@@ -9,6 +9,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class NicknameListener {
 
@@ -35,6 +36,14 @@ public class NicknameListener {
             String nickname = in.readUTF();
             plugin.getNicknameCache().setNickname(uuid, nickname);
             plugin.getPendingJoinManager().complete(uuid);
+
+            // Persist nickname to PostgreSQL
+            final String uuidStr = uuid.toString();
+            final String plain = plugin.getNicknameCache().getPlainNickname(uuid);
+            final String raw = plugin.getNicknameCache().getRawNickname(uuid);
+            CompletableFuture.runAsync(() -> {
+                plugin.getPgWriter().updateNickname(uuidStr, plain, raw);
+            });
         } catch (IOException | IllegalArgumentException e) {
             plugin.getLogger().warn("Failed to parse nickname plugin message", e);
         }

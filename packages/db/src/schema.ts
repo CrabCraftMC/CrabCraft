@@ -1,5 +1,6 @@
 import {
   pgTable,
+  pgEnum,
   text,
   integer,
   boolean,
@@ -9,13 +10,24 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
-// ── users ───────────────────────────────────────────────────────
-export const users = pgTable("users", {
+export const playerRoleEnum = pgEnum("player_role", [
+  "unverified",
+  "verified",
+  "moderator",
+  "admin",
+]);
+
+export type PlayerRole = (typeof playerRoleEnum.enumValues)[number];
+
+// ── players ─────────────────────────────────────────────────────
+export const players = pgTable("players", {
   discord_id: text("discord_id").primaryKey(),
   discord_username: text("discord_username").notNull(),
   minecraft_username: text("minecraft_username"),
   minecraft_uuid: text("minecraft_uuid").unique(),
-  active: boolean("active").notNull().default(false),
+  nickname: text("nickname"),
+  nickname_raw: text("nickname_raw"),
+  role: playerRoleEnum("role").notNull().default("unverified"),
   created_at: integer("created_at")
     .notNull()
     .$defaultFn(() => Math.floor(Date.now() / 1000)),
@@ -23,7 +35,6 @@ export const users = pgTable("users", {
     .notNull()
     .$defaultFn(() => Math.floor(Date.now() / 1000)),
   last_login_at: integer("last_login_at"),
-  is_admin: boolean("is_admin").notNull().default(false),
 });
 
 // ── applications ────────────────────────────────────────────────
@@ -33,7 +44,7 @@ export const applications = pgTable(
     id: serial("id").primaryKey(),
     discord_id: text("discord_id")
       .notNull()
-      .references(() => users.discord_id),
+      .references(() => players.discord_id),
     discord_username: text("discord_username").notNull(),
     minecraft_username: text("minecraft_username").notNull(),
     minecraft_uuid: text("minecraft_uuid"),

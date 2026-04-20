@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
-import { getUserForAuth, updateLastLogin } from "@crabcraft/db/queries/auth";
+import { getUserForAuth, updateOnLogin } from "@crabcraft/db/queries/auth";
+import { fetchPlayerName } from "@crabcraft/shared/mojang";
 
 declare module "next-auth" {
   interface Session {
@@ -11,7 +12,7 @@ declare module "next-auth" {
       discordId: string;
       minecraftUuid: string | null;
       minecraftUsername: string | null;
-      isAdmin: boolean;
+      role: string;
     };
   }
 }
@@ -21,7 +22,7 @@ declare module "@auth/core/jwt" {
     discordId?: string;
     minecraftUuid?: string | null;
     minecraftUsername?: string | null;
-    isAdmin?: boolean;
+    role?: string;
   }
 }
 
@@ -46,28 +47,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const user = await getUserForAuth(profile.id as string);
           if (user) {
+            // Refresh Minecraft username from Mojang if they have a linked account
+            const freshMcName = user.minecraft_uuid
+              ? await fetchPlayerName(user.minecraft_uuid)
+              : null;
+            const mcName = freshMcName && freshMcName !== "Unknown" ? freshMcName : user.minecraft_username;
+
             token.minecraftUuid = user.minecraft_uuid;
-            token.minecraftUsername = user.minecraft_username;
-            token.isAdmin = user.is_admin;
-            await updateLastLogin(profile.id as string);
+            token.minecraftUsername = mcName;
+            token.role = user.role;
+            await updateOnLogin(
+              profile.id as string,
+              profile.username as string,
+              mcName,
+            );
           } else {
             token.minecraftUuid = null;
             token.minecraftUsername = null;
-            token.isAdmin = false;
+            token.role = "unverified";
           }
         } catch {
           token.minecraftUuid = null;
           token.minecraftUsername = null;
-          token.isAdmin = false;
+          token.role = "unverified";
         }
       }
+
+      // Refresh role from DB on every request so role changes take effect immediately
+      if (token.discordId) {
+        try {
+          const user = await getUserForAuth(token.discordId);
+          if (user) token.role = user.role;
+        } catch {}
+      }
+
       return token;
     },
     async session({ session, token }) {
       session.user.discordId = token.discordId!;
       session.user.minecraftUuid = token.minecraftUuid ?? null;
       session.user.minecraftUsername = token.minecraftUsername ?? null;
-      session.user.isAdmin = token.isAdmin ?? false;
+      session.user.role = token.role ?? "unverified";
       return session;
     },
   },

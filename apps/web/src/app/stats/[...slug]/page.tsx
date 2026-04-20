@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import PlayerStatsPage from "@/components/PlayerStatsPage";
 import { fetchGzipJson } from "@/lib/fetchGzip";
 import {
-  isPlayerAdmin,
+  getPlayerRole,
   getJoinedSeason,
   getUserByIdentifier,
   getPlayerProfile,
@@ -56,7 +56,7 @@ export default async function StatsPage({ params }: Props) {
     silver: 0,
     bronze: 0,
     found: false,
-    isAdmin: false,
+    role: "unverified",
     joinedSeason: null as string | null,
   };
 
@@ -85,10 +85,10 @@ export default async function StatsPage({ params }: Props) {
         ? entry.uuid.toLowerCase() === search
         : player && player.name.toLowerCase() === search;
       if (match && player) {
-        let admin = false;
+        let playerRole = "unverified";
         let joinedSeason: string | null = null;
         try {
-          [admin, joinedSeason] = await Promise.all([isPlayerAdmin(entry.uuid), getJoinedSeason(entry.uuid)]);
+          [playerRole, joinedSeason] = await Promise.all([getPlayerRole(entry.uuid), getJoinedSeason(entry.uuid)]);
         } catch {}
         playerData = {
           nickname: player.name,
@@ -99,7 +99,7 @@ export default async function StatsPage({ params }: Props) {
           silver: entry.value[2],
           bronze: entry.value[3],
           found: true,
-          isAdmin: admin,
+          role: playerRole,
           joinedSeason,
         };
         break;
@@ -115,10 +115,10 @@ export default async function StatsPage({ params }: Props) {
           ? uuid.toLowerCase() === search
           : player.name && player.name.toLowerCase() === search;
         if (match) {
-          let admin = false;
+          let playerRole = "unverified";
           let joinedSeason: string | null = null;
           try {
-            [admin, joinedSeason] = await Promise.all([isPlayerAdmin(uuid), getJoinedSeason(uuid)]);
+            [playerRole, joinedSeason] = await Promise.all([getPlayerRole(uuid), getJoinedSeason(uuid)]);
           } catch {}
           playerData = {
             nickname: player.name,
@@ -129,7 +129,7 @@ export default async function StatsPage({ params }: Props) {
             silver: 0,
             bronze: 0,
             found: true,
-            isAdmin: admin,
+            role: playerRole,
             joinedSeason,
           };
           break;
@@ -152,7 +152,7 @@ export default async function StatsPage({ params }: Props) {
           silver: 0,
           bronze: 0,
           found: true,
-          isAdmin: dbUser.is_admin,
+          role: dbUser.role,
           joinedSeason,
         };
       }
@@ -183,8 +183,8 @@ export default async function StatsPage({ params }: Props) {
     if (locRes?.ok) localization = await locRes.json();
   }
 
-  // Fetch player profile (Discord username, active status)
-  let profile: { discord_username: string | null; active: boolean } | null = null;
+  // Fetch player profile (Discord username)
+  let profile: { discord_username: string | null } | null = null;
   profile = await profilePromise;
 
   return <PlayerStatsPage {...playerData} detailedStats={detailedStats} localization={localization} awardUnits={awardUnits} profile={profile} />;

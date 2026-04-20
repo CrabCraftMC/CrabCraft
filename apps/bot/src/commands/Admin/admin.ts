@@ -158,7 +158,6 @@ export default class AdminCommand extends SlashCommand {
       minecraftUsername: minecraftUsername,
       minecraftUuid: UUID,
     });
-    await appDb.setUserActive(applicant.id, true);
 
     const logChannel = await interaction.guild!.channels
       .fetch(config.LOG_CHANNEL_ID)
@@ -230,8 +229,6 @@ export default class AdminCommand extends SlashCommand {
       const role = interaction.guild!.roles.cache.get(config.MEMBER_ROLE_ID);
       if (role) await member.roles.remove(role).catch(() => null);
     }
-
-    await appDb.setUserActive(targetUser.id, false);
 
     const logChannel = await interaction.guild!.channels
       .fetch(config.LOG_CHANNEL_ID)
@@ -312,7 +309,6 @@ export default class AdminCommand extends SlashCommand {
         const role = interaction.guild!.roles.cache.get(config.MEMBER_ROLE_ID);
         if (role) await member.roles.remove(role).catch(() => null);
       }
-      await appDb.setUserActive(linkedDiscordId, false);
     }
 
     const logChannel = await interaction.guild!.channels

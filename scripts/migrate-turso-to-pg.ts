@@ -15,32 +15,31 @@ const turso = createClient({
 
 const pg = postgres(process.env.DATABASE_URL!);
 
-async function migrateUsers() {
+async function migratePlayers() {
   const result = await turso.execute("SELECT * FROM users");
   const rows = result.rows;
   if (rows.length === 0) {
-    console.log("  users: 0 rows (empty)");
+    console.log("  players: 0 rows (empty)");
     return 0;
   }
 
   for (const row of rows) {
     await pg`
-      INSERT INTO users (discord_id, discord_username, minecraft_username, minecraft_uuid, active, created_at, updated_at, last_login_at, is_admin)
+      INSERT INTO players (discord_id, discord_username, minecraft_username, minecraft_uuid, is_moderator, created_at, updated_at, last_login_at)
       VALUES (
         ${row.discord_id as string},
         ${row.discord_username as string},
         ${(row.minecraft_username as string | null) ?? null},
         ${(row.minecraft_uuid as string | null) ?? null},
-        ${Boolean(row.active)},
+        ${Boolean(row.is_admin)},
         ${row.created_at as number},
         ${row.updated_at as number},
-        ${(row.last_login_at as number | null) ?? null},
-        ${Boolean(row.is_admin)}
+        ${(row.last_login_at as number | null) ?? null}
       )
       ON CONFLICT (discord_id) DO NOTHING
     `;
   }
-  console.log(`  users: ${rows.length} rows migrated`);
+  console.log(`  players: ${rows.length} rows migrated (from Turso 'users' table)`);
   return rows.length;
 }
 
@@ -77,7 +76,6 @@ async function migrateApplications() {
     `;
   }
 
-  // Reset the serial sequence to the max id
   await pg`SELECT setval('applications_id_seq', (SELECT COALESCE(MAX(id), 0) FROM applications))`;
 
   console.log(`  applications: ${rows.length} rows migrated`);
@@ -176,7 +174,6 @@ async function migratePlayerSeasonStats() {
     `;
   }
 
-  // Reset the serial sequence
   await pg`SELECT setval('player_season_stats_id_seq', (SELECT COALESCE(MAX(id), 0) FROM player_season_stats))`;
 
   console.log(`  player_season_stats: ${rows.length} rows migrated`);
@@ -188,8 +185,8 @@ async function main() {
 
   let totalRows = 0;
 
-  // Order matters: users first (referenced by applications FK)
-  totalRows += await migrateUsers();
+  // Order matters: players first (referenced by applications FK)
+  totalRows += await migratePlayers();
   totalRows += await migrateApplications();
   totalRows += await migrateSeasons();
   totalRows += await migratePlayerSeasonStats();
@@ -198,12 +195,12 @@ async function main() {
 
   // Verify counts
   console.log("\nVerification:");
-  const pgUsers = await pg`SELECT COUNT(*) as count FROM users`;
+  const pgPlayers = await pg`SELECT COUNT(*) as count FROM players`;
   const pgApps = await pg`SELECT COUNT(*) as count FROM applications`;
   const pgSeasons = await pg`SELECT COUNT(*) as count FROM seasons`;
   const pgStats = await pg`SELECT COUNT(*) as count FROM player_season_stats`;
 
-  console.log(`  PostgreSQL users: ${pgUsers[0].count}`);
+  console.log(`  PostgreSQL players: ${pgPlayers[0].count}`);
   console.log(`  PostgreSQL applications: ${pgApps[0].count}`);
   console.log(`  PostgreSQL seasons: ${pgSeasons[0].count}`);
   console.log(`  PostgreSQL player_season_stats: ${pgStats[0].count}`);

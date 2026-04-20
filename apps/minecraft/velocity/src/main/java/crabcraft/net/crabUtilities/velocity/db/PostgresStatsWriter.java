@@ -123,6 +123,40 @@ public class PostgresStatsWriter {
         }
     }
 
+    /**
+     * Updates player info (username + nickname) by minecraft_uuid.
+     * Only updates existing players — no-op if UUID not in DB.
+     */
+    public void upsertPlayer(String uuid, String username, String nickname, String nicknameRaw) {
+        String sql = "UPDATE players SET minecraft_username = ?, nickname = ?, nickname_raw = ?, updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER WHERE minecraft_uuid = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, username);
+            stmt.setString(2, nickname);
+            stmt.setString(3, nicknameRaw);
+            stmt.setString(4, uuid);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Failed to upsert player {}", uuid, e);
+        }
+    }
+
+    /**
+     * Updates just the nickname for a player by minecraft_uuid.
+     */
+    public void updateNickname(String uuid, String nickname, String nicknameRaw) {
+        String sql = "UPDATE players SET nickname = ?, nickname_raw = ?, updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER WHERE minecraft_uuid = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, nickname);
+            stmt.setString(2, nicknameRaw);
+            stmt.setString(3, uuid);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Failed to update nickname for {}", uuid, e);
+        }
+    }
+
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();

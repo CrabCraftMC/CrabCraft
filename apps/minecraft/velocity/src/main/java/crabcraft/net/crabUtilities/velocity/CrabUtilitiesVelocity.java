@@ -10,6 +10,7 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import crabcraft.net.crabUtilities.velocity.api.StatsRequestManager;
 import crabcraft.net.crabUtilities.velocity.api.WebServer;
+import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatListener;
@@ -39,6 +40,7 @@ public class CrabUtilitiesVelocity {
     private DiscordWebhook discordWebhook;
     private JoinedPlayersStore joinedPlayersStore;
     private StatsRequestManager statsRequestManager;
+    private PostgresStatsWriter pgWriter;
     private VelocityConfig config;
 
     @Inject
@@ -64,6 +66,10 @@ public class CrabUtilitiesVelocity {
 
         this.statsRequestManager = new StatsRequestManager(config, logger);
         this.statsRequestManager.start();
+
+        this.pgWriter = new PostgresStatsWriter(
+            config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
+        );
 
         this.webServer = new WebServer(this, config.getApiPort());
         this.webServer.start();
@@ -94,6 +100,9 @@ public class CrabUtilitiesVelocity {
         if (redisStaffChat != null) {
             redisStaffChat.shutdown();
         }
+        if (pgWriter != null) {
+            pgWriter.close();
+        }
         logger.info("CrabUtilities Velocity disabled.");
     }
 
@@ -106,6 +115,13 @@ public class CrabUtilitiesVelocity {
         }
         this.statsRequestManager = new StatsRequestManager(config, logger);
         this.statsRequestManager.start();
+
+        if (pgWriter != null) {
+            pgWriter.close();
+        }
+        this.pgWriter = new PostgresStatsWriter(
+            config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
+        );
 
         if (webServer != null) {
             webServer.stop();
@@ -136,5 +152,6 @@ public class CrabUtilitiesVelocity {
     public JoinedPlayersStore getJoinedPlayersStore() { return joinedPlayersStore; }
     public WebServer getWebServer() { return webServer; }
     public StatsRequestManager getStatsRequestManager() { return statsRequestManager; }
+    public PostgresStatsWriter getPgWriter() { return pgWriter; }
     public VelocityConfig getConfig() { return config; }
 }

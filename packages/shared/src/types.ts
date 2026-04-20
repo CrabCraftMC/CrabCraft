@@ -75,7 +75,7 @@ export interface AdminUser {
   discord_username: string;
   minecraft_username: string | null;
   minecraft_uuid: string | null;
-  active: boolean;
+  role: string;
   last_login_at: number | null;
   created_at: number;
   joined_season: string | null;

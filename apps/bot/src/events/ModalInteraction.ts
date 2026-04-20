@@ -510,21 +510,13 @@ export default class ModalInteractionEvent extends Event {
       logger.error("Failed to cancel pending applications:", e);
     }
 
-    // If user is inactive (left previously), clean up stale whitelist record
-    let isActive = true; // safe default: skip cleanup rather than risk deleting valid records
+    // Clean up any stale whitelist record from a previous application
     try {
-      isActive = await appDb.isUserActive(interaction.user.id);
+      await mysql.query("DELETE FROM discordsrv_accounts WHERE discord = ?", [
+        interaction.user.id,
+      ]);
     } catch (e) {
-      logger.error("Failed to check user active status:", e);
-    }
-    if (!isActive) {
-      try {
-        await mysql.query("DELETE FROM discordsrv_accounts WHERE discord = ?", [
-          interaction.user.id,
-        ]);
-      } catch (e) {
-        logger.error("Failed to clean up stale whitelist record:", e);
-      }
+      logger.error("Failed to clean up stale whitelist record:", e);
     }
 
     // Check MariaDB (already whitelisted)
@@ -668,21 +660,13 @@ export default class ModalInteractionEvent extends Event {
       interaction.member as GuildMember
     ).guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null) as TextChannel | null;
 
-    // If user is inactive (left previously), clean up stale whitelist record
-    let isActive = true;
+    // Clean up any stale whitelist record from a previous application
     try {
-      isActive = await appDb.isUserActive(interaction.user.id);
+      await mysql.query("DELETE FROM discordsrv_accounts WHERE discord = ?", [
+        interaction.user.id,
+      ]);
     } catch (e) {
-      logger.error("Failed to check user active status:", e);
-    }
-    if (!isActive) {
-      try {
-        await mysql.query("DELETE FROM discordsrv_accounts WHERE discord = ?", [
-          interaction.user.id,
-        ]);
-      } catch (e) {
-        logger.error("Failed to clean up stale whitelist record:", e);
-      }
+      logger.error("Failed to clean up stale whitelist record:", e);
     }
 
     const rows = await mysql.query(

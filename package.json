@@ -13,6 +13,8 @@
     "db:studio": "bun run --filter @crabcraft/db studio"
   },
   "devDependencies": {
+    "@libsql/client": "^0.17.2",
+    "postgres": "^3.4.9",
     "turbo": "^2.5.0",
     "typescript": "^5.8.0"
   },

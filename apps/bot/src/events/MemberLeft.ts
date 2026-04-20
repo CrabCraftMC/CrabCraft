@@ -93,7 +93,6 @@ export default class MemberLeftEvent extends Event {
 
     // 4. Update Turso state
     try {
-      await appDb.setUserActive(member.user.id, false);
       await appDb.cancelPendingApplications(member.user.id);
     } catch (error) {
       logger.error("Failed to update Turso for departing member:", error);

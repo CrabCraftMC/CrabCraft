@@ -36,11 +36,20 @@
   ],
   "globalPassThroughEnv": [
     "TOKEN",
+    "ENV",
+    "DEV_GUILD_ID",
+    "MEMBER_ROLE_ID",
+    "MOD_ROLE_ID",
+    "APPLICATION_CATEGORY_ID",
+    "LOG_CHANNEL_ID",
+    "LEADERBOARD_CHANNEL_ID",
+    "WIKI_CHANNEL_ID",
     "DB_HOST",
     "DB_PORT",
     "DB_USER",
     "DB_PASS",
     "DB_NAME",
-    "SITE_URL"
+    "SITE_URL",
+    "GIT_COMMIT_SHA"
   ]
 }

@@ -9,6 +9,8 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
 import crabcraft.net.crabUtilities.velocity.NicknameCache;
+import crabcraft.net.crabUtilities.velocity.db.ComputedStats;
+import crabcraft.net.crabUtilities.velocity.db.StatsParser;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -421,6 +423,17 @@ public class WebServer {
                 if (statsJson == null) {
                     sendError(exchange, 404, "stats not found");
                 } else {
+                    // Parse and write computed stats to PostgreSQL asynchronously
+                    final String statsData = statsJson;
+                    final String playerUuid = uuid;
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            ComputedStats computed = StatsParser.parse(statsData);
+                            plugin.getPgWriter().writePlayerSeasonStats(playerUuid, plugin.getConfig().getCurrentSeason(), computed);
+                        } catch (Exception e) {
+                            // Don't let PG write failure break the API response
+                        }
+                    });
                     sendJson(exchange, statsJson);
                 }
             });

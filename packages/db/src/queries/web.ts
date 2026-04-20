@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, like, asc, count } from "drizzle-orm";
 import { db } from "../client";
 import {
-  users,
+  players,
   applications,
   seasons as seasonsTable,
   playerSeasonStats,
@@ -143,7 +143,7 @@ export async function getLeaderboard(
   const rows = await db.execute(
     sql`SELECT pss.minecraft_uuid, u.minecraft_username, pss.${sql.identifier(col)} as value
         FROM player_season_stats pss
-        JOIN users u ON u.minecraft_uuid = pss.minecraft_uuid
+        JOIN players u ON u.minecraft_uuid = pss.minecraft_uuid
         WHERE pss.season = ${season}
         ORDER BY pss.${sql.identifier(col)} DESC
         LIMIT ${limit}`,
@@ -202,31 +202,31 @@ export async function getMinecraftUuid(
   discordId: string,
 ): Promise<string | null> {
   const rows = await db
-    .select({ minecraft_uuid: users.minecraft_uuid })
-    .from(users)
-    .where(eq(users.discord_id, discordId));
+    .select({ minecraft_uuid: players.minecraft_uuid })
+    .from(players)
+    .where(eq(players.discord_id, discordId));
   if (rows.length === 0) return null;
   return rows[0].minecraft_uuid;
 }
 
-export async function isPlayerAdmin(
+export async function getPlayerRole(
   minecraftUuid: string,
-): Promise<boolean> {
+): Promise<string> {
   const rows = await db
-    .select({ is_admin: users.is_admin })
-    .from(users)
-    .where(eq(users.minecraft_uuid, minecraftUuid));
-  if (rows.length === 0) return false;
-  return rows[0].is_admin;
+    .select({ role: players.role })
+    .from(players)
+    .where(eq(players.minecraft_uuid, minecraftUuid));
+  if (rows.length === 0) return "unverified";
+  return rows[0].role;
 }
 
 export async function getMinecraftUsername(
   discordId: string,
 ): Promise<string | null> {
   const rows = await db
-    .select({ minecraft_username: users.minecraft_username })
-    .from(users)
-    .where(eq(users.discord_id, discordId));
+    .select({ minecraft_username: players.minecraft_username })
+    .from(players)
+    .where(eq(players.discord_id, discordId));
   if (rows.length === 0) return null;
   return rows[0].minecraft_username;
 }
@@ -237,12 +237,12 @@ export async function searchUsers(
 ): Promise<{ minecraft_uuid: string; minecraft_username: string }[]> {
   const rows = await db
     .select({
-      minecraft_uuid: users.minecraft_uuid,
-      minecraft_username: users.minecraft_username,
+      minecraft_uuid: players.minecraft_uuid,
+      minecraft_username: players.minecraft_username,
     })
-    .from(users)
-    .where(like(users.minecraft_username, `%${query}%`))
-    .orderBy(asc(users.minecraft_username))
+    .from(players)
+    .where(like(players.minecraft_username, `%${query}%`))
+    .orderBy(asc(players.minecraft_username))
     .limit(limit);
   return rows.filter(
     (r): r is { minecraft_uuid: string; minecraft_username: string } =>
@@ -255,20 +255,20 @@ export async function getUserByIdentifier(
 ): Promise<{
   minecraft_uuid: string;
   minecraft_username: string;
-  is_admin: boolean;
+  role: string;
 } | null> {
   const isUuid = identifier.includes("-") || identifier.length === 32;
   const rows = await db
     .select({
-      minecraft_uuid: users.minecraft_uuid,
-      minecraft_username: users.minecraft_username,
-      is_admin: users.is_admin,
+      minecraft_uuid: players.minecraft_uuid,
+      minecraft_username: players.minecraft_username,
+      role: players.role,
     })
-    .from(users)
+    .from(players)
     .where(
       isUuid
-        ? eq(users.minecraft_uuid, identifier)
-        : sql`LOWER(${users.minecraft_username}) = LOWER(${identifier})`,
+        ? eq(players.minecraft_uuid, identifier)
+        : sql`LOWER(${players.minecraft_username}) = LOWER(${identifier})`,
     );
   if (rows.length === 0) return null;
   const row = rows[0];
@@ -276,7 +276,7 @@ export async function getUserByIdentifier(
   return {
     minecraft_uuid: row.minecraft_uuid,
     minecraft_username: row.minecraft_username,
-    is_admin: row.is_admin,
+    role: row.role,
   };
 }
 
@@ -286,10 +286,10 @@ export async function getJoinedSeason(
   const rows = await db
     .select({ season: applications.season })
     .from(applications)
-    .innerJoin(users, eq(users.discord_id, applications.discord_id))
+    .innerJoin(players, eq(players.discord_id, applications.discord_id))
     .where(
       and(
-        eq(users.minecraft_uuid, minecraftUuid),
+        eq(players.minecraft_uuid, minecraftUuid),
         eq(applications.status, "accepted"),
       ),
     )
@@ -329,18 +329,18 @@ export async function getUserApplications(
 export async function getAdminUsers(): Promise<AdminUser[]> {
   const rows = await db.execute(
     sql`SELECT u.discord_id, u.discord_username, u.minecraft_username, u.minecraft_uuid,
-            u.active, u.last_login_at, u.created_at,
+            u.role, u.last_login_at, u.created_at,
             (SELECT a.season FROM applications a
              WHERE a.discord_id = u.discord_id AND a.status = 'accepted'
              ORDER BY a.applied_at ASC LIMIT 1) as joined_season
-     FROM users u ORDER BY u.last_login_at DESC NULLS LAST`,
+     FROM players u ORDER BY u.last_login_at DESC NULLS LAST`,
   );
   return (rows as unknown as Array<Record<string, unknown>>).map((row) => ({
     discord_id: row.discord_id as string,
     discord_username: row.discord_username as string,
     minecraft_username: (row.minecraft_username as string | null) ?? null,
     minecraft_uuid: (row.minecraft_uuid as string | null) ?? null,
-    active: Boolean(row.active),
+    role: row.role as string,
     last_login_at: (row.last_login_at as number | null) ?? null,
     created_at: row.created_at as number,
     joined_season: (row.joined_season as string | null) ?? null,
@@ -351,18 +351,147 @@ export async function getPlayerProfile(
   minecraftUuid: string,
 ): Promise<{
   discord_username: string | null;
-  active: boolean;
 } | null> {
   const rows = await db
     .select({
-      discord_username: users.discord_username,
-      active: users.active,
+      discord_username: players.discord_username,
     })
-    .from(users)
-    .where(eq(users.minecraft_uuid, minecraftUuid));
+    .from(players)
+    .where(eq(players.minecraft_uuid, minecraftUuid));
   if (rows.length === 0) return null;
   return {
     discord_username: rows[0].discord_username,
-    active: rows[0].active,
   };
+}
+
+// ── Admin queries ───────────────────────────────────────────────
+
+export async function getOverviewStats(): Promise<{
+  playerCount: number;
+  applicationsByStatus: Record<string, number>;
+  currentSeason: Season | null;
+  recentApplications: Application[];
+}> {
+  const [playerRows, statusRows, currentSeason, recentApps] = await Promise.all([
+    db.select({ count: sql<number>`COUNT(*)` }).from(players),
+    db.execute(
+      sql`SELECT status, COUNT(*)::int as count FROM applications GROUP BY status`,
+    ),
+    getCurrentSeason(),
+    db
+      .select()
+      .from(applications)
+      .orderBy(desc(applications.applied_at))
+      .limit(10),
+  ]);
+
+  const applicationsByStatus: Record<string, number> = {};
+  for (const row of statusRows as unknown as Array<{ status: string; count: number }>) {
+    applicationsByStatus[row.status] = row.count;
+  }
+
+  return {
+    playerCount: Number(playerRows[0]?.count ?? 0),
+    applicationsByStatus,
+    currentSeason,
+    recentApplications: recentApps.map((row) => ({
+      discord_id: row.discord_id,
+      discord_username: row.discord_username,
+      minecraft_username: row.minecraft_username,
+      minecraft_uuid: row.minecraft_uuid ?? "",
+      over_15: row.over_15,
+      voice_chat: row.voice_chat,
+      policy_agreed: row.policy_agreed,
+      status: row.status as "pending" | "accepted" | "denied",
+      join_reason: row.join_reason ?? "",
+      favourite_wood: row.favourite_wood ?? "",
+      denial_reason: row.denial_reason ?? null,
+      season: row.season ?? "",
+      applied_at: row.applied_at,
+      resolved_at: row.resolved_at ?? null,
+      resolved_by_discord_id: row.resolved_by_discord_id ?? null,
+    })),
+  };
+}
+
+export async function getAllApplications(filters?: {
+  status?: string;
+  season?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<Application[]> {
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(applications.status, filters.status));
+  if (filters?.season) conditions.push(eq(applications.season, filters.season));
+
+  const query = db
+    .select()
+    .from(applications)
+    .orderBy(desc(applications.applied_at))
+    .limit(filters?.limit ?? 50)
+    .offset(filters?.offset ?? 0);
+
+  const rows = conditions.length > 0
+    ? await query.where(and(...conditions))
+    : await query;
+
+  return rows.map((row) => ({
+    discord_id: row.discord_id,
+    discord_username: row.discord_username,
+    minecraft_username: row.minecraft_username,
+    minecraft_uuid: row.minecraft_uuid ?? "",
+    over_15: row.over_15,
+    voice_chat: row.voice_chat,
+    policy_agreed: row.policy_agreed,
+    status: row.status as "pending" | "accepted" | "denied",
+    join_reason: row.join_reason ?? "",
+    favourite_wood: row.favourite_wood ?? "",
+    denial_reason: row.denial_reason ?? null,
+    season: row.season ?? "",
+    applied_at: row.applied_at,
+    resolved_at: row.resolved_at ?? null,
+    resolved_by_discord_id: row.resolved_by_discord_id ?? null,
+  }));
+}
+
+export async function createSeason(data: {
+  id: string;
+  name: string;
+  start_date?: string;
+  end_date?: string;
+}): Promise<void> {
+  await db.insert(seasonsTable).values({
+    id: data.id,
+    name: data.name,
+    start_date: data.start_date ?? null,
+    end_date: data.end_date ?? null,
+  });
+}
+
+export async function updateSeason(
+  id: string,
+  data: { name?: string; start_date?: string; end_date?: string },
+): Promise<void> {
+  await db
+    .update(seasonsTable)
+    .set(data)
+    .where(eq(seasonsTable.id, id));
+}
+
+export async function setCurrentSeason(seasonId: string): Promise<void> {
+  await db.update(seasonsTable).set({ is_current: false });
+  await db
+    .update(seasonsTable)
+    .set({ is_current: true })
+    .where(eq(seasonsTable.id, seasonId));
+}
+
+export async function setPlayerRole(
+  discordId: string,
+  role: "unverified" | "verified" | "moderator" | "admin",
+): Promise<void> {
+  await db
+    .update(players)
+    .set({ role: role, updated_at: Math.floor(Date.now() / 1000) })
+    .where(eq(players.discord_id, discordId));
 }

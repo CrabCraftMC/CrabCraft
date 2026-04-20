@@ -26,6 +26,7 @@ interface UserData {
     avatarUrl: string;
     minecraftUuid: string | null;
     minecraftUsername: string | null;
+    role: string;
 }
 
 export default function Navbar({ user }: { user?: UserData | null }) {
@@ -314,6 +315,15 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                     <Gift className="w-4 h-4" />
                     Wrapped
                 </Link>
+                {(user.role === "moderator" || user.role === "admin") && (
+                    <Link
+                        href="/admin"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-orange-500 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                    >
+                        <Wrench className="w-4 h-4" />
+                        Admin Panel
+                    </Link>
+                )}
                 <button
                     onClick={() => toggleDarkMode()}
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors cursor-pointer"
@@ -445,6 +455,12 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                     <Gift className="w-4 h-4" />
                                     Wrapped
                                 </Link>
+                                {(user.role === "moderator" || user.role === "admin") && (
+                                    <Link href="/admin" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-orange-500 hover:bg-orange-500/10 transition-colors" onClick={() => setIsMenuOpen(false)}>
+                                        <Wrench className="w-4 h-4" />
+                                        Admin Panel
+                                    </Link>
+                                )}
                                 <button onClick={() => { setIsMenuOpen(false); signOut(); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer w-full">
                                     <LogOut className="w-4 h-4" />
                                     Sign Out

@@ -12,12 +12,12 @@ interface PlayerProps {
     silver: number;
     bronze: number;
     found: boolean;
-    isAdmin: boolean;
+    role: string;
     joinedSeason: string | null;
     detailedStats?: Record<string, { rank?: number; value: number }> | null;
     localization?: Record<string, string> | null;
     awardUnits?: Record<string, string> | null;
-    profile?: { discord_username: string | null; active: boolean } | null;
+    profile?: { discord_username: string | null } | null;
 }
 
 export default function PlayerStatsPage(props: PlayerProps) {
@@ -33,7 +33,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
         );
     }
 
-    const { nickname, uuid, rank, points, gold, silver, bronze, isAdmin, joinedSeason, detailedStats, localization, awardUnits, profile } = props;
+    const { nickname, uuid, rank, points, gold, silver, bronze, role, joinedSeason, detailedStats, localization, awardUnits, profile } = props;
 
     return (
         <div className="min-h-screen pt-16 lg:pt-24 pb-16">
@@ -50,7 +50,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                             <div>
                                 <h1 className="text-3xl lg:text-4xl font-bold text-white flex items-center flex-wrap">
                                     {nickname}
-                                    {isAdmin && (
+                                    {(role === "moderator" || role === "admin") && (
                                         <span className="ml-2 inline-flex items-center group relative cursor-pointer" tabIndex={0} title="Moderator">
                                             <svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />

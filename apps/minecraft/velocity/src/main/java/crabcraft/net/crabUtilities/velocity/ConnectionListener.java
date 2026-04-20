@@ -122,6 +122,15 @@ public class ConnectionListener {
         if (firstJoin) {
             plugin.getJoinedPlayersStore().markJoined(player.getUniqueId());
         }
+
+        // Update player info in PostgreSQL
+        final String playerUuid = player.getUniqueId().toString();
+        final String playerName = player.getUsername();
+        CompletableFuture.runAsync(() -> {
+            String plain = plugin.getNicknameCache().getPlainNickname(player.getUniqueId());
+            String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
+            plugin.getPgWriter().upsertPlayer(playerUuid, playerName, plain, raw);
+        });
     }
 
     private Component getDisplayName(Player player) {

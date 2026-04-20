@@ -103,6 +103,7 @@ export default async function RootLayout({
         : getAvatarUrl(user),
       minecraftUuid: user.minecraftUuid,
       minecraftUsername: user.minecraftUsername,
+      role: user.role,
     };
   }
 

@@ -3,7 +3,7 @@ import * as webQueries from "@crabcraft/db/queries/web";
 
 // Functions that benefit from React cache (used in Server Components)
 export const getMinecraftUuid = cache(webQueries.getMinecraftUuid);
-export const isPlayerAdmin = cache(webQueries.isPlayerAdmin);
+export const getPlayerRole = cache(webQueries.getPlayerRole);
 export const getMinecraftUsername = cache(webQueries.getMinecraftUsername);
 export const getUserByIdentifier = cache(webQueries.getUserByIdentifier);
 export const getJoinedSeason = cache(webQueries.getJoinedSeason);

@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../client";
-import { users, applications } from "../schema";
+import { players, applications } from "../schema";
 
 export interface UpsertUserData {
   discordId: string;
@@ -23,7 +23,7 @@ export interface CreateApplicationData {
 
 export async function upsertUser(data: UpsertUserData): Promise<void> {
   await db
-    .insert(users)
+    .insert(players)
     .values({
       discord_id: data.discordId,
       discord_username: data.discordUsername,
@@ -31,27 +31,14 @@ export async function upsertUser(data: UpsertUserData): Promise<void> {
       minecraft_uuid: data.minecraftUuid ?? null,
     })
     .onConflictDoUpdate({
-      target: users.discord_id,
+      target: players.discord_id,
       set: {
         discord_username: sql`excluded.discord_username`,
-        minecraft_username: sql`COALESCE(excluded.minecraft_username, ${users.minecraft_username})`,
-        minecraft_uuid: sql`COALESCE(excluded.minecraft_uuid, ${users.minecraft_uuid})`,
+        minecraft_username: sql`COALESCE(excluded.minecraft_username, ${players.minecraft_username})`,
+        minecraft_uuid: sql`COALESCE(excluded.minecraft_uuid, ${players.minecraft_uuid})`,
         updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
       },
     });
-}
-
-export async function setUserActive(
-  discordId: string,
-  active: boolean,
-): Promise<void> {
-  await db
-    .update(users)
-    .set({
-      active,
-      updated_at: Math.floor(Date.now() / 1000),
-    })
-    .where(eq(users.discord_id, discordId));
 }
 
 export async function createApplication(
@@ -133,20 +120,6 @@ export async function acceptApplication(
         eq(applications.status, "pending"),
       ),
     );
-  await db
-    .update(users)
-    .set({ active: true, updated_at: now })
-    .where(eq(users.discord_id, discordId));
-}
-
-export async function isUserActive(discordId: string): Promise<boolean> {
-  const rows = await db
-    .select({ active: users.active })
-    .from(users)
-    .where(eq(users.discord_id, discordId))
-    .limit(1);
-  if (rows.length === 0) return false;
-  return rows[0].active;
 }
 
 export async function cancelPendingApplications(
