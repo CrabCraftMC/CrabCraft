@@ -13,9 +13,13 @@ RUN bun install --frozen-lockfile
 # Stage 2: Build
 FROM oven/bun:1.3.13 AS builder
 WORKDIR /app
+
+# Copy source first, then overlay installed node_modules (all workspaces)
+COPY . .
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY . .
+COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 ARG GIT_COMMIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
