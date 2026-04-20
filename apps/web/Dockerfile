@@ -2,7 +2,9 @@
 FROM oven/bun:1.3.13 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
+COPY apps/bot/package.json ./apps/bot/
 COPY apps/web/package.json ./apps/web/
+COPY apps/minecraft/package.json ./apps/minecraft/
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
