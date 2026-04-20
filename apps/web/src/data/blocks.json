@@ -1,0 +1,1874 @@
+[
+  {
+    "id": "white_concrete",
+    "name": "White Concrete",
+    "color": "#CFD5D6",
+    "texture": "concrete_white"
+  },
+  {
+    "id": "orange_concrete",
+    "name": "Orange Concrete",
+    "color": "#E06101",
+    "texture": "concrete_orange"
+  },
+  {
+    "id": "magenta_concrete",
+    "name": "Magenta Concrete",
+    "color": "#A9309F",
+    "texture": "concrete_magenta"
+  },
+  {
+    "id": "light_blue_concrete",
+    "name": "Light Blue Concrete",
+    "color": "#2489C7",
+    "texture": "concrete_light_blue"
+  },
+  {
+    "id": "yellow_concrete",
+    "name": "Yellow Concrete",
+    "color": "#F1AF15",
+    "texture": "concrete_yellow"
+  },
+  {
+    "id": "lime_concrete",
+    "name": "Lime Concrete",
+    "color": "#5EA919",
+    "texture": "concrete_lime"
+  },
+  {
+    "id": "pink_concrete",
+    "name": "Pink Concrete",
+    "color": "#D6658F",
+    "texture": "concrete_pink"
+  },
+  {
+    "id": "gray_concrete",
+    "name": "Gray Concrete",
+    "color": "#373A3E",
+    "texture": "concrete_gray"
+  },
+  {
+    "id": "light_gray_concrete",
+    "name": "Light Gray Concrete",
+    "color": "#7D7D73",
+    "texture": "concrete_silver"
+  },
+  {
+    "id": "cyan_concrete",
+    "name": "Cyan Concrete",
+    "color": "#157788",
+    "texture": "concrete_cyan"
+  },
+  {
+    "id": "purple_concrete",
+    "name": "Purple Concrete",
+    "color": "#64209C",
+    "texture": "concrete_purple"
+  },
+  {
+    "id": "blue_concrete",
+    "name": "Blue Concrete",
+    "color": "#2D2F8F",
+    "texture": "concrete_blue"
+  },
+  {
+    "id": "brown_concrete",
+    "name": "Brown Concrete",
+    "color": "#603C20",
+    "texture": "concrete_brown"
+  },
+  {
+    "id": "green_concrete",
+    "name": "Green Concrete",
+    "color": "#495B24",
+    "texture": "concrete_green"
+  },
+  {
+    "id": "red_concrete",
+    "name": "Red Concrete",
+    "color": "#8E2121",
+    "texture": "concrete_red"
+  },
+  {
+    "id": "black_concrete",
+    "name": "Black Concrete",
+    "color": "#080A0F",
+    "texture": "concrete_black"
+  },
+  {
+    "id": "white_concrete_powder",
+    "name": "White Concrete Powder",
+    "color": "#E2E4E4",
+    "texture": "concrete_powder_white"
+  },
+  {
+    "id": "orange_concrete_powder",
+    "name": "Orange Concrete Powder",
+    "color": "#E38522",
+    "texture": "concrete_powder_orange"
+  },
+  {
+    "id": "magenta_concrete_powder",
+    "name": "Magenta Concrete Powder",
+    "color": "#C155B9",
+    "texture": "concrete_powder_magenta"
+  },
+  {
+    "id": "light_blue_concrete_powder",
+    "name": "Light Blue Concrete Powder",
+    "color": "#4BB5D6",
+    "texture": "concrete_powder_light_blue"
+  },
+  {
+    "id": "yellow_concrete_powder",
+    "name": "Yellow Concrete Powder",
+    "color": "#E9C739",
+    "texture": "concrete_powder_yellow"
+  },
+  {
+    "id": "lime_concrete_powder",
+    "name": "Lime Concrete Powder",
+    "color": "#7EBE2A",
+    "texture": "concrete_powder_lime"
+  },
+  {
+    "id": "pink_concrete_powder",
+    "name": "Pink Concrete Powder",
+    "color": "#E59BB6",
+    "texture": "concrete_powder_pink"
+  },
+  {
+    "id": "gray_concrete_powder",
+    "name": "Gray Concrete Powder",
+    "color": "#4D5155",
+    "texture": "concrete_powder_gray"
+  },
+  {
+    "id": "light_gray_concrete_powder",
+    "name": "Light Gray Concrete Powder",
+    "color": "#9B9B95",
+    "texture": "concrete_powder_silver"
+  },
+  {
+    "id": "cyan_concrete_powder",
+    "name": "Cyan Concrete Powder",
+    "color": "#25959D",
+    "texture": "concrete_powder_cyan"
+  },
+  {
+    "id": "purple_concrete_powder",
+    "name": "Purple Concrete Powder",
+    "color": "#8438B2",
+    "texture": "concrete_powder_purple"
+  },
+  {
+    "id": "blue_concrete_powder",
+    "name": "Blue Concrete Powder",
+    "color": "#464AA7",
+    "texture": "concrete_powder_blue"
+  },
+  {
+    "id": "brown_concrete_powder",
+    "name": "Brown Concrete Powder",
+    "color": "#7E5536",
+    "texture": "concrete_powder_brown"
+  },
+  {
+    "id": "green_concrete_powder",
+    "name": "Green Concrete Powder",
+    "color": "#61782D",
+    "texture": "concrete_powder_green"
+  },
+  {
+    "id": "red_concrete_powder",
+    "name": "Red Concrete Powder",
+    "color": "#A93633",
+    "texture": "concrete_powder_red"
+  },
+  {
+    "id": "black_concrete_powder",
+    "name": "Black Concrete Powder",
+    "color": "#1B1C21",
+    "texture": "concrete_powder_black"
+  },
+  {
+    "id": "white_wool",
+    "name": "White Wool",
+    "color": "#EAEDED",
+    "texture": "wool_colored_white"
+  },
+  {
+    "id": "orange_wool",
+    "name": "Orange Wool",
+    "color": "#F17716",
+    "texture": "wool_colored_orange"
+  },
+  {
+    "id": "magenta_wool",
+    "name": "Magenta Wool",
+    "color": "#BE46B5",
+    "texture": "wool_colored_magenta"
+  },
+  {
+    "id": "light_blue_wool",
+    "name": "Light Blue Wool",
+    "color": "#3CB0DA",
+    "texture": "wool_colored_light_blue"
+  },
+  {
+    "id": "yellow_wool",
+    "name": "Yellow Wool",
+    "color": "#F9C629",
+    "texture": "wool_colored_yellow"
+  },
+  {
+    "id": "lime_wool",
+    "name": "Lime Wool",
+    "color": "#71BA1A",
+    "texture": "wool_colored_lime"
+  },
+  {
+    "id": "pink_wool",
+    "name": "Pink Wool",
+    "color": "#EE90AD",
+    "texture": "wool_colored_pink"
+  },
+  {
+    "id": "gray_wool",
+    "name": "Gray Wool",
+    "color": "#3F4548",
+    "texture": "wool_colored_gray"
+  },
+  {
+    "id": "light_gray_wool",
+    "name": "Light Gray Wool",
+    "color": "#8E8F87",
+    "texture": "wool_colored_silver"
+  },
+  {
+    "id": "cyan_wool",
+    "name": "Cyan Wool",
+    "color": "#158A91",
+    "texture": "wool_colored_cyan"
+  },
+  {
+    "id": "purple_wool",
+    "name": "Purple Wool",
+    "color": "#7B2BAD",
+    "texture": "wool_colored_purple"
+  },
+  {
+    "id": "blue_wool",
+    "name": "Blue Wool",
+    "color": "#353A9E",
+    "texture": "wool_colored_blue"
+  },
+  {
+    "id": "brown_wool",
+    "name": "Brown Wool",
+    "color": "#734829",
+    "texture": "wool_colored_brown"
+  },
+  {
+    "id": "green_wool",
+    "name": "Green Wool",
+    "color": "#556E1C",
+    "texture": "wool_colored_green"
+  },
+  {
+    "id": "red_wool",
+    "name": "Red Wool",
+    "color": "#A12823",
+    "texture": "wool_colored_red"
+  },
+  {
+    "id": "black_wool",
+    "name": "Black Wool",
+    "color": "#16161B",
+    "texture": "wool_colored_black"
+  },
+  {
+    "id": "terracotta",
+    "name": "Terracotta",
+    "color": "#985E44",
+    "texture": "hardened_clay"
+  },
+  {
+    "id": "white_terracotta",
+    "name": "White Terracotta",
+    "color": "#D2B2A1",
+    "texture": "hardened_clay_stained_white"
+  },
+  {
+    "id": "orange_terracotta",
+    "name": "Orange Terracotta",
+    "color": "#A25426",
+    "texture": "hardened_clay_stained_orange"
+  },
+  {
+    "id": "magenta_terracotta",
+    "name": "Magenta Terracotta",
+    "color": "#96586D",
+    "texture": "hardened_clay_stained_magenta"
+  },
+  {
+    "id": "light_blue_terracotta",
+    "name": "Light Blue Terracotta",
+    "color": "#726D8A",
+    "texture": "hardened_clay_stained_light_blue"
+  },
+  {
+    "id": "yellow_terracotta",
+    "name": "Yellow Terracotta",
+    "color": "#BA8523",
+    "texture": "hardened_clay_stained_yellow"
+  },
+  {
+    "id": "lime_terracotta",
+    "name": "Lime Terracotta",
+    "color": "#687635",
+    "texture": "hardened_clay_stained_lime"
+  },
+  {
+    "id": "pink_terracotta",
+    "name": "Pink Terracotta",
+    "color": "#A24E4F",
+    "texture": "hardened_clay_stained_pink"
+  },
+  {
+    "id": "gray_terracotta",
+    "name": "Gray Terracotta",
+    "color": "#3A2A24",
+    "texture": "hardened_clay_stained_gray"
+  },
+  {
+    "id": "light_gray_terracotta",
+    "name": "Light Gray Terracotta",
+    "color": "#876B62",
+    "texture": "hardened_clay_stained_silver"
+  },
+  {
+    "id": "cyan_terracotta",
+    "name": "Cyan Terracotta",
+    "color": "#575B5B",
+    "texture": "hardened_clay_stained_cyan"
+  },
+  {
+    "id": "purple_terracotta",
+    "name": "Purple Terracotta",
+    "color": "#764656",
+    "texture": "hardened_clay_stained_purple"
+  },
+  {
+    "id": "blue_terracotta",
+    "name": "Blue Terracotta",
+    "color": "#4A3C5B",
+    "texture": "hardened_clay_stained_blue"
+  },
+  {
+    "id": "brown_terracotta",
+    "name": "Brown Terracotta",
+    "color": "#4D3324",
+    "texture": "hardened_clay_stained_brown"
+  },
+  {
+    "id": "green_terracotta",
+    "name": "Green Terracotta",
+    "color": "#4C532A",
+    "texture": "hardened_clay_stained_green"
+  },
+  {
+    "id": "red_terracotta",
+    "name": "Red Terracotta",
+    "color": "#8F3D2F",
+    "texture": "hardened_clay_stained_red"
+  },
+  {
+    "id": "black_terracotta",
+    "name": "Black Terracotta",
+    "color": "#251710",
+    "texture": "hardened_clay_stained_black"
+  },
+  {
+    "id": "oak_planks",
+    "name": "Oak Planks",
+    "color": "#A58651",
+    "texture": "planks_oak"
+  },
+  {
+    "id": "spruce_planks",
+    "name": "Spruce Planks",
+    "color": "#755631",
+    "texture": "planks_spruce"
+  },
+  {
+    "id": "birch_planks",
+    "name": "Birch Planks",
+    "color": "#C2B17A",
+    "texture": "planks_birch"
+  },
+  {
+    "id": "jungle_planks",
+    "name": "Jungle Planks",
+    "color": "#A47654",
+    "texture": "planks_jungle"
+  },
+  {
+    "id": "acacia_planks",
+    "name": "Acacia Planks",
+    "color": "#AA5B33",
+    "texture": "planks_acacia"
+  },
+  {
+    "id": "dark_oak_planks",
+    "name": "Dark Oak Planks",
+    "color": "#442C15",
+    "texture": "planks_big_oak"
+  },
+  {
+    "id": "crimson_planks",
+    "name": "Crimson Planks",
+    "color": "#693249",
+    "texture": "huge_fungus/crimson_planks"
+  },
+  {
+    "id": "warped_planks",
+    "name": "Warped Planks",
+    "color": "#2D6D68",
+    "texture": "huge_fungus/warped_planks"
+  },
+  {
+    "id": "mangrove_planks",
+    "name": "Mangrove Planks",
+    "color": "#773832",
+    "texture": "mangrove_planks"
+  },
+  {
+    "id": "cherry_planks",
+    "name": "Cherry Planks",
+    "color": "#E3B4AE",
+    "texture": "cherry_planks"
+  },
+  {
+    "id": "bamboo_planks",
+    "name": "Bamboo Planks",
+    "color": "#C4AF52",
+    "texture": "bamboo_planks"
+  },
+  {
+    "id": "stone",
+    "name": "Stone",
+    "color": "#7E7E7E",
+    "texture": "stone"
+  },
+  {
+    "id": "cobblestone",
+    "name": "Cobblestone",
+    "color": "#848484",
+    "texture": "cobblestone"
+  },
+  {
+    "id": "mossy_cobblestone",
+    "name": "Mossy Cobblestone",
+    "color": "#727967",
+    "texture": "cobblestone_mossy"
+  },
+  {
+    "id": "stone_bricks",
+    "name": "Stone Bricks",
+    "color": "#7C7C7C",
+    "texture": "stonebrick"
+  },
+  {
+    "id": "mossy_stone_bricks",
+    "name": "Mossy Stone Bricks",
+    "color": "#767B6E",
+    "texture": "stonebrick_mossy"
+  },
+  {
+    "id": "cracked_stone_bricks",
+    "name": "Cracked Stone Bricks",
+    "color": "#787778",
+    "texture": "stonebrick_cracked"
+  },
+  {
+    "id": "andesite",
+    "name": "Andesite",
+    "color": "#89898A",
+    "texture": "stone_andesite"
+  },
+  {
+    "id": "polished_andesite",
+    "name": "Polished Andesite",
+    "color": "#878988",
+    "texture": "stone_andesite_smooth"
+  },
+  {
+    "id": "diorite",
+    "name": "Diorite",
+    "color": "#C1C1C1",
+    "texture": "stone_diorite"
+  },
+  {
+    "id": "polished_diorite",
+    "name": "Polished Diorite",
+    "color": "#C5C5C6",
+    "texture": "stone_diorite_smooth"
+  },
+  {
+    "id": "granite",
+    "name": "Granite",
+    "color": "#986A59",
+    "texture": "stone_granite"
+  },
+  {
+    "id": "polished_granite",
+    "name": "Polished Granite",
+    "color": "#9C6D5C",
+    "texture": "stone_granite_smooth"
+  },
+  {
+    "id": "deepslate",
+    "name": "Deepslate",
+    "color": "#535355",
+    "texture": "deepslate/deepslate"
+  },
+  {
+    "id": "cobbled_deepslate",
+    "name": "Cobbled Deepslate",
+    "color": "#515153",
+    "texture": "deepslate/cobbled_deepslate"
+  },
+  {
+    "id": "polished_deepslate",
+    "name": "Polished Deepslate",
+    "color": "#4C4C4C",
+    "texture": "deepslate/polished_deepslate"
+  },
+  {
+    "id": "deepslate_bricks",
+    "name": "Deepslate Bricks",
+    "color": "#4B4B4B",
+    "texture": "deepslate/deepslate_bricks"
+  },
+  {
+    "id": "deepslate_tiles",
+    "name": "Deepslate Tiles",
+    "color": "#393939",
+    "texture": "deepslate/deepslate_tiles"
+  },
+  {
+    "id": "sand",
+    "name": "Sand",
+    "color": "#DBD0A4",
+    "texture": "sand"
+  },
+  {
+    "id": "red_sand",
+    "name": "Red Sand",
+    "color": "#BF6721",
+    "texture": "red_sand"
+  },
+  {
+    "id": "sandstone",
+    "name": "Sandstone",
+    "color": "#D9CC9E",
+    "texture": "sandstone_normal"
+  },
+  {
+    "id": "red_sandstone",
+    "name": "Red Sandstone",
+    "color": "#BC641F",
+    "texture": "red_sandstone_normal"
+  },
+  {
+    "id": "smooth_sandstone",
+    "name": "Smooth Sandstone",
+    "color": "#E0D6AB",
+    "texture": "sandstone_top"
+  },
+  {
+    "id": "smooth_red_sandstone",
+    "name": "Smooth Red Sandstone",
+    "color": "#B66220",
+    "texture": "red_sandstone_top"
+  },
+  {
+    "id": "netherrack",
+    "name": "Netherrack",
+    "color": "#632828",
+    "texture": "netherrack"
+  },
+  {
+    "id": "nether_bricks",
+    "name": "Nether Bricks",
+    "color": "#2E171B",
+    "texture": "nether_brick"
+  },
+  {
+    "id": "red_nether_bricks",
+    "name": "Red Nether Bricks",
+    "color": "#4A080A",
+    "texture": "red_nether_brick"
+  },
+  {
+    "id": "blackstone",
+    "name": "Blackstone",
+    "color": "#2C272E",
+    "texture": "blackstone"
+  },
+  {
+    "id": "polished_blackstone",
+    "name": "Polished Blackstone",
+    "color": "#37333C",
+    "texture": "polished_blackstone"
+  },
+  {
+    "id": "polished_blackstone_bricks",
+    "name": "Polished Blackstone Bricks",
+    "color": "#332E37",
+    "texture": "polished_blackstone_bricks"
+  },
+  {
+    "id": "soul_sand",
+    "name": "Soul Sand",
+    "color": "#544035",
+    "texture": "soul_sand"
+  },
+  {
+    "id": "soul_soil",
+    "name": "Soul Soil",
+    "color": "#4E3B30",
+    "texture": "soul_soil"
+  },
+  {
+    "id": "basalt",
+    "name": "Basalt",
+    "color": "#4C4B4F",
+    "texture": "basalt_side"
+  },
+  {
+    "id": "polished_basalt",
+    "name": "Polished Basalt",
+    "color": "#5C5C5E",
+    "texture": "polished_basalt_side"
+  },
+  {
+    "id": "iron_block",
+    "name": "Iron Block",
+    "color": "#DDDDDD",
+    "texture": "iron_block"
+  },
+  {
+    "id": "gold_block",
+    "name": "Gold Block",
+    "color": "#F7D345",
+    "texture": "gold_block"
+  },
+  {
+    "id": "diamond_block",
+    "name": "Diamond Block",
+    "color": "#71EEE5",
+    "texture": "diamond_block"
+  },
+  {
+    "id": "emerald_block",
+    "name": "Emerald Block",
+    "color": "#39CE63",
+    "texture": "emerald_block"
+  },
+  {
+    "id": "lapis_block",
+    "name": "Lapis Block",
+    "color": "#1F458D",
+    "texture": "lapis_block"
+  },
+  {
+    "id": "redstone_block",
+    "name": "Redstone Block",
+    "color": "#B61A05",
+    "texture": "redstone_block"
+  },
+  {
+    "id": "coal_block",
+    "name": "Coal Block",
+    "color": "#121111",
+    "texture": "coal_block"
+  },
+  {
+    "id": "copper_block",
+    "name": "Copper Block",
+    "color": "#C26D52",
+    "texture": "copper_block"
+  },
+  {
+    "id": "exposed_copper",
+    "name": "Exposed Copper",
+    "color": "#A47E69",
+    "texture": "exposed_copper"
+  },
+  {
+    "id": "weathered_copper",
+    "name": "Weathered Copper",
+    "color": "#6D9B71",
+    "texture": "weathered_copper"
+  },
+  {
+    "id": "oxidized_copper",
+    "name": "Oxidized Copper",
+    "color": "#54A587",
+    "texture": "oxidized_copper"
+  },
+  {
+    "id": "netherite_block",
+    "name": "Netherite Block",
+    "color": "#444042",
+    "texture": "netherite_block"
+  },
+  {
+    "id": "amethyst_block",
+    "name": "Amethyst Block",
+    "color": "#8C68C2",
+    "texture": "amethyst_block"
+  },
+  {
+    "id": "obsidian",
+    "name": "Obsidian",
+    "color": "#150E23",
+    "texture": "obsidian"
+  },
+  {
+    "id": "glowstone",
+    "name": "Glowstone",
+    "color": "#B8976F",
+    "texture": "glowstone"
+  },
+  {
+    "id": "clay",
+    "name": "Clay",
+    "color": "#A1A7B4",
+    "texture": "clay"
+  },
+  {
+    "id": "mud",
+    "name": "Mud",
+    "color": "#3D3A3D",
+    "texture": "mud"
+  },
+  {
+    "id": "packed_mud",
+    "name": "Packed Mud",
+    "color": "#8F6B50",
+    "texture": "packed_mud"
+  },
+  {
+    "id": "mud_bricks",
+    "name": "Mud Bricks",
+    "color": "#8B6950",
+    "texture": "mud_bricks"
+  },
+  {
+    "id": "moss_block",
+    "name": "Moss Block",
+    "color": "#5B6F2E",
+    "texture": "moss_block"
+  },
+  {
+    "id": "snow_block",
+    "name": "Snow Block",
+    "color": "#F9FEFE",
+    "texture": "snow"
+  },
+  {
+    "id": "ice",
+    "name": "Ice",
+    "color": "#92B8FE",
+    "texture": "ice"
+  },
+  {
+    "id": "packed_ice",
+    "name": "Packed Ice",
+    "color": "#8FB4FB",
+    "texture": "ice_packed"
+  },
+  {
+    "id": "blue_ice",
+    "name": "Blue Ice",
+    "color": "#75A8FD",
+    "texture": "blue_ice"
+  },
+  {
+    "id": "sponge",
+    "name": "Sponge",
+    "color": "#C5C24B",
+    "texture": "sponge"
+  },
+  {
+    "id": "wet_sponge",
+    "name": "Wet Sponge",
+    "color": "#ADB747",
+    "texture": "sponge_wet"
+  },
+  {
+    "id": "prismarine",
+    "name": "Prismarine",
+    "color": "#6AA09B",
+    "texture": "prismarine_rough"
+  },
+  {
+    "id": "dark_prismarine",
+    "name": "Dark Prismarine",
+    "color": "#355F4E",
+    "texture": "prismarine_dark"
+  },
+  {
+    "id": "prismarine_bricks",
+    "name": "Prismarine Bricks",
+    "color": "#66ADA1",
+    "texture": "prismarine_bricks"
+  },
+  {
+    "id": "end_stone",
+    "name": "End Stone",
+    "color": "#DCE09F",
+    "texture": "end_stone"
+  },
+  {
+    "id": "end_stone_bricks",
+    "name": "End Stone Bricks",
+    "color": "#DCE2A4",
+    "texture": "end_bricks"
+  },
+  {
+    "id": "purpur_block",
+    "name": "Purpur Block",
+    "color": "#AB80AB",
+    "texture": "purpur_block"
+  },
+  {
+    "id": "quartz_block",
+    "name": "Quartz Block",
+    "color": "#ECE6DF",
+    "texture": "quartz_block_side"
+  },
+  {
+    "id": "smooth_quartz",
+    "name": "Smooth Quartz",
+    "color": "#EDE6E0",
+    "texture": "quartz_block_bottom"
+  },
+  {
+    "id": "dirt",
+    "name": "Dirt",
+    "color": "#8A6346",
+    "texture": "dirt"
+  },
+  {
+    "id": "coarse_dirt",
+    "name": "Coarse Dirt",
+    "color": "#7D5A3F",
+    "texture": "coarse_dirt"
+  },
+  {
+    "id": "rooted_dirt",
+    "name": "Rooted Dirt",
+    "color": "#946B52",
+    "texture": "dirt_with_roots"
+  },
+  {
+    "id": "gravel",
+    "name": "Gravel",
+    "color": "#858180",
+    "texture": "gravel"
+  },
+  {
+    "id": "tuff",
+    "name": "Tuff",
+    "color": "#6F6F69",
+    "texture": "tuff"
+  },
+  {
+    "id": "calcite",
+    "name": "Calcite",
+    "color": "#E1E2DE",
+    "texture": "calcite"
+  },
+  {
+    "id": "dripstone_block",
+    "name": "Dripstone Block",
+    "color": "#886E5E",
+    "texture": "dripstone_block"
+  },
+  {
+    "id": "raw_iron_block",
+    "name": "Raw Iron Block",
+    "color": "#AD8E74",
+    "texture": "raw_iron_block"
+  },
+  {
+    "id": "raw_gold_block",
+    "name": "Raw Gold Block",
+    "color": "#E0B13D",
+    "texture": "raw_gold_block"
+  },
+  {
+    "id": "raw_copper_block",
+    "name": "Raw Copper Block",
+    "color": "#A36D53",
+    "texture": "raw_copper_block"
+  },
+  {
+    "id": "crying_obsidian",
+    "name": "Crying Obsidian",
+    "color": "#310D5C",
+    "texture": "crying_obsidian"
+  },
+  {
+    "id": "magma_block",
+    "name": "Magma Block",
+    "color": "#A34E23",
+    "texture": "magma"
+  },
+  {
+    "id": "honeycomb_block",
+    "name": "Honeycomb Block",
+    "color": "#E79B33",
+    "texture": "honeycomb"
+  },
+  {
+    "id": "hay_block",
+    "name": "Hay Block",
+    "color": "#A88D27",
+    "texture": "hay_block_side"
+  },
+  {
+    "id": "dried_kelp_block",
+    "name": "Dried Kelp Block",
+    "color": "#303827",
+    "texture": "dried_kelp_side_a"
+  },
+  {
+    "id": "slime_block",
+    "name": "Slime Block",
+    "color": "#70C05D",
+    "texture": "slime"
+  },
+  {
+    "id": "honey_block",
+    "name": "Honey Block",
+    "color": "#FBBE46",
+    "texture": "honey_side"
+  },
+  {
+    "id": "ochre_froglight",
+    "name": "Ochre Froglight",
+    "color": "#F6EBBD",
+    "texture": "ochre_froglight_side"
+  },
+  {
+    "id": "verdant_froglight",
+    "name": "Verdant Froglight",
+    "color": "#D7ECD5",
+    "texture": "verdant_froglight_side"
+  },
+  {
+    "id": "pearlescent_froglight",
+    "name": "Pearlescent Froglight",
+    "color": "#EDE4E6",
+    "texture": "pearlescent_froglight_side"
+  },
+  {
+    "id": "sculk",
+    "name": "Sculk",
+    "color": "#0D272D",
+    "texture": "sculk"
+  },
+  {
+    "id": "reinforced_deepslate",
+    "name": "Reinforced Deepslate",
+    "color": "#767D6E",
+    "texture": "reinforced_deepslate_side"
+  },
+  {
+    "id": "bricks",
+    "name": "Bricks",
+    "color": "#996559",
+    "texture": "brick"
+  },
+  {
+    "id": "bookshelf",
+    "name": "Bookshelf",
+    "color": "#866C4E",
+    "texture": "bookshelf"
+  },
+  {
+    "id": "lapis_ore",
+    "name": "Lapis Ore",
+    "color": "#747A93",
+    "texture": "lapis_ore"
+  },
+  {
+    "id": "redstone_ore",
+    "name": "Redstone Ore",
+    "color": "#937575",
+    "texture": "redstone_ore"
+  },
+  {
+    "id": "podzol",
+    "name": "Podzol",
+    "color": "#805C3E",
+    "texture": "dirt_podzol_side"
+  },
+  {
+    "id": "mycelium",
+    "name": "Mycelium",
+    "color": "#775C4E",
+    "texture": "mycelium_side"
+  },
+  {
+    "id": "warped_wart_block",
+    "name": "Warped Wart Block",
+    "color": "#177A7A",
+    "texture": "warped_wart_block"
+  },
+  {
+    "id": "nether_wart_block",
+    "name": "Nether Wart Block",
+    "color": "#750504",
+    "texture": "nether_wart_block"
+  },
+  {
+    "id": "shroomlight",
+    "name": "Shroomlight",
+    "color": "#F29D5D",
+    "texture": "shroomlight"
+  },
+  {
+    "id": "bone_block",
+    "name": "Bone Block",
+    "color": "#E5E2D0",
+    "texture": "bone_block_side"
+  },
+  {
+    "id": "smooth_stone",
+    "name": "Smooth Stone",
+    "color": "#A0A0A0",
+    "texture": "stone_slab_top"
+  },
+  {
+    "id": "chiseled_stone_bricks",
+    "name": "Chiseled Stone Bricks",
+    "color": "#7A797A",
+    "texture": "stonebrick_carved"
+  },
+  {
+    "id": "cut_sandstone",
+    "name": "Cut Sandstone",
+    "color": "#DACFA2",
+    "texture": "sandstone_smooth"
+  },
+  {
+    "id": "cut_red_sandstone",
+    "name": "Cut Red Sandstone",
+    "color": "#BE6721",
+    "texture": "red_sandstone_smooth"
+  },
+  {
+    "id": "oak_log",
+    "name": "Oak Log",
+    "color": "#715834",
+    "texture": "log_oak"
+  },
+  {
+    "id": "spruce_log",
+    "name": "Spruce Log",
+    "color": "#3C2712",
+    "texture": "log_spruce"
+  },
+  {
+    "id": "birch_log",
+    "name": "Birch Log",
+    "color": "#E0DFDB",
+    "texture": "log_birch"
+  },
+  {
+    "id": "jungle_log",
+    "name": "Jungle Log",
+    "color": "#57451A",
+    "texture": "log_jungle"
+  },
+  {
+    "id": "acacia_log",
+    "name": "Acacia Log",
+    "color": "#696258",
+    "texture": "log_acacia"
+  },
+  {
+    "id": "dark_oak_log",
+    "name": "Dark Oak Log",
+    "color": "#3E2F1B",
+    "texture": "log_big_oak"
+  },
+  {
+    "id": "mangrove_log",
+    "name": "Mangrove Log",
+    "color": "#554429",
+    "texture": "mangrove_log_side"
+  },
+  {
+    "id": "cherry_log",
+    "name": "Cherry Log",
+    "color": "#38222D",
+    "texture": "cherry_log_side"
+  },
+  {
+    "id": "crimson_stem",
+    "name": "Crimson Stem",
+    "color": "#611C24",
+    "texture": "huge_fungus/crimson_log_side"
+  },
+  {
+    "id": "warped_stem",
+    "name": "Warped Stem",
+    "color": "#3F4451",
+    "texture": "huge_fungus/warped_stem_side"
+  },
+  {
+    "id": "stripped_oak_log",
+    "name": "Stripped Oak Log",
+    "color": "#B29157",
+    "texture": "stripped_oak_log"
+  },
+  {
+    "id": "stripped_spruce_log",
+    "name": "Stripped Spruce Log",
+    "color": "#745A35",
+    "texture": "stripped_spruce_log"
+  },
+  {
+    "id": "stripped_birch_log",
+    "name": "Stripped Birch Log",
+    "color": "#C5B177",
+    "texture": "stripped_birch_log"
+  },
+  {
+    "id": "stripped_jungle_log",
+    "name": "Stripped Jungle Log",
+    "color": "#AC8555",
+    "texture": "stripped_jungle_log"
+  },
+  {
+    "id": "stripped_acacia_log",
+    "name": "Stripped Acacia Log",
+    "color": "#AF5D3C",
+    "texture": "stripped_acacia_log"
+  },
+  {
+    "id": "stripped_dark_oak_log",
+    "name": "Stripped Dark Oak Log",
+    "color": "#493924",
+    "texture": "stripped_dark_oak_log"
+  },
+  {
+    "id": "stripped_mangrove_log",
+    "name": "Stripped Mangrove Log",
+    "color": "#783730",
+    "texture": "stripped_mangrove_log_side"
+  },
+  {
+    "id": "stripped_cherry_log",
+    "name": "Stripped Cherry Log",
+    "color": "#D79195",
+    "texture": "stripped_cherry_log_side"
+  },
+  {
+    "id": "stripped_crimson_stem",
+    "name": "Stripped Crimson Stem",
+    "color": "#8A3A5A",
+    "texture": "huge_fungus/stripped_crimson_stem_side"
+  },
+  {
+    "id": "stripped_warped_stem",
+    "name": "Stripped Warped Stem",
+    "color": "#3A9794",
+    "texture": "huge_fungus/stripped_warped_stem_side"
+  },
+  {
+    "id": "white_glazed_terracotta",
+    "name": "White Glazed Terracotta",
+    "color": "#D5DBD7",
+    "texture": "glazed_terracotta_white"
+  },
+  {
+    "id": "orange_glazed_terracotta",
+    "name": "Orange Glazed Terracotta",
+    "color": "#C19A7F",
+    "texture": "glazed_terracotta_orange"
+  },
+  {
+    "id": "magenta_glazed_terracotta",
+    "name": "Magenta Glazed Terracotta",
+    "color": "#D270C1",
+    "texture": "glazed_terracotta_magenta"
+  },
+  {
+    "id": "light_blue_glazed_terracotta",
+    "name": "Light Blue Glazed Terracotta",
+    "color": "#81B4D5",
+    "texture": "glazed_terracotta_light_blue"
+  },
+  {
+    "id": "yellow_glazed_terracotta",
+    "name": "Yellow Glazed Terracotta",
+    "color": "#EDC671",
+    "texture": "glazed_terracotta_yellow"
+  },
+  {
+    "id": "lime_glazed_terracotta",
+    "name": "Lime Glazed Terracotta",
+    "color": "#B1C84F",
+    "texture": "glazed_terracotta_lime"
+  },
+  {
+    "id": "pink_glazed_terracotta",
+    "name": "Pink Glazed Terracotta",
+    "color": "#EC9EB7",
+    "texture": "glazed_terracotta_pink"
+  },
+  {
+    "id": "gray_glazed_terracotta",
+    "name": "Gray Glazed Terracotta",
+    "color": "#5B6264",
+    "texture": "glazed_terracotta_gray"
+  },
+  {
+    "id": "light_gray_glazed_terracotta",
+    "name": "Light Gray Glazed Terracotta",
+    "color": "#A0ACAE",
+    "texture": "glazed_terracotta_silver"
+  },
+  {
+    "id": "cyan_glazed_terracotta",
+    "name": "Cyan Glazed Terracotta",
+    "color": "#4F8288",
+    "texture": "glazed_terracotta_cyan"
+  },
+  {
+    "id": "purple_glazed_terracotta",
+    "name": "Purple Glazed Terracotta",
+    "color": "#7633A5",
+    "texture": "glazed_terracotta_purple"
+  },
+  {
+    "id": "blue_glazed_terracotta",
+    "name": "Blue Glazed Terracotta",
+    "color": "#324D99",
+    "texture": "glazed_terracotta_blue"
+  },
+  {
+    "id": "brown_glazed_terracotta",
+    "name": "Brown Glazed Terracotta",
+    "color": "#8A6E60",
+    "texture": "glazed_terracotta_brown"
+  },
+  {
+    "id": "green_glazed_terracotta",
+    "name": "Green Glazed Terracotta",
+    "color": "#7F9564",
+    "texture": "glazed_terracotta_green"
+  },
+  {
+    "id": "red_glazed_terracotta",
+    "name": "Red Glazed Terracotta",
+    "color": "#B8433B",
+    "texture": "glazed_terracotta_red"
+  },
+  {
+    "id": "black_glazed_terracotta",
+    "name": "Black Glazed Terracotta",
+    "color": "#592124",
+    "texture": "glazed_terracotta_black"
+  },
+  {
+    "id": "coal_ore",
+    "name": "Coal Ore",
+    "color": "#6F6F6E",
+    "texture": "coal_ore"
+  },
+  {
+    "id": "iron_ore",
+    "name": "Iron Ore",
+    "color": "#8C837D",
+    "texture": "iron_ore"
+  },
+  {
+    "id": "copper_ore",
+    "name": "Copper Ore",
+    "color": "#827F7A",
+    "texture": "copper_ore"
+  },
+  {
+    "id": "gold_ore",
+    "name": "Gold Ore",
+    "color": "#998B74",
+    "texture": "gold_ore"
+  },
+  {
+    "id": "diamond_ore",
+    "name": "Diamond Ore",
+    "color": "#7E9392",
+    "texture": "diamond_ore"
+  },
+  {
+    "id": "emerald_ore",
+    "name": "Emerald Ore",
+    "color": "#768F7A",
+    "texture": "emerald_ore"
+  },
+  {
+    "id": "deepslate_coal_ore",
+    "name": "Deepslate Coal Ore",
+    "color": "#515152",
+    "texture": "deepslate/deepslate_coal_ore"
+  },
+  {
+    "id": "deepslate_iron_ore",
+    "name": "Deepslate Iron Ore",
+    "color": "#766A63",
+    "texture": "deepslate/deepslate_iron_ore"
+  },
+  {
+    "id": "deepslate_copper_ore",
+    "name": "Deepslate Copper Ore",
+    "color": "#66635D",
+    "texture": "deepslate/deepslate_copper_ore"
+  },
+  {
+    "id": "deepslate_gold_ore",
+    "name": "Deepslate Gold Ore",
+    "color": "#857356",
+    "texture": "deepslate/deepslate_gold_ore"
+  },
+  {
+    "id": "deepslate_diamond_ore",
+    "name": "Deepslate Diamond Ore",
+    "color": "#5B7877",
+    "texture": "deepslate/deepslate_diamond_ore"
+  },
+  {
+    "id": "deepslate_emerald_ore",
+    "name": "Deepslate Emerald Ore",
+    "color": "#5A7861",
+    "texture": "deepslate/deepslate_emerald_ore"
+  },
+  {
+    "id": "deepslate_lapis_ore",
+    "name": "Deepslate Lapis Ore",
+    "color": "#575F80",
+    "texture": "deepslate/deepslate_lapis_ore"
+  },
+  {
+    "id": "deepslate_redstone_ore",
+    "name": "Deepslate Redstone Ore",
+    "color": "#795152",
+    "texture": "deepslate/deepslate_redstone_ore"
+  },
+  {
+    "id": "nether_gold_ore",
+    "name": "Nether Gold Ore",
+    "color": "#7F4E30",
+    "texture": "nether_gold_ore"
+  },
+  {
+    "id": "nether_quartz_ore",
+    "name": "Nether Quartz Ore",
+    "color": "#7F5A54",
+    "texture": "quartz_ore"
+  },
+  {
+    "id": "tube_coral_block",
+    "name": "Tube Coral Block",
+    "color": "#335AD1",
+    "texture": "coral_blue"
+  },
+  {
+    "id": "brain_coral_block",
+    "name": "Brain Coral Block",
+    "color": "#D160A1",
+    "texture": "coral_pink"
+  },
+  {
+    "id": "bubble_coral_block",
+    "name": "Bubble Coral Block",
+    "color": "#BB22B6",
+    "texture": "coral_purple"
+  },
+  {
+    "id": "fire_coral_block",
+    "name": "Fire Coral Block",
+    "color": "#A62531",
+    "texture": "coral_red"
+  },
+  {
+    "id": "horn_coral_block",
+    "name": "Horn Coral Block",
+    "color": "#D9CB43",
+    "texture": "coral_yellow"
+  },
+  {
+    "id": "dead_tube_coral_block",
+    "name": "Dead Tube Coral Block",
+    "color": "#857D7A",
+    "texture": "coral_blue_dead"
+  },
+  {
+    "id": "dead_brain_coral_block",
+    "name": "Dead Brain Coral Block",
+    "color": "#7F7874",
+    "texture": "coral_pink_dead"
+  },
+  {
+    "id": "dead_bubble_coral_block",
+    "name": "Dead Bubble Coral Block",
+    "color": "#857D79",
+    "texture": "coral_purple_dead"
+  },
+  {
+    "id": "dead_fire_coral_block",
+    "name": "Dead Fire Coral Block",
+    "color": "#857E79",
+    "texture": "coral_red_dead"
+  },
+  {
+    "id": "dead_horn_coral_block",
+    "name": "Dead Horn Coral Block",
+    "color": "#88817D",
+    "texture": "coral_yellow_dead"
+  },
+  {
+    "id": "glass",
+    "name": "Glass",
+    "color": "#B4D7DC",
+    "texture": "glass"
+  },
+  {
+    "id": "white_stained_glass",
+    "name": "White Stained Glass",
+    "color": "#FFFFFF",
+    "texture": "glass_white"
+  },
+  {
+    "id": "orange_stained_glass",
+    "name": "Orange Stained Glass",
+    "color": "#D87F33",
+    "texture": "glass_orange"
+  },
+  {
+    "id": "magenta_stained_glass",
+    "name": "Magenta Stained Glass",
+    "color": "#B24CD8",
+    "texture": "glass_magenta"
+  },
+  {
+    "id": "light_blue_stained_glass",
+    "name": "Light Blue Stained Glass",
+    "color": "#6699D8",
+    "texture": "glass_light_blue"
+  },
+  {
+    "id": "yellow_stained_glass",
+    "name": "Yellow Stained Glass",
+    "color": "#E5E533",
+    "texture": "glass_yellow"
+  },
+  {
+    "id": "lime_stained_glass",
+    "name": "Lime Stained Glass",
+    "color": "#7FCC19",
+    "texture": "glass_lime"
+  },
+  {
+    "id": "pink_stained_glass",
+    "name": "Pink Stained Glass",
+    "color": "#F27FA5",
+    "texture": "glass_pink"
+  },
+  {
+    "id": "gray_stained_glass",
+    "name": "Gray Stained Glass",
+    "color": "#4C4C4C",
+    "texture": "glass_gray"
+  },
+  {
+    "id": "light_gray_stained_glass",
+    "name": "Light Gray Stained Glass",
+    "color": "#999999",
+    "texture": "glass_silver"
+  },
+  {
+    "id": "cyan_stained_glass",
+    "name": "Cyan Stained Glass",
+    "color": "#4C7F99",
+    "texture": "glass_cyan"
+  },
+  {
+    "id": "purple_stained_glass",
+    "name": "Purple Stained Glass",
+    "color": "#7F3FB2",
+    "texture": "glass_purple"
+  },
+  {
+    "id": "blue_stained_glass",
+    "name": "Blue Stained Glass",
+    "color": "#334CB2",
+    "texture": "glass_blue"
+  },
+  {
+    "id": "brown_stained_glass",
+    "name": "Brown Stained Glass",
+    "color": "#664C33",
+    "texture": "glass_brown"
+  },
+  {
+    "id": "green_stained_glass",
+    "name": "Green Stained Glass",
+    "color": "#667F33",
+    "texture": "glass_green"
+  },
+  {
+    "id": "red_stained_glass",
+    "name": "Red Stained Glass",
+    "color": "#993333",
+    "texture": "glass_red"
+  },
+  {
+    "id": "black_stained_glass",
+    "name": "Black Stained Glass",
+    "color": "#191919",
+    "texture": "glass_black"
+  },
+  {
+    "id": "tinted_glass",
+    "name": "Tinted Glass",
+    "color": "#2D2730",
+    "texture": "tinted_glass"
+  },
+  {
+    "id": "crafting_table",
+    "name": "Crafting Table",
+    "color": "#91764B",
+    "texture": "crafting_table_side"
+  },
+  {
+    "id": "furnace",
+    "name": "Furnace",
+    "color": "#807F7F",
+    "texture": "furnace_side"
+  },
+  {
+    "id": "smoker",
+    "name": "Smoker",
+    "color": "#6B6156",
+    "texture": "smoker_side"
+  },
+  {
+    "id": "blast_furnace",
+    "name": "Blast Furnace",
+    "color": "#727272",
+    "texture": "blast_furnace_side"
+  },
+  {
+    "id": "dispenser",
+    "name": "Dispenser",
+    "color": "#858484",
+    "texture": "dispenser_front_horizontal"
+  },
+  {
+    "id": "dropper",
+    "name": "Dropper",
+    "color": "#858484",
+    "texture": "dropper_front_horizontal"
+  },
+  {
+    "id": "observer",
+    "name": "Observer",
+    "color": "#4C4B4B",
+    "texture": "observer_side"
+  },
+  {
+    "id": "note_block",
+    "name": "Note Block",
+    "color": "#623F2C",
+    "texture": "noteblock"
+  },
+  {
+    "id": "jukebox",
+    "name": "Jukebox",
+    "color": "#623F2C",
+    "texture": "jukebox_side"
+  },
+  {
+    "id": "tnt",
+    "name": "TNT",
+    "color": "#BF7C7B",
+    "texture": "tnt_side"
+  },
+  {
+    "id": "target",
+    "name": "Target",
+    "color": "#E7C8BF",
+    "texture": "target_side"
+  },
+  {
+    "id": "loom",
+    "name": "Loom",
+    "color": "#976D4C",
+    "texture": "loom_side"
+  },
+  {
+    "id": "cartography_table",
+    "name": "Cartography Table",
+    "color": "#63514A",
+    "texture": "cartography_table_side2"
+  },
+  {
+    "id": "smithing_table",
+    "name": "Smithing Table",
+    "color": "#3E2729",
+    "texture": "smithing_table_side"
+  },
+  {
+    "id": "pumpkin",
+    "name": "Pumpkin",
+    "color": "#C7771C",
+    "texture": "pumpkin_side"
+  },
+  {
+    "id": "carved_pumpkin",
+    "name": "Carved Pumpkin",
+    "color": "#A86718",
+    "texture": "pumpkin_face_off"
+  },
+  {
+    "id": "jack_o_lantern",
+    "name": "Jack o'Lantern",
+    "color": "#DBA449",
+    "texture": "pumpkin_face_on"
+  },
+  {
+    "id": "melon",
+    "name": "Melon",
+    "color": "#7C941E",
+    "texture": "melon_side"
+  },
+  {
+    "id": "red_mushroom_block",
+    "name": "Red Mushroom Block",
+    "color": "#C93937",
+    "texture": "mushroom_block_skin_red"
+  },
+  {
+    "id": "brown_mushroom_block",
+    "name": "Brown Mushroom Block",
+    "color": "#957051",
+    "texture": "mushroom_block_skin_brown"
+  },
+  {
+    "id": "cut_copper",
+    "name": "Cut Copper",
+    "color": "#C16D53",
+    "texture": "cut_copper"
+  },
+  {
+    "id": "exposed_cut_copper",
+    "name": "Exposed Cut Copper",
+    "color": "#9E7B67",
+    "texture": "exposed_cut_copper"
+  },
+  {
+    "id": "weathered_cut_copper",
+    "name": "Weathered Cut Copper",
+    "color": "#6F946E",
+    "texture": "weathered_cut_copper"
+  },
+  {
+    "id": "oxidized_cut_copper",
+    "name": "Oxidized Cut Copper",
+    "color": "#529D81",
+    "texture": "oxidized_cut_copper"
+  },
+  {
+    "id": "polished_tuff",
+    "name": "Polished Tuff",
+    "color": "#636965",
+    "texture": "polished_tuff"
+  },
+  {
+    "id": "tuff_bricks",
+    "name": "Tuff Bricks",
+    "color": "#666962",
+    "texture": "tuff_bricks"
+  },
+  {
+    "id": "chiseled_tuff",
+    "name": "Chiseled Tuff",
+    "color": "#5C615A",
+    "texture": "chiseled_tuff"
+  },
+  {
+    "id": "cracked_deepslate_bricks",
+    "name": "Cracked Deepslate Bricks",
+    "color": "#454546",
+    "texture": "deepslate/cracked_deepslate_bricks"
+  },
+  {
+    "id": "cracked_deepslate_tiles",
+    "name": "Cracked Deepslate Tiles",
+    "color": "#373737",
+    "texture": "deepslate/cracked_deepslate_tiles"
+  },
+  {
+    "id": "chiseled_deepslate",
+    "name": "Chiseled Deepslate",
+    "color": "#39393A",
+    "texture": "deepslate/chiseled_deepslate"
+  },
+  {
+    "id": "cracked_polished_blackstone_bricks",
+    "name": "Cracked Polished Blackstone Bricks",
+    "color": "#2F2A32",
+    "texture": "cracked_polished_blackstone_bricks"
+  },
+  {
+    "id": "chiseled_polished_blackstone",
+    "name": "Chiseled Polished Blackstone",
+    "color": "#39353E",
+    "texture": "chiseled_polished_blackstone"
+  },
+  {
+    "id": "gilded_blackstone",
+    "name": "Gilded Blackstone",
+    "color": "#48382C",
+    "texture": "gilded_blackstone"
+  },
+  {
+    "id": "cracked_nether_bricks",
+    "name": "Cracked Nether Bricks",
+    "color": "#2B1519",
+    "texture": "cracked_nether_bricks"
+  },
+  {
+    "id": "chiseled_nether_bricks",
+    "name": "Chiseled Nether Bricks",
+    "color": "#31181D",
+    "texture": "chiseled_nether_bricks"
+  },
+  {
+    "id": "ancient_debris",
+    "name": "Ancient Debris",
+    "color": "#634740",
+    "texture": "ancient_debris_side"
+  },
+  {
+    "id": "lodestone",
+    "name": "Lodestone",
+    "color": "#7D7E81",
+    "texture": "lodestone_side"
+  },
+  {
+    "id": "respawn_anchor",
+    "name": "Respawn Anchor",
+    "color": "#321F53",
+    "texture": "respawn_anchor_side0"
+  },
+  {
+    "id": "sculk_catalyst",
+    "name": "Sculk Catalyst",
+    "color": "#6B786C",
+    "texture": "sculk_catalyst_side"
+  },
+  {
+    "id": "smooth_basalt",
+    "name": "Smooth Basalt",
+    "color": "#4B4B4F",
+    "texture": "smooth_basalt"
+  },
+  {
+    "id": "sea_lantern",
+    "name": "Sea Lantern",
+    "color": "#B8CDC4",
+    "texture": "sea_lantern"
+  },
+  {
+    "id": "redstone_lamp",
+    "name": "Redstone Lamp",
+    "color": "#6B3E21",
+    "texture": "redstone_lamp_off"
+  },
+  {
+    "id": "bamboo_block",
+    "name": "Bamboo Block",
+    "color": "#82933B",
+    "texture": "bamboo_block"
+  },
+  {
+    "id": "stripped_bamboo_block",
+    "name": "Stripped Bamboo Block",
+    "color": "#C4AF52",
+    "texture": "stripped_bamboo_block"
+  },
+  {
+    "id": "bamboo_mosaic",
+    "name": "Bamboo Mosaic",
+    "color": "#C1AC4F",
+    "texture": "bamboo_mosaic"
+  },
+  {
+    "id": "crimson_nylium",
+    "name": "Crimson Nylium",
+    "color": "#702020",
+    "texture": "crimson_nylium_side"
+  },
+  {
+    "id": "warped_nylium",
+    "name": "Warped Nylium",
+    "color": "#514C47",
+    "texture": "warped_nylium_side"
+  },
+  {
+    "id": "purpur_pillar",
+    "name": "Purpur Pillar",
+    "color": "#AD84AD",
+    "texture": "purpur_pillar"
+  },
+  {
+    "id": "quartz_pillar",
+    "name": "Quartz Pillar",
+    "color": "#ECE7E0",
+    "texture": "quartz_block_lines"
+  },
+  {
+    "id": "chiseled_quartz",
+    "name": "Chiseled Quartz Block",
+    "color": "#E8E3DA",
+    "texture": "quartz_block_chiseled"
+  },
+  {
+    "id": "chiseled_sandstone",
+    "name": "Chiseled Sandstone",
+    "color": "#D9CC9E",
+    "texture": "sandstone_carved"
+  },
+  {
+    "id": "chiseled_red_sandstone",
+    "name": "Chiseled Red Sandstone",
+    "color": "#B8621E",
+    "texture": "red_sandstone_carved"
+  },
+  {
+    "id": "crafter",
+    "name": "Crafter",
+    "color": "#827769",
+    "texture": "crafter_south"
+  }
+]

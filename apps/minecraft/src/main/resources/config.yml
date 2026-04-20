@@ -1,0 +1,9 @@
+# CrabUtilities configuration
+resource-pack:
+  # URL to your resource pack (must be direct URL)
+  url: ""
+  # Optional SHA-1 hash of the resource pack in hex (40 chars). If set, it's sent with the pack
+  hash: ""
+  # Players (UUIDs) who have opted in to automatically receive the pack on join
+  auto-enabled: []
+

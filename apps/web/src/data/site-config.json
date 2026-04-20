@@ -1,0 +1,228 @@
+{
+    "site": {
+        "name": "CrabCraft",
+        "disclaimer": "CrabCraft is in no way affiliated with Mojang AB."
+    },
+    "navbar": {
+        "links": [
+            {
+                "name": "Home",
+                "url": "/",
+                "icon": "Home"
+            },
+            {
+                "name": "Leaderboard",
+                "url": "/leaderboard",
+                "icon": "BarChart3"
+            },
+            {
+                "name": "Awards",
+                "url": "/awards",
+                "icon": "Trophy"
+            }
+        ],
+        "tools": [
+            {
+                "name": "RGB Nickname",
+                "url": "/tools/rgb-nickname",
+                "icon": "Palette"
+            },
+            {
+                "name": "Block Gradient",
+                "url": "/tools/block-gradient",
+                "icon": "Rainbow"
+            },
+            {
+                "name": "Circle Generator",
+                "url": "/tools/circle-generator",
+                "icon": "Circle"
+            },
+            {
+                "name": "Portal Calculator",
+                "url": "/tools/portal-calculator",
+                "icon": "ArrowLeftRight"
+            }
+        ],
+        "socials": [
+            {
+                "platform": "youtube",
+                "url": "https://www.youtube.com/@CrabCraftMC"
+            },
+            {
+                "platform": "tiktok",
+                "url": "https://www.tiktok.com/@playcrabcraft"
+            },
+            {
+                "platform": "instagram",
+                "url": "https://www.instagram.com/crabcraftmc/"
+            },
+            {
+                "platform": "discord",
+                "url": "https://discord.crabcraft.net"
+            }
+        ]
+    },
+    "home": {
+        "hero": [
+            {
+                "title": "APPLY",
+                "subtitle": "Apply Now",
+                "description": "Apply to get whitelisted and start playing",
+                "buttonText": "APPLY",
+                "url": "https://discord.crabcraft.net",
+                "bgGradient": "from-[#F97316] to-[#FB923C]",
+                "image": "/welcome.webp",
+                "imageScale": "scale-50 sm:scale-60 lg:scale-75",
+                "colSpan": "lg:col-span-4",
+                "bgTextSize": "text-[60px] sm:text-[80px] md:text-[100px] lg:text-[150px]",
+                "bgTextPos": "-translate-y-1/2",
+                "buttonBg": "bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 drop-shadow-md"
+            },
+            {
+                "title": "LIVE MAP",
+                "subtitle": "Live Map",
+                "description": "Explore the world in real time with our interactive live map",
+                "buttonText": "VIEW",
+                "url": "https://map.crabcraft.net",
+                "bgGradient": "from-[#006BFF] to-[#29C6FF]",
+                "image": "/explorer.webp",
+                "imageScale": "scale-50 sm:scale-60 lg:scale-75",
+                "colSpan": "lg:col-span-2",
+                "bgTextSize": "text-[40px] sm:text-[50px] md:text-[55px] lg:text-[65px]",
+                "bgTextPos": "-translate-y-1/2",
+                "buttonBg": "bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 drop-shadow-md"
+            },
+            {
+                "title": "READ WIKI",
+                "subtitle": "Wiki",
+                "description": "Learn everything about CrabCraft",
+                "buttonText": "READ",
+                "url": "https://wiki.crabcraft.net",
+                "bgGradient": "from-[#1E701E] to-[#388E3C]",
+                "image": "/wiki-player.webp",
+                "imageScale": "scale-50 sm:scale-58 lg:scale-68",
+                "colSpan": "lg:col-span-2",
+                "bgTextSize": "text-[35px] sm:text-[40px] md:text-[42px] lg:text-[50px]",
+                "bgTextPos": "-translate-y-1/2",
+                "buttonBg": "bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 drop-shadow-md"
+            }
+        ],
+        "recentPurchases": {
+            "title": "Recent Purchases",
+            "subtitle": "Thank you for your support!",
+            "list": [
+                {
+                    "name": "sztukamefa",
+                    "type": "MVIP 30 days",
+                    "avatar": "https://minotar.net/helm/govpl/64"
+                },
+                {
+                    "name": "ifwd",
+                    "type": "VIP 14 days",
+                    "avatar": "https://minotar.net/helm/ifwd/64"
+                },
+                {
+                    "name": "1ifwd",
+                    "type": "VIP 7 days",
+                    "avatar": "https://minotar.net/helm/1ifwd/64"
+                },
+                {
+                    "name": "onxybln",
+                    "type": "VIP 30 days",
+                    "avatar": "https://minotar.net/helm/onxybln/64"
+                }
+            ]
+        },
+        "packs": {
+            "starter": {
+                "title": "STARTER PACK",
+                "displayName": "Starter Pack",
+                "description": "Perfect for the start.",
+                "price": "from 99.99 PLN",
+                "image": "/pink.png"
+            },
+            "standard": {
+                "title": "Standard Pack",
+                "displayName": "Standard Pack",
+                "description": "Perfect set for every player",
+                "price": "FROM 12.99 PLN",
+                "image": "/winner.png"
+            },
+            "gambler": {
+                "title": "GAMBLER PACK",
+                "displayName": "Gambler Pack",
+                "description": "For the brave who like risk!",
+                "price": "from 25.00 PLN",
+                "image": "/bluewithdiamonds.png"
+            },
+            "wealthy": {
+                "title": "WEALTHY PACK",
+                "displayName": "Wealthy Pack",
+                "description": "Only for the richest!",
+                "price": "from 77.00 PLN",
+                "image": "/gold.png"
+            }
+        },
+        "ranks": [
+            {
+                "name": "CUBE",
+                "desc": "CUBE Rank for 30 days",
+                "price": "77.00 PLN",
+                "bg": "from-[#8000FF] to-[#C080FF]",
+                "textGrad": "from-[#d0a0ff] to-[#8000ff]",
+                "img": "/shop.png",
+                "scale": "scale-200 sm:scale-250 lg:scale-350"
+            },
+            {
+                "name": "MVIP",
+                "desc": "MVIP Rank for 30 days",
+                "price": "77.00 PLN",
+                "bg": "from-[#FF80C0] to-[#FF4080]",
+                "textGrad": "from-[#ff99d9] to-[#ff4080]",
+                "img": "/mvip.png",
+                "scale": "scale-200 sm:scale-250 lg:scale-350"
+            },
+            {
+                "name": "SVIP",
+                "desc": "SVIP Rank for 30 days",
+                "price": "77.00 PLN",
+                "bg": "from-[#40C0FF] to-[#0080FF]",
+                "textGrad": "from-[#80d9ff] to-[#0080ff]",
+                "img": "/blue.png",
+                "scale": "scale-200 sm:scale-250 lg:scale-350"
+            },
+            {
+                "name": "VIP",
+                "desc": "VIP Rank for 30 days",
+                "price": "77.00 PLN",
+                "bg": "from-[#40FF40] to-[#008000]",
+                "textGrad": "from-[#80ff80] to-[#008000]",
+                "img": "/green.png",
+                "scale": "scale-200 sm:scale-250 lg:scale-350"
+            }
+        ],
+        "keys": [
+            {
+                "name": "RARE KEY",
+                "price": "77.00 PLN",
+                "bg": "from-[#40FF40] to-[#008000]",
+                "textGrad": "from-[#80ff80] to-[#008000]",
+                "img": "/5.png"
+            },
+            {
+                "name": "EPIC KEY",
+                "price": "77.00 PLN",
+                "bg": "from-[#40C0FF] to-[#000080]",
+                "textGrad": "from-[#80c0ff] to-[#000080]",
+                "img": "/8.png"
+            },
+            {
+                "name": "LEGENDARY KEY",
+                "price": "199.00 PLN",
+                "bg": "from-[#FFD700] to-[#B8860B]",
+                "textGrad": "from-[#FFD700] to-[#B8860B]",
+                "img": "/3.png"
+            }
+        ]
+    }
+}

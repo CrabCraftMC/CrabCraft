@@ -1,0 +1,15 @@
+name: CrabUtilities
+version: '${version}'
+main: crabcraft.net.crabUtilities.CrabUtilities
+api-version: '1.21'
+softdepend:
+  - Essentials
+commands:
+  pack:
+    description: Enable or disable the server resource pack for yourself.
+    usage: /pack <on|off>
+    aliases: [resourcepack, rp]
+  crabutilities:
+    description: CrabUtilities admin commands.
+    usage: /crabutilities reload
+    permission: crabutilities.reload

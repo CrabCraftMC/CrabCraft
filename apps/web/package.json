@@ -1,0 +1,49 @@
+{
+  "name": "@crabcraft/web",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "bun run scripts/download-textures.ts",
+    "build": "next build",
+    "start": "next start",
+    "clean": "rm -rf .next"
+  },
+  "dependencies": {
+    "@crabcraft/db": "workspace:*",
+    "@crabcraft/shared": "workspace:*",
+    "@simonwep/pickr": "^1.9.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "figma-squircle": "^1.1.0",
+    "framer-motion": "^12.26.2",
+    "lucide-react": "^0.562.0",
+    "next": "^16.2.1",
+    "next-auth": "5.0.0-beta.30",
+    "@auth/core": "^0.41.0",
+    "@radix-ui/react-slot": "^1.2.3",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-icons": "^5.5.0",
+    "sharp": "^0.34.5",
+    "tailwind-merge": "^3.4.0",
+    "web-haptics": "^0.0.6"
+  },
+  "devDependencies": {
+    "@crabcraft/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions"
+  ]
+}

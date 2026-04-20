@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+apps/minecraft/build/
+apps/minecraft/spigot/build/
+apps/minecraft/velocity/build/
+apps/minecraft/jars/
+
+# Logs
+*.log
+
+# Zone Identifier files (WSL/Windows)
+*:Zone.Identifier
+
+# Turbo
+.turbo/
+
+# Misc
+leaderboard_state.json
+public/textures/
+
+# Vercel
+.vercel/

@@ -1,0 +1,32 @@
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  channel: "crabutilities:staffchat"
+
+api:
+  port: 8080
+
+staff-chat:
+  # MiniMessage format. Placeholders: <sender>, <message>
+  format: "<dark_gray>[<aqua>SC</aqua>]</dark_gray> <gray><sender></gray> <dark_gray>></dark_gray> <white><message></white>"
+
+join-leave-messages:
+  # Servers that should NOT trigger join/leave/swap messages
+  ignored-servers: []
+  # MiniMessage format for first-time join. Placeholders: <name>, <username>
+  first-join: "<yellow><name> joined the game for the first time</yellow>"
+  # Discord webhook integration. Leave webhook-url empty to disable.
+  # Placeholders: {name} (nickname or username), {username} (always raw), {server} (current server)
+  discord:
+    webhook-url: ""
+    join: "{name} joined the game"
+    leave: "{name} left the game"
+    swap: "{name} swapped to the {server} server"
+    first-join: "{name} joined the game for the first time!"
+
+database:
+  url: "jdbc:postgresql://localhost:5432/crabcraft"
+  username: "crabcraft"
+  password: ""
+  current-season: "s1"

@@ -1,0 +1,7 @@
+.gradle/
+build/
+jars/
+.idea/
+*.iml
+joined.mv.db
+joined-players.txt

@@ -1,0 +1,444 @@
+package crabcraft.net.crabUtilities.velocity.api;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.server.RegisteredServer;
+import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
+import crabcraft.net.crabUtilities.velocity.NicknameCache;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
+
+public class WebServer {
+
+    private static final Gson GSON = new Gson();
+
+    private static final int RATE_LIMIT = 60;
+    private static final long RATE_WINDOW_MS = 60_000;
+
+    private static final Pattern USERNAME = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
+    private static final Pattern UUID_PATTERN = Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
+
+    private static final String ERROR_SCHEMA =
+            "{\"type\":\"object\",\"properties\":{\"error\":{\"type\":\"string\"}}}";
+
+    private static final String PLAYER_SCHEMA = "{"
+            + "\"type\":\"object\","
+            + "\"properties\":{"
+            + "\"username\":{\"type\":\"string\",\"description\":\"Minecraft username\"},"
+            + "\"uuid\":{\"type\":\"string\",\"format\":\"uuid\",\"description\":\"Player UUID\"},"
+            + "\"nickname\":{\"type\":\"string\",\"nullable\":true,\"description\":\"Plain-text display name\"},"
+            + "\"nickname_raw\":{\"type\":\"string\",\"nullable\":true,\"description\":\"Raw (formatted) display name\"},"
+            + "\"ping\":{\"type\":\"integer\",\"description\":\"Player latency in milliseconds\"},"
+            + "\"server\":{\"type\":\"string\",\"nullable\":true,\"description\":\"Backend server the player is on\"}"
+            + "}"
+            + "}";
+
+    private static final String COMMON_ERRORS =
+            "\"405\":{\"description\":\"Method not allowed\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"429\":{\"description\":\"Rate limit exceeded\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}}";
+
+    private static final String OPENAPI_JSON = "{"
+            + "\"openapi\":\"3.0.3\","
+            + "\"info\":{"
+            + "\"title\":\"CrabCraft API\","
+            + "\"version\":\"1.0.0\","
+            + "\"description\":\"Live player data from the CrabCraft proxy.\""
+            + "},"
+            + "\"paths\":{"
+
+            + "\"/ping\":{"
+            + "\"get\":{"
+            + "\"summary\":\"Health check\","
+            + "\"description\":\"Simple health check to verify the API is running.\","
+            + "\"operationId\":\"ping\","
+            + "\"responses\":{"
+            + "\"200\":{"
+            + "\"description\":\"API is healthy\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{\"status\":{\"type\":\"string\",\"example\":\"ok\"}}}}}"
+            + "},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/status\":{"
+            + "\"get\":{"
+            + "\"summary\":\"Server status\","
+            + "\"description\":\"Returns an overview of the proxy server including player count and version.\","
+            + "\"operationId\":\"getStatus\","
+            + "\"responses\":{"
+            + "\"200\":{"
+            + "\"description\":\"Successful response\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"online\":{\"type\":\"boolean\",\"description\":\"Whether the proxy is online\"},"
+            + "\"players\":{\"type\":\"object\",\"properties\":{"
+            + "\"online\":{\"type\":\"integer\",\"description\":\"Current player count\"},"
+            + "\"max\":{\"type\":\"integer\",\"description\":\"Maximum player slots\"}"
+            + "}},"
+            + "\"version\":{\"type\":\"string\",\"description\":\"Proxy server version\"}"
+            + "}}}}"
+            + "},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/servers\":{"
+            + "\"get\":{"
+            + "\"summary\":\"List backend servers\","
+            + "\"description\":\"Returns all registered backend servers with their player counts.\","
+            + "\"operationId\":\"getServers\","
+            + "\"responses\":{"
+            + "\"200\":{"
+            + "\"description\":\"Successful response\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"servers\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
+            + "\"name\":{\"type\":\"string\",\"description\":\"Server name\"},"
+            + "\"players\":{\"type\":\"integer\",\"description\":\"Number of players on this server\"}"
+            + "}}}"
+            + "}}}}"
+            + "},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/players\":{"
+            + "\"get\":{"
+            + "\"summary\":\"List online players\","
+            + "\"description\":\"Returns all players currently connected to the proxy.\","
+            + "\"operationId\":\"getPlayers\","
+            + "\"responses\":{"
+            + "\"200\":{"
+            + "\"description\":\"Successful response\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"count\":{\"type\":\"integer\",\"description\":\"Number of online players\"},"
+            + "\"players\":{\"type\":\"array\",\"items\":" + PLAYER_SCHEMA + "}"
+            + "}}}}"
+            + "},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/players/{name}\":{"
+            + "\"get\":{"
+            + "\"summary\":\"Look up a player\","
+            + "\"description\":\"Returns details for a specific online player by username.\","
+            + "\"operationId\":\"getPlayer\","
+            + "\"parameters\":[{\"name\":\"name\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\"},\"description\":\"Player username (3-16 alphanumeric characters or underscores)\"}],"
+            + "\"responses\":{"
+            + "\"200\":{"
+            + "\"description\":\"Player found\","
+            + "\"content\":{\"application/json\":{\"schema\":" + PLAYER_SCHEMA + "}}"
+            + "},"
+            + "\"400\":{\"description\":\"Invalid username format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"Player not online\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/stats/{uuid}\":{"
+            + "\"get\":{"
+            + "\"summary\":\"Player statistics\","
+            + "\"description\":\"Returns a player's Minecraft statistics from the server's stats file.\","
+            + "\"operationId\":\"getStats\","
+            + "\"parameters\":[{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Player UUID in lowercase hyphenated format\"}],"
+            + "\"responses\":{"
+            + "\"200\":{"
+            + "\"description\":\"Stats data\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\"}}}"
+            + "},"
+            + "\"400\":{\"description\":\"Invalid UUID format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"No stats found for this UUID\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"503\":{\"description\":\"Stats unavailable (server not responding)\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "}"
+
+            + "}"
+            + "}";
+
+    private static final String SCALAR_HTML = "<!doctype html>\n"
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <meta charset=\"UTF-8\" />\n"
+            + "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n"
+            + "    <title>CrabCraft API Docs</title>\n"
+            + "    <style>html,body{margin:0;padding:0;}</style>\n"
+            + "  </head>\n"
+            + "  <body>\n"
+            + "    <script id=\"api-reference\" type=\"application/json\">\n"
+            + OPENAPI_JSON + "\n"
+            + "    </script>\n"
+            + "    <script src=\"https://cdn.jsdelivr.net/npm/@scalar/api-reference\"></script>\n"
+            + "    <noscript>JavaScript is required to render the API documentation. You can still access /openapi.json and /players directly.</noscript>\n"
+            + "  </body>\n"
+            + "</html>\n";
+
+    private final CrabUtilitiesVelocity plugin;
+    private final int port;
+    private HttpServer httpServer;
+
+    // [count, windowStartMs] per IP
+    private final ConcurrentHashMap<String, long[]> rateLimits = new ConcurrentHashMap<>();
+
+    public WebServer(CrabUtilitiesVelocity plugin, int port) {
+        this.plugin = plugin;
+        this.port = port;
+    }
+
+    public boolean isRunning() {
+        return httpServer != null;
+    }
+
+    private boolean isRateLimited(String ip) {
+        long now = System.currentTimeMillis();
+        long[] window = rateLimits.computeIfAbsent(ip, k -> new long[]{0, now});
+        synchronized (window) {
+            if (now - window[1] > RATE_WINDOW_MS) {
+                window[0] = 0;
+                window[1] = now;
+            }
+            if (window[0] >= RATE_LIMIT) return true;
+            window[0]++;
+            return false;
+        }
+    }
+
+    private JsonObject buildPlayerJson(Player player) {
+        NicknameCache cache = plugin.getNicknameCache();
+        JsonObject obj = new JsonObject();
+        obj.addProperty("username", player.getUsername());
+        obj.addProperty("uuid", player.getUniqueId().toString());
+        obj.addProperty("nickname", cache.getPlainNickname(player.getUniqueId()));
+        obj.addProperty("nickname_raw", cache.getRawNickname(player.getUniqueId()));
+        obj.addProperty("ping", player.getPing());
+        obj.addProperty("server", player.getCurrentServer()
+                .map(conn -> conn.getServerInfo().getName())
+                .orElse(null));
+        return obj;
+    }
+
+    private static void sendJson(HttpExchange exchange, String json) throws IOException {
+        byte[] body = json.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.sendResponseHeaders(200, body.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(body);
+        }
+    }
+
+    private static void sendError(HttpExchange exchange, int code, String message) throws IOException {
+        JsonObject err = new JsonObject();
+        err.addProperty("error", message);
+        byte[] body = GSON.toJson(err).getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.sendResponseHeaders(code, body.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(body);
+        }
+    }
+
+    public boolean start() {
+        if (httpServer != null) {
+            plugin.getLogger().warn("Web API is already running.");
+            return false;
+        }
+        try {
+            httpServer = HttpServer.create(new InetSocketAddress(port), 0);
+
+            httpServer.createContext("/", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                byte[] body = SCALAR_HTML.getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
+                exchange.sendResponseHeaders(200, body.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(body);
+                }
+            });
+
+            httpServer.createContext("/openapi.json", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                byte[] body = OPENAPI_JSON.getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(body);
+                }
+            });
+
+            httpServer.createContext("/ping", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                sendJson(exchange, "{\"status\":\"ok\"}");
+            });
+
+            httpServer.createContext("/status", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                JsonObject players = new JsonObject();
+                players.addProperty("online", plugin.getServer().getPlayerCount());
+                players.addProperty("max", plugin.getServer().getConfiguration().getShowMaxPlayers());
+
+                JsonObject response = new JsonObject();
+                response.addProperty("online", true);
+                response.add("players", players);
+                response.addProperty("version", plugin.getServer().getVersion().toString());
+
+                sendJson(exchange, GSON.toJson(response));
+            });
+
+            httpServer.createContext("/servers", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                JsonArray servers = new JsonArray();
+                for (RegisteredServer rs : plugin.getServer().getAllServers()) {
+                    JsonObject obj = new JsonObject();
+                    obj.addProperty("name", rs.getServerInfo().getName());
+                    obj.addProperty("players", rs.getPlayersConnected().size());
+                    servers.add(obj);
+                }
+
+                JsonObject response = new JsonObject();
+                response.add("servers", servers);
+
+                sendJson(exchange, GSON.toJson(response));
+            });
+
+            httpServer.createContext("/players", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+
+                String path = exchange.getRequestURI().getPath();
+                // Handle /players/{name}
+                if (path.length() > "/players/".length()) {
+                    String name = path.substring("/players/".length());
+                    if (!USERNAME.matcher(name).matches()) {
+                        sendError(exchange, 400, "invalid username");
+                        return;
+                    }
+                    Optional<Player> target = plugin.getServer().getPlayer(name);
+                    if (target.isPresent()) {
+                        sendJson(exchange, GSON.toJson(buildPlayerJson(target.get())));
+                    } else {
+                        sendError(exchange, 404, "player not online");
+                    }
+                    return;
+                }
+
+                JsonArray players = new JsonArray();
+                for (Player player : plugin.getServer().getAllPlayers()) {
+                    players.add(buildPlayerJson(player));
+                }
+
+                JsonObject response = new JsonObject();
+                response.addProperty("count", players.size());
+                response.add("players", players);
+
+                sendJson(exchange, GSON.toJson(response));
+            });
+
+            httpServer.createContext("/stats/", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+
+                String uuid = exchange.getRequestURI().getPath().substring("/stats/".length());
+                if (!UUID_PATTERN.matcher(uuid).matches()) {
+                    sendError(exchange, 400, "invalid uuid");
+                    return;
+                }
+
+                CompletableFuture<String> future = plugin.getStatsRequestManager().requestStats(uuid);
+                String statsJson;
+                try {
+                    statsJson = future.get(5, TimeUnit.SECONDS);
+                } catch (TimeoutException e) {
+                    future.cancel(true);
+                    sendError(exchange, 503, "stats unavailable");
+                    return;
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    sendError(exchange, 503, "stats unavailable");
+                    return;
+                } catch (ExecutionException e) {
+                    sendError(exchange, 503, "stats unavailable");
+                    return;
+                }
+
+                if (statsJson == null) {
+                    sendError(exchange, 404, "stats not found");
+                } else {
+                    sendJson(exchange, statsJson);
+                }
+            });
+
+            httpServer.start();
+            plugin.getLogger().info("Web API started on port {}", port);
+            return true;
+        } catch (IOException e) {
+            plugin.getLogger().error("Failed to start Web API on port {}", port, e);
+            return false;
+        }
+    }
+
+    public void stop() {
+        if (httpServer != null) {
+            httpServer.stop(0);
+            httpServer = null;
+            plugin.getLogger().info("Web API stopped.");
+        }
+    }
+}
