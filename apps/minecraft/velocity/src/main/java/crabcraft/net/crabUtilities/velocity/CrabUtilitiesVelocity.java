@@ -10,6 +10,10 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import crabcraft.net.crabUtilities.velocity.api.StatsRequestManager;
 import crabcraft.net.crabUtilities.velocity.api.WebServer;
+import crabcraft.net.crabUtilities.velocity.awards.AwardDbWriter;
+import crabcraft.net.crabUtilities.velocity.awards.AwardDefinition;
+import crabcraft.net.crabUtilities.velocity.awards.AwardEvaluator;
+import crabcraft.net.crabUtilities.velocity.awards.AwardLoader;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
@@ -19,6 +23,7 @@ import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 @Plugin(
         id = "crabutilities",
@@ -41,6 +46,8 @@ public class CrabUtilitiesVelocity {
     private JoinedPlayersStore joinedPlayersStore;
     private StatsRequestManager statsRequestManager;
     private PostgresStatsWriter pgWriter;
+    private AwardEvaluator awardEvaluator;
+    private AwardDbWriter awardDbWriter;
     private VelocityConfig config;
 
     @Inject
@@ -70,6 +77,11 @@ public class CrabUtilitiesVelocity {
         this.pgWriter = new PostgresStatsWriter(
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
         );
+
+        Map<String, AwardDefinition> awards = AwardLoader.loadAll(logger);
+        logger.info("Loaded {} award definitions", awards.size());
+        this.awardEvaluator = new AwardEvaluator(awards);
+        this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
 
         this.webServer = new WebServer(this, config.getApiPort());
         this.webServer.start();
@@ -122,6 +134,7 @@ public class CrabUtilitiesVelocity {
         this.pgWriter = new PostgresStatsWriter(
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
         );
+        this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
 
         if (webServer != null) {
             webServer.stop();
@@ -153,5 +166,7 @@ public class CrabUtilitiesVelocity {
     public WebServer getWebServer() { return webServer; }
     public StatsRequestManager getStatsRequestManager() { return statsRequestManager; }
     public PostgresStatsWriter getPgWriter() { return pgWriter; }
+    public AwardEvaluator getAwardEvaluator() { return awardEvaluator; }
+    public AwardDbWriter getAwardDbWriter() { return awardDbWriter; }
     public VelocityConfig getConfig() { return config; }
 }

@@ -1,64 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BASE = "https://map.crabcraft.net/stats/data";
-const HEADERS = { Referer: "https://crabcraft.net" };
-
-function getCachePrefix(uuid: string): string {
-  return uuid.replace(/-/g, "").slice(0, 2);
-}
+import { getAward } from "@crabcraft/shared/awards";
+import {
+  getAwardLeaderboard,
+  getCurrentSeason,
+  AWARD_AGGREGATE_SERVER_ID,
+} from "@/lib/queries";
 
 export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ key: string }> }
+  request: NextRequest,
+  { params }: { params: Promise<{ key: string }> },
 ) {
   const { key } = await params;
 
-  // Validate key format (alphanumeric + underscores only)
-  if (!/^[a-z0-9_]+$/.test(key)) {
+  if (!/^[a-z0-9_]+$/.test(key) || !getAward(key)) {
     return NextResponse.json([], { status: 400 });
   }
 
+  const searchParams = request.nextUrl.searchParams;
+  const serverId = searchParams.get("server") ?? AWARD_AGGREGATE_SERVER_ID;
+
   try {
-    // Fetch rankings
-    const rankingsRes = await fetch(`${BASE}/rankings/${key}.json`, {
-      headers: HEADERS,
-      next: { revalidate: 60 },
-    });
-    if (!rankingsRes.ok) return NextResponse.json([], { status: 404 });
+    const currentSeason = await getCurrentSeason();
+    if (!currentSeason) return NextResponse.json([], { status: 404 });
 
-    const rankings: { uuid: string; value: number }[] =
-      await rankingsRes.json();
-
-    // Deduplicate cache prefixes and fetch player names
-    const prefixes = [...new Set(rankings.map((r) => getCachePrefix(r.uuid)))];
-    const cacheResults = await Promise.all(
-      prefixes.map((prefix) =>
-        fetch(`${BASE}/playercache/${prefix}.json`, {
-          headers: HEADERS,
-          next: { revalidate: 3600 },
-        })
-          .then((r) => (r.ok ? r.json() : []))
-          .catch(() => [])
-      )
+    const entries = await getAwardLeaderboard(
+      key,
+      currentSeason.id,
+      serverId,
+      100,
     );
 
-    // Build UUID → name lookup
-    const nameMap = new Map<string, string>();
-    for (const entries of cacheResults) {
-      for (const entry of entries as { uuid: string; name: string }[]) {
-        nameMap.set(entry.uuid, entry.name);
-      }
-    }
-
-    // Merge rankings with names
-    const result = rankings.map((r, i) => ({
-      rank: i + 1,
-      uuid: r.uuid,
-      name: nameMap.get(r.uuid) ?? "Unknown",
-      value: r.value,
-    }));
-
-    return NextResponse.json(result);
+    return NextResponse.json(
+      entries.map((e) => ({
+        rank: e.rank,
+        uuid: e.minecraft_uuid,
+        name: e.minecraft_username ?? "Unknown",
+        value: e.score,
+        medal: e.medal,
+      })),
+    );
   } catch {
     return NextResponse.json([], { status: 500 });
   }

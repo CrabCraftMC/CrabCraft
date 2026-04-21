@@ -5,6 +5,9 @@ import {
   applications,
   seasons as seasonsTable,
   playerSeasonStats,
+  playerAwardScores,
+  playerCrownScores,
+  AGGREGATE_SERVER_ID,
 } from "../schema";
 import type {
   PlayerSeasonStats,
@@ -494,4 +497,316 @@ export async function setPlayerRole(
     .update(players)
     .set({ role: role, updated_at: Math.floor(Date.now() / 1000) })
     .where(eq(players.discord_id, discordId));
+}
+
+// ── Award queries ───────────────────────────────────────────────
+
+export interface AwardLeaderboardEntry {
+  rank: number;
+  minecraft_uuid: string;
+  minecraft_username: string | null;
+  score: number;
+  medal: number; // 0 none, 1 gold, 2 silver, 3 bronze
+}
+
+export interface AwardSummaryEntry {
+  award_id: string;
+  best_uuid: string | null;
+  best_username: string | null;
+  best_score: number;
+}
+
+export interface CrownLeaderboardEntry {
+  rank: number;
+  minecraft_uuid: string;
+  minecraft_username: string | null;
+  gold: number;
+  silver: number;
+  bronze: number;
+  crown_score: number;
+}
+
+export interface PlayerAwardHolding {
+  award_id: string;
+  score: number;
+  medal: number;
+  rank: number;
+}
+
+export const AWARD_AGGREGATE_SERVER_ID = AGGREGATE_SERVER_ID;
+
+/**
+ * Per-award leaderboard, ordered by score desc. Serves /awards/[key].
+ */
+export async function getAwardLeaderboard(
+  awardId: string,
+  season: string,
+  serverId: string = AGGREGATE_SERVER_ID,
+  limit = 50,
+): Promise<AwardLeaderboardEntry[]> {
+  const rows = await db
+    .select({
+      uuid: playerAwardScores.minecraft_uuid,
+      username: players.minecraft_username,
+      score: playerAwardScores.score,
+      medal: playerAwardScores.medal,
+    })
+    .from(playerAwardScores)
+    .leftJoin(
+      players,
+      eq(players.minecraft_uuid, playerAwardScores.minecraft_uuid),
+    )
+    .where(
+      and(
+        eq(playerAwardScores.award_id, awardId),
+        eq(playerAwardScores.season, season),
+        eq(playerAwardScores.server_id, serverId),
+      ),
+    )
+    .orderBy(desc(playerAwardScores.score))
+    .limit(limit);
+
+  return rows.map((row, i) => ({
+    rank: i + 1,
+    minecraft_uuid: row.uuid,
+    minecraft_username: row.username,
+    score: Number(row.score),
+    medal: row.medal,
+  }));
+}
+
+/**
+ * One-row-per-award summary: the current #1 holder for each award.
+ * Used by the /awards overview page.
+ */
+export async function getAwardsSummary(
+  season: string,
+  serverId: string = AGGREGATE_SERVER_ID,
+): Promise<AwardSummaryEntry[]> {
+  const rows = await db.execute(
+    sql`
+      SELECT DISTINCT ON (p.award_id)
+        p.award_id,
+        p.minecraft_uuid AS best_uuid,
+        u.minecraft_username AS best_username,
+        p.score AS best_score
+      FROM player_award_scores p
+      LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
+      WHERE p.season = ${season}
+        AND p.server_id = ${serverId}
+        AND p.score > 0
+      ORDER BY p.award_id, p.score DESC
+    `,
+  );
+  return (
+    rows as unknown as Array<{
+      award_id: string;
+      best_uuid: string | null;
+      best_username: string | null;
+      best_score: number | string;
+    }>
+  ).map((row) => ({
+    award_id: row.award_id,
+    best_uuid: row.best_uuid,
+    best_username: row.best_username,
+    best_score: Number(row.best_score ?? 0),
+  }));
+}
+
+/**
+ * Hall of Fame ranking (crown score). Serves /leaderboard.
+ */
+export async function getCrownLeaderboard(
+  season: string,
+  serverId: string = AGGREGATE_SERVER_ID,
+  limit = 100,
+): Promise<CrownLeaderboardEntry[]> {
+  const rows = await db
+    .select({
+      uuid: playerCrownScores.minecraft_uuid,
+      username: players.minecraft_username,
+      gold: playerCrownScores.gold,
+      silver: playerCrownScores.silver,
+      bronze: playerCrownScores.bronze,
+      crown_score: playerCrownScores.crown_score,
+    })
+    .from(playerCrownScores)
+    .leftJoin(
+      players,
+      eq(players.minecraft_uuid, playerCrownScores.minecraft_uuid),
+    )
+    .where(
+      and(
+        eq(playerCrownScores.season, season),
+        eq(playerCrownScores.server_id, serverId),
+        sql`${playerCrownScores.crown_score} > 0`,
+      ),
+    )
+    .orderBy(
+      desc(playerCrownScores.crown_score),
+      desc(playerCrownScores.gold),
+      desc(playerCrownScores.silver),
+    )
+    .limit(limit);
+
+  return rows.map((row, i) => ({
+    rank: i + 1,
+    minecraft_uuid: row.uuid,
+    minecraft_username: row.username,
+    gold: row.gold,
+    silver: row.silver,
+    bronze: row.bronze,
+    crown_score: row.crown_score,
+  }));
+}
+
+/**
+ * All medal-earning award entries held by one player (for their profile page).
+ * Returns rows where the player is on the podium (medal > 0). Includes per-award rank.
+ */
+export async function getPlayerAwardHoldings(
+  uuid: string,
+  season: string,
+  serverId: string = AGGREGATE_SERVER_ID,
+): Promise<PlayerAwardHolding[]> {
+  const rows = await db.execute(
+    sql`
+      SELECT award_id, score, medal, rank FROM (
+        SELECT
+          award_id,
+          minecraft_uuid,
+          score,
+          medal,
+          RANK() OVER (PARTITION BY award_id ORDER BY score DESC) AS rank
+        FROM player_award_scores
+        WHERE season = ${season}
+          AND server_id = ${serverId}
+          AND score > 0
+      ) ranked
+      WHERE minecraft_uuid = ${uuid} AND medal > 0
+      ORDER BY medal ASC, score DESC
+    `,
+  );
+  return (
+    rows as unknown as Array<{
+      award_id: string;
+      score: number | string;
+      medal: number;
+      rank: number | string;
+    }>
+  ).map((row) => ({
+    award_id: row.award_id,
+    score: Number(row.score),
+    medal: row.medal,
+    rank: Number(row.rank),
+  }));
+}
+
+/**
+ * Single crown-score row for a player (for their profile page).
+ */
+export async function getPlayerCrownScore(
+  uuid: string,
+  season: string,
+  serverId: string = AGGREGATE_SERVER_ID,
+): Promise<CrownLeaderboardEntry | null> {
+  const rows = await db.execute(
+    sql`
+      SELECT
+        p.minecraft_uuid,
+        u.minecraft_username,
+        p.gold,
+        p.silver,
+        p.bronze,
+        p.crown_score,
+        (
+          SELECT COUNT(*) + 1
+          FROM player_crown_scores p2
+          WHERE p2.season = p.season
+            AND p2.server_id = p.server_id
+            AND p2.crown_score > p.crown_score
+        ) AS rank
+      FROM player_crown_scores p
+      LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
+      WHERE p.minecraft_uuid = ${uuid}
+        AND p.season = ${season}
+        AND p.server_id = ${serverId}
+      LIMIT 1
+    `,
+  );
+  const first = (
+    rows as unknown as Array<{
+      minecraft_uuid: string;
+      minecraft_username: string | null;
+      gold: number;
+      silver: number;
+      bronze: number;
+      crown_score: number;
+      rank: number | string;
+    }>
+  )[0];
+  if (!first) return null;
+  return {
+    rank: Number(first.rank),
+    minecraft_uuid: first.minecraft_uuid,
+    minecraft_username: first.minecraft_username,
+    gold: first.gold,
+    silver: first.silver,
+    bronze: first.bronze,
+    crown_score: first.crown_score,
+  };
+}
+
+/**
+ * All award scores a player has (score > 0) for a season/server, with rank.
+ * Used for the per-player detailed stats table on their profile page.
+ */
+export async function getPlayerAwardScores(
+  uuid: string,
+  season: string,
+  serverId: string = AGGREGATE_SERVER_ID,
+): Promise<Record<string, { rank: number; value: number }>> {
+  const rows = await db.execute(
+    sql`
+      SELECT award_id, score, rank FROM (
+        SELECT
+          award_id,
+          minecraft_uuid,
+          score,
+          RANK() OVER (PARTITION BY award_id ORDER BY score DESC) AS rank
+        FROM player_award_scores
+        WHERE season = ${season}
+          AND server_id = ${serverId}
+          AND score > 0
+      ) ranked
+      WHERE minecraft_uuid = ${uuid}
+    `,
+  );
+  const out: Record<string, { rank: number; value: number }> = {};
+  for (const row of rows as unknown as Array<{
+    award_id: string;
+    score: number | string;
+    rank: number | string;
+  }>) {
+    out[row.award_id] = { rank: Number(row.rank), value: Number(row.score) };
+  }
+  return out;
+}
+
+/**
+ * Distinct server_ids that have award data for a season, for the UI server toggle.
+ * Excludes the aggregate sentinel — callers typically render it separately.
+ */
+export async function getAwardServers(season: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ server_id: playerAwardScores.server_id })
+    .from(playerAwardScores)
+    .where(
+      and(
+        eq(playerAwardScores.season, season),
+        sql`${playerAwardScores.server_id} <> ${AGGREGATE_SERVER_ID}`,
+      ),
+    )
+    .orderBy(asc(playerAwardScores.server_id));
+  return rows.map((r) => r.server_id);
 }

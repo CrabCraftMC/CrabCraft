@@ -108,7 +108,7 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
             }`}
           >
             <Image
-              src={`https://map.crabcraft.net/stats/img/award-icons/${award.key}.png`}
+              src={`/awards/icons/${award.key}.png`}
               alt=""
               width={32}
               height={32}

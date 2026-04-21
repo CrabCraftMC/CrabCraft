@@ -157,6 +157,15 @@ public class PostgresStatsWriter {
         }
     }
 
+    /**
+     * Shared HikariCP pool. Exposed so auxiliary writers (awards, crown
+     * scores) can reuse the same connection pool rather than opening their
+     * own.
+     */
+    public HikariDataSource getDataSource() {
+        return dataSource;
+    }
+
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
