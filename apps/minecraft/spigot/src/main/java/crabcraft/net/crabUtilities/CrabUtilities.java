@@ -13,6 +13,7 @@ public final class CrabUtilities extends JavaPlugin {
     private Plugin essentials; // Optional: present when EssentialsX is installed
     private ResourcePackManager resourcePackManager;
     private StatsRedisHandler statsRedisHandler;
+    private StatsPushTask statsPushTask;
     private UpdateService updateService;
 
     @Override
@@ -53,6 +54,9 @@ public final class CrabUtilities extends JavaPlugin {
         this.statsRedisHandler = new StatsRedisHandler(this);
         statsRedisHandler.start();
 
+        this.statsPushTask = new StatsPushTask(this);
+        statsPushTask.start();
+
         getLogger().info("CrabUtilities enabled. EssentialsX present: " + (essentials != null));
     }
 
@@ -74,6 +78,9 @@ public final class CrabUtilities extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (statsPushTask != null) {
+            statsPushTask.shutdown();
+        }
         if (statsRedisHandler != null) {
             statsRedisHandler.shutdown();
         }

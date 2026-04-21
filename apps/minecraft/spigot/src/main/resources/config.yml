@@ -10,6 +10,12 @@ redis:
   port: 6379
   password: ""
 
+# Periodic scan of the world's stats/ folder. Each changed
+# stats/<uuid>.json is published on the crabutilities:stats-push
+# Redis channel for the Velocity proxy to compute awards from.
+stats-push:
+  interval-minutes: 5
+
 resource-pack:
   # URL to your resource pack (must be direct URL)
   url: ""

@@ -8,6 +8,7 @@ import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
+import crabcraft.net.crabUtilities.velocity.api.StatsPushSubscriber;
 import crabcraft.net.crabUtilities.velocity.api.StatsRequestManager;
 import crabcraft.net.crabUtilities.velocity.api.WebServer;
 import crabcraft.net.crabUtilities.velocity.awards.AwardDbWriter;
@@ -46,6 +47,7 @@ public class CrabUtilitiesVelocity {
     private DiscordWebhook discordWebhook;
     private JoinedPlayersStore joinedPlayersStore;
     private StatsRequestManager statsRequestManager;
+    private StatsPushSubscriber statsPushSubscriber;
     private PostgresStatsWriter pgWriter;
     private AwardEvaluator awardEvaluator;
     private AwardDbWriter awardDbWriter;
@@ -85,6 +87,9 @@ public class CrabUtilitiesVelocity {
         this.awardEvaluator = new AwardEvaluator(awards);
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
 
+        this.statsPushSubscriber = new StatsPushSubscriber(this, config, logger);
+        this.statsPushSubscriber.start();
+
         this.webServer = new WebServer(this, config.getApiPort());
         this.webServer.start();
 
@@ -112,6 +117,9 @@ public class CrabUtilitiesVelocity {
     public void onProxyShutdown(ProxyShutdownEvent event) {
         if (webServer != null) {
             webServer.stop();
+        }
+        if (statsPushSubscriber != null) {
+            statsPushSubscriber.shutdown();
         }
         if (statsRequestManager != null) {
             statsRequestManager.shutdown();
@@ -144,7 +152,16 @@ public class CrabUtilitiesVelocity {
         this.pgWriter = new PostgresStatsWriter(
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
         );
+        Map<String, AwardDefinition> awards = AwardLoader.loadAll(pgWriter.getDataSource(), logger);
+        logger.info("Loaded {} award definitions from database", awards.size());
+        this.awardEvaluator = new AwardEvaluator(awards);
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
+
+        if (statsPushSubscriber != null) {
+            statsPushSubscriber.shutdown();
+        }
+        this.statsPushSubscriber = new StatsPushSubscriber(this, config, logger);
+        this.statsPushSubscriber.start();
 
         if (webServer != null) {
             webServer.stop();
