@@ -132,3 +132,71 @@ export const playerSeasonStats = pgTable(
     index("pss_season_idx").on(table.season),
   ],
 );
+
+// ── player_award_scores ─────────────────────────────────────────
+// Per-player, per-award, per-server score for a season.
+// server_id = "__aggregate__" represents the sum across all servers.
+export const AGGREGATE_SERVER_ID = "__aggregate__";
+
+export const playerAwardScores = pgTable(
+  "player_award_scores",
+  {
+    id: serial("id").primaryKey(),
+    minecraft_uuid: text("minecraft_uuid").notNull(),
+    season: text("season").notNull(),
+    server_id: text("server_id").notNull(),
+    award_id: text("award_id").notNull(),
+    score: real("score").notNull().default(0),
+    medal: integer("medal").notNull().default(0), // 0 = none, 1 = gold, 2 = silver, 3 = bronze
+    computed_at: integer("computed_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    uniqueIndex("pas_uuid_season_server_award_unique").on(
+      table.minecraft_uuid,
+      table.season,
+      table.server_id,
+      table.award_id,
+    ),
+    index("pas_leaderboard_idx").on(
+      table.season,
+      table.server_id,
+      table.award_id,
+      table.score,
+    ),
+    index("pas_player_idx").on(table.minecraft_uuid, table.season),
+  ],
+);
+
+// ── player_crown_scores ─────────────────────────────────────────
+// Derived hall-of-fame rollup: gold/silver/bronze medal counts + weighted
+// crown score per (player, season, server). Refreshed after award writes.
+export const playerCrownScores = pgTable(
+  "player_crown_scores",
+  {
+    id: serial("id").primaryKey(),
+    minecraft_uuid: text("minecraft_uuid").notNull(),
+    season: text("season").notNull(),
+    server_id: text("server_id").notNull(),
+    gold: integer("gold").notNull().default(0),
+    silver: integer("silver").notNull().default(0),
+    bronze: integer("bronze").notNull().default(0),
+    crown_score: integer("crown_score").notNull().default(0),
+    computed_at: integer("computed_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    uniqueIndex("pcs_uuid_season_server_unique").on(
+      table.minecraft_uuid,
+      table.season,
+      table.server_id,
+    ),
+    index("pcs_leaderboard_idx").on(
+      table.season,
+      table.server_id,
+      table.crown_score,
+    ),
+  ],
+);

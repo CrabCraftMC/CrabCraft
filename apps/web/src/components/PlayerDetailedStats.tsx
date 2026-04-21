@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import Squircle from "@/components/Squircle";
 import { formatValue, type Units } from "@/lib/formatValue";
 import { categorise, getTitle, getDesc } from "@/lib/categories";
+import { AWARDS } from "@crabcraft/shared/awards";
 
 type StatEntry = { rank?: number; value: number };
 type StatsData = Record<string, StatEntry>;
@@ -36,14 +37,20 @@ export default function PlayerDetailedStats({
   const [activeTab, setActiveTab] = useState(tabs[0] || "");
   const [search, setSearch] = useState("");
 
+  const resolveTitle = (key: string) =>
+    AWARDS[key]?.title ?? getTitle(key, loc);
+  const resolveDesc = (key: string) =>
+    AWARDS[key]?.desc || getDesc(key, loc);
+
   const searchResults = useMemo(() => {
     if (search.length < 2) return null;
     const q = search.toLowerCase();
     return statItems.filter(({ key }) => {
-      const title = getTitle(key, loc);
-      const desc = getDesc(key, loc);
+      const title = resolveTitle(key);
+      const desc = resolveDesc(key);
       return title.toLowerCase().includes(q) || desc?.toLowerCase().includes(q) || key.includes(q);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, statItems, loc]);
 
   if (tabs.length === 0) return null;
@@ -94,8 +101,8 @@ export default function PlayerDetailedStats({
         </div>
 
         {items.map(({ key, entry }, i) => {
-          const title = getTitle(key, loc);
-          const desc = getDesc(key, loc);
+          const title = resolveTitle(key);
+          const desc = resolveDesc(key);
 
           return (
             <Link
@@ -118,7 +125,7 @@ export default function PlayerDetailedStats({
               </div>
               <div className="col-span-6 sm:col-span-7 min-w-0 flex items-center gap-3">
                 <Image
-                  src={`https://map.crabcraft.net/stats/img/award-icons/${key}.png`}
+                  src={AWARDS[key]?.icon ?? `/awards/icons/${key}.png`}
                   alt=""
                   width={32}
                   height={32}

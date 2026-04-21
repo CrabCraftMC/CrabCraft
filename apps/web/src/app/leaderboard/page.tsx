@@ -2,40 +2,40 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import Squircle from "@/components/Squircle";
-import { fetchGzipJson } from "@/lib/fetchGzip";
+import ServerSelect from "@/components/ServerSelect";
+import {
+  getCrownLeaderboard,
+  getAwardServers,
+  getCurrentSeason,
+  AWARD_AGGREGATE_SERVER_ID,
+} from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "Leaderboard",
   description: "View all CrabCraft players ranked by award points.",
 };
 
-interface Player {
-  rank: number;
-  uuid: string;
-  name: string;
-  points: number;
-  gold: number;
-  silver: number;
-  bronze: number;
+interface SearchParams {
+  server?: string;
 }
 
-export default async function LeaderboardPage() {
-  let players: Player[] = [];
+interface Props {
+  searchParams: Promise<SearchParams>;
+}
 
-  const json = await fetchGzipJson<any>(
-    "https://map.crabcraft.net/stats/data/summary.json.gz"
-  );
-  if (json) {
-    players = json.hof.map((entry: any, i: number) => ({
-      rank: i + 1,
-      uuid: entry.uuid,
-      name: json.players[entry.uuid]?.name ?? "Unknown",
-      points: entry.value[0],
-      gold: entry.value[1],
-      silver: entry.value[2],
-      bronze: entry.value[3],
-    }));
-  }
+export default async function LeaderboardPage({ searchParams }: Props) {
+  const { server } = await searchParams;
+  const currentSeason = await getCurrentSeason();
+  const seasonId = currentSeason?.id;
+
+  const serverId = server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
+
+  const [players, servers] = seasonId
+    ? await Promise.all([
+        getCrownLeaderboard(seasonId, serverId, 100),
+        getAwardServers(seasonId),
+      ])
+    : [[], []];
 
   const top3 = players.slice(0, 3);
   const podiumStyles = [
@@ -100,6 +100,16 @@ export default async function LeaderboardPage() {
           </Link>
         </div>
 
+        {servers.length > 0 && (
+          <div className="flex justify-center mb-6 animate-in">
+            <ServerSelect
+              servers={servers}
+              current={serverId}
+              basePath="/leaderboard"
+            />
+          </div>
+        )}
+
         {top3.length > 2 && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-10">
             {podiumOrder.map((idx) => {
@@ -108,12 +118,12 @@ export default async function LeaderboardPage() {
               return (
                 <Squircle
                   cornerRadius={32}
-                  key={player.uuid}
+                  key={player.minecraft_uuid}
                   className={`${style.mt} ${style.order} card-hover animate-in overflow-hidden bg-gradient-to-br ${style.gradient}`}
                   style={{ animationDelay: `${0.1 + idx * 0.05}s` }}
                 >
                   <Link
-                    href={`/stats/${player.uuid}`}
+                    href={`/stats/${player.minecraft_uuid}`}
                     className={`block ${style.padding} relative cursor-pointer`}
                   >
                     <span
@@ -123,7 +133,7 @@ export default async function LeaderboardPage() {
                     </span>
                     <div className="absolute bottom-0 right-0 pointer-events-none z-0 hidden sm:block opacity-30">
                       <Image
-                        src={`https://starlightskins.lunareclipse.studio/render/${style.render}/${player.uuid}/full`}
+                        src={`https://starlightskins.lunareclipse.studio/render/${style.render}/${player.minecraft_uuid}/full`}
                         alt=""
                         width={140}
                         height={280}
@@ -132,20 +142,20 @@ export default async function LeaderboardPage() {
                     </div>
                     <div className="relative z-10 flex flex-col items-start text-left gap-3">
                       <Image
-                        src={`https://mc-heads.net/avatar/${player.uuid}/100.png`}
-                        alt={player.name}
+                        src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/100.png`}
+                        alt={player.minecraft_username ?? ""}
                         width={style.avatarSize}
                         height={style.avatarSize}
                         className="rounded-lg bg-white/20"
                       />
                       <div>
                         <p className={`font-bold text-white ${style.nameSize}`}>
-                          {player.name}
+                          {player.minecraft_username ?? "Unknown"}
                         </p>
                         <p
                           className={`font-mc text-white/90 ${style.ptsSize} mt-1`}
                         >
-                          {player.points} pts
+                          {player.crown_score} pts
                         </p>
                         <div className="flex gap-3 mt-2 text-xs text-white/70">
                           <span>{player.gold} gold</span>
@@ -209,8 +219,8 @@ export default async function LeaderboardPage() {
 
           {players.map((player, i) => (
             <Link
-              key={player.uuid}
-              href={`/stats/${player.uuid}`}
+              key={player.minecraft_uuid}
+              href={`/stats/${player.minecraft_uuid}`}
               className={`grid grid-cols-10 gap-2 px-6 py-3 items-center hover:bg-orange-50/60 dark:hover:bg-[#2a221b] transition-colors relative z-10 cursor-pointer ${
                 i % 2 === 0
                   ? "bg-paper-2/80"
@@ -218,25 +228,42 @@ export default async function LeaderboardPage() {
               }`}
             >
               <div className="col-span-2 sm:col-span-1 flex items-center justify-center">
-                <span className={`text-sm font-bold ${player.rank === 1 ? "text-yellow-500" : player.rank === 2 ? "text-gray-400" : player.rank === 3 ? "text-amber-600" : "text-gray-400 dark:text-gray-500"}`}>
-                  {player.rank}{player.rank === 1 ? "st" : player.rank === 2 ? "nd" : player.rank === 3 ? "rd" : "th"}
+                <span
+                  className={`text-sm font-bold ${
+                    player.rank === 1
+                      ? "text-yellow-500"
+                      : player.rank === 2
+                        ? "text-gray-400"
+                        : player.rank === 3
+                          ? "text-amber-600"
+                          : "text-gray-400 dark:text-gray-500"
+                  }`}
+                >
+                  {player.rank}
+                  {player.rank === 1
+                    ? "st"
+                    : player.rank === 2
+                      ? "nd"
+                      : player.rank === 3
+                        ? "rd"
+                        : "th"}
                 </span>
               </div>
               <div className="col-span-5 flex items-center gap-3">
                 <Image
-                  src={`https://mc-heads.net/avatar/${player.uuid}/64.png`}
-                  alt={player.name}
+                  src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/64.png`}
+                  alt={player.minecraft_username ?? ""}
                   width={28}
                   height={28}
                   className="rounded bg-gray-200 dark:bg-gray-700"
                 />
                 <span className="font-bold text-sm text-gray-700 dark:text-gray-300 truncate">
-                  {player.name}
+                  {player.minecraft_username ?? "Unknown"}
                 </span>
               </div>
               <div className="col-span-3 sm:col-span-1 text-center">
                 <span className="font-bold text-orange-500 text-sm">
-                  {player.points}
+                  {player.crown_score}
                 </span>
               </div>
               <div className="hidden sm:block col-span-1 text-center text-sm text-yellow-600 font-bold">
@@ -258,7 +285,6 @@ export default async function LeaderboardPage() {
             </div>
           )}
         </Squircle>
-
       </div>
     </div>
   );
