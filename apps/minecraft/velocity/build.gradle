@@ -47,6 +47,15 @@ tasks.jar {
 
 tasks.build.dependsOn(tasks.shadowJar)
 
+// Bundle the single source-of-truth award seed file into the plugin JAR
+// so the plugin can populate an empty awards table without requiring
+// 'bun run seed:awards' to have been run first.
+processResources {
+    from(file("${rootDir}/../../packages/db/seeds/awards.json")) {
+        into "crabcraft"
+    }
+}
+
 def generatedSrcDir = layout.buildDirectory.dir("generated/sources/buildinfo/java")
 
 tasks.register('generateBuildInfo') {

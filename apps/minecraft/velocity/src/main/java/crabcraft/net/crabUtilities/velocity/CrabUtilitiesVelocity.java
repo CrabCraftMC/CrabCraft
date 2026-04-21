@@ -14,6 +14,7 @@ import crabcraft.net.crabUtilities.velocity.awards.AwardDbWriter;
 import crabcraft.net.crabUtilities.velocity.awards.AwardDefinition;
 import crabcraft.net.crabUtilities.velocity.awards.AwardEvaluator;
 import crabcraft.net.crabUtilities.velocity.awards.AwardLoader;
+import crabcraft.net.crabUtilities.velocity.awards.AwardSeeder;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
@@ -77,6 +78,7 @@ public class CrabUtilitiesVelocity {
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
         );
 
+        AwardSeeder.seedIfEmpty(pgWriter.getDataSource(), logger);
         Map<String, AwardDefinition> awards = AwardLoader.loadAll(pgWriter.getDataSource(), logger);
         logger.info("Loaded {} award definitions from database", awards.size());
         this.awardEvaluator = new AwardEvaluator(awards);
@@ -138,6 +140,7 @@ public class CrabUtilitiesVelocity {
         this.pgWriter = new PostgresStatsWriter(
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
         );
+        AwardSeeder.seedIfEmpty(pgWriter.getDataSource(), logger);
         Map<String, AwardDefinition> awards = AwardLoader.loadAll(pgWriter.getDataSource(), logger);
         logger.info("Loaded {} award definitions from database", awards.size());
         this.awardEvaluator = new AwardEvaluator(awards);
