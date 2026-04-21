@@ -3,29 +3,19 @@ package crabcraft.net.crabUtilities.velocity.api;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
 import crabcraft.net.crabUtilities.velocity.NicknameCache;
-import crabcraft.net.crabUtilities.velocity.awards.AwardDbWriter;
-import crabcraft.net.crabUtilities.velocity.awards.AwardEvaluator;
-import crabcraft.net.crabUtilities.velocity.db.ComputedStats;
-import crabcraft.net.crabUtilities.velocity.db.StatsParser;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
 public class WebServer {
@@ -36,7 +26,6 @@ public class WebServer {
     private static final long RATE_WINDOW_MS = 60_000;
 
     private static final Pattern USERNAME = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
-    private static final Pattern UUID_PATTERN = Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
 
     private static final String ERROR_SCHEMA =
             "{\"type\":\"object\",\"properties\":{\"error\":{\"type\":\"string\"}}}";
@@ -154,25 +143,6 @@ public class WebServer {
             + "},"
             + "\"400\":{\"description\":\"Invalid username format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + "\"404\":{\"description\":\"Player not online\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + COMMON_ERRORS
-            + "}"
-            + "}"
-            + "},"
-
-            + "\"/stats/{uuid}\":{"
-            + "\"get\":{"
-            + "\"summary\":\"Player statistics\","
-            + "\"description\":\"Returns a player's Minecraft statistics from the server's stats file.\","
-            + "\"operationId\":\"getStats\","
-            + "\"parameters\":[{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Player UUID in lowercase hyphenated format\"}],"
-            + "\"responses\":{"
-            + "\"200\":{"
-            + "\"description\":\"Stats data\","
-            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\"}}}"
-            + "},"
-            + "\"400\":{\"description\":\"Invalid UUID format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + "\"404\":{\"description\":\"No stats found for this UUID\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + "\"503\":{\"description\":\"Stats unavailable (server not responding)\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
             + "}"
@@ -389,80 +359,6 @@ public class WebServer {
                 response.add("players", players);
 
                 sendJson(exchange, GSON.toJson(response));
-            });
-
-            httpServer.createContext("/stats/", exchange -> {
-                if (!"GET".equals(exchange.getRequestMethod())) {
-                    sendError(exchange, 405, "method not allowed");
-                    return;
-                }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
-                    sendError(exchange, 429, "rate limit exceeded");
-                    return;
-                }
-
-                String uuid = exchange.getRequestURI().getPath().substring("/stats/".length());
-                if (!UUID_PATTERN.matcher(uuid).matches()) {
-                    sendError(exchange, 400, "invalid uuid");
-                    return;
-                }
-
-                CompletableFuture<Map<String, String>> future = plugin.getStatsRequestManager().requestStats(uuid);
-                Map<String, String> responses;
-                try {
-                    responses = future.get(5, TimeUnit.SECONDS);
-                } catch (TimeoutException e) {
-                    future.cancel(true);
-                    sendError(exchange, 503, "stats unavailable");
-                    return;
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    sendError(exchange, 503, "stats unavailable");
-                    return;
-                } catch (ExecutionException e) {
-                    sendError(exchange, 503, "stats unavailable");
-                    return;
-                }
-
-                if (responses == null || responses.isEmpty()) {
-                    sendError(exchange, 404, "stats not found");
-                } else {
-                    // For the HTTP API response, surface the first backend's stats blob so
-                    // external callers keep seeing one stats object per player. The award
-                    // pipeline (below) uses every per-server response.
-                    String statsJson = responses.values().iterator().next();
-                    final String playerUuid = uuid;
-                    final Map<String, String> perServer = new java.util.HashMap<>(responses);
-                    CompletableFuture.runAsync(() -> {
-                        String season = plugin.getConfig().getCurrentSeason();
-                        // Legacy player_season_stats row stays on the first backend's blob.
-                        try {
-                            ComputedStats computed = StatsParser.parse(statsJson);
-                            plugin.getPgWriter().writePlayerSeasonStats(playerUuid, season, computed);
-                        } catch (Exception ignored) {
-                            // Don't let PG write failure break the API response
-                        }
-                        // Per-server award scores + crown recompute, one pass per backend.
-                        AwardEvaluator evaluator = plugin.getAwardEvaluator();
-                        AwardDbWriter writer = plugin.getAwardDbWriter();
-                        if (evaluator == null || writer == null) return;
-                        for (Map.Entry<String, String> entry : perServer.entrySet()) {
-                            try {
-                                JsonObject parsed = GSON.fromJson(entry.getValue(), JsonObject.class);
-                                if (parsed == null) continue;
-                                writer.writeForPlayerOnServer(
-                                        playerUuid, season, entry.getKey(),
-                                        evaluator.evaluate(parsed));
-                            } catch (JsonSyntaxException ignored) {
-                                // Skip malformed stats JSON from one backend; others still apply.
-                            } catch (Exception e) {
-                                plugin.getLogger().warn("Award write failed for uuid={} server={}",
-                                        playerUuid, entry.getKey(), e);
-                            }
-                        }
-                    });
-                    sendJson(exchange, statsJson);
-                }
             });
 
             httpServer.start();

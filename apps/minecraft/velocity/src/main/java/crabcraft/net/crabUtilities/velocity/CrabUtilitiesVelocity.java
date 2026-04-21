@@ -9,7 +9,6 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import crabcraft.net.crabUtilities.velocity.api.StatsPushSubscriber;
-import crabcraft.net.crabUtilities.velocity.api.StatsRequestManager;
 import crabcraft.net.crabUtilities.velocity.api.WebServer;
 import crabcraft.net.crabUtilities.velocity.awards.AwardDbWriter;
 import crabcraft.net.crabUtilities.velocity.awards.AwardDefinition;
@@ -46,7 +45,6 @@ public class CrabUtilitiesVelocity {
     private PendingJoinManager pendingJoinManager;
     private DiscordWebhook discordWebhook;
     private JoinedPlayersStore joinedPlayersStore;
-    private StatsRequestManager statsRequestManager;
     private StatsPushSubscriber statsPushSubscriber;
     private PostgresStatsWriter pgWriter;
     private AwardEvaluator awardEvaluator;
@@ -74,9 +72,6 @@ public class CrabUtilitiesVelocity {
 
         server.getChannelRegistrar().register(MinecraftChannelIdentifier.from("crabutilities:nicknames"));
         server.getEventManager().register(this, new NicknameListener(this));
-
-        this.statsRequestManager = new StatsRequestManager(config, logger);
-        this.statsRequestManager.start();
 
         this.pgWriter = new PostgresStatsWriter(
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
@@ -121,9 +116,6 @@ public class CrabUtilitiesVelocity {
         if (statsPushSubscriber != null) {
             statsPushSubscriber.shutdown();
         }
-        if (statsRequestManager != null) {
-            statsRequestManager.shutdown();
-        }
         if (redisStaffChat != null) {
             redisStaffChat.shutdown();
         }
@@ -139,12 +131,6 @@ public class CrabUtilitiesVelocity {
     public void reload() {
         this.config = VelocityConfig.load(dataDirectory, logger);
         VelocityConfig config = this.config;
-
-        if (statsRequestManager != null) {
-            statsRequestManager.shutdown();
-        }
-        this.statsRequestManager = new StatsRequestManager(config, logger);
-        this.statsRequestManager.start();
 
         if (pgWriter != null) {
             pgWriter.close();
@@ -199,7 +185,6 @@ public class CrabUtilitiesVelocity {
     public DiscordWebhook getDiscordWebhook() { return discordWebhook; }
     public JoinedPlayersStore getJoinedPlayersStore() { return joinedPlayersStore; }
     public WebServer getWebServer() { return webServer; }
-    public StatsRequestManager getStatsRequestManager() { return statsRequestManager; }
     public PostgresStatsWriter getPgWriter() { return pgWriter; }
     public AwardEvaluator getAwardEvaluator() { return awardEvaluator; }
     public AwardDbWriter getAwardDbWriter() { return awardDbWriter; }
