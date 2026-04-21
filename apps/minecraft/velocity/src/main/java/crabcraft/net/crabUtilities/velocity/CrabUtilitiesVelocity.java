@@ -16,6 +16,7 @@ import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatListener;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
+import crabcraft.net.crabUtilities.velocity.update.UpdateService;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -23,7 +24,7 @@ import java.nio.file.Path;
 @Plugin(
         id = "crabutilities",
         name = "CrabUtilities",
-        version = "1.0-SNAPSHOT",
+        version = BuildInfo.VERSION,
         authors = {"CrabCraft"}
 )
 public class CrabUtilitiesVelocity {
@@ -42,6 +43,7 @@ public class CrabUtilitiesVelocity {
     private StatsRequestManager statsRequestManager;
     private PostgresStatsWriter pgWriter;
     private VelocityConfig config;
+    private UpdateService updateService;
 
     @Inject
     public CrabUtilitiesVelocity(ProxyServer server, Logger logger,
@@ -79,6 +81,11 @@ public class CrabUtilitiesVelocity {
 
         this.staffChatManager = new StaffChatManager(this, redisStaffChat);
 
+        this.updateService = new UpdateService(this);
+        if (config.isUpdateEnabled()) {
+            updateService.start();
+        }
+
         StaffChatCommand.register(this);
         StaffChatToggleCommand.register(this);
         ReloadCommand.register(this);
@@ -102,6 +109,9 @@ public class CrabUtilitiesVelocity {
         }
         if (pgWriter != null) {
             pgWriter.close();
+        }
+        if (updateService != null) {
+            updateService.shutdown();
         }
         logger.info("CrabUtilities Velocity disabled.");
     }
@@ -138,6 +148,14 @@ public class CrabUtilitiesVelocity {
         this.staffChatManager = new StaffChatManager(this, redisStaffChat);
         this.discordWebhook = new DiscordWebhook(config.getDiscordWebhookUrl(), logger);
 
+        if (updateService != null) {
+            updateService.shutdown();
+        }
+        this.updateService = new UpdateService(this);
+        if (config.isUpdateEnabled()) {
+            updateService.start();
+        }
+
         logger.info("CrabUtilities Velocity reloaded.");
     }
 
@@ -154,4 +172,5 @@ public class CrabUtilitiesVelocity {
     public StatsRequestManager getStatsRequestManager() { return statsRequestManager; }
     public PostgresStatsWriter getPgWriter() { return pgWriter; }
     public VelocityConfig getConfig() { return config; }
+    public UpdateService getUpdateService() { return updateService; }
 }

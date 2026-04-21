@@ -30,3 +30,14 @@ database:
   username: "crabcraft"
   password: ""
   current-season: "s1"
+
+# Automatic updates — polls GitHub Releases and downloads the new proxy JAR to
+# plugins/CrabUtilities-Velocity.jar.staged. Stop the proxy, replace the live
+# jar with the .staged file, then start the proxy to apply.
+auto-update:
+  enabled: true
+  check-interval-hours: 6
+  include-prereleases: false
+  github-repo: "CrabCraftMC/CrabCraft"
+  # Optional personal-access token; unauthenticated requests are limited to 60/hour.
+  github-token: ""

@@ -11,5 +11,11 @@ commands:
     aliases: [resourcepack, rp]
   crabutilities:
     description: CrabUtilities admin commands.
-    usage: /crabutilities reload
-    permission: crabutilities.reload
+    usage: /crabutilities <reload|update check|update download|update status>
+permissions:
+  crabutilities.reload:
+    description: Reload CrabUtilities configuration.
+    default: op
+  crabutilities.update:
+    description: Run CrabUtilities update commands.
+    default: op

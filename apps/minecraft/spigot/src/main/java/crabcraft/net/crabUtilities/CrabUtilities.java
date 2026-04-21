@@ -1,14 +1,19 @@
 package crabcraft.net.crabUtilities;
 
+import crabcraft.net.crabUtilities.update.UpdateCommand;
+import crabcraft.net.crabUtilities.update.UpdateService;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.io.File;
 
 public final class CrabUtilities extends JavaPlugin {
 
     private Plugin essentials; // Optional: present when EssentialsX is installed
     private ResourcePackManager resourcePackManager;
     private StatsRedisHandler statsRedisHandler;
+    private UpdateService updateService;
 
     @Override
     public void onEnable() {
@@ -29,12 +34,19 @@ public final class CrabUtilities extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(nicknameSync, this);
         nicknameSync.syncAll();
 
+        // Auto-updater
+        this.updateService = new UpdateService(this);
+        UpdateCommand updateCommand = new UpdateCommand(this, updateService);
+        if (getConfig().getBoolean("auto-update.enabled", true)) {
+            updateService.start();
+        }
+
         // Commands
         PackCommand packCommand = new PackCommand(this);
         getCommand("pack").setExecutor(packCommand);
         getCommand("pack").setTabCompleter(packCommand);
 
-        ReloadCommand reloadCommand = new ReloadCommand(this);
+        ReloadCommand reloadCommand = new ReloadCommand(this, updateCommand);
         getCommand("crabutilities").setExecutor(reloadCommand);
         getCommand("crabutilities").setTabCompleter(reloadCommand);
 
@@ -52,10 +64,21 @@ public final class CrabUtilities extends JavaPlugin {
         return resourcePackManager;
     }
 
+    /**
+     * Exposes the on-disk plugin jar so the updater can stage a replacement with
+     * the same filename into {@code plugins/update/}.
+     */
+    public File getPluginJarFile() {
+        return getFile();
+    }
+
     @Override
     public void onDisable() {
         if (statsRedisHandler != null) {
             statsRedisHandler.shutdown();
+        }
+        if (updateService != null) {
+            updateService.shutdown();
         }
     }
 }

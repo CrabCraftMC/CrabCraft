@@ -12,3 +12,13 @@ resource-pack:
   # Players (UUIDs) who have opted in to automatically receive the pack on join
   auto-enabled: []
 
+# Automatic updates — polls GitHub Releases and stages the new JAR into
+# plugins/update/ so Paper swaps it in on the next server restart.
+auto-update:
+  enabled: true
+  check-interval-hours: 6
+  include-prereleases: false
+  notify-ops: true
+  github-repo: "CrabCraftMC/CrabCraft"
+  # Optional personal-access token; unauthenticated requests are limited to 60/hour.
+  github-token: ""
