@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -403,10 +404,10 @@ public class WebServer {
                     return;
                 }
 
-                CompletableFuture<String> future = plugin.getStatsRequestManager().requestStats(uuid);
-                String statsJson;
+                CompletableFuture<Map<String, String>> future = plugin.getStatsRequestManager().requestStats(uuid);
+                Map<String, String> responses;
                 try {
-                    statsJson = future.get(5, TimeUnit.SECONDS);
+                    responses = future.get(5, TimeUnit.SECONDS);
                 } catch (TimeoutException e) {
                     future.cancel(true);
                     sendError(exchange, 503, "stats unavailable");
@@ -420,15 +421,17 @@ public class WebServer {
                     return;
                 }
 
-                if (statsJson == null) {
+                if (responses == null || responses.isEmpty()) {
                     sendError(exchange, 404, "stats not found");
                 } else {
-                    // Parse and write computed stats to PostgreSQL asynchronously
-                    final String statsData = statsJson;
+                    // For the HTTP API response, surface the first backend's stats blob so
+                    // external callers keep seeing one stats object per player. The award
+                    // pipeline (separate path) uses every per-server response.
+                    String statsJson = responses.values().iterator().next();
                     final String playerUuid = uuid;
                     CompletableFuture.runAsync(() -> {
                         try {
-                            ComputedStats computed = StatsParser.parse(statsData);
+                            ComputedStats computed = StatsParser.parse(statsJson);
                             plugin.getPgWriter().writePlayerSeasonStats(playerUuid, plugin.getConfig().getCurrentSeason(), computed);
                         } catch (Exception e) {
                             // Don't let PG write failure break the API response

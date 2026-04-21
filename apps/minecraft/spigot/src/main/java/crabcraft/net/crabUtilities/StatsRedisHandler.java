@@ -19,6 +19,7 @@ public class StatsRedisHandler {
     private final String host;
     private final int port;
     private final String password;
+    private final String serverId;
     private JedisPool jedisPool;
     private Thread subscriberThread;
     private JedisPubSub pubSub;
@@ -28,6 +29,7 @@ public class StatsRedisHandler {
         this.host = plugin.getConfig().getString("redis.host", "localhost");
         this.port = plugin.getConfig().getInt("redis.port", 6379);
         this.password = plugin.getConfig().getString("redis.password", "");
+        this.serverId = plugin.getConfig().getString("server-id", "default");
     }
 
     public void start() {
@@ -61,16 +63,19 @@ public class StatsRedisHandler {
                         "stats/" + uuid + ".json"
                 );
 
+                // Response format: requestId \0 serverId \0 statsJson
+                // statsJson is empty when this backend has no stats file for the uuid.
                 String response;
                 if (statsFile.exists()) {
                     try {
-                        response = requestId + SEPARATOR + Files.readString(statsFile.toPath());
+                        response = requestId + SEPARATOR + serverId + SEPARATOR
+                                + Files.readString(statsFile.toPath());
                     } catch (IOException e) {
                         plugin.getLogger().warning("Failed to read stats file for " + uuid + ": " + e.getMessage());
-                        response = requestId + SEPARATOR;
+                        response = requestId + SEPARATOR + serverId + SEPARATOR;
                     }
                 } else {
-                    response = requestId + SEPARATOR;
+                    response = requestId + SEPARATOR + serverId + SEPARATOR;
                 }
 
                 try (Jedis jedis = jedisPool.getResource()) {
