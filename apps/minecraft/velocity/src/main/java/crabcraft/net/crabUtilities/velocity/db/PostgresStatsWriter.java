@@ -77,6 +77,12 @@ public class PostgresStatsWriter {
         config.setMaximumPoolSize(3);
         config.setConnectionTimeout(5000);
         config.setPoolName("CrabUtilities-PG");
+        // Velocity isolates plugin classloaders, so DriverManager's
+        // ServiceLoader-based discovery can't see the driver bundled
+        // inside this plugin JAR. Naming the driver class explicitly
+        // makes Hikari load it via Class.forName on the plugin's own
+        // classloader, which always succeeds.
+        config.setDriverClassName("org.postgresql.Driver");
         this.dataSource = new HikariDataSource(config);
     }
 
