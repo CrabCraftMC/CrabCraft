@@ -10,7 +10,8 @@
     "db:generate": "turbo db:generate",
     "db:migrate": "turbo db:migrate",
     "db:push": "turbo db:push",
-    "db:studio": "bun run --filter @crabcraft/db studio"
+    "db:studio": "bun run --filter @crabcraft/db studio",
+    "seed:awards": "bun run --cwd packages/db scripts/seed-awards.ts"
   },
   "devDependencies": {
     "@libsql/client": "^0.17.2",

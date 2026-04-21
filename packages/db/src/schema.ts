@@ -6,6 +6,7 @@ import {
   boolean,
   serial,
   real,
+  jsonb,
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
@@ -132,6 +133,32 @@ export const playerSeasonStats = pgTable(
     index("pss_season_idx").on(table.season),
   ],
 );
+
+// ── awards ──────────────────────────────────────────────────────
+// Award definitions. Runtime-editable: admins can add/rename/disable
+// awards without redeploying. Evaluated by the Velocity plugin against
+// each player's stats/<uuid>.json.
+export const awards = pgTable("awards", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  unit: text("unit").notNull(), // int | ticks | cm | tenths_of_heart
+  bucket: text("bucket").notNull(), // combat | mining | crafting | building | items | food | movement | misc
+  icon: text("icon").notNull(),
+  // Reader spec used by the plugin to extract a value from
+  // stats/<uuid>.json. Schema mirrors MinecraftStats' JSON readers.
+  reader_type: text("reader_type").notNull(), // int | match-sum
+  reader_path: jsonb("reader_path").notNull(), // string[]
+  reader_patterns: jsonb("reader_patterns"), // string[] | null
+  enabled: boolean("enabled").notNull().default(true),
+  sort_order: integer("sort_order").notNull().default(0),
+  created_at: integer("created_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  updated_at: integer("updated_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
 
 // ── player_award_scores ─────────────────────────────────────────
 // Per-player, per-award, per-server score for a season.
