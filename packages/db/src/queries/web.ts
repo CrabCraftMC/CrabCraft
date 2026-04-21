@@ -6,7 +6,6 @@ import {
   seasons as seasonsTable,
   playerSeasonStats,
   playerAwardScores,
-  playerCrownScores,
   awards,
   AGGREGATE_SERVER_ID,
 } from "../schema";
@@ -675,44 +674,59 @@ export async function getAwardsSummary(
 
 /**
  * Hall of Fame ranking (crown score). Serves /leaderboard.
+ *
+ * Aggregates medals from player_award_scores at query time. Crown
+ * score weighting: gold * 4 + silver * 2 + bronze. At our scale the
+ * scan is sub-millisecond; keeping this as a live query avoids the
+ * write-amplification + sync problems of a rollup table.
  */
 export async function getCrownLeaderboard(
   season: string,
   serverId: string = AGGREGATE_SERVER_ID,
   limit = 100,
 ): Promise<CrownLeaderboardEntry[]> {
-  const rows = await db
-    .select({
-      uuid: playerCrownScores.minecraft_uuid,
-      username: players.minecraft_username,
-      gold: playerCrownScores.gold,
-      silver: playerCrownScores.silver,
-      bronze: playerCrownScores.bronze,
-      crown_score: playerCrownScores.crown_score,
-    })
-    .from(playerCrownScores)
-    .leftJoin(
-      players,
-      eq(players.minecraft_uuid, playerCrownScores.minecraft_uuid),
-    )
-    .where(
-      and(
-        eq(playerCrownScores.season, season),
-        eq(playerCrownScores.server_id, serverId),
-        sql`${playerCrownScores.crown_score} > 0`,
-      ),
-    )
-    .orderBy(
-      desc(playerCrownScores.crown_score),
-      desc(playerCrownScores.gold),
-      desc(playerCrownScores.silver),
-    )
-    .limit(limit);
-
-  return rows.map((row, i) => ({
+  const rows = await db.execute(
+    sql`
+      SELECT
+        c.minecraft_uuid,
+        u.minecraft_username,
+        c.gold,
+        c.silver,
+        c.bronze,
+        c.crown_score
+      FROM (
+        SELECT
+          minecraft_uuid,
+          COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
+          COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
+          COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
+          (COUNT(*) FILTER (WHERE medal = 1) * 4
+           + COUNT(*) FILTER (WHERE medal = 2) * 2
+           + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
+        FROM player_award_scores
+        WHERE season = ${season}
+          AND server_id = ${serverId}
+        GROUP BY minecraft_uuid
+      ) c
+      LEFT JOIN players u ON u.minecraft_uuid = c.minecraft_uuid
+      WHERE c.crown_score > 0
+      ORDER BY c.crown_score DESC, c.gold DESC, c.silver DESC
+      LIMIT ${limit}
+    `,
+  );
+  return (
+    rows as unknown as Array<{
+      minecraft_uuid: string;
+      minecraft_username: string | null;
+      gold: number;
+      silver: number;
+      bronze: number;
+      crown_score: number;
+    }>
+  ).map((row, i) => ({
     rank: i + 1,
-    minecraft_uuid: row.uuid,
-    minecraft_username: row.username,
+    minecraft_uuid: row.minecraft_uuid,
+    minecraft_username: row.minecraft_username,
     gold: row.gold,
     silver: row.silver,
     bronze: row.bronze,
@@ -764,6 +778,10 @@ export async function getPlayerAwardHoldings(
 
 /**
  * Single crown-score row for a player (for their profile page).
+ *
+ * Computes the player's medals and their rank within the
+ * (season, server_id) slice from player_award_scores in one pass.
+ * Returns null when the player has no medal-earning awards.
  */
 export async function getPlayerCrownScore(
   uuid: string,
@@ -772,25 +790,33 @@ export async function getPlayerCrownScore(
 ): Promise<CrownLeaderboardEntry | null> {
   const rows = await db.execute(
     sql`
-      SELECT
-        p.minecraft_uuid,
-        u.minecraft_username,
-        p.gold,
-        p.silver,
-        p.bronze,
-        p.crown_score,
-        (
-          SELECT COUNT(*) + 1
-          FROM player_crown_scores p2
-          WHERE p2.season = p.season
-            AND p2.server_id = p.server_id
-            AND p2.crown_score > p.crown_score
-        ) AS rank
-      FROM player_crown_scores p
-      LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
-      WHERE p.minecraft_uuid = ${uuid}
-        AND p.season = ${season}
-        AND p.server_id = ${serverId}
+      WITH crown AS (
+        SELECT
+          minecraft_uuid,
+          COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
+          COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
+          COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
+          (COUNT(*) FILTER (WHERE medal = 1) * 4
+           + COUNT(*) FILTER (WHERE medal = 2) * 2
+           + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
+        FROM player_award_scores
+        WHERE season = ${season}
+          AND server_id = ${serverId}
+        GROUP BY minecraft_uuid
+      ),
+      ranked AS (
+        SELECT
+          minecraft_uuid, gold, silver, bronze, crown_score,
+          RANK() OVER (
+            ORDER BY crown_score DESC, gold DESC, silver DESC
+          ) AS rank
+        FROM crown
+        WHERE crown_score > 0
+      )
+      SELECT r.*, u.minecraft_username
+      FROM ranked r
+      LEFT JOIN players u ON u.minecraft_uuid = r.minecraft_uuid
+      WHERE r.minecraft_uuid = ${uuid}
       LIMIT 1
     `,
   );

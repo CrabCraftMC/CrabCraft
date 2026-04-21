@@ -196,34 +196,7 @@ export const playerAwardScores = pgTable(
   ],
 );
 
-// ── player_crown_scores ─────────────────────────────────────────
-// Derived hall-of-fame rollup: gold/silver/bronze medal counts + weighted
-// crown score per (player, season, server). Refreshed after award writes.
-export const playerCrownScores = pgTable(
-  "player_crown_scores",
-  {
-    id: serial("id").primaryKey(),
-    minecraft_uuid: text("minecraft_uuid").notNull(),
-    season: text("season").notNull(),
-    server_id: text("server_id").notNull(),
-    gold: integer("gold").notNull().default(0),
-    silver: integer("silver").notNull().default(0),
-    bronze: integer("bronze").notNull().default(0),
-    crown_score: integer("crown_score").notNull().default(0),
-    computed_at: integer("computed_at")
-      .notNull()
-      .$defaultFn(() => Math.floor(Date.now() / 1000)),
-  },
-  (table) => [
-    uniqueIndex("pcs_uuid_season_server_unique").on(
-      table.minecraft_uuid,
-      table.season,
-      table.server_id,
-    ),
-    index("pcs_leaderboard_idx").on(
-      table.season,
-      table.server_id,
-      table.crown_score,
-    ),
-  ],
-);
+// Crown scores (gold/silver/bronze totals + weighted crown score) are
+// not stored — they're aggregated on read directly from
+// player_award_scores. See getCrownLeaderboard / getPlayerCrownScore
+// in packages/db/src/queries/web.ts.

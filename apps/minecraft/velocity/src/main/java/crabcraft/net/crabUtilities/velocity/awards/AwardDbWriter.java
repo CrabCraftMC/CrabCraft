@@ -9,7 +9,7 @@ import java.sql.SQLException;
 import java.util.Map;
 
 /**
- * Persists award scores and derived tables to Postgres.
+ * Persists award scores to Postgres.
  *
  * Pipeline, called per stats update:
  * <ol>
@@ -18,13 +18,12 @@ import java.util.Map;
  *   <li>{@link #recomputePlayerAggregate(Connection, String, String)} sums
  *       the player's per-server rows into the {@code __aggregate__}
  *       sentinel row used by the cross-server leaderboards.</li>
- *   <li>{@link #recomputeMedals(Connection, String, String)} and
- *       {@link #recomputeCrownScores(Connection, String, String)} refresh
- *       the global medal / crown-score state for that slice.</li>
+ *   <li>{@link #recomputeMedals(Connection, String, String)} refreshes
+ *       the top-3 medal state for that slice.</li>
  * </ol>
- * The two recompute steps touch every row in the slice, but the slice is
- * at most (~active players) &times; 202 awards which is trivial for
- * Postgres. They're idempotent so concurrent runs converge.
+ * Crown-score aggregation (gold/silver/bronze totals per player) is
+ * not persisted — the web queries compute it directly from
+ * {@code player_award_scores} at read time via window functions.
  */
 public final class AwardDbWriter {
 
@@ -77,35 +76,6 @@ public final class AwardDbWriter {
         WHERE pas.id = ranked.id
         """;
 
-    /**
-     * Weighted crown score: gold * 4 + silver * 2 + bronze * 1, matching
-     * the explainer tooltip on the web /leaderboard page.
-     */
-    private static final String RECOMPUTE_CROWN = """
-        INSERT INTO player_crown_scores
-            (minecraft_uuid, season, server_id, gold, silver, bronze, crown_score, computed_at)
-        SELECT
-            minecraft_uuid,
-            season,
-            server_id,
-            COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
-            COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
-            COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-            (COUNT(*) FILTER (WHERE medal = 1) * 4
-             + COUNT(*) FILTER (WHERE medal = 2) * 2
-             + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score,
-            EXTRACT(EPOCH FROM NOW())::INTEGER
-        FROM player_award_scores
-        WHERE season = ? AND server_id = ?
-        GROUP BY minecraft_uuid, season, server_id
-        ON CONFLICT (minecraft_uuid, season, server_id) DO UPDATE SET
-            gold = EXCLUDED.gold,
-            silver = EXCLUDED.silver,
-            bronze = EXCLUDED.bronze,
-            crown_score = EXCLUDED.crown_score,
-            computed_at = EXTRACT(EPOCH FROM NOW())::INTEGER
-        """;
-
     private final HikariDataSource dataSource;
     private final Logger logger;
 
@@ -128,8 +98,6 @@ public final class AwardDbWriter {
                 recomputePlayerAggregate(conn, uuid, season);
                 recomputeMedals(conn, season, serverId);
                 recomputeMedals(conn, season, AGGREGATE_SERVER_ID);
-                recomputeCrownScores(conn, season, serverId);
-                recomputeCrownScores(conn, season, AGGREGATE_SERVER_ID);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -169,14 +137,6 @@ public final class AwardDbWriter {
 
     public void recomputeMedals(Connection conn, String season, String serverId) throws SQLException {
         try (PreparedStatement stmt = conn.prepareStatement(RECOMPUTE_MEDALS)) {
-            stmt.setString(1, season);
-            stmt.setString(2, serverId);
-            stmt.executeUpdate();
-        }
-    }
-
-    public void recomputeCrownScores(Connection conn, String season, String serverId) throws SQLException {
-        try (PreparedStatement stmt = conn.prepareStatement(RECOMPUTE_CROWN)) {
             stmt.setString(1, season);
             stmt.setString(2, serverId);
             stmt.executeUpdate();
