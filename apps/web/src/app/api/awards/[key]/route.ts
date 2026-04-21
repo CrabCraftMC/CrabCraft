@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAward } from "@crabcraft/shared/awards";
 import {
   getAwardLeaderboard,
   getCurrentSeason,
+  getAwardDefinition,
   AWARD_AGGREGATE_SERVER_ID,
 } from "@/lib/queries";
 
@@ -12,8 +12,13 @@ export async function GET(
 ) {
   const { key } = await params;
 
-  if (!/^[a-z0-9_]+$/.test(key) || !getAward(key)) {
+  if (!/^[a-z0-9_]+$/.test(key)) {
     return NextResponse.json([], { status: 400 });
+  }
+
+  const meta = await getAwardDefinition(key);
+  if (!meta) {
+    return NextResponse.json([], { status: 404 });
   }
 
   const searchParams = request.nextUrl.searchParams;

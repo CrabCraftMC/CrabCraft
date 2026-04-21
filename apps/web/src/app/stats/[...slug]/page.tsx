@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import PlayerStatsPage from "@/components/PlayerStatsPage";
-import { AWARDS } from "@crabcraft/shared/awards";
 import {
   getPlayerRole,
   getJoinedSeason,
@@ -9,6 +8,7 @@ import {
   getCurrentSeason,
   getPlayerCrownScore,
   getPlayerAwardScores,
+  getAwardDefinitions,
 } from "@/lib/queries";
 
 interface Props {
@@ -52,7 +52,10 @@ export default async function StatsPage({ params }: Props) {
   const { slug } = await params;
   const identifier = (slug?.join("/") || "").trim();
 
-  const dbUser = await getUserByIdentifier(identifier).catch(() => null);
+  const [dbUser, awardDefs] = await Promise.all([
+    getUserByIdentifier(identifier).catch(() => null),
+    getAwardDefinitions().catch(() => []),
+  ]);
 
   const playerData = {
     nickname: dbUser?.minecraft_username ?? identifier,
@@ -68,13 +71,25 @@ export default async function StatsPage({ params }: Props) {
   };
 
   const awardUnits: Record<string, string> = {};
-  for (const id of Object.keys(AWARDS)) awardUnits[id] = AWARDS[id].unit;
+  const awardsById: Record<
+    string,
+    { title: string; description: string; icon: string }
+  > = {};
+  for (const d of awardDefs) {
+    awardUnits[d.id] = d.unit;
+    awardsById[d.id] = {
+      title: d.title,
+      description: d.description,
+      icon: d.icon,
+    };
+  }
 
   if (!playerData.found) {
     return (
       <PlayerStatsPage
         {...playerData}
         detailedStats={null}
+        awardsById={awardsById}
         localization={null}
         awardUnits={awardUnits}
         profile={null}
@@ -117,6 +132,7 @@ export default async function StatsPage({ params }: Props) {
     <PlayerStatsPage
       {...enriched}
       detailedStats={detailedStats}
+      awardsById={awardsById}
       localization={null}
       awardUnits={awardUnits}
       profile={profile}

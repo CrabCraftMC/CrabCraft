@@ -15,6 +15,7 @@ interface PlayerProps {
     role: string;
     joinedSeason: string | null;
     detailedStats?: Record<string, { rank?: number; value: number }> | null;
+    awardsById?: Record<string, { title: string; description: string; icon: string }> | null;
     localization?: Record<string, string> | null;
     awardUnits?: Record<string, string> | null;
     profile?: { discord_username: string | null } | null;
@@ -33,7 +34,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
         );
     }
 
-    const { nickname, uuid, rank, points, gold, silver, bronze, role, joinedSeason, detailedStats, localization, awardUnits, profile } = props;
+    const { nickname, uuid, rank, points, gold, silver, bronze, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile } = props;
 
     return (
         <div className="min-h-screen pt-16 lg:pt-24 pb-16">
@@ -102,7 +103,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                 </div>
 
                 {/* Detailed stats */}
-                {detailedStats && <PlayerDetailedStats stats={detailedStats} localization={localization} awardUnits={awardUnits} />}
+                {detailedStats && <PlayerDetailedStats stats={detailedStats} awardsById={awardsById ?? undefined} localization={localization} awardUnits={awardUnits} />}
 
                 {/* Back link */}
                 <div className="mt-8 text-center animate-in" style={{ animationDelay: "0.25s" }}>

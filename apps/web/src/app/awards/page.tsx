@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import AwardsTabs from "@/components/AwardsTabs";
 import ServerSelect from "@/components/ServerSelect";
-import { AWARDS, AWARD_IDS } from "@crabcraft/shared/awards";
 import {
   getAwardsSummary,
   getAwardServers,
   getCurrentSeason,
+  getAwardDefinitions,
   AWARD_AGGREGATE_SERVER_ID,
 } from "@/lib/queries";
 import { categorise } from "@/lib/categories";
@@ -26,10 +26,14 @@ export const metadata: Metadata = {
 
 export default async function AwardsPage({ searchParams }: Props) {
   const { server } = await searchParams;
-  const currentSeason = await getCurrentSeason();
+  const [currentSeason, defs] = await Promise.all([
+    getCurrentSeason(),
+    getAwardDefinitions(),
+  ]);
   const seasonId = currentSeason?.id;
 
-  const serverId = server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
+  const serverId =
+    server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
 
   const [summary, servers] = seasonId
     ? await Promise.all([
@@ -40,15 +44,14 @@ export default async function AwardsPage({ searchParams }: Props) {
 
   const summaryByAward = new Map(summary.map((s) => [s.award_id, s]));
   const awardUnits: Record<string, string> = {};
-  for (const id of AWARD_IDS) awardUnits[id] = AWARDS[id].unit;
+  for (const d of defs) awardUnits[d.id] = d.unit;
 
-  const awardItems = AWARD_IDS.map((id) => {
-    const meta = AWARDS[id];
-    const best = summaryByAward.get(id);
+  const awardItems = defs.map((d) => {
+    const best = summaryByAward.get(d.id);
     return {
-      key: id,
-      title: meta.title,
-      desc: meta.desc || null,
+      key: d.id,
+      title: d.title,
+      desc: d.description || null,
       bestName: best?.best_username ?? null,
       bestUuid: best?.best_uuid ?? null,
       bestValue: best?.best_score ?? 0,
@@ -68,7 +71,7 @@ export default async function AwardsPage({ searchParams }: Props) {
             Awards
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {AWARD_IDS.length} awards to compete for
+            {defs.length} awards to compete for
           </p>
         </div>
 

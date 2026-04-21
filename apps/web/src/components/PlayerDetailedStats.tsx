@@ -7,22 +7,28 @@ import { Search } from "lucide-react";
 import Squircle from "@/components/Squircle";
 import { formatValue, type Units } from "@/lib/formatValue";
 import { categorise, getTitle, getDesc } from "@/lib/categories";
-import { AWARDS } from "@crabcraft/shared/awards";
 
 type StatEntry = { rank?: number; value: number };
 type StatsData = Record<string, StatEntry>;
 
+type AwardMeta = { title: string; description: string; icon: string };
+
 export default function PlayerDetailedStats({
   stats,
+  awardsById,
   localization,
   awardUnits,
 }: {
   stats: StatsData;
+  /** Award metadata keyed by award id, provided by the server
+   *  component from getAwardDefinitions(). */
+  awardsById?: Record<string, AwardMeta>;
   localization?: Record<string, string> | null;
   awardUnits?: Units;
 }) {
   const loc = (localization ?? null) as Record<string, string> | null;
   const units = awardUnits ?? null;
+  const metaFor = awardsById ?? {};
 
   // Convert stats Record to array, filter zeros, categorise
   const statItems = Object.entries(stats)
@@ -38,9 +44,9 @@ export default function PlayerDetailedStats({
   const [search, setSearch] = useState("");
 
   const resolveTitle = (key: string) =>
-    AWARDS[key]?.title ?? getTitle(key, loc);
+    metaFor[key]?.title ?? getTitle(key, loc);
   const resolveDesc = (key: string) =>
-    AWARDS[key]?.desc || getDesc(key, loc);
+    metaFor[key]?.description || getDesc(key, loc);
 
   const searchResults = useMemo(() => {
     if (search.length < 2) return null;
@@ -125,7 +131,7 @@ export default function PlayerDetailedStats({
               </div>
               <div className="col-span-6 sm:col-span-7 min-w-0 flex items-center gap-3">
                 <Image
-                  src={AWARDS[key]?.icon ?? `/awards/icons/${key}.png`}
+                  src={metaFor[key]?.icon ?? `/awards/icons/${key}.png`}
                   alt=""
                   width={32}
                   height={32}

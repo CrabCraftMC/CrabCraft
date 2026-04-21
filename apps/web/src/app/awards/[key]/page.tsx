@@ -4,11 +4,11 @@ import Link from "next/link";
 import Squircle from "@/components/Squircle";
 import ServerSelect from "@/components/ServerSelect";
 import { formatValue } from "@/lib/formatValue";
-import { getAward, AWARDS } from "@crabcraft/shared/awards";
 import {
   getAwardLeaderboard,
   getAwardServers,
   getCurrentSeason,
+  getAwardDefinition,
   AWARD_AGGREGATE_SERVER_ID,
 } from "@/lib/queries";
 import { notFound } from "next/navigation";
@@ -24,7 +24,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { key } = await params;
-  const meta = getAward(key);
+  const meta = await getAwardDefinition(key);
   const title = meta?.title ?? key;
   return {
     title: `${title} Leaderboard`,
@@ -37,13 +37,14 @@ export default async function AwardLeaderboardPage({
   searchParams,
 }: Props) {
   const [{ key }, { server }] = await Promise.all([params, searchParams]);
-  const meta = getAward(key);
+  const meta = await getAwardDefinition(key);
   if (!meta) notFound();
 
   const currentSeason = await getCurrentSeason();
   const seasonId = currentSeason?.id;
 
-  const serverId = server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
+  const serverId =
+    server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
 
   const [entries, servers] = seasonId
     ? await Promise.all([
@@ -52,8 +53,8 @@ export default async function AwardLeaderboardPage({
       ])
     : [[], []];
 
-  const awardUnits: Record<string, string> = {};
-  for (const id of Object.keys(AWARDS)) awardUnits[id] = AWARDS[id].unit;
+  // formatValue only needs the unit for this one award
+  const awardUnits: Record<string, string> = { [meta.id]: meta.unit };
 
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -72,8 +73,10 @@ export default async function AwardLeaderboardPage({
               {meta.title}
             </h1>
           </div>
-          {meta.desc && (
-            <p className="text-gray-600 dark:text-gray-400">{meta.desc}</p>
+          {meta.description && (
+            <p className="text-gray-600 dark:text-gray-400">
+              {meta.description}
+            </p>
           )}
           <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             {entries.length} players ranked

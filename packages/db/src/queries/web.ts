@@ -7,6 +7,7 @@ import {
   playerSeasonStats,
   playerAwardScores,
   playerCrownScores,
+  awards,
   AGGREGATE_SERVER_ID,
 } from "../schema";
 import type {
@@ -499,7 +500,66 @@ export async function setPlayerRole(
     .where(eq(players.discord_id, discordId));
 }
 
-// ── Award queries ───────────────────────────────────────────────
+// ── Award definition queries ────────────────────────────────────
+
+export interface AwardDefinition {
+  id: string;
+  title: string;
+  description: string;
+  unit: string;
+  bucket: string;
+  icon: string;
+  enabled: boolean;
+  sort_order: number;
+}
+
+/**
+ * All enabled awards, ordered for stable UI display. Small table
+ * (~200 rows) so no pagination needed.
+ */
+export async function getAwardDefinitions(): Promise<AwardDefinition[]> {
+  const rows = await db
+    .select({
+      id: awards.id,
+      title: awards.title,
+      description: awards.description,
+      unit: awards.unit,
+      bucket: awards.bucket,
+      icon: awards.icon,
+      enabled: awards.enabled,
+      sort_order: awards.sort_order,
+    })
+    .from(awards)
+    .where(eq(awards.enabled, true))
+    .orderBy(asc(awards.bucket), asc(awards.sort_order), asc(awards.title));
+  return rows;
+}
+
+/**
+ * Single award lookup. Returns null if the award doesn't exist or is
+ * disabled — used by /awards/[key] and the API route to 404 cleanly.
+ */
+export async function getAwardDefinition(
+  id: string,
+): Promise<AwardDefinition | null> {
+  const rows = await db
+    .select({
+      id: awards.id,
+      title: awards.title,
+      description: awards.description,
+      unit: awards.unit,
+      bucket: awards.bucket,
+      icon: awards.icon,
+      enabled: awards.enabled,
+      sort_order: awards.sort_order,
+    })
+    .from(awards)
+    .where(and(eq(awards.id, id), eq(awards.enabled, true)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+// ── Award score queries ─────────────────────────────────────────
 
 export interface AwardLeaderboardEntry {
   rank: number;
