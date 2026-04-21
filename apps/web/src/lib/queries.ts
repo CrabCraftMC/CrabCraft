@@ -21,7 +21,21 @@ export {
   searchUsers,
   getUserApplications,
   getAdminUsers,
+  getAwardLeaderboard,
+  getAwardsSummary,
+  getCrownLeaderboard,
+  getPlayerAwardHoldings,
+  getPlayerAwardScores,
+  getPlayerCrownScore,
+  getAwardServers,
+  AWARD_AGGREGATE_SERVER_ID,
 } from "@crabcraft/db/queries/web";
 
 // Re-export types for convenience
-export type { SeasonWithPlaytime } from "@crabcraft/db/queries/web";
+export type {
+  SeasonWithPlaytime,
+  AwardLeaderboardEntry,
+  AwardSummaryEntry,
+  CrownLeaderboardEntry,
+  PlayerAwardHolding,
+} from "@crabcraft/db/queries/web";

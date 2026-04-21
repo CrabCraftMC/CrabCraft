@@ -1,16 +1,22 @@
 package crabcraft.net.crabUtilities.velocity;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.player.ServerPostConnectEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
+import crabcraft.net.crabUtilities.velocity.awards.AwardDbWriter;
+import crabcraft.net.crabUtilities.velocity.awards.AwardEvaluator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -22,6 +28,9 @@ public class ConnectionListener {
             .hexCharacter('#')
             .hexColors()
             .build();
+    private static final Gson GSON = new Gson();
+    // Short delay before polling so the backend has time to flush stats to disk.
+    private static final long POST_DISCONNECT_REFRESH_DELAY_SECONDS = 5;
 
     private final CrabUtilitiesVelocity plugin;
 
@@ -96,6 +105,46 @@ public class ConnectionListener {
 
         String discordMsg = formatDiscord(plugin.getConfig().getDiscordLeaveFormat(), player, null);
         plugin.getDiscordWebhook().send(discordMsg);
+
+        refreshAwardScoresAsync(player.getUniqueId().toString());
+    }
+
+    /**
+     * Fires a stats-request for the player and writes per-server award
+     * scores to Postgres. Scheduled with a short delay so the backend has
+     * time to flush the disconnecting player's stats file to disk.
+     */
+    private void refreshAwardScoresAsync(String uuid) {
+        AwardEvaluator evaluator = plugin.getAwardEvaluator();
+        AwardDbWriter writer = plugin.getAwardDbWriter();
+        if (evaluator == null || writer == null) return;
+
+        plugin.getServer().getScheduler()
+                .buildTask(plugin, () -> {
+                    plugin.getStatsRequestManager().requestStats(uuid)
+                            .orTimeout(5, TimeUnit.SECONDS)
+                            .whenComplete((responses, err) -> {
+                                if (err != null || responses == null || responses.isEmpty()) return;
+                                String season = plugin.getConfig().getCurrentSeason();
+                                for (Map.Entry<String, String> entry : responses.entrySet()) {
+                                    try {
+                                        JsonObject parsed = GSON.fromJson(entry.getValue(), JsonObject.class);
+                                        if (parsed == null) continue;
+                                        writer.writeForPlayerOnServer(
+                                                uuid, season, entry.getKey(),
+                                                evaluator.evaluate(parsed));
+                                    } catch (JsonSyntaxException ignored) {
+                                        // Skip malformed JSON from one backend.
+                                    } catch (Exception e) {
+                                        plugin.getLogger().warn(
+                                                "Post-disconnect award write failed for uuid={} server={}",
+                                                uuid, entry.getKey(), e);
+                                    }
+                                }
+                            });
+                })
+                .delay(POST_DISCONNECT_REFRESH_DELAY_SECONDS, TimeUnit.SECONDS)
+                .schedule();
     }
 
     private void broadcastJoin(Player player) {

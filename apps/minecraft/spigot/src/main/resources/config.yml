@@ -1,4 +1,10 @@
 # CrabUtilities configuration
+
+# Identifier for this backend server used in the stats response and in
+# the per-server award leaderboards. Must be unique across the network
+# and match the server name configured in the Velocity proxy.
+server-id: "survival"
+
 redis:
   host: "localhost"
   port: 6379

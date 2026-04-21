@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import PlayerStatsPage from "@/components/PlayerStatsPage";
-import { fetchGzipJson } from "@/lib/fetchGzip";
+import { AWARDS } from "@crabcraft/shared/awards";
 import {
   getPlayerRole,
   getJoinedSeason,
   getUserByIdentifier,
   getPlayerProfile,
+  getCurrentSeason,
+  getPlayerCrownScore,
+  getPlayerAwardScores,
 } from "@/lib/queries";
 
 interface Props {
@@ -25,9 +28,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {}
 
   const isUuid = identifier.includes("-") || identifier.length === 32;
-  const canonical = isUuid && name !== identifier
-    ? `https://crabcraft.net/stats/${identifier}`
-    : undefined;
+  const canonical =
+    isUuid && name !== identifier
+      ? `https://crabcraft.net/stats/${identifier}`
+      : undefined;
 
   return {
     title: name || "Player Stats",
@@ -36,9 +40,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: `${name} - CrabCraft`,
       description: `View ${name}'s stats and awards on CrabCraft.`,
-      images: name !== identifier
-        ? [`https://mc-heads.net/avatar/${identifier}/256.png`]
-        : undefined,
+      images:
+        name !== identifier
+          ? [`https://mc-heads.net/avatar/${identifier}/256.png`]
+          : undefined,
     },
   };
 }
@@ -47,145 +52,74 @@ export default async function StatsPage({ params }: Props) {
   const { slug } = await params;
   const identifier = (slug?.join("/") || "").trim();
 
-  let playerData = {
-    nickname: identifier,
-    uuid: "",
+  const dbUser = await getUserByIdentifier(identifier).catch(() => null);
+
+  const playerData = {
+    nickname: dbUser?.minecraft_username ?? identifier,
+    uuid: dbUser?.minecraft_uuid ?? "",
     rank: 0,
     points: 0,
     gold: 0,
     silver: 0,
     bronze: 0,
-    found: false,
-    role: "unverified",
+    found: Boolean(dbUser?.minecraft_uuid && dbUser?.minecraft_username),
+    role: dbUser?.role ?? "unverified",
     joinedSeason: null as string | null,
   };
 
-  let awardUnits: Record<string, string> | null = null;
-
-  const json = await fetchGzipJson<any>(
-    "https://map.crabcraft.net/stats/data/summary.json.gz"
-  );
-
-  if (json) {
-    const search = identifier.toLowerCase();
-    const isUuid = search.includes("-") || search.length === 32;
-
-    // Extract award unit types
-    if (json.awards) {
-      awardUnits = {};
-      for (const [key, val] of Object.entries(json.awards) as [string, any][]) {
-        if (val.unit) awardUnits[key] = val.unit;
-      }
-    }
-
-    for (let i = 0; i < json.hof.length; i++) {
-      const entry = json.hof[i];
-      const player = json.players[entry.uuid];
-      const match = isUuid
-        ? entry.uuid.toLowerCase() === search
-        : player && player.name.toLowerCase() === search;
-      if (match && player) {
-        let playerRole = "unverified";
-        let joinedSeason: string | null = null;
-        try {
-          [playerRole, joinedSeason] = await Promise.all([getPlayerRole(entry.uuid), getJoinedSeason(entry.uuid)]);
-        } catch {}
-        playerData = {
-          nickname: player.name,
-          uuid: entry.uuid,
-          rank: i + 1,
-          points: entry.value[0],
-          gold: entry.value[1],
-          silver: entry.value[2],
-          bronze: entry.value[3],
-          found: true,
-          role: playerRole,
-          joinedSeason,
-        };
-        break;
-      }
-    }
-
-    if (!playerData.found && json.players) {
-      for (const [uuid, player] of Object.entries(json.players) as [
-        string,
-        any,
-      ][]) {
-        const match = isUuid
-          ? uuid.toLowerCase() === search
-          : player.name && player.name.toLowerCase() === search;
-        if (match) {
-          let playerRole = "unverified";
-          let joinedSeason: string | null = null;
-          try {
-            [playerRole, joinedSeason] = await Promise.all([getPlayerRole(uuid), getJoinedSeason(uuid)]);
-          } catch {}
-          playerData = {
-            nickname: player.name,
-            uuid,
-            rank: 0,
-            points: 0,
-            gold: 0,
-            silver: 0,
-            bronze: 0,
-            found: true,
-            role: playerRole,
-            joinedSeason,
-          };
-          break;
-        }
-      }
-    }
-  }
+  const awardUnits: Record<string, string> = {};
+  for (const id of Object.keys(AWARDS)) awardUnits[id] = AWARDS[id].unit;
 
   if (!playerData.found) {
-    try {
-      const dbUser = await getUserByIdentifier(identifier);
-      if (dbUser && dbUser.minecraft_uuid && dbUser.minecraft_username) {
-        const joinedSeason = await getJoinedSeason(dbUser.minecraft_uuid);
-        playerData = {
-          nickname: dbUser.minecraft_username,
-          uuid: dbUser.minecraft_uuid,
-          rank: 0,
-          points: 0,
-          gold: 0,
-          silver: 0,
-          bronze: 0,
-          found: true,
-          role: dbUser.role,
-          joinedSeason,
-        };
-      }
-    } catch {}
+    return (
+      <PlayerStatsPage
+        {...playerData}
+        detailedStats={null}
+        localization={null}
+        awardUnits={awardUnits}
+        profile={null}
+      />
+    );
   }
 
-  // Fetch detailed per-player stats + localization in parallel
-  let detailedStats: Record<string, { rank?: number; value: number }> | null = null;
-  let localization: Record<string, string> | null = null;
-  const statsUuid = playerData.uuid || (identifier.includes("-") ? identifier : "");
-  const profileUuid = playerData.uuid || statsUuid;
-  const profilePromise = profileUuid
-    ? getPlayerProfile(profileUuid).catch(() => null)
-    : Promise.resolve(null);
+  const currentSeason = await getCurrentSeason();
+  const seasonId = currentSeason?.id;
 
-  if (statsUuid) {
-    const [statsRes, locRes] = await Promise.all([
-      fetch(
-        `https://map.crabcraft.net/stats/data/playerdata/${statsUuid}.json`,
-        { signal: AbortSignal.timeout(10000), next: { revalidate: 60 } }
-      ).catch(() => null),
-      fetch(
-        "https://map.crabcraft.net/stats/localization/en.json",
-        { signal: AbortSignal.timeout(10000), next: { revalidate: 3600 } }
-      ).catch(() => null),
-    ]);
-    if (statsRes?.ok) detailedStats = await statsRes.json();
-    if (locRes?.ok) localization = await locRes.json();
-  }
+  const [joinedSeason, crown, detailedStats, profile] = await Promise.all([
+    getJoinedSeason(playerData.uuid).catch(() => null),
+    seasonId
+      ? getPlayerCrownScore(playerData.uuid, seasonId).catch(() => null)
+      : Promise.resolve(null),
+    seasonId
+      ? getPlayerAwardScores(playerData.uuid, seasonId).catch(() => ({}))
+      : Promise.resolve({}),
+    getPlayerProfile(playerData.uuid).catch(() => null),
+  ]);
 
-  // Fetch player profile (Discord username)
-  let profile: { discord_username: string | null } | null = null;
-  profile = await profilePromise;
+  // Use current role from DB (already in dbUser) but refresh via cache helper for consistency.
+  let role = playerData.role;
+  try {
+    role = await getPlayerRole(playerData.uuid);
+  } catch {}
 
-  return <PlayerStatsPage {...playerData} detailedStats={detailedStats} localization={localization} awardUnits={awardUnits} profile={profile} />;
+  const enriched = {
+    ...playerData,
+    role,
+    joinedSeason,
+    rank: crown?.rank ?? 0,
+    points: crown?.crown_score ?? 0,
+    gold: crown?.gold ?? 0,
+    silver: crown?.silver ?? 0,
+    bronze: crown?.bronze ?? 0,
+  };
+
+  return (
+    <PlayerStatsPage
+      {...enriched}
+      detailedStats={detailedStats}
+      localization={null}
+      awardUnits={awardUnits}
+      profile={profile}
+    />
+  );
 }

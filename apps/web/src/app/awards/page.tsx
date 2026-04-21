@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { categorise, getTitle, getDesc } from "@/lib/categories";
 import AwardsTabs from "@/components/AwardsTabs";
-import { fetchGzipJson } from "@/lib/fetchGzip";
+import ServerSelect from "@/components/ServerSelect";
+import { AWARDS, AWARD_IDS } from "@crabcraft/shared/awards";
+import {
+  getAwardsSummary,
+  getAwardServers,
+  getCurrentSeason,
+  AWARD_AGGREGATE_SERVER_ID,
+} from "@/lib/queries";
+import { categorise } from "@/lib/categories";
 
-const BASE = "https://map.crabcraft.net/stats";
-const HEADERS = { Referer: "https://crabcraft.net" };
+interface SearchParams {
+  server?: string;
+}
 
-function getCachePrefix(uuid: string): string {
-  return uuid.replace(/-/g, "").slice(0, 2);
+interface Props {
+  searchParams: Promise<SearchParams>;
 }
 
 export const metadata: Metadata = {
@@ -16,71 +24,38 @@ export const metadata: Metadata = {
   description: "Browse all CrabCraft awards and see who holds the #1 spot.",
 };
 
-export default async function AwardsPage() {
-  let awards: Record<
-    string,
-    { unit: string; best: { uuid: string; value: number } }
-  > = {};
-  let loc: Record<string, string> | null = null;
-  let awardUnits: Record<string, string> | null = null;
+export default async function AwardsPage({ searchParams }: Props) {
+  const { server } = await searchParams;
+  const currentSeason = await getCurrentSeason();
+  const seasonId = currentSeason?.id;
 
-  // Fetch summary + localization in parallel
-  const [summary, locRes] = await Promise.all([
-    fetchGzipJson<any>(`${BASE}/data/summary.json.gz`, { headers: HEADERS }),
-    fetch(`${BASE}/localization/en.json`, {
-      headers: HEADERS,
-      next: { revalidate: 3600 },
-    }).catch(() => null),
-  ]);
+  const serverId = server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
 
-  if (summary) {
-    awards = summary.awards || {};
-    awardUnits = {};
-    for (const [k, v] of Object.entries(awards) as [string, any][]) {
-      if (v.unit) awardUnits[k] = v.unit;
-    }
-  }
+  const [summary, servers] = seasonId
+    ? await Promise.all([
+        getAwardsSummary(seasonId, serverId),
+        getAwardServers(seasonId),
+      ])
+    : [[], []];
 
-  if (locRes?.ok) {
-    loc = await locRes.json();
-  }
+  const summaryByAward = new Map(summary.map((s) => [s.award_id, s]));
+  const awardUnits: Record<string, string> = {};
+  for (const id of AWARD_IDS) awardUnits[id] = AWARDS[id].unit;
 
-  // Fetch player names for #1 holders
-  const bestUuids = Object.values(awards)
-    .filter((a) => a.best?.uuid)
-    .map((a) => a.best.uuid);
-  const prefixes = [...new Set(bestUuids.map(getCachePrefix))];
-  const cacheResults = await Promise.all(
-    prefixes.map((prefix) =>
-      fetch(`${BASE}/data/playercache/${prefix}.json`, {
-        headers: HEADERS,
-        next: { revalidate: 3600 },
-      })
-        .then((r) => (r.ok ? r.json() : []))
-        .catch(() => [])
-    )
-  );
-
-  const nameMap = new Map<string, string>();
-  for (const batch of cacheResults) {
-    for (const entry of batch as { uuid: string; name: string }[]) {
-      nameMap.set(entry.uuid, entry.name);
-    }
-  }
-
-  // Build award entries and categorise
-  const awardItems = Object.entries(awards).map(([key, award]) => ({
-    key,
-    title: getTitle(key, loc),
-    desc: getDesc(key, loc),
-    bestName: award.best?.uuid ? (nameMap.get(award.best.uuid) ?? null) : null,
-    bestUuid: award.best?.uuid ?? null,
-    bestValue: award.best?.value ?? 0,
-  }));
+  const awardItems = AWARD_IDS.map((id) => {
+    const meta = AWARDS[id];
+    const best = summaryByAward.get(id);
+    return {
+      key: id,
+      title: meta.title,
+      desc: meta.desc || null,
+      bestName: best?.best_username ?? null,
+      bestUuid: best?.best_uuid ?? null,
+      bestValue: best?.best_score ?? 0,
+    };
+  });
 
   const buckets = categorise(awardItems);
-
-  // Sort each bucket alphabetically by title
   for (const items of Object.values(buckets)) {
     items.sort((a, b) => a.title.localeCompare(b.title));
   }
@@ -93,9 +68,19 @@ export default async function AwardsPage() {
             Awards
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {Object.keys(awards).length} awards to compete for
+            {AWARD_IDS.length} awards to compete for
           </p>
         </div>
+
+        {servers.length > 0 && (
+          <div className="flex justify-center mb-6 animate-in">
+            <ServerSelect
+              servers={servers}
+              current={serverId}
+              basePath="/awards"
+            />
+          </div>
+        )}
 
         <AwardsTabs buckets={buckets} units={awardUnits} />
 
