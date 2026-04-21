@@ -74,7 +74,11 @@ public class UpdateChecker {
         for (int i = 0; i < assets.length(); i++) {
             JSONObject a = assets.getJSONObject(i);
             String name = a.optString("name", "");
-            String url = a.optString("browser_download_url", "");
+            // Use the API url (not browser_download_url) so Authorization
+            // gets accepted for private repos. Combined with the
+            // Accept: application/octet-stream header in UpdateDownloader,
+            // GitHub 302s to a signed URL which downloads without auth.
+            String url = a.optString("url", "");
             if (name.equals(jarAssetName)) {
                 jarUrl = url;
                 size = a.optLong("size", 0L);
