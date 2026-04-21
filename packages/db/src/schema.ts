@@ -172,7 +172,9 @@ export const playerAwardScores = pgTable(
     minecraft_uuid: text("minecraft_uuid").notNull(),
     season: text("season").notNull(),
     server_id: text("server_id").notNull(),
-    award_id: text("award_id").notNull(),
+    award_id: text("award_id")
+      .notNull()
+      .references(() => awards.id, { onDelete: "cascade" }),
     score: real("score").notNull().default(0),
     medal: integer("medal").notNull().default(0), // 0 = none, 1 = gold, 2 = silver, 3 = bronze
     computed_at: integer("computed_at")
