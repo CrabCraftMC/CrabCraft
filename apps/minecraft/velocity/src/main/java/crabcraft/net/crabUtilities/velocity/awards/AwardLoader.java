@@ -1,112 +1,77 @@
 package crabcraft.net.crabUtilities.velocity.awards;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
+import java.lang.reflect.Type;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
- * Loads every {@code /awards/&lt;id&gt;.json} from the plugin JAR's classpath
- * into {@link AwardDefinition} objects at plugin start.
+ * Loads every enabled award definition from the Postgres {@code awards}
+ * table at plugin start. The table is seeded by
+ * {@code packages/db/scripts/seed-awards.ts} and is runtime-editable
+ * via Drizzle Studio / SQL / any future admin UI.
  *
- * Supports both JAR-packaged resources (production) and exploded class
- * directories (IDE / test runs).
+ * Reader specs are stored as JSONB columns and parsed back into the
+ * {@link AwardDefinition.Reader} shape by Gson.
  */
 public final class AwardLoader {
 
-    private static final String RESOURCE_DIR = "/awards";
+    private static final String SELECT_SQL = """
+        SELECT id, reader_type, reader_path, reader_patterns
+        FROM awards
+        WHERE enabled = true
+        """;
+
     private static final Gson GSON = new Gson();
+    private static final Type STRING_LIST_TYPE = new TypeToken<List<String>>() {}.getType();
 
     private AwardLoader() {}
 
-    public static Map<String, AwardDefinition> loadAll(Logger logger) {
-        URL dirUrl = AwardLoader.class.getResource(RESOURCE_DIR);
-        if (dirUrl == null) {
-            logger.error("No {} resource directory found on classpath", RESOURCE_DIR);
-            return Collections.emptyMap();
-        }
-
-        List<String> fileNames;
-        try {
-            fileNames = listAwardFileNames(dirUrl);
-        } catch (Exception e) {
-            logger.error("Failed to enumerate award definitions", e);
-            return Collections.emptyMap();
-        }
-
+    public static Map<String, AwardDefinition> loadAll(HikariDataSource dataSource, Logger logger) {
         Map<String, AwardDefinition> out = new HashMap<>();
-        for (String fileName : fileNames) {
-            String resourcePath = RESOURCE_DIR + "/" + fileName;
-            try (InputStream in = AwardLoader.class.getResourceAsStream(resourcePath)) {
-                if (in == null) {
-                    logger.warn("Award resource missing after enumeration: {}", resourcePath);
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(SELECT_SQL);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                String id = rs.getString("id");
+                String readerType = rs.getString("reader_type");
+                String readerPathJson = rs.getString("reader_path");
+                String readerPatternsJson = rs.getString("reader_patterns");
+
+                if (id == null || readerType == null || readerPathJson == null) {
+                    logger.warn("Skipping award with missing required columns: id={}", id);
                     continue;
                 }
-                AwardDefinition def;
-                try (BufferedReader reader =
-                             new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-                    def = GSON.fromJson(reader, AwardDefinition.class);
-                }
-                if (def == null || def.id == null || def.reader == null) {
-                    logger.warn("Invalid award definition: {}", fileName);
+
+                AwardDefinition def = new AwardDefinition();
+                def.id = id;
+                def.reader = new AwardDefinition.Reader();
+                def.reader.type = readerType;
+                try {
+                    def.reader.path = GSON.fromJson(readerPathJson, STRING_LIST_TYPE);
+                    def.reader.patterns = readerPatternsJson == null
+                            ? null
+                            : GSON.fromJson(readerPatternsJson, STRING_LIST_TYPE);
+                } catch (Exception e) {
+                    logger.warn("Skipping award {} with malformed reader spec", id, e);
                     continue;
                 }
-                out.put(def.id, def);
-            } catch (Exception e) {
-                logger.warn("Failed to load award definition {}", fileName, e);
+                out.put(id, def);
             }
+        } catch (SQLException e) {
+            logger.error("Failed to load award definitions from database", e);
+            return Collections.emptyMap();
         }
         return Collections.unmodifiableMap(out);
-    }
-
-    private static List<String> listAwardFileNames(URL dirUrl) throws Exception {
-        String protocol = dirUrl.getProtocol();
-        if ("file".equals(protocol)) {
-            Path dir = Path.of(dirUrl.toURI());
-            try (Stream<Path> stream = Files.list(dir)) {
-                return stream
-                        .filter(p -> p.getFileName().toString().endsWith(".json"))
-                        .map(p -> p.getFileName().toString())
-                        .sorted()
-                        .toList();
-            }
-        }
-
-        if ("jar".equals(protocol)) {
-            URI uri = dirUrl.toURI();
-            // Try opening an existing filesystem for the jar first, to avoid
-            // clashing with another consumer that already opened one.
-            FileSystem fs;
-            try {
-                fs = FileSystems.getFileSystem(uri);
-            } catch (Exception ignored) {
-                fs = FileSystems.newFileSystem(uri, Map.of());
-            }
-            Path dir = fs.getPath(RESOURCE_DIR);
-            List<String> names = new ArrayList<>();
-            try (Stream<Path> stream = Files.list(dir)) {
-                stream.filter(p -> p.getFileName().toString().endsWith(".json"))
-                        .forEach(p -> names.add(p.getFileName().toString()));
-            }
-            Collections.sort(names);
-            return names;
-        }
-
-        throw new IllegalStateException("Unsupported award resource URL protocol: " + protocol);
     }
 }

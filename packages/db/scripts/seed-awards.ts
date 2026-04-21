@@ -25,11 +25,9 @@ import { AWARDS } from "@crabcraft/shared/awards";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const REPO_ROOT = resolve(__dirname, "..", "..", "..");
-const STATS_DIR = join(
-  REPO_ROOT,
-  "apps/minecraft/velocity/src/main/resources/awards",
-);
+// Reader JSONs live under packages/db/seeds/awards (seed data, not
+// plugin resources).
+const STATS_DIR = resolve(__dirname, "..", "seeds", "awards");
 
 interface RawReader {
   $type: string;

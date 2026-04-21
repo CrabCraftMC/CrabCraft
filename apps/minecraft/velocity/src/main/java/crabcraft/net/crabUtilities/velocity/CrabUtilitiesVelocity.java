@@ -80,8 +80,8 @@ public class CrabUtilitiesVelocity {
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
         );
 
-        Map<String, AwardDefinition> awards = AwardLoader.loadAll(logger);
-        logger.info("Loaded {} award definitions", awards.size());
+        Map<String, AwardDefinition> awards = AwardLoader.loadAll(pgWriter.getDataSource(), logger);
+        logger.info("Loaded {} award definitions from database", awards.size());
         this.awardEvaluator = new AwardEvaluator(awards);
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
 
