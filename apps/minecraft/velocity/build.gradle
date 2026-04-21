@@ -32,6 +32,11 @@ shadowJar {
     relocate 'org.json', 'crabcraft.net.libs.json'
     relocate 'org.postgresql', 'crabcraft.net.libs.postgresql'
     relocate 'com.zaxxer.hikari', 'crabcraft.net.libs.hikari'
+
+    // Rewrite META-INF/services/* entries (notably java.sql.Driver) to
+    // match the relocate rules above. Without this, ServiceLoader can't
+    // find the PostgreSQL driver at runtime and Hikari fails to init.
+    mergeServiceFiles()
 }
 
 tasks.jar {
