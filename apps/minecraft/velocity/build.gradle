@@ -31,12 +31,13 @@ shadowJar {
     relocate 'redis.clients.jedis', 'crabcraft.net.libs.jedis'
     relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
     relocate 'org.json', 'crabcraft.net.libs.json'
-    relocate 'org.postgresql', 'crabcraft.net.libs.postgresql'
     relocate 'com.zaxxer.hikari', 'crabcraft.net.libs.hikari'
+    // NB: org.postgresql is intentionally NOT relocated. Shadow can't
+    // reliably rewrite the JDBC driver's ServiceLoader entry when the
+    // package is moved, which makes HikariCP fail with "No suitable
+    // driver for jdbc:postgresql:..." at runtime. Velocity gives each
+    // plugin its own classloader so there's no conflict to shade around.
 
-    // Rewrite META-INF/services/* entries (notably java.sql.Driver) to
-    // match the relocate rules above. Without this, ServiceLoader can't
-    // find the PostgreSQL driver at runtime and Hikari fails to init.
     mergeServiceFiles()
 }
 
