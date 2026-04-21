@@ -2,7 +2,7 @@
 // Source: stats/*.json + www/localization/en.json
 // Do not edit by hand; regenerate by copying assets from upstream.
 
-export type AwardUnit = "int" | "ticks" | "cm" | "hp";
+export type AwardUnit = "int" | "ticks" | "cm" | "tenths_of_heart";
 export type AwardBucket = "combat" | "mining" | "crafting" | "building" | "items" | "food" | "movement" | "misc";
 
 export interface AwardMeta {
