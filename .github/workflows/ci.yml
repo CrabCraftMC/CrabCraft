@@ -122,11 +122,32 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Validate tag matches gradle.properties version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if ! grep -q "^version=${TAG_VERSION}\$" apps/minecraft/gradle.properties; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match apps/minecraft/gradle.properties:"
+            cat apps/minecraft/gradle.properties
+            echo "Expected: version=${TAG_VERSION}"
+            exit 1
+          fi
+
       - name: Build JARs with Gradle
         run: |
           chmod +x apps/minecraft/gradlew
           cd apps/minecraft
-          ./gradlew build
+          GRADLE_ARGS=""
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            GRADLE_ARGS="-Pversion=${GITHUB_REF_NAME#v}"
+          fi
+          ./gradlew build $GRADLE_ARGS
+
+      - name: Generate SHA256SUMS.txt
+        run: |
+          cd apps/minecraft/jars
+          sha256sum *.jar > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -143,7 +164,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: CrabUtilities-All
-          path: apps/minecraft/jars/*.jar
+          path: |
+            apps/minecraft/jars/*.jar
+            apps/minecraft/jars/SHA256SUMS.txt
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrabUtilities-Checksums
+          path: apps/minecraft/jars/SHA256SUMS.txt
           retention-days: 30
 
   # ── Optional: attach all artifacts to a release on tagged pushes ─
@@ -166,4 +195,5 @@ jobs:
             artifacts/crabcraft-bot/*.tar.gz
             artifacts/CrabUtilities-Spigot/*.jar
             artifacts/CrabUtilities-Velocity/*.jar
+            artifacts/CrabUtilities-Checksums/SHA256SUMS.txt
           generate_release_notes: true

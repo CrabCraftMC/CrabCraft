@@ -33,6 +33,7 @@ dependencies {
 shadowJar {
     configurations = [project.configurations.runtimeClasspath]
     archiveClassifier.set('')
+    archiveVersion.set('')
     relocate 'redis.clients.jedis', 'crabcraft.net.libs.jedis'
     relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
     relocate 'org.json', 'crabcraft.net.libs.json'

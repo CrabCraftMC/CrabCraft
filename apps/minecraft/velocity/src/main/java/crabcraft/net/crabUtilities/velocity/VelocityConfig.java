@@ -34,6 +34,11 @@ public class VelocityConfig {
     private final String dbUsername;
     private final String dbPassword;
     private final String currentSeason;
+    private final boolean updateEnabled;
+    private final long updateCheckIntervalHours;
+    private final boolean updateIncludePrereleases;
+    private final String updateGithubRepo;
+    private final String updateGithubToken;
 
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
                            String redisChannel, String staffChatFormat, int apiPort,
@@ -42,7 +47,10 @@ public class VelocityConfig {
                            String discordLeaveFormat, String discordSwapFormat,
                            String discordFirstJoinFormat,
                            String dbUrl, String dbUsername, String dbPassword,
-                           String currentSeason) {
+                           String currentSeason,
+                           boolean updateEnabled, long updateCheckIntervalHours,
+                           boolean updateIncludePrereleases,
+                           String updateGithubRepo, String updateGithubToken) {
         this.redisHost = redisHost;
         this.redisPort = redisPort;
         this.redisPassword = redisPassword;
@@ -60,6 +68,11 @@ public class VelocityConfig {
         this.dbUsername = dbUsername;
         this.dbPassword = dbPassword;
         this.currentSeason = currentSeason;
+        this.updateEnabled = updateEnabled;
+        this.updateCheckIntervalHours = updateCheckIntervalHours;
+        this.updateIncludePrereleases = updateIncludePrereleases;
+        this.updateGithubRepo = updateGithubRepo;
+        this.updateGithubToken = updateGithubToken;
     }
 
     public static VelocityConfig load(Path dataDirectory, Logger logger) {
@@ -128,17 +141,26 @@ public class VelocityConfig {
             String dbPassword = database.node("password").getString("");
             String currentSeason = database.node("current-season").getString("s1");
 
+            ConfigurationNode update = root.node("auto-update");
+            boolean updateEnabled = update.node("enabled").getBoolean(true);
+            long updateInterval = update.node("check-interval-hours").getLong(6L);
+            boolean updateIncludePre = update.node("include-prereleases").getBoolean(false);
+            String updateRepo = update.node("github-repo").getString("CrabCraftMC/CrabCraft");
+            String updateToken = update.node("github-token").getString("");
+
             return new VelocityConfig(host, port, password, channel, format, apiPort,
                     ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
-                    dbUrl, dbUsername, dbPassword, currentSeason);
+                    dbUrl, dbUsername, dbPassword, currentSeason,
+                    updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken);
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT, 8080,
                     List.of(), "<yellow><name> joined the game for the first time</yellow>",
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
-                    "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "", "s1");
+                    "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "", "s1",
+                    true, 6L, false, "CrabCraftMC/CrabCraft", "");
         }
     }
 
@@ -159,4 +181,9 @@ public class VelocityConfig {
     public String getDbUsername() { return dbUsername; }
     public String getDbPassword() { return dbPassword; }
     public String getCurrentSeason() { return currentSeason; }
+    public boolean isUpdateEnabled() { return updateEnabled; }
+    public long getUpdateCheckIntervalHours() { return updateCheckIntervalHours; }
+    public boolean isUpdateIncludePrereleases() { return updateIncludePrereleases; }
+    public String getUpdateGithubRepo() { return updateGithubRepo; }
+    public String getUpdateGithubToken() { return updateGithubToken; }
 }
