@@ -11,6 +11,11 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
+import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -19,6 +24,8 @@ import java.util.concurrent.TimeUnit;
 
 public class ConnectionListener {
 
+    private static final MinecraftChannelIdentifier NICKNAME_CHANNEL =
+            MinecraftChannelIdentifier.from("crabutilities:nicknames");
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
             .character('§')
@@ -44,6 +51,10 @@ public class ConnectionListener {
         if (currentServer == null) return;
 
         String currentServerName = currentServer.getServerInfo().getName();
+
+        // Push the authoritative nickname to the backend server so EssentialsX
+        // stays in sync across servers. Runs on every server connect (join + swap).
+        pushNicknameToBackend(player, currentServer);
 
         if (previousServer == null) {
             // Player just joined the proxy
@@ -157,6 +168,21 @@ public class ConnectionListener {
             result = result.replace("{server}", serverName);
         }
         return result;
+    }
+
+    private void pushNicknameToBackend(Player player, RegisteredServer server) {
+        String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
+        if (raw == null) return; // No cached nick yet — Spigot will send one on join
+
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            DataOutputStream out = new DataOutputStream(bytes);
+            out.writeUTF(player.getUniqueId().toString());
+            out.writeUTF(raw);
+            server.sendPluginMessage(NICKNAME_CHANNEL, bytes.toByteArray());
+        } catch (IOException e) {
+            plugin.getLogger().warn("Failed to push nickname to backend for {}", player.getUsername(), e);
+        }
     }
 
     private boolean isIgnored(String serverName) {

@@ -47,13 +47,14 @@ public final class CrabUtilities extends JavaPlugin {
 
         this.resourcePackManager = new ResourcePackManager(this);
 
-        // Plugin messaging channels
+        // Plugin messaging channels (bidirectional for nickname sync)
         getServer().getMessenger().registerOutgoingPluginChannel(this, "crabutilities:nicknames");
+        NicknameSync nicknameSync = new NicknameSync(this);
+        getServer().getMessenger().registerIncomingPluginChannel(this, "crabutilities:nicknames", nicknameSync);
 
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PackJoinListener(this), this);
-        NicknameSync nicknameSync = new NicknameSync(this);
         Bukkit.getPluginManager().registerEvents(nicknameSync, this);
         nicknameSync.syncAll();
 
