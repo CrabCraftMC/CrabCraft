@@ -10,6 +10,7 @@ import {
   removePlayerAlt,
   getPlayerAlts,
   getAltCountForUser,
+  getPlayerPrimaryUuid,
   isAltUuidTaken,
   MAX_ALTS,
 } from "../../utils/altDb.js";
@@ -102,6 +103,19 @@ export default class AltCommand extends SlashCommand {
         components: [
           errorContainer(
             `**Sorry**, the username \`${username}\` is not a valid Minecraft Java account.`,
+          ),
+        ],
+      });
+      return;
+    }
+
+    // Prevent adding own primary account as an alt
+    const primaryUuid = await getPlayerPrimaryUuid(interaction.user.id);
+    if (primaryUuid && primaryUuid === resolved.uuid) {
+      await interaction.editReply({
+        components: [
+          errorContainer(
+            `**That's your main account!** You can't add your primary Minecraft account as an alt.`,
           ),
         ],
       });

@@ -335,6 +335,15 @@ export async function deleteAllAltsForUser(discordId: string): Promise<void> {
   await db.delete(playerAlts).where(eq(playerAlts.discord_id, discordId));
 }
 
+export async function getPlayerPrimaryUuid(discordId: string): Promise<string | null> {
+  const rows = await db
+    .select({ minecraft_uuid: players.minecraft_uuid })
+    .from(players)
+    .where(eq(players.discord_id, discordId))
+    .limit(1);
+  return rows[0]?.minecraft_uuid ?? null;
+}
+
 export async function isAltUuidTaken(minecraftUuid: string): Promise<boolean> {
   const rows = await db
     .select({ id: playerAlts.id })

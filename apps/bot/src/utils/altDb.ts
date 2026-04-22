@@ -4,6 +4,7 @@ export {
   getPlayerAlts,
   getAltCountForUser,
   deleteAllAltsForUser,
+  getPlayerPrimaryUuid,
   isAltUuidTaken,
   MAX_ALTS,
   type PlayerAlt,

@@ -272,6 +272,6 @@ export const playerAlts = pgTable(
       .$defaultFn(() => Math.floor(Date.now() / 1000)),
   },
   (table) => [
-    index("pa_discord_idx").on(table.discord_id),
+    index("palt_discord_idx").on(table.discord_id),
   ],
 );
