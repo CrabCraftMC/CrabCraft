@@ -20,8 +20,13 @@ public final class CrabUtilities extends JavaPlugin {
         // Detect EssentialsX (optional) and register event listeners
         this.essentials = Bukkit.getPluginManager().getPlugin("Essentials");
 
-        // Config and managers
+        // Config: save default, then backfill any new keys from the bundled default
         saveDefaultConfig();
+        getConfig().setDefaults(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                new java.io.InputStreamReader(getResource("config.yml"))));
+        getConfig().options().copyDefaults(true);
+        saveConfig();
+
         this.resourcePackManager = new ResourcePackManager(this);
 
         // Plugin messaging channels
