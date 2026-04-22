@@ -11,7 +11,10 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class ConnectionListener {
@@ -24,6 +27,7 @@ public class ConnectionListener {
             .build();
 
     private final CrabUtilitiesVelocity plugin;
+    private final Set<UUID> announcedPlayers = ConcurrentHashMap.newKeySet();
 
     public ConnectionListener(CrabUtilitiesVelocity plugin) {
         this.plugin = plugin;
@@ -81,6 +85,8 @@ public class ConnectionListener {
     public void onDisconnect(DisconnectEvent event) {
         Player player = event.getPlayer();
 
+        if (!announcedPlayers.remove(player.getUniqueId())) return;
+
         RegisteredServer lastServer = player.getCurrentServer()
                 .map(conn -> conn.getServer())
                 .orElse(null);
@@ -112,6 +118,7 @@ public class ConnectionListener {
                 Placeholder.unparsed("username", player.getUsername())
         );
         broadcast(message);
+        announcedPlayers.add(player.getUniqueId());
 
         String discordFormat = firstJoin
                 ? plugin.getConfig().getDiscordFirstJoinFormat()
