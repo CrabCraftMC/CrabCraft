@@ -170,19 +170,11 @@ export default class ReadyEvent extends Event {
     );
 
     try {
-      if (config.ENV === "development" && config.DEV_GUILD_ID) {
-        await client.rest.put(
-          Routes.applicationGuildCommands(client.user.id, config.DEV_GUILD_ID),
-          { body: commandData },
-        );
-        logger.debug("Deployed slash commands to dev guild");
-      } else {
-        await client.rest.put(
-          Routes.applicationCommands(client.user.id),
-          { body: commandData },
-        );
-        logger.debug("Deployed slash commands globally");
-      }
+      await client.rest.put(
+        Routes.applicationCommands(client.user.id),
+        { body: commandData },
+      );
+      logger.debug("Deployed slash commands globally");
     } catch (error) {
       logger.error("Failed to deploy slash commands:", error);
     }

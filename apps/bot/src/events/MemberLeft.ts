@@ -61,7 +61,7 @@ export default class MemberLeftEvent extends Event {
       );
 
       if (rows.length === 0) {
-        // Not whitelisted - still update Turso state below
+        // Not whitelisted - still cancel pending applications below
       } else {
         await mysql.query(
           "DELETE FROM discordsrv_accounts WHERE discord = ?",
@@ -91,11 +91,11 @@ export default class MemberLeftEvent extends Event {
       }
     }
 
-    // 4. Update Turso state
+    // 4. Cancel any pending applications
     try {
       await appDb.cancelPendingApplications(member.user.id);
     } catch (error) {
-      logger.error("Failed to update Turso for departing member:", error);
+      logger.error("Failed to cancel pending applications for departing member:", error);
     }
   }
 }

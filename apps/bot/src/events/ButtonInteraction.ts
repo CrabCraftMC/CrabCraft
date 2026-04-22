@@ -343,7 +343,7 @@ export default class ButtonInteractionEvent extends Event {
       catch (e) { logger.error("Failed to add member role:", e); }
 
       try { await appDb.acceptApplication(applicant.id, interaction.user.id); }
-      catch (e) { logger.error("Failed to update Turso accept status:", e); }
+      catch (e) { logger.error("Failed to update application accept status:", e); }
 
       try {
         // @ts-ignore

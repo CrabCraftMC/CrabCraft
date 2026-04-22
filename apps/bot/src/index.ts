@@ -31,7 +31,7 @@ export const commands: Collection<string, SlashCommand> = new Collection();
   await loadCommands();
   logger.info("Loading events...");
   await loadEvents();
-  await client.login(config.TOKEN);
+  await client.login(config.DISCORD_BOT_TOKEN);
 })();
 
 // Graceful shutdown
