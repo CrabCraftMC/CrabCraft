@@ -121,6 +121,22 @@ public class StatsPushTask {
             envelope.addProperty("serverId", serverId);
             envelope.addProperty("uuid", uuid);
             envelope.add("stats", JsonParser.parseString(raw));
+
+            // Include advancements if available for this player
+            File advDir = new File(
+                    plugin.getServer().getWorlds().get(0).getWorldFolder(),
+                    "advancements");
+            File advFile = new File(advDir, uuid + ".json");
+            if (advFile.isFile()) {
+                try {
+                    String advRaw = Files.readString(advFile.toPath());
+                    envelope.add("advancements", JsonParser.parseString(advRaw));
+                } catch (Exception e) {
+                    // Advancement read failure is non-fatal; just skip it
+                    plugin.getLogger().fine("Could not read advancements for " + uuid + ": " + e.getMessage());
+                }
+            }
+
             String payload = envelope.toString();
 
             try (Jedis jedis = jedisPool.getResource()) {
