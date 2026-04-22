@@ -20,12 +20,30 @@ public final class CrabUtilities extends JavaPlugin {
         // Detect EssentialsX (optional) and register event listeners
         this.essentials = Bukkit.getPluginManager().getPlugin("Essentials");
 
-        // Config: save default, then backfill any new keys from the bundled default
+        // Config: save default if missing, then merge new keys from bundled
+        // default using Configurate (preserves comments unlike Bukkit's saveConfig)
         saveDefaultConfig();
-        getConfig().setDefaults(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                new java.io.InputStreamReader(getResource("config.yml"))));
-        getConfig().options().copyDefaults(true);
-        saveConfig();
+        try {
+            java.nio.file.Path configPath = getDataFolder().toPath().resolve("config.yml");
+            var loader = org.spongepowered.configurate.yaml.YamlConfigurationLoader.builder()
+                    .path(configPath)
+                    .nodeStyle(org.spongepowered.configurate.yaml.NodeStyle.BLOCK)
+                    .build();
+            var root = loader.load();
+            try (java.io.InputStream defaultIn = getResource("config.yml")) {
+                if (defaultIn != null) {
+                    var defaults = org.spongepowered.configurate.yaml.YamlConfigurationLoader.builder()
+                            .source(() -> new java.io.BufferedReader(new java.io.InputStreamReader(defaultIn)))
+                            .build()
+                            .load();
+                    root.mergeFrom(defaults);
+                    loader.save(root);
+                }
+            }
+        } catch (Exception e) {
+            getLogger().warning("Failed to merge config defaults: " + e.getMessage());
+        }
+        reloadConfig();
 
         this.resourcePackManager = new ResourcePackManager(this);
 

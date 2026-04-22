@@ -1,9 +1,13 @@
 # CrabUtilities configuration
 
-# Identifier for this backend server used in the stats response and in
-# the per-server award leaderboards. Must be unique across the network
+# REQUIRED: You must set both server-id and season before stats will be pushed.
+# Identifier for this backend server. Must be unique across the network
 # and match the server name configured in the Velocity proxy.
-server-id: "survival"
+server-id: ""
+
+# Season this server writes data to. Examples: "6" for SMP season 6,
+# "creative" for a permanent creative server, "events" for an events server.
+season: ""
 
 redis:
   host: "localhost"

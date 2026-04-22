@@ -36,6 +36,7 @@ export const players = pgTable("players", {
     .notNull()
     .$defaultFn(() => Math.floor(Date.now() / 1000)),
   last_login_at: integer("last_login_at"),
+  last_mc_login_at: integer("last_mc_login_at"),
 });
 
 // ── applications ────────────────────────────────────────────────

@@ -120,7 +120,17 @@ public class StatsPushSubscriber {
             return;
         }
 
-        String season = plugin.getConfig().getCurrentSeason();
+        // Season comes from the Spigot server's config via the envelope.
+        // Fall back to DB current season for backwards compat with older Spigot plugins.
+        String season = envelope.has("season") && envelope.get("season").isJsonPrimitive()
+                ? envelope.get("season").getAsString() : null;
+        if (season == null || season.isBlank()) {
+            season = plugin.getAwardQueryService().getCurrentSeason();
+        }
+        if (season == null || season.isBlank()) {
+            logger.warn("Skipping stats-push for uuid={}: no season in envelope and no current season in DB", uuid);
+            return;
+        }
 
         // Legacy wide-row stats (unchanged schema). Parse the raw
         // JSON string since StatsParser takes text.

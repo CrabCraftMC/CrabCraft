@@ -38,6 +38,7 @@ public class StatsPushTask {
     private final int port;
     private final String password;
     private final String serverId;
+    private final String season;
     private final long intervalMinutes;
 
     private JedisPool jedisPool;
@@ -49,12 +50,17 @@ public class StatsPushTask {
         this.host = plugin.getConfig().getString("redis.host", "localhost");
         this.port = plugin.getConfig().getInt("redis.port", 6379);
         this.password = plugin.getConfig().getString("redis.password", "");
-        this.serverId = plugin.getConfig().getString("server-id", "default");
+        this.serverId = plugin.getConfig().getString("server-id", "").trim();
+        this.season = plugin.getConfig().getString("season", "").trim();
         this.intervalMinutes = Math.max(1L,
                 plugin.getConfig().getLong("stats-push.interval-minutes", 5L));
     }
 
     public void start() {
+        if (serverId.isEmpty() || season.isEmpty()) {
+            plugin.getLogger().severe("Stats push DISABLED: 'server-id' and 'season' must both be set in config.yml");
+            return;
+        }
         JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxTotal(2);
         if (password != null && !password.isEmpty()) {
@@ -119,6 +125,7 @@ public class StatsPushTask {
 
             JsonObject envelope = new JsonObject();
             envelope.addProperty("serverId", serverId);
+            envelope.addProperty("season", season);
             envelope.addProperty("uuid", uuid);
             envelope.add("stats", JsonParser.parseString(raw));
 

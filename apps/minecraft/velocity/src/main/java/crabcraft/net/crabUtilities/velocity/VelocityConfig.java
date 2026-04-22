@@ -33,7 +33,6 @@ public class VelocityConfig {
     private final String dbUrl;
     private final String dbUsername;
     private final String dbPassword;
-    private final String currentSeason;
     private final boolean updateEnabled;
     private final long updateCheckIntervalHours;
     private final boolean updateIncludePrereleases;
@@ -47,7 +46,6 @@ public class VelocityConfig {
                            String discordLeaveFormat, String discordSwapFormat,
                            String discordFirstJoinFormat,
                            String dbUrl, String dbUsername, String dbPassword,
-                           String currentSeason,
                            boolean updateEnabled, long updateCheckIntervalHours,
                            boolean updateIncludePrereleases,
                            String updateGithubRepo, String updateGithubToken) {
@@ -67,7 +65,6 @@ public class VelocityConfig {
         this.dbUrl = dbUrl;
         this.dbUsername = dbUsername;
         this.dbPassword = dbPassword;
-        this.currentSeason = currentSeason;
         this.updateEnabled = updateEnabled;
         this.updateCheckIntervalHours = updateCheckIntervalHours;
         this.updateIncludePrereleases = updateIncludePrereleases;
@@ -139,8 +136,6 @@ public class VelocityConfig {
             String dbUrl = database.node("url").getString("jdbc:postgresql://localhost:5432/crabcraft");
             String dbUsername = database.node("username").getString("crabcraft");
             String dbPassword = database.node("password").getString("");
-            String currentSeason = database.node("current-season").getString("s1");
-
             ConfigurationNode update = root.node("auto-update");
             boolean updateEnabled = update.node("enabled").getBoolean(true);
             long updateInterval = update.node("check-interval-hours").getLong(6L);
@@ -151,7 +146,7 @@ public class VelocityConfig {
             return new VelocityConfig(host, port, password, channel, format, apiPort,
                     ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
-                    dbUrl, dbUsername, dbPassword, currentSeason,
+                    dbUrl, dbUsername, dbPassword,
                     updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken);
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
@@ -159,7 +154,7 @@ public class VelocityConfig {
                     List.of(), "<yellow><name> joined the game for the first time</yellow>",
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
-                    "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "", "s1",
+                    "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "",
                     true, 6L, false, "CrabCraftMC/CrabCraft", "");
         }
     }
@@ -180,7 +175,6 @@ public class VelocityConfig {
     public String getDbUrl() { return dbUrl; }
     public String getDbUsername() { return dbUsername; }
     public String getDbPassword() { return dbPassword; }
-    public String getCurrentSeason() { return currentSeason; }
     public boolean isUpdateEnabled() { return updateEnabled; }
     public long getUpdateCheckIntervalHours() { return updateCheckIntervalHours; }
     public boolean isUpdateIncludePrereleases() { return updateIncludePrereleases; }

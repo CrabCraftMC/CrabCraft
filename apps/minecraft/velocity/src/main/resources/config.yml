@@ -29,7 +29,6 @@ database:
   url: "jdbc:postgresql://localhost:5432/crabcraft"
   username: "crabcraft"
   password: ""
-  current-season: "s1"
 
 # Automatic updates — polls GitHub Releases and downloads the new proxy JAR to
 # plugins/CrabUtilities-Velocity.jar.staged. Stop the proxy, replace the live

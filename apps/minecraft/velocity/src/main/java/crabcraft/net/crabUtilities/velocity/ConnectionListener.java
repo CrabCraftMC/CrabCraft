@@ -107,7 +107,7 @@ public class ConnectionListener {
     private void broadcastJoin(Player player) {
         if (!player.isActive()) return;
 
-        boolean firstJoin = plugin.getJoinedPlayersStore().isNew(player.getUniqueId());
+        boolean firstJoin = !plugin.getPgWriter().hasJoinedBefore(player.getUniqueId().toString());
 
         Component displayName = getDisplayName(player);
         String inGameFormat = firstJoin
@@ -126,11 +126,7 @@ public class ConnectionListener {
         String discordMsg = formatDiscord(discordFormat, player, null);
         plugin.getDiscordWebhook().send(discordMsg);
 
-        if (firstJoin) {
-            plugin.getJoinedPlayersStore().markJoined(player.getUniqueId());
-        }
-
-        // Update player info in PostgreSQL
+        // Update player info in PostgreSQL (also sets last_mc_login_at)
         final String playerUuid = player.getUniqueId().toString();
         final String playerName = player.getUsername();
         CompletableFuture.runAsync(() -> {

@@ -134,7 +134,10 @@ public class PostgresStatsWriter {
      * Only updates existing players — no-op if UUID not in DB.
      */
     public void upsertPlayer(String uuid, String username, String nickname, String nicknameRaw) {
-        String sql = "UPDATE players SET minecraft_username = ?, nickname = ?, nickname_raw = ?, updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER WHERE minecraft_uuid = ?";
+        String sql = "UPDATE players SET minecraft_username = ?, nickname = ?, nickname_raw = ?, " +
+                "updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER, " +
+                "last_mc_login_at = EXTRACT(EPOCH FROM NOW())::INTEGER " +
+                "WHERE minecraft_uuid = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, username);
@@ -145,6 +148,26 @@ public class PostgresStatsWriter {
         } catch (SQLException e) {
             logger.error("Failed to upsert player {}", uuid, e);
         }
+    }
+
+    /**
+     * Check if a player has ever logged into Minecraft (last_mc_login_at is set).
+     */
+    public boolean hasJoinedBefore(String uuid) {
+        String sql = "SELECT last_mc_login_at FROM players WHERE minecraft_uuid = ? LIMIT 1";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid);
+            try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    rs.getInt("last_mc_login_at");
+                    return !rs.wasNull();
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to check join status for {}", uuid, e);
+        }
+        return false;
     }
 
     /**
