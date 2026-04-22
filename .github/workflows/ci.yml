@@ -217,10 +217,28 @@ jobs:
           git tag "v${NEW_VERSION}"
           git push origin main --tags
 
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Rebuild plugin JARs with new version
+        run: |
+          chmod +x apps/minecraft/gradlew
+          cd apps/minecraft
+          ./gradlew build -Pversion=${{ steps.bump.outputs.version }}
+
+      - name: Generate SHA256SUMS.txt
+        run: |
+          cd apps/minecraft/jars
+          sha256sum *.jar > SHA256SUMS.txt
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: "{crabcraft-bot,CrabUtilities-Spigot,CrabUtilities-Velocity,CrabUtilities-Checksums}"
+          pattern: crabcraft-bot
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -228,9 +246,9 @@ jobs:
           tag_name: v${{ steps.bump.outputs.version }}
           files: |
             artifacts/crabcraft-bot/*.tar.gz
-            artifacts/CrabUtilities-Spigot/*.jar
-            artifacts/CrabUtilities-Velocity/*.jar
-            artifacts/CrabUtilities-Checksums/SHA256SUMS.txt
+            apps/minecraft/spigot/build/libs/CrabUtilities*.jar
+            apps/minecraft/velocity/build/libs/CrabUtilities-Velocity*.jar
+            apps/minecraft/jars/SHA256SUMS.txt
           generate_release_notes: true
 
   # ── Optional: attach all artifacts to a release on tagged pushes ─
