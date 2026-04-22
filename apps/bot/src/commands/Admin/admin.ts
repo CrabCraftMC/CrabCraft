@@ -4,6 +4,7 @@ import config from "../../utils/config.js";
 import mysql from "../../utils/database.js";
 import * as appDb from "../../utils/appDb.js";
 import { resolveUsername, fetchPlayerName } from "../../utils/mojang.js";
+import { deleteAllAltsForUser } from "../../utils/altDb.js";
 import {
   type ChatInputCommandInteraction,
   type RESTPostAPIApplicationCommandsJSONBody,
@@ -222,6 +223,13 @@ export default class AdminCommand extends SlashCommand {
       return;
     }
 
+    // Also remove any alt accounts
+    try {
+      await deleteAllAltsForUser(targetUser.id);
+    } catch {
+      // Non-critical — continue with wipe
+    }
+
     const member = await interaction
       .guild!.members.fetch(targetUser.id)
       .catch(() => null);
@@ -299,6 +307,15 @@ export default class AdminCommand extends SlashCommand {
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
       });
       return;
+    }
+
+    // Also remove any alt accounts for the linked Discord user
+    if (linkedDiscordId) {
+      try {
+        await deleteAllAltsForUser(linkedDiscordId);
+      } catch {
+        // Non-critical — continue with wipe
+      }
     }
 
     if (linkedDiscordId) {
