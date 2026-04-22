@@ -2,13 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import AwardsTabs from "@/components/AwardsTabs";
 import ServerSelect from "@/components/ServerSelect";
-import {
-  getAwardsSummary,
-  getAwardServers,
-  getCurrentSeason,
-  getAwardDefinitions,
-  AWARD_AGGREGATE_SERVER_ID,
-} from "@/lib/queries";
 import { categorise } from "@/lib/categories";
 
 interface SearchParams {
@@ -24,39 +17,52 @@ export const metadata: Metadata = {
   description: "Browse all CrabCraft awards and see who holds the #1 spot.",
 };
 
+interface ProxyAward {
+  id: string;
+  title: string;
+  description: string;
+  unit: string;
+  bucket: string;
+  icon: string;
+  leader: { uuid: string; username: string; score: number } | null;
+}
+
+interface ProxyAwardsResponse {
+  awards: ProxyAward[];
+  servers: string[];
+}
+
+async function fetchAwards(server?: string): Promise<ProxyAwardsResponse | null> {
+  const url = new URL("https://api.crabcraft.net/awards");
+  if (server) url.searchParams.set("server", server);
+  try {
+    const res = await fetch(url, { next: { revalidate: 30 } });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export default async function AwardsPage({ searchParams }: Props) {
   const { server } = await searchParams;
-  const [currentSeason, defs] = await Promise.all([
-    getCurrentSeason(),
-    getAwardDefinitions(),
-  ]);
-  const seasonId = currentSeason?.id;
+  const data = await fetchAwards(server);
 
-  const serverId =
-    server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
+  const awards = data?.awards ?? [];
+  const servers = data?.servers ?? [];
+  const serverId = server && server.length > 0 ? server : "";
 
-  const [summary, servers] = seasonId
-    ? await Promise.all([
-        getAwardsSummary(seasonId, serverId),
-        getAwardServers(seasonId),
-      ])
-    : [[], []];
-
-  const summaryByAward = new Map(summary.map((s) => [s.award_id, s]));
   const awardUnits: Record<string, string> = {};
-  for (const d of defs) awardUnits[d.id] = d.unit;
+  for (const d of awards) awardUnits[d.id] = d.unit;
 
-  const awardItems = defs.map((d) => {
-    const best = summaryByAward.get(d.id);
-    return {
-      key: d.id,
-      title: d.title,
-      desc: d.description || null,
-      bestName: best?.best_username ?? null,
-      bestUuid: best?.best_uuid ?? null,
-      bestValue: best?.best_score ?? 0,
-    };
-  });
+  const awardItems = awards.map((d) => ({
+    key: d.id,
+    title: d.title,
+    desc: d.description || null,
+    bestName: d.leader?.username ?? null,
+    bestUuid: d.leader?.uuid ?? null,
+    bestValue: d.leader?.score ?? 0,
+  }));
 
   const buckets = categorise(awardItems);
   for (const items of Object.values(buckets)) {
@@ -71,7 +77,7 @@ export default async function AwardsPage({ searchParams }: Props) {
             Awards
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {defs.length} awards to compete for
+            {awards.length} awards to compete for
           </p>
         </div>
 
