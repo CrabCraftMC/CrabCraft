@@ -11,6 +11,7 @@ import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
 import crabcraft.net.crabUtilities.velocity.NicknameCache;
 
 import java.io.IOException;
+import java.net.URI;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +27,9 @@ public class WebServer {
     private static final long RATE_WINDOW_MS = 60_000;
 
     private static final Pattern USERNAME = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
+    private static final Pattern UUID_PATTERN = Pattern.compile(
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+    private static final Pattern AWARD_ID_PATTERN = Pattern.compile("^[a-z0-9_]+$");
 
     private static final String ERROR_SCHEMA =
             "{\"type\":\"object\",\"properties\":{\"error\":{\"type\":\"string\"}}}";
@@ -232,6 +236,22 @@ public class WebServer {
         }
     }
 
+    private static java.util.Map<String, String> parseQuery(URI uri) {
+        java.util.Map<String, String> params = new java.util.HashMap<>();
+        String query = uri.getRawQuery();
+        if (query == null || query.isEmpty()) return params;
+        for (String pair : query.split("&")) {
+            int eq = pair.indexOf('=');
+            if (eq > 0) {
+                params.put(
+                    java.net.URLDecoder.decode(pair.substring(0, eq), java.nio.charset.StandardCharsets.UTF_8),
+                    java.net.URLDecoder.decode(pair.substring(eq + 1), java.nio.charset.StandardCharsets.UTF_8)
+                );
+            }
+        }
+        return params;
+    }
+
     public boolean start() {
         if (httpServer != null) {
             plugin.getLogger().warn("Web API is already running.");
@@ -359,6 +379,101 @@ public class WebServer {
                 response.add("players", players);
 
                 sendJson(exchange, GSON.toJson(response));
+            });
+
+            httpServer.createContext("/awards/crowns", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                var params = parseQuery(exchange.getRequestURI());
+                int limit = 100;
+                try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
+                var result = plugin.getAwardQueryService().getCrownLeaderboard(
+                        params.get("season"), params.get("server"), limit);
+                if (result == null) {
+                    sendError(exchange, 404, "no current season");
+                    return;
+                }
+                sendJson(exchange, GSON.toJson(result));
+            });
+
+            httpServer.createContext("/awards/player/", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                String path = exchange.getRequestURI().getPath();
+                String uuid = path.substring("/awards/player/".length());
+                if (!UUID_PATTERN.matcher(uuid).matches()) {
+                    sendError(exchange, 400, "invalid uuid format");
+                    return;
+                }
+                var params = parseQuery(exchange.getRequestURI());
+                var result = plugin.getAwardQueryService().getPlayerAwards(
+                        uuid, params.get("season"), params.get("server"));
+                if (result == null) {
+                    sendError(exchange, 404, "no current season");
+                    return;
+                }
+                if (result.has("notFound")) {
+                    sendError(exchange, 404, "player has no award data");
+                    return;
+                }
+                sendJson(exchange, GSON.toJson(result));
+            });
+
+            httpServer.createContext("/awards", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                var params = parseQuery(exchange.getRequestURI());
+                String path = exchange.getRequestURI().getPath();
+
+                // /awards/{id} — single award leaderboard
+                if (path.length() > "/awards/".length()) {
+                    String awardId = path.substring("/awards/".length());
+                    if (!AWARD_ID_PATTERN.matcher(awardId).matches()) {
+                        sendError(exchange, 400, "invalid award id format");
+                        return;
+                    }
+                    int limit = 100;
+                    try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
+                    var result = plugin.getAwardQueryService().getAwardLeaderboard(
+                            awardId, params.get("season"), params.get("server"), limit);
+                    if (result == null) {
+                        sendError(exchange, 404, "no current season");
+                        return;
+                    }
+                    if (result.has("notFound")) {
+                        sendError(exchange, 404, "award not found");
+                        return;
+                    }
+                    sendJson(exchange, GSON.toJson(result));
+                    return;
+                }
+
+                // /awards — list all awards with leaders
+                var result = plugin.getAwardQueryService().getAllAwards(
+                        params.get("season"), params.get("server"));
+                if (result == null) {
+                    sendError(exchange, 404, "no current season");
+                    return;
+                }
+                sendJson(exchange, GSON.toJson(result));
             });
 
             httpServer.start();
