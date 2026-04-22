@@ -3,12 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import Squircle from "@/components/Squircle";
 import ServerSelect from "@/components/ServerSelect";
-import {
-  getCrownLeaderboard,
-  getAwardServers,
-  getCurrentSeason,
-  AWARD_AGGREGATE_SERVER_ID,
-} from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "Leaderboard",
@@ -25,17 +19,35 @@ interface Props {
 
 export default async function LeaderboardPage({ searchParams }: Props) {
   const { server } = await searchParams;
-  const currentSeason = await getCurrentSeason();
-  const seasonId = currentSeason?.id;
+  const serverId = server && server.length > 0 ? server : "";
 
-  const serverId = server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
+  let players: Array<{
+    rank: number;
+    uuid: string;
+    username: string | null;
+    gold: number;
+    silver: number;
+    bronze: number;
+    crown_score: number;
+    minecraft_uuid: string;
+    minecraft_username: string | null;
+  }> = [];
+  let servers: string[] = [];
 
-  const [players, servers] = seasonId
-    ? await Promise.all([
-        getCrownLeaderboard(seasonId, serverId, 100),
-        getAwardServers(seasonId),
-      ])
-    : [[], []];
+  try {
+    const url = new URL("https://api.crabcraft.net/awards/crowns");
+    if (server) url.searchParams.set("server", server);
+    const res = await fetch(url, { next: { revalidate: 30 } });
+    if (res.ok) {
+      const data = await res.json();
+      players = (data.leaderboard ?? []).map((p: any) => ({
+        ...p,
+        minecraft_uuid: p.uuid,
+        minecraft_username: p.username,
+      }));
+      servers = data.servers ?? [];
+    }
+  } catch {}
 
   const top3 = players.slice(0, 3);
   const podiumStyles = [
