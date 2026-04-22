@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, like, asc, count } from "drizzle-orm";
+import { eq, and, desc, sql, like, ilike, asc, count } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
@@ -244,7 +244,7 @@ export async function searchUsers(
       minecraft_username: players.minecraft_username,
     })
     .from(players)
-    .where(like(players.minecraft_username, `%${query}%`))
+    .where(ilike(players.minecraft_username, `%${query}%`))
     .orderBy(asc(players.minecraft_username))
     .limit(limit);
   return rows.filter(
