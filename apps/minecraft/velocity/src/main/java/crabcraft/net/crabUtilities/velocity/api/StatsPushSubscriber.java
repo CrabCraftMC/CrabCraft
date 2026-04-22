@@ -6,6 +6,7 @@ import com.google.gson.JsonSyntaxException;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
 import crabcraft.net.crabUtilities.velocity.VelocityConfig;
 import crabcraft.net.crabUtilities.velocity.awards.AwardDbWriter;
+import crabcraft.net.crabUtilities.velocity.advancements.AdvancementDbWriter;
 import crabcraft.net.crabUtilities.velocity.awards.AwardEvaluator;
 import crabcraft.net.crabUtilities.velocity.db.ComputedStats;
 import crabcraft.net.crabUtilities.velocity.db.StatsParser;
@@ -142,6 +143,21 @@ public class StatsPushSubscriber {
         } catch (Exception e) {
             logger.warn("Failed to write award scores for uuid={} server={}",
                     uuid, serverId, e);
+        }
+
+        // Advancements.
+        JsonObject advancements = envelope.has("advancements") && envelope.get("advancements").isJsonObject()
+                ? envelope.getAsJsonObject("advancements") : null;
+        if (advancements != null) {
+            AdvancementDbWriter advWriter = plugin.getAdvancementDbWriter();
+            if (advWriter != null) {
+                try {
+                    advWriter.writeForPlayerOnServer(uuid, season, serverId, advancements);
+                } catch (Exception e) {
+                    logger.warn("Failed to write advancements for uuid={} server={}",
+                            uuid, serverId, e);
+                }
+            }
         }
     }
 

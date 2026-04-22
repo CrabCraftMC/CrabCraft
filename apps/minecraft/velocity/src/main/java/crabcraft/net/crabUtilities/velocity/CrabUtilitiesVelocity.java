@@ -15,6 +15,7 @@ import crabcraft.net.crabUtilities.velocity.awards.AwardDefinition;
 import crabcraft.net.crabUtilities.velocity.awards.AwardEvaluator;
 import crabcraft.net.crabUtilities.velocity.awards.AwardLoader;
 import crabcraft.net.crabUtilities.velocity.awards.AwardQueryService;
+import crabcraft.net.crabUtilities.velocity.advancements.AdvancementDbWriter;
 import crabcraft.net.crabUtilities.velocity.awards.AwardSeeder;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
@@ -52,6 +53,7 @@ public class CrabUtilitiesVelocity {
     private AwardEvaluator awardEvaluator;
     private AwardDbWriter awardDbWriter;
     private AwardQueryService awardQueryService;
+    private AdvancementDbWriter advancementDbWriter;
     private VelocityConfig config;
     private UpdateService updateService;
 
@@ -86,6 +88,7 @@ public class CrabUtilitiesVelocity {
         this.awardEvaluator = new AwardEvaluator(awards);
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
         this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
+        this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
 
         this.statsPushSubscriber = new StatsPushSubscriber(this, config, logger);
         this.statsPushSubscriber.start();
@@ -149,6 +152,7 @@ public class CrabUtilitiesVelocity {
         this.awardEvaluator = new AwardEvaluator(awards);
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
         this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
+        this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
 
         if (statsPushSubscriber != null) {
             statsPushSubscriber.shutdown();
@@ -196,6 +200,7 @@ public class CrabUtilitiesVelocity {
     public AwardEvaluator getAwardEvaluator() { return awardEvaluator; }
     public AwardDbWriter getAwardDbWriter() { return awardDbWriter; }
     public AwardQueryService getAwardQueryService() { return awardQueryService; }
+    public AdvancementDbWriter getAdvancementDbWriter() { return advancementDbWriter; }
     public VelocityConfig getConfig() { return config; }
     public UpdateService getUpdateService() { return updateService; }
 }
