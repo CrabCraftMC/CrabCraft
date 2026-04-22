@@ -122,16 +122,17 @@ export default function Navbar({ user }: { user?: UserData | null }) {
             <div className="px-6 lg:px-8">
                 <div className="flex items-center h-14 md:h-20">
                     <div className="flex-1 flex justify-start">
-                        <Link href="/" className="flex items-center gap-2">
+                        <Link href="/" className="flex items-center gap-3">
                             <Image
                                 src="/logo.png"
                                 alt="Logo"
-                                width={55}
-                                height={55}
+                                width={44}
+                                height={44}
                                 loading="eager"
-                                className="object-contain w-10 h-10 md:w-[55px] md:h-[55px]"
+                                unoptimized
+                                className="object-contain w-9 h-9 md:w-[44px] md:h-[44px]"
                             />
-                            <span className="font-mc text-lg md:text-xl text-orange-500">CrabCraft</span>
+                            <span className="font-mc text-lg md:text-xl text-orange-500 tracking-wide">CrabCraft</span>
                         </Link>
                     </div>
 

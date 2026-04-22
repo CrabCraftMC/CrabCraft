@@ -1,8 +1,8 @@
 [
   {
     "id": "aviate",
-    "title": "Aviator",
-    "description": "Distance gone by elytra",
+    "title": "Glider",
+    "description": "Distance flown with elytra",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/aviate.png",
@@ -16,8 +16,8 @@
   },
   {
     "id": "biomes",
-    "title": "Explorer",
-    "description": "Biomes discovered",
+    "title": "Globetrotter",
+    "description": "Unique biomes visited",
     "unit": "int",
     "bucket": "misc",
     "icon": "/awards/icons/biomes.png",
@@ -32,8 +32,8 @@
   },
   {
     "id": "break_tools",
-    "title": "Oh Snap",
-    "description": "Tools broken",
+    "title": "Worn Out",
+    "description": "Tools broken from use",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/break_tools.png",
@@ -55,8 +55,8 @@
   },
   {
     "id": "breed",
-    "title": "Ranch",
-    "description": "Animals bred",
+    "title": "Matchmaker",
+    "description": "Animals bred together",
     "unit": "int",
     "bucket": "misc",
     "icon": "/awards/icons/breed.png",
@@ -70,8 +70,8 @@
   },
   {
     "id": "climb",
-    "title": "Climber",
-    "description": "Distance climbed",
+    "title": "Ascending",
+    "description": "Distance climbed on ladders and vines",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/climb.png",
@@ -85,8 +85,8 @@
   },
   {
     "id": "collect_berries",
-    "title": "Berry Collector",
-    "description": "Berries collected",
+    "title": "Berry Picker",
+    "description": "Sweet berries harvested",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/collect_berries.png",
@@ -102,8 +102,8 @@
   },
   {
     "id": "collect_shroom",
-    "title": "Fun Guy",
-    "description": "Mushrooms collected",
+    "title": "Shroom Gatherer",
+    "description": "Mushrooms picked up",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/collect_shroom.png",
@@ -120,8 +120,8 @@
   },
   {
     "id": "craft_armor",
-    "title": "Armorer",
-    "description": "Pieces of armor crafted",
+    "title": "Suited Up",
+    "description": "Armor pieces crafted",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_armor.png",
@@ -141,8 +141,8 @@
   },
   {
     "id": "craft_beacon",
-    "title": "Power Source",
-    "description": "Beacons crafted",
+    "title": "Beacon Builder",
+    "description": "Beacons constructed",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_beacon.png",
@@ -156,8 +156,8 @@
   },
   {
     "id": "craft_bookshelf",
-    "title": "Librarian",
-    "description": "Bookshelves crafted",
+    "title": "Bookworm",
+    "description": "Bookshelves built",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_bookshelf.png",
@@ -173,8 +173,8 @@
   },
   {
     "id": "craft_bread",
-    "title": "Baker",
-    "description": "Breads, cakes and cookies made",
+    "title": "Oven Fresh",
+    "description": "Breads, cakes and cookies baked",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_bread.png",
@@ -192,7 +192,7 @@
   },
   {
     "id": "craft_bundle",
-    "title": "Backpacker",
+    "title": "Packed Up",
     "description": "Bundles crafted",
     "unit": "int",
     "bucket": "crafting",
@@ -207,8 +207,8 @@
   },
   {
     "id": "craft_clock",
-    "title": "Timekeeper",
-    "description": "Clocks crafted",
+    "title": "Clockwork",
+    "description": "Clocks assembled",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_clock.png",
@@ -222,7 +222,7 @@
   },
   {
     "id": "craft_compass",
-    "title": "Navigator",
+    "title": "Pathfinder",
     "description": "Compasses crafted",
     "unit": "int",
     "bucket": "crafting",
@@ -237,7 +237,7 @@
   },
   {
     "id": "craft_ender_chest",
-    "title": "Grief This!",
+    "title": "Secure Storage",
     "description": "Ender chests crafted",
     "unit": "int",
     "bucket": "crafting",
@@ -252,8 +252,8 @@
   },
   {
     "id": "craft_glowstone",
-    "title": "Illuminator",
-    "description": "Glowstone crafted",
+    "title": "Bright Idea",
+    "description": "Glowstone blocks crafted",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_glowstone.png",
@@ -267,8 +267,8 @@
   },
   {
     "id": "craft_mineral_block",
-    "title": "Compressor",
-    "description": "Mineral blocks crafted",
+    "title": "Block Press",
+    "description": "Mineral blocks compressed",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_mineral_block.png",
@@ -296,8 +296,8 @@
   },
   {
     "id": "craft_paper",
-    "title": "Paperboy",
-    "description": "Paper produced",
+    "title": "Pulp Mill",
+    "description": "Paper sheets produced",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_paper.png",
@@ -311,7 +311,7 @@
   },
   {
     "id": "craft_recovery_compass",
-    "title": "Recovery",
+    "title": "Lost & Found",
     "description": "Recovery compasses crafted",
     "unit": "int",
     "bucket": "crafting",
@@ -326,8 +326,8 @@
   },
   {
     "id": "craft_respawn_anchor",
-    "title": "Respawn",
-    "description": "Respawn Anchors crafted",
+    "title": "Anchor Point",
+    "description": "Respawn anchors crafted",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_respawn_anchor.png",
@@ -341,8 +341,8 @@
   },
   {
     "id": "craft_sponge",
-    "title": "Spongebob",
-    "description": "Sponges dried",
+    "title": "Soaked",
+    "description": "Sponges dried in furnace",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_sponge.png",
@@ -356,7 +356,7 @@
   },
   {
     "id": "craft_spyglass",
-    "title": "Voyeur",
+    "title": "Lookout",
     "description": "Spyglasses crafted",
     "unit": "int",
     "bucket": "crafting",
@@ -371,8 +371,8 @@
   },
   {
     "id": "craft_sword",
-    "title": "Blacksmith",
-    "description": "Swords crafted",
+    "title": "Blade Forger",
+    "description": "Swords forged",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_sword.png",
@@ -388,8 +388,8 @@
   },
   {
     "id": "craft_tnt",
-    "title": "Bad Intentions",
-    "description": "TNT crafted",
+    "title": "Demolitions",
+    "description": "TNT blocks crafted",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_tnt.png",
@@ -403,7 +403,7 @@
   },
   {
     "id": "craft_tools",
-    "title": "Workshop",
+    "title": "Tool Bench",
     "description": "Tools crafted",
     "unit": "int",
     "bucket": "crafting",
@@ -426,8 +426,8 @@
   },
   {
     "id": "craft_turtle_helmet",
-    "title": "Turtlehead",
-    "description": "Turtle Helmets crafted",
+    "title": "Shell Helm",
+    "description": "Turtle shell helmets crafted",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_turtle_helmet.png",
@@ -441,8 +441,8 @@
   },
   {
     "id": "craft_wool",
-    "title": "Carpet Dealer",
-    "description": "Wool/carpets crafted/dyed",
+    "title": "Textile Worker",
+    "description": "Wool and carpets crafted",
     "unit": "int",
     "bucket": "crafting",
     "icon": "/awards/icons/craft_wool.png",
@@ -459,8 +459,8 @@
   },
   {
     "id": "crouch",
-    "title": "Sneaky",
-    "description": "Distance crouched",
+    "title": "Low Profile",
+    "description": "Distance traveled while sneaking",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/crouch.png",
@@ -474,8 +474,8 @@
   },
   {
     "id": "damage_dealt",
-    "title": "Berserk!",
-    "description": "Damage dealt",
+    "title": "Heavy Hitter",
+    "description": "Total damage dealt to mobs",
     "unit": "tenths_of_heart",
     "bucket": "combat",
     "icon": "/awards/icons/damage_dealt.png",
@@ -489,8 +489,8 @@
   },
   {
     "id": "damage_shield",
-    "title": "Shield",
-    "description": "Damage blocked",
+    "title": "Shielded",
+    "description": "Damage blocked with a shield",
     "unit": "tenths_of_heart",
     "bucket": "combat",
     "icon": "/awards/icons/damage_shield.png",
@@ -504,8 +504,8 @@
   },
   {
     "id": "damage_taken",
-    "title": "Ouch!",
-    "description": "Damage taken",
+    "title": "Battle Scarred",
+    "description": "Total damage received",
     "unit": "tenths_of_heart",
     "bucket": "combat",
     "icon": "/awards/icons/damage_taken.png",
@@ -519,8 +519,8 @@
   },
   {
     "id": "death",
-    "title": "Lemming",
-    "description": "Times died",
+    "title": "Frequent Flyer",
+    "description": "Total deaths",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/death.png",
@@ -534,8 +534,8 @@
   },
   {
     "id": "dive",
-    "title": "Diver",
-    "description": "Distance dived",
+    "title": "Deep Dive",
+    "description": "Distance traveled underwater",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/dive.png",
@@ -549,8 +549,8 @@
   },
   {
     "id": "drink_milk",
-    "title": "Milksop",
-    "description": "Milk buckets drunk",
+    "title": "Got Milk?",
+    "description": "Milk buckets consumed",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/drink_milk.png",
@@ -564,8 +564,8 @@
   },
   {
     "id": "drop",
-    "title": "Dropper",
-    "description": "Items dropped",
+    "title": "Litterbug",
+    "description": "Items tossed on the ground",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/drop.png",
@@ -579,8 +579,8 @@
   },
   {
     "id": "eat_cookie",
-    "title": "Cookie Monster",
-    "description": "Cookies eaten",
+    "title": "Cookie Crumbler",
+    "description": "Cookies devoured",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/eat_cookie.png",
@@ -594,8 +594,8 @@
   },
   {
     "id": "eat_fish",
-    "title": "Fish Gourmet",
-    "description": "Fish eaten",
+    "title": "Seafood Lover",
+    "description": "Cooked fish consumed",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/eat_fish.png",
@@ -616,8 +616,8 @@
   },
   {
     "id": "eat_junkfood",
-    "title": "Bad Diet",
-    "description": "Junkfood items eaten",
+    "title": "Junk Muncher",
+    "description": "Junk food items eaten",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/eat_junkfood.png",
@@ -635,8 +635,8 @@
   },
   {
     "id": "eat_meat",
-    "title": "Carnivore",
-    "description": "Meat items eaten",
+    "title": "Meat Eater",
+    "description": "Cooked meat consumed",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/eat_meat.png",
@@ -662,8 +662,8 @@
   },
   {
     "id": "eat_rawmeat",
-    "title": "Raw Eater",
-    "description": "Raw meat items eaten",
+    "title": "Risky Appetite",
+    "description": "Raw meat eaten",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/eat_rawmeat.png",
@@ -683,8 +683,8 @@
   },
   {
     "id": "eat_soup",
-    "title": "Soupy Caspar",
-    "description": "Soups and stews eaten",
+    "title": "Soup Slurper",
+    "description": "Soups and stews consumed",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/eat_soup.png",
@@ -703,8 +703,8 @@
   },
   {
     "id": "eat_veggie",
-    "title": "Vegetarian",
-    "description": "Veggie items eaten",
+    "title": "Green Diet",
+    "description": "Vegetable items eaten",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/eat_veggie.png",
@@ -737,8 +737,8 @@
   },
   {
     "id": "enchant",
-    "title": "Enchanter",
-    "description": "Items enchanted",
+    "title": "Runesmith",
+    "description": "Items enchanted at a table",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/enchant.png",
@@ -752,8 +752,8 @@
   },
   {
     "id": "fall",
-    "title": "Base Jumper",
-    "description": "Distance fallen",
+    "title": "Free Fall",
+    "description": "Total distance fallen",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/fall.png",
@@ -767,8 +767,8 @@
   },
   {
     "id": "harvest_bamboo",
-    "title": "Bamboozled",
-    "description": "Bamboo harvested",
+    "title": "Bamboo Farmer",
+    "description": "Bamboo stalks harvested",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/harvest_bamboo.png",
@@ -782,8 +782,8 @@
   },
   {
     "id": "harvest_nether_wart",
-    "title": "Nether Farmer",
-    "description": "Nether warts harvested",
+    "title": "Wart Grower",
+    "description": "Nether wart harvested",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/harvest_nether_wart.png",
@@ -797,8 +797,8 @@
   },
   {
     "id": "harvest_sugar",
-    "title": "Sugar High",
-    "description": "Sugar harvested",
+    "title": "Cane Cutter",
+    "description": "Sugar cane harvested",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/harvest_sugar.png",
@@ -812,8 +812,8 @@
   },
   {
     "id": "interact_anvil",
-    "title": "Smith",
-    "description": "Anvil interactions",
+    "title": "Anvil Worker",
+    "description": "Times used an anvil",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_anvil.png",
@@ -827,8 +827,8 @@
   },
   {
     "id": "interact_blast_furnace",
-    "title": "Smelter",
-    "description": "Blast Furnace interactions",
+    "title": "Blast Operator",
+    "description": "Times used a blast furnace",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_blast_furnace.png",
@@ -842,8 +842,8 @@
   },
   {
     "id": "interact_brewing_stand",
-    "title": "Brewer",
-    "description": "Brewing Stand interactions",
+    "title": "Potion Mixer",
+    "description": "Times used a brewing stand",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_brewing_stand.png",
@@ -857,8 +857,8 @@
   },
   {
     "id": "interact_campfire",
-    "title": "Primitive Technology",
-    "description": "Campfire interactions",
+    "title": "Camp Cook",
+    "description": "Times used a campfire",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_campfire.png",
@@ -872,8 +872,8 @@
   },
   {
     "id": "interact_cartography",
-    "title": "Cartographer",
-    "description": "Cartography table interactions",
+    "title": "Map Maker",
+    "description": "Times used a cartography table",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_cartography.png",
@@ -887,8 +887,8 @@
   },
   {
     "id": "interact_grindstone",
-    "title": "I Fix It",
-    "description": "Grindstone interactions",
+    "title": "Grinder",
+    "description": "Times used a grindstone",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_grindstone.png",
@@ -902,8 +902,8 @@
   },
   {
     "id": "interact_lectern",
-    "title": "Lector",
-    "description": "Lectern interactions",
+    "title": "Page Turner",
+    "description": "Times used a lectern",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_lectern.png",
@@ -917,8 +917,8 @@
   },
   {
     "id": "interact_loom",
-    "title": "Tailor",
-    "description": "Loom interactions",
+    "title": "Pattern Weaver",
+    "description": "Times used a loom",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_loom.png",
@@ -932,8 +932,8 @@
   },
   {
     "id": "interact_smoker",
-    "title": "Chef",
-    "description": "Smoker interactions",
+    "title": "Smoke Master",
+    "description": "Times used a smoker",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_smoker.png",
@@ -947,8 +947,8 @@
   },
   {
     "id": "interact_stonecutter",
-    "title": "Mason",
-    "description": "Stonecutter interactions",
+    "title": "Stone Shaper",
+    "description": "Times used a stonecutter",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/interact_stonecutter.png",
@@ -962,8 +962,8 @@
   },
   {
     "id": "jump",
-    "title": "Bunnyhopper",
-    "description": "Times jumped",
+    "title": "Spring Loaded",
+    "description": "Total jumps",
     "unit": "int",
     "bucket": "movement",
     "icon": "/awards/icons/jump.png",
@@ -977,7 +977,7 @@
   },
   {
     "id": "kill_allay",
-    "title": "No, Thanks",
+    "title": "Allay Slayer",
     "description": "Allays killed",
     "unit": "int",
     "bucket": "combat",
@@ -992,7 +992,7 @@
   },
   {
     "id": "kill_any",
-    "title": "Killing Spree!",
+    "title": "Total Eliminations",
     "description": "Total mobs killed",
     "unit": "int",
     "bucket": "combat",
@@ -1007,7 +1007,7 @@
   },
   {
     "id": "kill_axolotl",
-    "title": "Sir Axolot",
+    "title": "Axolotl Hunter",
     "description": "Axolotls killed",
     "unit": "int",
     "bucket": "combat",
@@ -1022,7 +1022,7 @@
   },
   {
     "id": "kill_bat",
-    "title": "Bat Flap",
+    "title": "Bat Swatter",
     "description": "Bats killed",
     "unit": "int",
     "bucket": "combat",
@@ -1037,7 +1037,7 @@
   },
   {
     "id": "kill_bee",
-    "title": "Beegone!",
+    "title": "Bee Bane",
     "description": "Bees killed",
     "unit": "int",
     "bucket": "combat",
@@ -1052,7 +1052,7 @@
   },
   {
     "id": "kill_blaze",
-    "title": "Extinguisher",
+    "title": "Blaze Snuffer",
     "description": "Blazes killed",
     "unit": "int",
     "bucket": "combat",
@@ -1067,7 +1067,7 @@
   },
   {
     "id": "kill_camel",
-    "title": "Desert Deleter",
+    "title": "Camel Crusher",
     "description": "Camels killed",
     "unit": "int",
     "bucket": "combat",
@@ -1082,7 +1082,7 @@
   },
   {
     "id": "kill_chicken",
-    "title": "Chicken Griller",
+    "title": "Poultry Puncher",
     "description": "Chickens killed",
     "unit": "int",
     "bucket": "combat",
@@ -1097,7 +1097,7 @@
   },
   {
     "id": "kill_cow",
-    "title": "Cow Tipper",
+    "title": "Beef Bringer",
     "description": "Cows killed",
     "unit": "int",
     "bucket": "combat",
@@ -1112,7 +1112,7 @@
   },
   {
     "id": "kill_creeper",
-    "title": "Creeper Creep",
+    "title": "Boom Dodger",
     "description": "Creepers killed",
     "unit": "int",
     "bucket": "combat",
@@ -1127,7 +1127,7 @@
   },
   {
     "id": "kill_dolphin",
-    "title": "Dolphin Hunter",
+    "title": "Flipper Fiend",
     "description": "Dolphins killed",
     "unit": "int",
     "bucket": "combat",
@@ -1142,7 +1142,7 @@
   },
   {
     "id": "kill_ender_dragon",
-    "title": "Dragon Hunter",
+    "title": "Dragon Slayer",
     "description": "Ender Dragons killed",
     "unit": "int",
     "bucket": "combat",
@@ -1157,7 +1157,7 @@
   },
   {
     "id": "kill_enderman",
-    "title": "Enderman Ender",
+    "title": "Ender Ender",
     "description": "Endermen killed",
     "unit": "int",
     "bucket": "combat",
@@ -1172,8 +1172,8 @@
   },
   {
     "id": "kill_endermite",
-    "title": "End Ratter",
-    "description": "Endermite killed",
+    "title": "Mite Crusher",
+    "description": "Endermites killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_endermite.png",
@@ -1187,7 +1187,7 @@
   },
   {
     "id": "kill_fish",
-    "title": "Fish Catcher",
+    "title": "Fish Whacker",
     "description": "Fish killed",
     "unit": "int",
     "bucket": "combat",
@@ -1207,7 +1207,7 @@
   },
   {
     "id": "kill_fox",
-    "title": "What Does The Fox Say?",
+    "title": "Fox Chaser",
     "description": "Foxes killed",
     "unit": "int",
     "bucket": "combat",
@@ -1222,8 +1222,8 @@
   },
   {
     "id": "kill_frog",
-    "title": "Ribbit Apart",
-    "description": "Frogs Killed",
+    "title": "Frog Squasher",
+    "description": "Frogs killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_frog.png",
@@ -1237,7 +1237,7 @@
   },
   {
     "id": "kill_ghast",
-    "title": "Tear Drinker",
+    "title": "Ghast Buster",
     "description": "Ghasts killed",
     "unit": "int",
     "bucket": "combat",
@@ -1252,7 +1252,7 @@
   },
   {
     "id": "kill_goat",
-    "title": "G.O.A.T.",
+    "title": "Goat Getter",
     "description": "Goats killed",
     "unit": "int",
     "bucket": "combat",
@@ -1267,8 +1267,8 @@
   },
   {
     "id": "kill_guardian",
-    "title": "Underwater Raider",
-    "description": "Score vs Guardians",
+    "title": "Temple Raider",
+    "description": "Guardians killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_guardian.png",
@@ -1285,8 +1285,8 @@
   },
   {
     "id": "kill_hoglins",
-    "title": "Hakuna Matata",
-    "description": "Hoglins & Zoglins killed",
+    "title": "Hoglin Chopper",
+    "description": "Hoglins and zoglins killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_hoglins.png",
@@ -1303,7 +1303,7 @@
   },
   {
     "id": "kill_horse",
-    "title": "Horse Hater",
+    "title": "Stallion Stomper",
     "description": "Horses killed",
     "unit": "int",
     "bucket": "combat",
@@ -1318,7 +1318,7 @@
   },
   {
     "id": "kill_illagers",
-    "title": "Cleanser",
+    "title": "Raid Repeller",
     "description": "Illagers killed",
     "unit": "int",
     "bucket": "combat",
@@ -1338,8 +1338,8 @@
   },
   {
     "id": "kill_iron_golem",
-    "title": "Traitor",
-    "description": "Iron Golems killed",
+    "title": "Golem Breaker",
+    "description": "Iron golems killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_iron_golem.png",
@@ -1353,8 +1353,8 @@
   },
   {
     "id": "kill_llama",
-    "title": "Caravan Bandit",
-    "description": "LLamas killed",
+    "title": "Llama Drama",
+    "description": "Llamas killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_llama.png",
@@ -1371,8 +1371,8 @@
   },
   {
     "id": "kill_magma_cube",
-    "title": "Magma Cream",
-    "description": "Magma Cubes killed",
+    "title": "Magma Masher",
+    "description": "Magma cubes killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_magma_cube.png",
@@ -1386,7 +1386,7 @@
   },
   {
     "id": "kill_mooshroom",
-    "title": "Mycelium Cowboy",
+    "title": "Shroom Cow Slayer",
     "description": "Mooshrooms killed",
     "unit": "int",
     "bucket": "combat",
@@ -1401,8 +1401,8 @@
   },
   {
     "id": "kill_ocelot",
-    "title": "Kitty Killer",
-    "description": "Ocelots and Cats killed",
+    "title": "Cat Catcher",
+    "description": "Ocelots and cats killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_ocelot.png",
@@ -1419,7 +1419,7 @@
   },
   {
     "id": "kill_panda",
-    "title": "Kung FU! Panda",
+    "title": "Panda Pounder",
     "description": "Pandas killed",
     "unit": "int",
     "bucket": "combat",
@@ -1434,7 +1434,7 @@
   },
   {
     "id": "kill_parrot",
-    "title": "Stupid Bird!",
+    "title": "Parrot Pirate",
     "description": "Parrots killed",
     "unit": "int",
     "bucket": "combat",
@@ -1449,7 +1449,7 @@
   },
   {
     "id": "kill_phantom",
-    "title": "Phantom Shooter",
+    "title": "Night Swatter",
     "description": "Phantoms killed",
     "unit": "int",
     "bucket": "combat",
@@ -1464,7 +1464,7 @@
   },
   {
     "id": "kill_pig",
-    "title": "Pork Chopper",
+    "title": "Pork Producer",
     "description": "Pigs killed",
     "unit": "int",
     "bucket": "combat",
@@ -1479,7 +1479,7 @@
   },
   {
     "id": "kill_piglin",
-    "title": "Kill or Be Killed",
+    "title": "Piglin Punisher",
     "description": "Piglins killed",
     "unit": "int",
     "bucket": "combat",
@@ -1494,8 +1494,8 @@
   },
   {
     "id": "kill_piglin_brute",
-    "title": "Brutal",
-    "description": "Piglin Brutes killed",
+    "title": "Brute Force",
+    "description": "Piglin brutes killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_piglin_brute.png",
@@ -1509,8 +1509,8 @@
   },
   {
     "id": "kill_polar_bear",
-    "title": "Polar Hunter",
-    "description": "Polar Bears killed",
+    "title": "Arctic Antagonist",
+    "description": "Polar bears killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_polar_bear.png",
@@ -1524,7 +1524,7 @@
   },
   {
     "id": "kill_rabbit",
-    "title": "Bunny Killer :(",
+    "title": "Rabbit Runner",
     "description": "Rabbits killed",
     "unit": "int",
     "bucket": "combat",
@@ -1539,7 +1539,7 @@
   },
   {
     "id": "kill_ravager",
-    "title": "Ravaging!",
+    "title": "Ravager Wrecker",
     "description": "Ravagers killed",
     "unit": "int",
     "bucket": "combat",
@@ -1557,7 +1557,7 @@
   },
   {
     "id": "kill_sheep",
-    "title": "Big Bad Wolf",
+    "title": "Wool Harvester",
     "description": "Sheep killed",
     "unit": "int",
     "bucket": "combat",
@@ -1572,7 +1572,7 @@
   },
   {
     "id": "kill_shulker",
-    "title": "Shulker Cracker",
+    "title": "Shell Popper",
     "description": "Shulkers killed",
     "unit": "int",
     "bucket": "combat",
@@ -1587,7 +1587,7 @@
   },
   {
     "id": "kill_silverfish",
-    "title": "Nasty Little...",
+    "title": "Bug Squasher",
     "description": "Silverfish killed",
     "unit": "int",
     "bucket": "combat",
@@ -1602,8 +1602,8 @@
   },
   {
     "id": "kill_skeleton",
-    "title": "Bone Collector",
-    "description": "Skeletons/Strays killed",
+    "title": "Bone Rattler",
+    "description": "Skeletons and strays killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_skeleton.png",
@@ -1620,7 +1620,7 @@
   },
   {
     "id": "kill_slime",
-    "title": "Swamp Lurker",
+    "title": "Slime Splatter",
     "description": "Slimes killed",
     "unit": "int",
     "bucket": "combat",
@@ -1635,7 +1635,7 @@
   },
   {
     "id": "kill_sniffer",
-    "title": "Sniffed Away",
+    "title": "Sniffer Swiper",
     "description": "Sniffers killed",
     "unit": "int",
     "bucket": "combat",
@@ -1650,8 +1650,8 @@
   },
   {
     "id": "kill_snow_golem",
-    "title": "AntiFrosty",
-    "description": "Snow Golems killed",
+    "title": "Snowman Melter",
+    "description": "Snow golems killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_snow_golem.png",
@@ -1665,7 +1665,7 @@
   },
   {
     "id": "kill_spider",
-    "title": "Arachnophobia",
+    "title": "Web Clearer",
     "description": "Spiders killed",
     "unit": "int",
     "bucket": "combat",
@@ -1683,7 +1683,7 @@
   },
   {
     "id": "kill_squid",
-    "title": "Pool Cleaner",
+    "title": "Ink Spiller",
     "description": "Squids killed",
     "unit": "int",
     "bucket": "combat",
@@ -1701,7 +1701,7 @@
   },
   {
     "id": "kill_strider",
-    "title": "Lava Pool Cleaner",
+    "title": "Strider Slayer",
     "description": "Striders killed",
     "unit": "int",
     "bucket": "combat",
@@ -1716,8 +1716,8 @@
   },
   {
     "id": "kill_tadpole",
-    "title": "Obliterator",
-    "description": "Tadpoles Killed",
+    "title": "Tadpole Terminator",
+    "description": "Tadpoles killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_tadpole.png",
@@ -1731,7 +1731,7 @@
   },
   {
     "id": "kill_turtle",
-    "title": "Super Mario",
+    "title": "Shell Stomper",
     "description": "Turtles killed",
     "unit": "int",
     "bucket": "combat",
@@ -1746,7 +1746,7 @@
   },
   {
     "id": "kill_vex",
-    "title": "Vex Hunter",
+    "title": "Vex Vanquisher",
     "description": "Vexes killed",
     "unit": "int",
     "bucket": "combat",
@@ -1761,7 +1761,7 @@
   },
   {
     "id": "kill_villager",
-    "title": "Bully",
+    "title": "Village Menace",
     "description": "Villagers killed",
     "unit": "int",
     "bucket": "combat",
@@ -1776,8 +1776,8 @@
   },
   {
     "id": "kill_wandering_trader",
-    "title": "Trade Sanctions",
-    "description": "Wandering Traders killed",
+    "title": "Trader Trouble",
+    "description": "Wandering traders killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_wandering_trader.png",
@@ -1791,7 +1791,7 @@
   },
   {
     "id": "kill_warden",
-    "title": "You Can't See Me",
+    "title": "Warden Conqueror",
     "description": "Wardens killed",
     "unit": "int",
     "bucket": "combat",
@@ -1806,7 +1806,7 @@
   },
   {
     "id": "kill_witch",
-    "title": "Witch Hunter",
+    "title": "Hex Breaker",
     "description": "Witches killed",
     "unit": "int",
     "bucket": "combat",
@@ -1821,8 +1821,8 @@
   },
   {
     "id": "kill_wither_skeleton",
-    "title": "Wither Or Not",
-    "description": "Wither Skeletons killed",
+    "title": "Skull Collector",
+    "description": "Wither skeletons killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_wither_skeleton.png",
@@ -1836,8 +1836,8 @@
   },
   {
     "id": "kill_wolf",
-    "title": "Bad Dog!",
-    "description": "Wolves and Dogs killed",
+    "title": "Wolf Wrangler",
+    "description": "Wolves and dogs killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_wolf.png",
@@ -1851,8 +1851,8 @@
   },
   {
     "id": "kill_zombie",
-    "title": "Zombie Grinder",
-    "description": "Zombies/Husks/Drowned killed",
+    "title": "Undead Purger",
+    "description": "Zombies, husks and drowned killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_zombie.png",
@@ -1871,8 +1871,8 @@
   },
   {
     "id": "kill_zombified_piglin",
-    "title": "Nether Gang War",
-    "description": "Zombified Piglins killed",
+    "title": "Nether Brawler",
+    "description": "Zombified piglins killed",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/kill_zombified_piglin.png",
@@ -1889,8 +1889,8 @@
   },
   {
     "id": "killed_by_creeper",
-    "title": "Keboom!",
-    "description": "Times Killed by Creepers",
+    "title": "Creeper Victim",
+    "description": "Times killed by a creeper",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/killed_by_creeper.png",
@@ -1904,8 +1904,8 @@
   },
   {
     "id": "killed_by_warden",
-    "title": "Stay out!",
-    "description": "Times Killed by Wardens",
+    "title": "Deep Dark Death",
+    "description": "Times killed by a warden",
     "unit": "int",
     "bucket": "combat",
     "icon": "/awards/icons/killed_by_warden.png",
@@ -1919,8 +1919,8 @@
   },
   {
     "id": "mine_amethyst",
-    "title": "Jeweler",
-    "description": "Amethysts mined",
+    "title": "Gem Cutter",
+    "description": "Amethyst mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_amethyst.png",
@@ -1937,8 +1937,8 @@
   },
   {
     "id": "mine_ancient_debris",
-    "title": "Archeologist",
-    "description": "Ancient Debris mined",
+    "title": "Debris Digger",
+    "description": "Ancient debris excavated",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_ancient_debris.png",
@@ -1952,8 +1952,8 @@
   },
   {
     "id": "mine_coal_ore",
-    "title": "Black Gold",
-    "description": "Coal Ore mined",
+    "title": "Coal Cracker",
+    "description": "Coal ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_coal_ore.png",
@@ -1970,8 +1970,8 @@
   },
   {
     "id": "mine_cobweb",
-    "title": "Silky Situation",
-    "description": "Cobweb removed",
+    "title": "Web Sweeper",
+    "description": "Cobwebs cleared",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_cobweb.png",
@@ -1985,8 +1985,8 @@
   },
   {
     "id": "mine_copper_ore",
-    "title": "Copper Miner",
-    "description": "Copper Ore mined",
+    "title": "Copper Vein",
+    "description": "Copper ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_copper_ore.png",
@@ -2003,8 +2003,8 @@
   },
   {
     "id": "mine_coral",
-    "title": "Coral Collector",
-    "description": "Corals mined",
+    "title": "Reef Raider",
+    "description": "Coral blocks mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_coral.png",
@@ -2023,8 +2023,8 @@
   },
   {
     "id": "mine_diamond_ore",
-    "title": "Diamonds!",
-    "description": "Diamond Ore mined",
+    "title": "Diamond Strike",
+    "description": "Diamond ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_diamond_ore.png",
@@ -2041,8 +2041,8 @@
   },
   {
     "id": "mine_dimensional",
-    "title": "Terraformer",
-    "description": "Netherrack/End stone mined",
+    "title": "Dimension Digger",
+    "description": "Netherrack and end stone mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_dimensional.png",
@@ -2059,8 +2059,8 @@
   },
   {
     "id": "mine_emerald_ore",
-    "title": "Mountain Miner",
-    "description": "Emerald Ore mined",
+    "title": "Emerald Seeker",
+    "description": "Emerald ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_emerald_ore.png",
@@ -2077,8 +2077,8 @@
   },
   {
     "id": "mine_glass",
-    "title": "Glassbreaker",
-    "description": "Glass broken",
+    "title": "Glass Breaker",
+    "description": "Glass blocks broken",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_glass.png",
@@ -2097,8 +2097,8 @@
   },
   {
     "id": "mine_gold_ore",
-    "title": "Gold Rush",
-    "description": "Gold Ore mined",
+    "title": "Gold Vein",
+    "description": "Gold ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_gold_ore.png",
@@ -2115,8 +2115,8 @@
   },
   {
     "id": "mine_grass",
-    "title": "Lawnmower",
-    "description": "Grass removed",
+    "title": "Grass Trimmer",
+    "description": "Grass and ferns cleared",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_grass.png",
@@ -2134,7 +2134,7 @@
   {
     "id": "mine_ground",
     "title": "Excavator",
-    "description": "Dirt, sand etc. mined",
+    "description": "Dirt, sand and gravel dug",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_ground.png",
@@ -2166,7 +2166,7 @@
   {
     "id": "mine_ice",
     "title": "Ice Breaker",
-    "description": "Ice broken",
+    "description": "Ice blocks broken",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_ice.png",
@@ -2183,8 +2183,8 @@
   },
   {
     "id": "mine_iron_ore",
-    "title": "Iron Heart",
-    "description": "Iron Ore mined",
+    "title": "Iron Vein",
+    "description": "Iron ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_iron_ore.png",
@@ -2201,8 +2201,8 @@
   },
   {
     "id": "mine_kelp",
-    "title": "I Need Kelp!",
-    "description": "Kelp mined",
+    "title": "Kelp Harvester",
+    "description": "Kelp cut",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_kelp.png",
@@ -2219,8 +2219,8 @@
   },
   {
     "id": "mine_lapis_ore",
-    "title": "Blue",
-    "description": "Lapis Lazuli Ore mined",
+    "title": "Lapis Finder",
+    "description": "Lapis lazuli ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_lapis_ore.png",
@@ -2237,8 +2237,8 @@
   },
   {
     "id": "mine_nether_foliage",
-    "title": "Nether Mower",
-    "description": "Nether sprouts & roots removed",
+    "title": "Nether Trimmer",
+    "description": "Nether roots and sprouts cleared",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_nether_foliage.png",
@@ -2256,8 +2256,8 @@
   },
   {
     "id": "mine_nether_quartz_ore",
-    "title": "Quartz",
-    "description": "Nether Quartz Ore mined",
+    "title": "Quartz Miner",
+    "description": "Nether quartz ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_nether_quartz_ore.png",
@@ -2271,7 +2271,7 @@
   },
   {
     "id": "mine_obsidian",
-    "title": "Obsidian Miner",
+    "title": "Obsidian Breaker",
     "description": "Obsidian blocks mined",
     "unit": "int",
     "bucket": "mining",
@@ -2286,8 +2286,8 @@
   },
   {
     "id": "mine_pointed_dripstone",
-    "title": "Cave Dweller",
-    "description": "Pointed Dripstone mined",
+    "title": "Cave Chipper",
+    "description": "Pointed dripstone mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_pointed_dripstone.png",
@@ -2302,7 +2302,7 @@
   {
     "id": "mine_redstone_ore",
     "title": "Redstone Miner",
-    "description": "Redstone Ore mined",
+    "description": "Redstone ore mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_redstone_ore.png",
@@ -2319,8 +2319,8 @@
   },
   {
     "id": "mine_snow",
-    "title": "Snow Pusher",
-    "description": "Snow removed",
+    "title": "Snow Shoveler",
+    "description": "Snow layers cleared",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_snow.png",
@@ -2338,8 +2338,8 @@
   },
   {
     "id": "mine_spawner",
-    "title": "Nope!",
-    "description": "Spawners removed",
+    "title": "Spawner Smasher",
+    "description": "Monster spawners destroyed",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_spawner.png",
@@ -2353,8 +2353,8 @@
   },
   {
     "id": "mine_stone",
-    "title": "Stonemason",
-    "description": "Stone mined",
+    "title": "Rock Breaker",
+    "description": "Stone blocks mined",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_stone.png",
@@ -2380,8 +2380,8 @@
   },
   {
     "id": "mine_wood",
-    "title": "Woodcutter",
-    "description": "Wood blocks cut",
+    "title": "Lumber Jack",
+    "description": "Wood blocks chopped",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_wood.png",
@@ -2398,7 +2398,7 @@
   },
   {
     "id": "noteblock",
-    "title": "Musician",
+    "title": "Note Player",
     "description": "Note block interactions",
     "unit": "int",
     "bucket": "items",
@@ -2416,7 +2416,7 @@
   },
   {
     "id": "open_container",
-    "title": "Warehouse",
+    "title": "Container Opener",
     "description": "Containers opened",
     "unit": "int",
     "bucket": "items",
@@ -2436,7 +2436,7 @@
   },
   {
     "id": "place_banner",
-    "title": "Flying Flags",
+    "title": "Flag Planter",
     "description": "Banners placed",
     "unit": "int",
     "bucket": "building",
@@ -2453,8 +2453,8 @@
   },
   {
     "id": "place_bars",
-    "title": "Jailer",
-    "description": "Iron bars & chains placed",
+    "title": "Cage Builder",
+    "description": "Iron bars and chains placed",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_bars.png",
@@ -2471,7 +2471,7 @@
   },
   {
     "id": "place_cactus",
-    "title": "Cactus Farmer",
+    "title": "Prickly Planter",
     "description": "Cacti planted",
     "unit": "int",
     "bucket": "building",
@@ -2486,7 +2486,7 @@
   },
   {
     "id": "place_candle",
-    "title": "Candlelight Dinner",
+    "title": "Candle Lighter",
     "description": "Candles placed",
     "unit": "int",
     "bucket": "building",
@@ -2503,8 +2503,8 @@
   },
   {
     "id": "place_chorus_flower",
-    "title": "Chorus Farmer",
-    "description": "Chorus Flowers planted",
+    "title": "End Gardener",
+    "description": "Chorus flowers planted",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_chorus_flower.png",
@@ -2518,7 +2518,7 @@
   },
   {
     "id": "place_conveyor",
-    "title": "Conveyor",
+    "title": "Item Mover",
     "description": "Hoppers and droppers placed",
     "unit": "int",
     "bucket": "building",
@@ -2536,8 +2536,8 @@
   },
   {
     "id": "place_electrics",
-    "title": "Electrician",
-    "description": "Redstone items placed",
+    "title": "Redstone Placer",
+    "description": "Redstone components placed",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_electrics.png",
@@ -2564,8 +2564,8 @@
   },
   {
     "id": "place_glass",
-    "title": "Glassworker",
-    "description": "Glass placed",
+    "title": "Window Maker",
+    "description": "Glass blocks placed",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_glass.png",
@@ -2582,7 +2582,7 @@
   },
   {
     "id": "place_lantern",
-    "title": "Fear Of The Dark",
+    "title": "Light Hanger",
     "description": "Lanterns placed",
     "unit": "int",
     "bucket": "building",
@@ -2600,8 +2600,8 @@
   },
   {
     "id": "place_lightning_rod",
-    "title": "Benjamin Franklin",
-    "description": "Lightning Rods placed",
+    "title": "Storm Catcher",
+    "description": "Lightning rods placed",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_lightning_rod.png",
@@ -2615,8 +2615,8 @@
   },
   {
     "id": "place_lodestone",
-    "title": "Lodecrumb Trail",
-    "description": "Lodestone placed",
+    "title": "Lodestone Layer",
+    "description": "Lodestones placed",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_lodestone.png",
@@ -2630,7 +2630,7 @@
   },
   {
     "id": "place_piston",
-    "title": "Mechanic",
+    "title": "Piston Pusher",
     "description": "Pistons placed",
     "unit": "int",
     "bucket": "building",
@@ -2647,7 +2647,7 @@
   },
   {
     "id": "place_rails",
-    "title": "Railway Company",
+    "title": "Rail Layer",
     "description": "Rails placed",
     "unit": "int",
     "bucket": "building",
@@ -2664,8 +2664,8 @@
   },
   {
     "id": "place_sapling",
-    "title": "Forester",
-    "description": "Trees planted",
+    "title": "Tree Planter",
+    "description": "Saplings planted",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_sapling.png",
@@ -2682,8 +2682,8 @@
   },
   {
     "id": "place_scaffolding",
-    "title": "Bob The Builder",
-    "description": "Scaffoldings placed",
+    "title": "Scaffold Stacker",
+    "description": "Scaffolding placed",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_scaffolding.png",
@@ -2697,7 +2697,7 @@
   },
   {
     "id": "place_sign",
-    "title": "README.TXT",
+    "title": "Sign Poster",
     "description": "Signs placed",
     "unit": "int",
     "bucket": "building",
@@ -2714,8 +2714,8 @@
   },
   {
     "id": "place_stairs",
-    "title": "MaStair",
-    "description": "Stairs built",
+    "title": "Step Builder",
+    "description": "Stairs placed",
     "unit": "int",
     "bucket": "building",
     "icon": "/awards/icons/place_stairs.png",
@@ -2731,7 +2731,7 @@
   },
   {
     "id": "place_torch",
-    "title": "Enlightened",
+    "title": "Torch Bearer",
     "description": "Torches placed",
     "unit": "int",
     "bucket": "building",
@@ -2749,7 +2749,7 @@
   },
   {
     "id": "place_wall",
-    "title": "Iron Curtain",
+    "title": "Wall Builder",
     "description": "Walls placed",
     "unit": "int",
     "bucket": "building",
@@ -2766,7 +2766,7 @@
   },
   {
     "id": "play",
-    "title": "Dedication",
+    "title": "Time Served",
     "description": "Total time played",
     "unit": "ticks",
     "bucket": "misc",
@@ -2784,8 +2784,8 @@
   },
   {
     "id": "play_record",
-    "title": "Disc Jockey",
-    "description": "Records played",
+    "title": "Jukebox Hero",
+    "description": "Music discs played",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/play_record.png",
@@ -2799,8 +2799,8 @@
   },
   {
     "id": "pot_flower",
-    "title": "Florist",
-    "description": "Flowers potted",
+    "title": "Flower Arranger",
+    "description": "Plants potted in flower pots",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/pot_flower.png",
@@ -2814,8 +2814,8 @@
   },
   {
     "id": "ride_boat",
-    "title": "Sailor",
-    "description": "Distance gone by boat",
+    "title": "Boat Captain",
+    "description": "Distance traveled by boat",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/ride_boat.png",
@@ -2829,8 +2829,8 @@
   },
   {
     "id": "ride_horse",
-    "title": "Rider",
-    "description": "Distance ridden on a horse",
+    "title": "Horseback",
+    "description": "Distance traveled on horseback",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/ride_horse.png",
@@ -2844,8 +2844,8 @@
   },
   {
     "id": "ride_minecart",
-    "title": "Public Transport",
-    "description": "Distance gone in a minecart",
+    "title": "Rail Rider",
+    "description": "Distance traveled by minecart",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/ride_minecart.png",
@@ -2859,8 +2859,8 @@
   },
   {
     "id": "ride_pig",
-    "title": "Because I Can!",
-    "description": "Distance ridden on a pig",
+    "title": "Pig Jockey",
+    "description": "Distance traveled on a pig",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/ride_pig.png",
@@ -2874,8 +2874,8 @@
   },
   {
     "id": "ride_strider",
-    "title": "The Floor Is Lava",
-    "description": "Distance ridden on a strider",
+    "title": "Lava Surfer",
+    "description": "Distance traveled on a strider",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/ride_strider.png",
@@ -2889,7 +2889,7 @@
   },
   {
     "id": "ring_bell",
-    "title": "Ding Dong Ditch!",
+    "title": "Bell Ringer",
     "description": "Bells rung",
     "unit": "int",
     "bucket": "items",
@@ -2904,8 +2904,8 @@
   },
   {
     "id": "sleep",
-    "title": "Sleepyhead",
-    "description": "Times slept",
+    "title": "Well Rested",
+    "description": "Times slept in a bed",
     "unit": "int",
     "bucket": "misc",
     "icon": "/awards/icons/sleep.png",
@@ -2919,7 +2919,7 @@
   },
   {
     "id": "sprint",
-    "title": "Marathon",
+    "title": "Sprinter",
     "description": "Distance sprinted",
     "unit": "cm",
     "bucket": "movement",
@@ -2934,7 +2934,7 @@
   },
   {
     "id": "swim",
-    "title": "Swimmer",
+    "title": "Lap Counter",
     "description": "Distance swum",
     "unit": "cm",
     "bucket": "movement",
@@ -2949,7 +2949,7 @@
   },
   {
     "id": "time_since_death",
-    "title": "Survivor",
+    "title": "Staying Alive",
     "description": "Time since last death",
     "unit": "ticks",
     "bucket": "misc",
@@ -2964,7 +2964,7 @@
   },
   {
     "id": "time_since_sleep",
-    "title": "Insomnia",
+    "title": "Night Owl",
     "description": "Time since last sleep",
     "unit": "ticks",
     "bucket": "misc",
@@ -2979,8 +2979,8 @@
   },
   {
     "id": "trade",
-    "title": "Trader",
-    "description": "Villager trades",
+    "title": "Deal Maker",
+    "description": "Villager trades completed",
     "unit": "int",
     "bucket": "misc",
     "icon": "/awards/icons/trade.png",
@@ -2994,7 +2994,7 @@
   },
   {
     "id": "trigger_raid",
-    "title": "Bad Omen",
+    "title": "Raid Starter",
     "description": "Raids triggered",
     "unit": "int",
     "bucket": "misc",
@@ -3009,8 +3009,8 @@
   },
   {
     "id": "use_book",
-    "title": "Bestseller",
-    "description": "Books written",
+    "title": "Author",
+    "description": "Books written with quill",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_book.png",
@@ -3024,8 +3024,8 @@
   },
   {
     "id": "use_bow",
-    "title": "Archer",
-    "description": "Arrows shot",
+    "title": "Bow Master",
+    "description": "Arrows shot from a bow",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_bow.png",
@@ -3039,8 +3039,8 @@
   },
   {
     "id": "use_crossbow",
-    "title": "Sharpshooter",
-    "description": "Bolts fired",
+    "title": "Crossbow Expert",
+    "description": "Bolts fired from a crossbow",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_crossbow.png",
@@ -3054,7 +3054,7 @@
   },
   {
     "id": "use_dirt",
-    "title": "Getting Dirty",
+    "title": "Dirt Placer",
     "description": "Dirt blocks placed",
     "unit": "int",
     "bucket": "items",
@@ -3073,7 +3073,7 @@
   },
   {
     "id": "use_egg",
-    "title": "Catch!",
+    "title": "Egg Tosser",
     "description": "Eggs thrown",
     "unit": "int",
     "bucket": "items",
@@ -3088,8 +3088,8 @@
   },
   {
     "id": "use_ender_eye",
-    "title": "Stronghold Seeker",
-    "description": "Ender eyes thrown",
+    "title": "Eye Launcher",
+    "description": "Eyes of ender thrown",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_ender_eye.png",
@@ -3103,7 +3103,7 @@
   },
   {
     "id": "use_ender_pearl",
-    "title": "Translocator",
+    "title": "Pearl Warper",
     "description": "Ender pearls thrown",
     "unit": "int",
     "bucket": "items",
@@ -3118,8 +3118,8 @@
   },
   {
     "id": "use_fireworks",
-    "title": "Happy New Year!",
-    "description": "Fireworks started",
+    "title": "Rocket Launcher",
+    "description": "Firework rockets used",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_fireworks.png",
@@ -3133,8 +3133,8 @@
   },
   {
     "id": "use_flint",
-    "title": "Pyromaniac",
-    "description": "Fires started",
+    "title": "Fire Starter",
+    "description": "Fires ignited with flint and steel",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_flint.png",
@@ -3148,7 +3148,7 @@
   },
   {
     "id": "use_goat_horn",
-    "title": "Sound the Charge!",
+    "title": "Horn Blower",
     "description": "Goat horns sounded",
     "unit": "int",
     "bucket": "items",
@@ -3163,8 +3163,8 @@
   },
   {
     "id": "use_hoe",
-    "title": "Farmer",
-    "description": "Ground blocks plowed",
+    "title": "Soil Tiller",
+    "description": "Blocks tilled with a hoe",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_hoe.png",
@@ -3180,8 +3180,8 @@
   },
   {
     "id": "use_honey_bottle",
-    "title": "Winnie the Pooh",
-    "description": "Honey bottles drunk",
+    "title": "Honey Drinker",
+    "description": "Honey bottles consumed",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_honey_bottle.png",
@@ -3195,7 +3195,7 @@
   },
   {
     "id": "use_lava_bucket",
-    "title": "Napalm",
+    "title": "Lava Dumper",
     "description": "Lava buckets emptied",
     "unit": "int",
     "bucket": "items",
@@ -3210,8 +3210,8 @@
   },
   {
     "id": "use_potion",
-    "title": "Alchemist",
-    "description": "Potions used",
+    "title": "Potion Drinker",
+    "description": "Potions consumed",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_potion.png",
@@ -3227,8 +3227,8 @@
   },
   {
     "id": "use_shears",
-    "title": "Cutter",
-    "description": "Shear uses",
+    "title": "Shearer",
+    "description": "Times used shears",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_shears.png",
@@ -3242,7 +3242,7 @@
   },
   {
     "id": "use_snowball",
-    "title": "Snowball Fight!",
+    "title": "Snowball Thrower",
     "description": "Snowballs thrown",
     "unit": "int",
     "bucket": "items",
@@ -3257,8 +3257,8 @@
   },
   {
     "id": "use_totem",
-    "title": "Nine Lives",
-    "description": "Totems of Undying used",
+    "title": "Death Cheater",
+    "description": "Totems of undying activated",
     "unit": "int",
     "bucket": "items",
     "icon": "/awards/icons/use_totem.png",
@@ -3272,7 +3272,7 @@
   },
   {
     "id": "use_water_bucket",
-    "title": "Aqueduct",
+    "title": "Water Placer",
     "description": "Water buckets emptied",
     "unit": "int",
     "bucket": "items",
@@ -3287,8 +3287,8 @@
   },
   {
     "id": "walk",
-    "title": "Traveler",
-    "description": "Distance walked",
+    "title": "Wanderer",
+    "description": "Total distance walked",
     "unit": "cm",
     "bucket": "movement",
     "icon": "/awards/icons/walk.png",
@@ -3302,7 +3302,7 @@
   },
   {
     "id": "walk_on_water",
-    "title": "Water Walker",
+    "title": "Frost Walker",
     "description": "Distance walked on water",
     "unit": "cm",
     "bucket": "movement",
@@ -3317,8 +3317,8 @@
   },
   {
     "id": "win_raid",
-    "title": "Hero",
-    "description": "Raids won",
+    "title": "Raid Victor",
+    "description": "Raids successfully defended",
     "unit": "int",
     "bucket": "misc",
     "icon": "/awards/icons/win_raid.png",
@@ -3327,6 +3327,542 @@
       "path": [
         "minecraft:custom",
         "minecraft:raid_win"
+      ]
+    }
+  },
+  {
+    "id": "kill_breeze",
+    "title": "Wind Breaker",
+    "description": "Breezes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_breeze.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:breeze"
+      ]
+    }
+  },
+  {
+    "id": "kill_bogged",
+    "title": "Debogger",
+    "description": "Bogged killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_bogged.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:bogged"
+      ]
+    }
+  },
+  {
+    "id": "kill_armadillo",
+    "title": "Shell Shocked",
+    "description": "Armadillos killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_armadillo.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:armadillo"
+      ]
+    }
+  },
+  {
+    "id": "kill_creaking",
+    "title": "Creak Destroyer",
+    "description": "Creakings killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_creaking.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:creaking"
+      ]
+    }
+  },
+  {
+    "id": "kill_happy_ghast",
+    "title": "Heartbreaker",
+    "description": "Happy ghasts killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_happy_ghast.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:happy_ghast"
+      ]
+    }
+  },
+  {
+    "id": "kill_parched",
+    "title": "Hydration Needed",
+    "description": "Parched killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_parched.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:parched"
+      ]
+    }
+  },
+  {
+    "id": "kill_camel_husk",
+    "title": "Husk Buster",
+    "description": "Camel husks killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_camel_husk.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:camel_husk"
+      ]
+    }
+  },
+  {
+    "id": "killed_by_breeze",
+    "title": "Blown Away",
+    "description": "Times killed by a breeze",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/killed_by_breeze.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed_by",
+        "minecraft:breeze"
+      ]
+    }
+  },
+  {
+    "id": "killed_by_bogged",
+    "title": "Poisoned",
+    "description": "Times killed by a bogged",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/killed_by_bogged.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed_by",
+        "minecraft:bogged"
+      ]
+    }
+  },
+  {
+    "id": "ride_happy_ghast",
+    "title": "Cloud Rider",
+    "description": "Distance traveled on a happy ghast",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_happy_ghast.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:happy_ghast_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "ride_nautilus",
+    "title": "Submariner",
+    "description": "Distance traveled on a nautilus",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_nautilus.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:nautilus_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "interact_crafting",
+    "title": "Handyman",
+    "description": "Times used a crafting table",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_crafting.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_crafting_table"
+      ]
+    }
+  },
+  {
+    "id": "interact_furnace",
+    "title": "Smelting",
+    "description": "Times used a furnace",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_furnace.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_furnace"
+      ]
+    }
+  },
+  {
+    "id": "interact_smithing",
+    "title": "Netherite Smith",
+    "description": "Times used a smithing table",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_smithing.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_smithing_table"
+      ]
+    }
+  },
+  {
+    "id": "interact_beacon",
+    "title": "Beaconeer",
+    "description": "Times configured a beacon",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_beacon.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_beacon"
+      ]
+    }
+  },
+  {
+    "id": "open_chest",
+    "title": "Treasure Hunter",
+    "description": "Chests opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_chest.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:open_chest"
+      ]
+    }
+  },
+  {
+    "id": "open_barrel",
+    "title": "Barrel Roller",
+    "description": "Barrels opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_barrel.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:open_barrel"
+      ]
+    }
+  },
+  {
+    "id": "open_shulker_box",
+    "title": "Unboxer",
+    "description": "Shulker boxes opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_shulker_box.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:open_shulker_box"
+      ]
+    }
+  },
+  {
+    "id": "open_ender_chest",
+    "title": "Ender Hoarder",
+    "description": "Ender chests opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_ender_chest.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:open_enderchest"
+      ]
+    }
+  },
+  {
+    "id": "target_hit",
+    "title": "Bullseye",
+    "description": "Target blocks shot",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/target_hit.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:target_hit"
+      ]
+    }
+  },
+  {
+    "id": "eat_cake",
+    "title": "Let Them Eat Cake",
+    "description": "Cake slices eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_cake.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:eat_cake_slice"
+      ]
+    }
+  },
+  {
+    "id": "talk_villager",
+    "title": "Chatterbox",
+    "description": "Villager conversations",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/talk_villager.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:talked_to_villager"
+      ]
+    }
+  },
+  {
+    "id": "sneak_time",
+    "title": "Shadow",
+    "description": "Time spent sneaking",
+    "unit": "ticks",
+    "bucket": "misc",
+    "icon": "/awards/icons/sneak_time.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:sneak_time"
+      ]
+    }
+  },
+  {
+    "id": "fish_caught",
+    "title": "Angler",
+    "description": "Fish caught with a rod",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/fish_caught.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:fish_caught"
+      ]
+    }
+  },
+  {
+    "id": "craft_mace",
+    "title": "Heavy Hitter",
+    "description": "Maces crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_mace.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:mace"
+      ]
+    }
+  },
+  {
+    "id": "craft_spear",
+    "title": "Javelin",
+    "description": "Spears crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_spear.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_spear"
+      ]
+    }
+  },
+  {
+    "id": "craft_harness",
+    "title": "Sky Saddle",
+    "description": "Harnesses crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_harness.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_harness"
+      ]
+    }
+  },
+  {
+    "id": "craft_saddle",
+    "title": "Jockey",
+    "description": "Saddles crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_saddle.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:saddle"
+      ]
+    }
+  },
+  {
+    "id": "craft_copper_bulb",
+    "title": "Copper Glow",
+    "description": "Copper bulbs crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_copper_bulb.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.*copper_bulb"
+      ]
+    }
+  },
+  {
+    "id": "craft_crafter",
+    "title": "Automation",
+    "description": "Crafters crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_crafter.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:crafter"
+      ]
+    }
+  },
+  {
+    "id": "use_mace",
+    "title": "Smasher",
+    "description": "Mace attacks landed",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_mace.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:mace"
+      ]
+    }
+  },
+  {
+    "id": "use_wind_charge",
+    "title": "Wind Blaster",
+    "description": "Wind charges thrown",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_wind_charge.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:wind_charge"
+      ]
+    }
+  },
+  {
+    "id": "use_spear",
+    "title": "Lancer",
+    "description": "Spear attacks landed",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_spear.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_spear"
       ]
     }
   }

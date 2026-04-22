@@ -37,9 +37,9 @@ async function fetchAwardDefinitions(): Promise<ProxyAward[]> {
 
 async function fetchPlayerAwards(uuid: string): Promise<ProxyPlayerAwards | null> {
   try {
-    const res = await fetch(`https://api.crabcraft.net/awards/player/${uuid}`, { next: { revalidate: 30 } });
+    const res = await fetch(`https://api.crabcraft.net/players/${uuid}/awards`, { next: { revalidate: 30 } });
     if (!res.ok) return null;
-    return res.json();
+    return await res.json();
   } catch {
     return null;
   }

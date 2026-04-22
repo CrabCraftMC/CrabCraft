@@ -1,0 +1,286 @@
+{
+  "GET /ping": {
+    "status": "ok"
+  },
+
+  "GET /status": {
+    "online": true,
+    "players": {
+      "online": 7,
+      "max": 100
+    },
+    "version": "Velocity 3.4.0-SNAPSHOT"
+  },
+
+  "GET /servers": {
+    "servers": [
+      { "name": "survival", "players": 5 },
+      { "name": "creative", "players": 2 },
+      { "name": "lobby", "players": 0 }
+    ]
+  },
+
+  "GET /players": {
+    "count": 7,
+    "players": [
+      {
+        "username": "MaxMoon",
+        "uuid": "550e8400-e29b-41d4-a716-446655440000",
+        "nickname": "Max",
+        "nickname_raw": "&bMax",
+        "ping": 32,
+        "server": "survival"
+      },
+      {
+        "username": "IanTheOfficial",
+        "uuid": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "nickname": null,
+        "nickname_raw": null,
+        "ping": 45,
+        "server": "survival"
+      }
+    ]
+  },
+
+  "GET /players/MaxMoon": {
+    "username": "MaxMoon",
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "nickname": "Max",
+    "nickname_raw": "&bMax",
+    "ping": 32,
+    "server": "survival"
+  },
+
+  "GET /awards": {
+    "awards": [
+      {
+        "id": "aviate",
+        "title": "Glider",
+        "description": "Distance flown with elytra",
+        "unit": "cm",
+        "bucket": "movement",
+        "icon": "/awards/icons/aviate.png",
+        "leader": {
+          "uuid": "550e8400-e29b-41d4-a716-446655440000",
+          "username": "MaxMoon",
+          "score": 5847320.0
+        }
+      },
+      {
+        "id": "kill_any",
+        "title": "Total Eliminations",
+        "description": "Total mobs killed",
+        "unit": "int",
+        "bucket": "combat",
+        "icon": "/awards/icons/kill_any.png",
+        "leader": {
+          "uuid": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+          "username": "IanTheOfficial",
+          "score": 12450.0
+        }
+      },
+      {
+        "id": "mine_diamond_ore",
+        "title": "Diamond Strike",
+        "description": "Diamond ore mined",
+        "unit": "int",
+        "bucket": "mining",
+        "icon": "/awards/icons/mine_diamond_ore.png",
+        "leader": null
+      }
+    ],
+    "servers": ["survival", "creative"]
+  },
+
+  "GET /awards/aviate": {
+    "award": {
+      "id": "aviate",
+      "title": "Glider",
+      "description": "Distance flown with elytra",
+      "unit": "cm",
+      "bucket": "movement",
+      "icon": "/awards/icons/aviate.png"
+    },
+    "leaderboard": [
+      {
+        "rank": 1,
+        "uuid": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "MaxMoon",
+        "score": 5847320.0,
+        "medal": 1
+      },
+      {
+        "rank": 2,
+        "uuid": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "username": "IanTheOfficial",
+        "score": 3291000.0,
+        "medal": 2
+      },
+      {
+        "rank": 3,
+        "uuid": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "username": "Steve_Player",
+        "score": 1500000.0,
+        "medal": 3
+      },
+      {
+        "rank": 4,
+        "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "username": "AlexBuilder",
+        "score": 820000.0,
+        "medal": 0
+      }
+    ],
+    "total": 45,
+    "offset": 0,
+    "limit": 100
+  },
+
+  "GET /awards/crowns": {
+    "leaderboard": [
+      {
+        "rank": 1,
+        "uuid": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "MaxMoon",
+        "gold": 18,
+        "silver": 12,
+        "bronze": 7,
+        "crown_score": 133
+      },
+      {
+        "rank": 2,
+        "uuid": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "username": "IanTheOfficial",
+        "gold": 10,
+        "silver": 15,
+        "bronze": 9,
+        "crown_score": 104
+      },
+      {
+        "rank": 3,
+        "uuid": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "username": "Steve_Player",
+        "gold": 5,
+        "silver": 8,
+        "bronze": 20,
+        "crown_score": 69
+      }
+    ],
+    "total": 38,
+    "offset": 0,
+    "limit": 100,
+    "servers": ["survival", "creative"]
+  },
+
+  "GET /players/550e8400-e29b-41d4-a716-446655440000/awards": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "MaxMoon",
+    "crown": {
+      "rank": 1,
+      "gold": 18,
+      "silver": 12,
+      "bronze": 7,
+      "crown_score": 133
+    },
+    "scores": {
+      "aviate": { "rank": 1, "score": 5847320.0 },
+      "kill_any": { "rank": 3, "score": 8920.0 },
+      "mine_diamond_ore": { "rank": 1, "score": 2450.0 },
+      "walk": { "rank": 2, "score": 15000000.0 },
+      "craft_beacon": { "rank": 1, "score": 12.0 },
+      "sleep": { "rank": 45, "score": 320.0 },
+      "jump": { "rank": 5, "score": 98432.0 }
+    }
+  },
+
+  "GET /players/550e8400-e29b-41d4-a716-446655440000/advancements": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "MaxMoon",
+    "completed": 87,
+    "total": 130,
+    "advancements": {
+      "minecraft:story/mine_stone": {
+        "completed": true,
+        "completed_at": 1713800000
+      },
+      "minecraft:story/upgrade_tools": {
+        "completed": true,
+        "completed_at": 1713802500
+      },
+      "minecraft:story/smelt_iron": {
+        "completed": true,
+        "completed_at": 1713805000
+      },
+      "minecraft:story/obtain_armor": {
+        "completed": true,
+        "completed_at": 1713810000
+      },
+      "minecraft:story/lava_bucket": {
+        "completed": false,
+        "completed_at": null
+      },
+      "minecraft:story/iron_tools": {
+        "completed": true,
+        "completed_at": 1713812000
+      },
+      "minecraft:nether/return_to_sender": {
+        "completed": false,
+        "completed_at": null
+      },
+      "minecraft:end/kill_dragon": {
+        "completed": true,
+        "completed_at": 1714500000
+      },
+      "minecraft:adventure/kill_a_mob": {
+        "completed": true,
+        "completed_at": 1713801000
+      },
+      "minecraft:husbandry/plant_seed": {
+        "completed": true,
+        "completed_at": 1713803000
+      }
+    }
+  },
+
+  "GET /advancements/leaderboard": {
+    "leaderboard": [
+      {
+        "rank": 1,
+        "uuid": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "MaxMoon",
+        "completed": 87
+      },
+      {
+        "rank": 2,
+        "uuid": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "username": "IanTheOfficial",
+        "completed": 72
+      },
+      {
+        "rank": 3,
+        "uuid": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "username": "Steve_Player",
+        "completed": 55
+      }
+    ],
+    "total": 28,
+    "offset": 0,
+    "limit": 100
+  },
+
+  "GET /unknown-path (404)": {
+    "error": "not found"
+  },
+
+  "Rate limited (429)": {
+    "error": "rate limit exceeded"
+  },
+
+  "Invalid input (400)": {
+    "error": "invalid uuid format"
+  },
+
+  "No data (404)": {
+    "error": "player has no award data"
+  }
+}

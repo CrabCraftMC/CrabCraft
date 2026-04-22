@@ -43,7 +43,7 @@ async function fetchAwardLeaderboard(key: string, server?: string): Promise<Prox
   try {
     const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) return null;
-    return res.json();
+    return await res.json();
   } catch {
     return null;
   }
