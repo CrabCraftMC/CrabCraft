@@ -305,7 +305,7 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
-      // Update Turso
+      // Update database
       try {
         await appDb.updateApplication(interaction.user.id, {
           minecraftUsername: minecraftUsername,
@@ -322,7 +322,7 @@ export default class ModalInteractionEvent extends Event {
           minecraftUuid: resolved.uuid,
         });
       } catch (e) {
-        logger.error("Failed to update application in Turso:", e);
+        logger.error("Failed to update application in database:", e);
       }
 
       // Edit the original application message
@@ -468,12 +468,12 @@ export default class ModalInteractionEvent extends Event {
         }).catch(() => null);
       }
 
-      // Update application status in Turso
+      // Update application status in database
       if (applicantId) {
         try {
           await appDb.denyApplication(applicantId, reason, interaction.user.id);
         } catch (e) {
-          logger.error("Failed to update deny status in Turso:", e);
+          logger.error("Failed to update deny status in database:", e);
         }
       }
 
@@ -613,7 +613,7 @@ export default class ModalInteractionEvent extends Event {
       editButton,
     );
 
-    // Persist to Turso
+    // Persist to database
     try {
       await appDb.upsertUser({
         discordId: interaction.user.id,
@@ -632,7 +632,7 @@ export default class ModalInteractionEvent extends Event {
         favouriteWood: favouriteWood || undefined,
       });
     } catch (e) {
-      logger.error("Failed to persist application to Turso:", e);
+      logger.error("Failed to persist application to database:", e);
     }
 
     // Policy message
@@ -725,7 +725,7 @@ export default class ModalInteractionEvent extends Event {
       }).catch(() => null);
     }
 
-    // Persist to Turso (upsert user + create accepted application)
+    // Persist to database (upsert user + create accepted application)
     try {
       await appDb.upsertUser({
         discordId: interaction.user.id,
@@ -743,7 +743,7 @@ export default class ModalInteractionEvent extends Event {
       });
       await appDb.acceptApplication(interaction.user.id, interaction.user.id);
     } catch (e) {
-      logger.error("Fast application: failed to persist to Turso:", e);
+      logger.error("Fast application: failed to persist to database:", e);
     }
   }
 }
