@@ -14,7 +14,7 @@ import {
   isAltUuidTaken,
   MAX_ALTS,
 } from "../../utils/altDb.js";
-import { resolveUsername } from "../../utils/mojang.js";
+import { resolveUsername, isValidUsername } from "../../utils/mojang.js";
 import {
   type ChatInputCommandInteraction,
   type RESTPostAPIApplicationCommandsJSONBody,
@@ -78,6 +78,18 @@ export default class AltCommand extends SlashCommand {
 
   private async handleAdd(interaction: ChatInputCommandInteraction) {
     const username = interaction.options.getString("username", true).trim();
+
+    if (!isValidUsername(username)) {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            "**Invalid username.** Minecraft usernames are 3\u201316 characters (letters, numbers, underscores).",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     await interaction.deferReply({
       flags: MessageFlags.Ephemeral,
@@ -160,6 +172,18 @@ export default class AltCommand extends SlashCommand {
   private async handleRemove(interaction: ChatInputCommandInteraction) {
     const username = interaction.options.getString("username", true).trim();
 
+    if (!isValidUsername(username)) {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            "**Invalid username.** Minecraft usernames are 3\u201316 characters (letters, numbers, underscores).",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
     await interaction.deferReply({
       flags: MessageFlags.Ephemeral,
     });
@@ -197,16 +221,19 @@ export default class AltCommand extends SlashCommand {
   }
 
   private async handleList(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply({
+      flags: MessageFlags.Ephemeral,
+    });
+
     const alts = await getPlayerAlts(interaction.user.id);
 
     if (alts.length === 0) {
-      await interaction.reply({
+      await interaction.editReply({
         components: [
           primaryContainer(
             `### Your Alt Accounts\nYou have no alt accounts linked. Use \`/alt add\` to link one (max ${MAX_ALTS}).`,
           ),
         ],
-        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
       });
       return;
     }
@@ -216,13 +243,12 @@ export default class AltCommand extends SlashCommand {
         `- \`${alt.minecraft_username}\` · <t:${alt.created_at}:R>`,
     );
 
-    await interaction.reply({
+    await interaction.editReply({
       components: [
         primaryContainer(
           `### Your Alt Accounts (${alts.length}/${MAX_ALTS})\n${lines.join("\n")}`,
         ),
       ],
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
     });
   }
 

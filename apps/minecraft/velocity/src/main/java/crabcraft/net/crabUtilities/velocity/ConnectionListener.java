@@ -56,6 +56,10 @@ public class ConnectionListener {
         if (isAlt) {
             luckPerms.getUserManager().modifyUser(player.getUniqueId(), user -> {
                 user.data().add(InheritanceNode.builder(ALT_GROUP).build());
+            }).exceptionally(e -> {
+                plugin.getLogger().error("Failed to assign '{}' group to alt {} ({})",
+                        ALT_GROUP, player.getUsername(), uuid, e);
+                return null;
             });
             plugin.getLogger().info("Alt account {} ({}) — assigned '{}' group",
                     player.getUsername(), uuid, ALT_GROUP);
@@ -63,6 +67,10 @@ public class ConnectionListener {
             // Clean up stale alt group if the alt was removed from the database
             luckPerms.getUserManager().modifyUser(player.getUniqueId(), user -> {
                 user.data().remove(InheritanceNode.builder(ALT_GROUP).build());
+            }).exceptionally(e -> {
+                plugin.getLogger().error("Failed to remove '{}' group from {} ({})",
+                        ALT_GROUP, player.getUsername(), uuid, e);
+                return null;
             });
         }
     }
