@@ -10,7 +10,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   # ── Build Discord bot → tarball of compiled files ────────────────
@@ -192,6 +192,8 @@ jobs:
       - name: Bump version, commit, and tag
         id: bump
         run: |
+          git fetch --tags origin
+
           CURRENT=$(grep '^version=' apps/minecraft/gradle.properties | cut -d= -f2)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
           COMMIT_MSG="${{ github.event.head_commit.message }}"
@@ -205,6 +207,15 @@ jobs:
           fi
 
           NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          # If tag already exists (from a previous partial run), keep bumping
+          while git tag -l "v${NEW_VERSION}" | grep -q .; do
+            echo "Tag v${NEW_VERSION} already exists, bumping again"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$NEW_VERSION"
+            PATCH=$((PATCH + 1))
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          done
+
           echo "Bumping ${CURRENT} → ${NEW_VERSION}"
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
 
@@ -212,6 +223,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
           git add apps/minecraft/gradle.properties
           git commit -m "Release v${NEW_VERSION}"
           git tag "v${NEW_VERSION}"
