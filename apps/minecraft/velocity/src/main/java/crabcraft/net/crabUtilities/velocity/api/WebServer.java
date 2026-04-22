@@ -228,6 +228,45 @@ public class WebServer {
             + "}"
             + "}"
             + "}"
+            + ","
+
+            + "\"/advancements/leaderboard\":{"
+            + "\"get\":{"
+            + "\"summary\":\"Advancement leaderboard\","
+            + "\"description\":\"Global leaderboard ranked by advancement completion count.\","
+            + "\"operationId\":\"getAdvancementLeaderboard\","
+            + "\"parameters\":["
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
+            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"},"
+            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Max entries\"},"
+            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Advancement completion leaderboard with pagination\"},"
+            + "\"404\":{\"description\":\"No current season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/advancements/player/{uuid}\":{"
+            + "\"get\":{"
+            + "\"summary\":\"Player advancements\","
+            + "\"description\":\"Returns all advancements for a player with completion status.\","
+            + "\"operationId\":\"getPlayerAdvancements\","
+            + "\"parameters\":["
+            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Player UUID\"},"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
+            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Player advancement data with completion counts\"},"
+            + "\"400\":{\"description\":\"Invalid UUID format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"Player not found or no season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "}"
 
             + "}"
             + "}";
@@ -557,6 +596,58 @@ public class WebServer {
                         params.get("season"), params.get("server"));
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
+                    return;
+                }
+                sendJson(exchange, GSON.toJson(result));
+            });
+
+            httpServer.createContext("/advancements/leaderboard", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                var params = parseQuery(exchange.getRequestURI());
+                int limit = 100;
+                int offset = 0;
+                try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
+                try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
+                var result = plugin.getAdvancementQueryService().getAdvancementLeaderboard(
+                        params.get("season"), params.get("server"), limit, offset);
+                if (result == null) {
+                    sendError(exchange, 404, "no current season");
+                    return;
+                }
+                sendJson(exchange, GSON.toJson(result));
+            });
+
+            httpServer.createContext("/advancements/player/", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                String path = exchange.getRequestURI().getPath();
+                String uuid = path.substring("/advancements/player/".length());
+                if (!UUID_PATTERN.matcher(uuid).matches()) {
+                    sendError(exchange, 400, "invalid uuid format");
+                    return;
+                }
+                var params = parseQuery(exchange.getRequestURI());
+                var result = plugin.getAdvancementQueryService().getPlayerAdvancements(
+                        uuid, params.get("season"), params.get("server"));
+                if (result == null) {
+                    sendError(exchange, 404, "no current season");
+                    return;
+                }
+                if (result.has("notFound")) {
+                    sendError(exchange, 404, "player has no advancement data");
                     return;
                 }
                 sendJson(exchange, GSON.toJson(result));
