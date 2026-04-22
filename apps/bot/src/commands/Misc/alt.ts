@@ -88,7 +88,7 @@ export default class AltCommand extends SlashCommand {
       await interaction.editReply({
         components: [
           errorContainer(
-            `**Alt limit reached!** You can only have ${MAX_ALTS} alt account${MAX_ALTS === 1 ? "" : "s"}.`,
+            `**Alt limit reached!** You can only have ${MAX_ALTS} alt accounts.`,
           ),
         ],
       });
