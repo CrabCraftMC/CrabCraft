@@ -2,6 +2,8 @@ name: CrabUtilities
 version: '${version}'
 main: crabcraft.net.crabUtilities.CrabUtilities
 api-version: '1.21'
+authors: [Max]
+website: https://www.crabcraft.net
 softdepend:
   - Essentials
 commands:

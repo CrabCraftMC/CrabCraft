@@ -34,7 +34,8 @@ import java.util.Map;
         id = "crabutilities",
         name = "CrabUtilities",
         version = BuildInfo.VERSION,
-        authors = {"CrabCraft"}
+        url = "https://www.crabcraft.net",
+        authors = {"Max"}
 )
 public class CrabUtilitiesVelocity {
 
