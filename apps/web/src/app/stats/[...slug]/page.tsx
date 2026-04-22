@@ -5,11 +5,45 @@ import {
   getJoinedSeason,
   getUserByIdentifier,
   getPlayerProfile,
-  getCurrentSeason,
-  getPlayerCrownScore,
-  getPlayerAwardScores,
-  getAwardDefinitions,
 } from "@/lib/queries";
+
+interface ProxyAward {
+  id: string;
+  title: string;
+  description: string;
+  unit: string;
+  bucket: string;
+  icon: string;
+  leader: { uuid: string; username: string; score: number } | null;
+}
+
+interface ProxyPlayerAwards {
+  uuid: string;
+  username: string | null;
+  crown: { rank: number; gold: number; silver: number; bronze: number; crown_score: number } | null;
+  scores: Record<string, { rank: number; score: number }>;
+}
+
+async function fetchAwardDefinitions(): Promise<ProxyAward[]> {
+  try {
+    const res = await fetch("https://api.crabcraft.net/awards", { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.awards ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchPlayerAwards(uuid: string): Promise<ProxyPlayerAwards | null> {
+  try {
+    const res = await fetch(`https://api.crabcraft.net/awards/player/${uuid}`, { next: { revalidate: 30 } });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
 
 interface Props {
   params: Promise<{ slug?: string[] }>;
@@ -54,7 +88,7 @@ export default async function StatsPage({ params }: Props) {
 
   const [dbUser, awardDefs] = await Promise.all([
     getUserByIdentifier(identifier).catch(() => null),
-    getAwardDefinitions().catch(() => []),
+    fetchAwardDefinitions(),
   ]);
 
   const playerData = {
@@ -97,21 +131,20 @@ export default async function StatsPage({ params }: Props) {
     );
   }
 
-  const currentSeason = await getCurrentSeason();
-  const seasonId = currentSeason?.id;
-
-  const [joinedSeason, crown, detailedStats, profile] = await Promise.all([
+  const [joinedSeason, playerAwards, profile] = await Promise.all([
     getJoinedSeason(playerData.uuid).catch(() => null),
-    seasonId
-      ? getPlayerCrownScore(playerData.uuid, seasonId).catch(() => null)
-      : Promise.resolve(null),
-    seasonId
-      ? getPlayerAwardScores(playerData.uuid, seasonId).catch(() => ({}))
-      : Promise.resolve({}),
+    fetchPlayerAwards(playerData.uuid),
     getPlayerProfile(playerData.uuid).catch(() => null),
   ]);
 
-  // Use current role from DB (already in dbUser) but refresh via cache helper for consistency.
+  // Convert proxy scores format to what PlayerStatsPage expects
+  const detailedStats: Record<string, { rank: number; value: number }> = {};
+  if (playerAwards?.scores) {
+    for (const [awardId, data] of Object.entries(playerAwards.scores)) {
+      detailedStats[awardId] = { rank: data.rank, value: data.score };
+    }
+  }
+
   let role = playerData.role;
   try {
     role = await getPlayerRole(playerData.uuid);
@@ -121,11 +154,11 @@ export default async function StatsPage({ params }: Props) {
     ...playerData,
     role,
     joinedSeason,
-    rank: crown?.rank ?? 0,
-    points: crown?.crown_score ?? 0,
-    gold: crown?.gold ?? 0,
-    silver: crown?.silver ?? 0,
-    bronze: crown?.bronze ?? 0,
+    rank: playerAwards?.crown?.rank ?? 0,
+    points: playerAwards?.crown?.crown_score ?? 0,
+    gold: playerAwards?.crown?.gold ?? 0,
+    silver: playerAwards?.crown?.silver ?? 0,
+    bronze: playerAwards?.crown?.bronze ?? 0,
   };
 
   return (
