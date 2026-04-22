@@ -192,7 +192,10 @@ jobs:
       - name: Bump version, commit, and tag
         id: bump
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch --tags origin
+          git pull --rebase origin main
 
           CURRENT=$(grep '^version=' apps/minecraft/gradle.properties | cut -d= -f2)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
@@ -220,10 +223,6 @@ jobs:
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
 
           sed -i "s/^version=.*$/version=${NEW_VERSION}/" apps/minecraft/gradle.properties
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           git add apps/minecraft/gradle.properties
           git commit -m "Release v${NEW_VERSION}"
           git tag "v${NEW_VERSION}"
