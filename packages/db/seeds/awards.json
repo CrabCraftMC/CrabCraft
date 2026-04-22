@@ -683,7 +683,7 @@
   },
   {
     "id": "eat_soup",
-    "title": "Stew Sipper",
+    "title": "Soup Slurper",
     "description": "Soups and stews consumed",
     "unit": "int",
     "bucket": "food",
@@ -1067,7 +1067,7 @@
   },
   {
     "id": "kill_camel",
-    "title": "Hump Dumper",
+    "title": "Camel Crusher",
     "description": "Camels killed",
     "unit": "int",
     "bucket": "combat",
@@ -1701,7 +1701,7 @@
   },
   {
     "id": "kill_strider",
-    "title": "Lava Walker Down",
+    "title": "Strider Slayer",
     "description": "Striders killed",
     "unit": "int",
     "bucket": "combat",
@@ -2077,7 +2077,7 @@
   },
   {
     "id": "mine_glass",
-    "title": "Pane Smasher",
+    "title": "Glass Breaker",
     "description": "Glass blocks broken",
     "unit": "int",
     "bucket": "mining",
@@ -2133,7 +2133,7 @@
   },
   {
     "id": "mine_ground",
-    "title": "Dirt Shifter",
+    "title": "Excavator",
     "description": "Dirt, sand and gravel dug",
     "unit": "int",
     "bucket": "mining",
@@ -2165,7 +2165,7 @@
   },
   {
     "id": "mine_ice",
-    "title": "Frost Cracker",
+    "title": "Ice Breaker",
     "description": "Ice blocks broken",
     "unit": "int",
     "bucket": "mining",
@@ -2286,7 +2286,7 @@
   },
   {
     "id": "mine_pointed_dripstone",
-    "title": "Stalactite Snapper",
+    "title": "Cave Chipper",
     "description": "Pointed dripstone mined",
     "unit": "int",
     "bucket": "mining",
@@ -2301,7 +2301,7 @@
   },
   {
     "id": "mine_redstone_ore",
-    "title": "Redstone Tapper",
+    "title": "Redstone Miner",
     "description": "Redstone ore mined",
     "unit": "int",
     "bucket": "mining",
@@ -3302,7 +3302,7 @@
   },
   {
     "id": "walk_on_water",
-    "title": "Surface Strider",
+    "title": "Frost Walker",
     "description": "Distance walked on water",
     "unit": "cm",
     "bucket": "movement",

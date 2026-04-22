@@ -54,15 +54,39 @@ public class WebServer {
             + "\"openapi\":\"3.0.3\","
             + "\"info\":{"
             + "\"title\":\"CrabCraft API\","
-            + "\"version\":\"1.1.0\","
-            + "\"description\":\"Live player data from the CrabCraft proxy.\""
+            + "\"version\":\"2.0.0\","
+            + "\"description\":\"The CrabCraft API provides real-time and historical data from the CrabCraft Minecraft server network. "
+            + "It is served directly from the Velocity proxy and requires no authentication.\\n\\n"
+            + "## Rate Limiting\\n\\n"
+            + "All endpoints (except docs) are rate limited to **60 requests per minute per IP**. "
+            + "Exceeding this limit returns a 429 status code.\\n\\n"
+            + "## Seasons and Servers\\n\\n"
+            + "Many endpoints accept optional `season` and `server` query parameters. "
+            + "If omitted, `season` defaults to the currently active season and `server` defaults to the cross-server aggregate. "
+            + "Seasons are identified by short IDs like `6` or `creative`. "
+            + "Server IDs match the backend server names registered in the proxy (e.g. `survival`).\\n\\n"
+            + "## Pagination\\n\\n"
+            + "Leaderboard endpoints support pagination with `limit` (max 100, default 100) and `offset` (default 0). "
+            + "Paginated responses include `total`, `offset`, and `limit` fields alongside the data array.\\n\\n"
+            + "## Crown Scoring\\n\\n"
+            + "The crown system ranks players by their medal holdings across all awards. "
+            + "Gold medals (1st place) are worth 5 points, silver (2nd) worth 3 points, and bronze (3rd) worth 1 point. "
+            + "The crown score is the weighted sum of all medals a player holds.\""
             + "},"
+            + "\"tags\":["
+            + "{\"name\":\"Server\",\"description\":\"Proxy server status, backend servers, and online player information. These endpoints return live data from the running proxy.\"},"
+            + "{\"name\":\"Players\",\"description\":\"Player-specific data including online status, award scores, and advancement progress. Use a Minecraft UUID to look up a specific player.\"},"
+            + "{\"name\":\"Awards\",\"description\":\"Awards are competitive stat-tracking categories (e.g. distance walked, mobs killed, items crafted). Each award has a leaderboard. Players earn gold, silver, and bronze medals for placing in the top 3. The crown leaderboard ranks players by their total medal points.\"},"
+            + "{\"name\":\"Advancements\",\"description\":\"Minecraft advancements (achievements) tracked per player per season. The leaderboard ranks players by how many advancements they have completed.\"}"
+            + "],"
             + "\"paths\":{"
 
+            // ── Server ──
             + "\"/ping\":{"
             + "\"get\":{"
+            + "\"tags\":[\"Server\"],"
             + "\"summary\":\"Health check\","
-            + "\"description\":\"Simple health check to verify the API is running.\","
+            + "\"description\":\"Returns a simple status object to verify the API is running and reachable. Useful for monitoring and uptime checks.\","
             + "\"operationId\":\"ping\","
             + "\"responses\":{"
             + "\"200\":{"
@@ -76,19 +100,20 @@ public class WebServer {
 
             + "\"/status\":{"
             + "\"get\":{"
+            + "\"tags\":[\"Server\"],"
             + "\"summary\":\"Server status\","
-            + "\"description\":\"Returns an overview of the proxy server including player count and version.\","
+            + "\"description\":\"Returns an overview of the proxy including whether it is online, the current player count, maximum player slots, and the server version string.\","
             + "\"operationId\":\"getStatus\","
             + "\"responses\":{"
             + "\"200\":{"
-            + "\"description\":\"Successful response\","
+            + "\"description\":\"Server status retrieved\","
             + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
-            + "\"online\":{\"type\":\"boolean\",\"description\":\"Whether the proxy is online\"},"
+            + "\"online\":{\"type\":\"boolean\",\"description\":\"Always true when the API is reachable\"},"
             + "\"players\":{\"type\":\"object\",\"properties\":{"
-            + "\"online\":{\"type\":\"integer\",\"description\":\"Current player count\"},"
-            + "\"max\":{\"type\":\"integer\",\"description\":\"Maximum player slots\"}"
+            + "\"online\":{\"type\":\"integer\",\"description\":\"Number of players currently connected\"},"
+            + "\"max\":{\"type\":\"integer\",\"description\":\"Maximum player slots configured on the proxy\"}"
             + "}},"
-            + "\"version\":{\"type\":\"string\",\"description\":\"Proxy server version\"}"
+            + "\"version\":{\"type\":\"string\",\"description\":\"Velocity proxy version string\"}"
             + "}}}}"
             + "},"
             + COMMON_ERRORS
@@ -98,15 +123,16 @@ public class WebServer {
 
             + "\"/servers\":{"
             + "\"get\":{"
+            + "\"tags\":[\"Server\"],"
             + "\"summary\":\"List backend servers\","
-            + "\"description\":\"Returns all registered backend servers with their player counts.\","
+            + "\"description\":\"Returns all backend servers registered on the proxy with the number of players currently connected to each. This includes all servers regardless of whether they have players.\","
             + "\"operationId\":\"getServers\","
             + "\"responses\":{"
             + "\"200\":{"
-            + "\"description\":\"Successful response\","
+            + "\"description\":\"Server list retrieved\","
             + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
             + "\"servers\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
-            + "\"name\":{\"type\":\"string\",\"description\":\"Server name\"},"
+            + "\"name\":{\"type\":\"string\",\"description\":\"Server name as registered in the proxy config\"},"
             + "\"players\":{\"type\":\"integer\",\"description\":\"Number of players on this server\"}"
             + "}}}"
             + "}}}}"
@@ -116,16 +142,18 @@ public class WebServer {
             + "}"
             + "},"
 
+            // ── Players ──
             + "\"/players\":{"
             + "\"get\":{"
+            + "\"tags\":[\"Players\"],"
             + "\"summary\":\"List online players\","
-            + "\"description\":\"Returns all players currently connected to the proxy.\","
+            + "\"description\":\"Returns all players currently connected to the proxy across all backend servers. Each player object includes their username, UUID, display nickname (if set via EssentialsX), ping, and which backend server they are on.\","
             + "\"operationId\":\"getPlayers\","
             + "\"responses\":{"
             + "\"200\":{"
-            + "\"description\":\"Successful response\","
+            + "\"description\":\"Player list retrieved\","
             + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
-            + "\"count\":{\"type\":\"integer\",\"description\":\"Number of online players\"},"
+            + "\"count\":{\"type\":\"integer\",\"description\":\"Total number of online players\"},"
             + "\"players\":{\"type\":\"array\",\"items\":" + PLAYER_SCHEMA + "}"
             + "}}}}"
             + "},"
@@ -136,73 +164,77 @@ public class WebServer {
 
             + "\"/players/{name}\":{"
             + "\"get\":{"
-            + "\"summary\":\"Look up a player\","
-            + "\"description\":\"Returns details for a specific online player by username.\","
+            + "\"tags\":[\"Players\"],"
+            + "\"summary\":\"Look up online player\","
+            + "\"description\":\"Returns details for a specific player by their Minecraft username. The player must be currently online. Returns 404 if the player is not connected to the proxy.\","
             + "\"operationId\":\"getPlayer\","
-            + "\"parameters\":[{\"name\":\"name\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\"},\"description\":\"Player username (3-16 alphanumeric characters or underscores)\"}],"
+            + "\"parameters\":[{\"name\":\"name\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"pattern\":\"^[a-zA-Z0-9_]{3,16}$\"},\"description\":\"Minecraft username (3-16 alphanumeric characters or underscores)\"}],"
             + "\"responses\":{"
             + "\"200\":{"
-            + "\"description\":\"Player found\","
+            + "\"description\":\"Player found and online\","
             + "\"content\":{\"application/json\":{\"schema\":" + PLAYER_SCHEMA + "}}"
             + "},"
-            + "\"400\":{\"description\":\"Invalid username format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + "\"404\":{\"description\":\"Player not online\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + COMMON_ERRORS
-            + "}"
-            + "}"
-            + "}"
-            + ","
-
-            + "\"/awards\":{"
-            + "\"get\":{"
-            + "\"summary\":\"List all awards\","
-            + "\"description\":\"Returns all enabled awards with the #1 holder for each and available servers.\","
-            + "\"operationId\":\"getAwards\","
-            + "\"parameters\":["
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"}"
-            + "],"
-            + "\"responses\":{"
-            + "\"200\":{\"description\":\"All awards with leaders\"},"
-            + "\"404\":{\"description\":\"No current season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"400\":{\"description\":\"Username does not match the required format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"No player with that username is currently online\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
             + "}"
             + "},"
 
-            + "\"/awards/crowns\":{"
+            + "\"/players/{uuid}/awards\":{"
             + "\"get\":{"
-            + "\"summary\":\"Crown leaderboard\","
-            + "\"description\":\"Hall of Fame ranking by crown score (gold*4 + silver*2 + bronze).\","
-            + "\"operationId\":\"getCrownLeaderboard\","
-            + "\"parameters\":["
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"},"
-            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Max entries\"},"
-            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip\"}"
-            + "],"
-            + "\"responses\":{"
-            + "\"200\":{\"description\":\"Crown score leaderboard with total, offset, limit\"},"
-            + "\"404\":{\"description\":\"No current season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + COMMON_ERRORS
-            + "}"
-            + "}"
-            + "},"
-
-            + "\"/awards/player/{uuid}\":{"
-            + "\"get\":{"
-            + "\"summary\":\"Player awards\","
-            + "\"description\":\"Returns a player's scores and rank across all awards plus crown summary.\","
+            + "\"tags\":[\"Players\"],"
+            + "\"summary\":\"Player award scores\","
+            + "\"description\":\"Returns all award scores and rankings for a specific player, plus their crown score summary (gold, silver, bronze medal counts and overall rank). Only awards where the player has a score greater than zero are included. The scores object is keyed by award ID, with each entry containing the player's rank and score for that award.\","
             + "\"operationId\":\"getPlayerAwards\","
             + "\"parameters\":["
-            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Player UUID\"},"
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"}"
+            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"},"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
+            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"}"
             + "],"
             + "\"responses\":{"
-            + "\"200\":{\"description\":\"Player award scores and crown data\"},"
-            + "\"400\":{\"description\":\"Invalid UUID format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + "\"404\":{\"description\":\"Player not found or no season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"200\":{\"description\":\"Player award data retrieved successfully\"},"
+            + "\"400\":{\"description\":\"UUID format is invalid. Must be a standard UUID with dashes.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"Player has no award data for this season, or no season is currently active.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/players/{uuid}/advancements\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Players\"],"
+            + "\"summary\":\"Player advancements\","
+            + "\"description\":\"Returns all tracked Minecraft advancements for a player with their completion status. Includes a count of completed vs total advancements. Each advancement entry shows whether it has been completed and the timestamp of completion (if available). Advancements are identified by their Minecraft namespace ID (e.g. minecraft:story/mine_stone).\","
+            + "\"operationId\":\"getPlayerAdvancements\","
+            + "\"parameters\":["
+            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"},"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
+            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Player advancement data retrieved successfully\"},"
+            + "\"400\":{\"description\":\"UUID format is invalid. Must be a standard UUID with dashes.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"Player has no advancement data for this season, or no season is currently active.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            // ── Awards ──
+            + "\"/awards\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Awards\"],"
+            + "\"summary\":\"List all awards\","
+            + "\"description\":\"Returns every enabled award definition along with the current #1 holder for each. Awards are grouped by bucket (combat, mining, crafting, building, items, food, movement, misc) and sorted by display order within each bucket. The response also includes a list of server IDs that have award data, which can be used to populate a server filter in the UI.\","
+            + "\"operationId\":\"getAwards\","
+            + "\"parameters\":["
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
+            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Full list of awards with leader information\"},"
+            + "\"404\":{\"description\":\"No season is currently active\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
             + "}"
@@ -210,59 +242,62 @@ public class WebServer {
 
             + "\"/awards/{id}\":{"
             + "\"get\":{"
+            + "\"tags\":[\"Awards\"],"
             + "\"summary\":\"Award leaderboard\","
-            + "\"description\":\"Returns the leaderboard for a single award.\","
+            + "\"description\":\"Returns the leaderboard for a single award, showing the top players ranked by score. The response includes the award metadata (title, description, unit, icon) and a paginated list of entries. Each entry contains the player's rank, UUID, username, score, and medal (1=gold, 2=silver, 3=bronze, 0=none). Supports pagination with limit and offset.\","
             + "\"operationId\":\"getAwardLeaderboard\","
             + "\"parameters\":["
-            + "{\"name\":\"id\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\"},\"description\":\"Award ID (e.g. aviate, kill_any)\"},"
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"},"
-            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Max entries\"},"
-            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip\"}"
+            + "{\"name\":\"id\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9_]+$\"},\"description\":\"Award ID (e.g. aviate, kill_any, mine_diamond_ore)\"},"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
+            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"},"
+            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
+            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
             + "],"
             + "\"responses\":{"
-            + "\"200\":{\"description\":\"Award metadata and leaderboard with total, offset, limit\"},"
-            + "\"400\":{\"description\":\"Invalid award ID format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + "\"404\":{\"description\":\"Award not found or no season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + COMMON_ERRORS
-            + "}"
-            + "}"
-            + "}"
-            + ","
-
-            + "\"/advancements/leaderboard\":{"
-            + "\"get\":{"
-            + "\"summary\":\"Advancement leaderboard\","
-            + "\"description\":\"Global leaderboard ranked by advancement completion count.\","
-            + "\"operationId\":\"getAdvancementLeaderboard\","
-            + "\"parameters\":["
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"},"
-            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Max entries\"},"
-            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip\"}"
-            + "],"
-            + "\"responses\":{"
-            + "\"200\":{\"description\":\"Advancement completion leaderboard with pagination\"},"
-            + "\"404\":{\"description\":\"No current season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"200\":{\"description\":\"Award metadata and paginated leaderboard\"},"
+            + "\"400\":{\"description\":\"Award ID contains invalid characters. Must be lowercase alphanumeric and underscores only.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"Award does not exist, is disabled, or no season is currently active.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
             + "}"
             + "},"
 
-            + "\"/advancements/player/{uuid}\":{"
+            + "\"/awards/crowns\":{"
             + "\"get\":{"
-            + "\"summary\":\"Player advancements\","
-            + "\"description\":\"Returns all advancements for a player with completion status.\","
-            + "\"operationId\":\"getPlayerAdvancements\","
+            + "\"tags\":[\"Awards\"],"
+            + "\"summary\":\"Crown leaderboard\","
+            + "\"description\":\"Returns the Hall of Fame leaderboard, ranking players by their crown score. The crown score is a weighted sum of medal placements across all awards: gold (1st place) = 4 points, silver (2nd) = 2 points, bronze (3rd) = 1 point. Only players with at least one medal are included. Supports pagination with limit and offset.\","
+            + "\"operationId\":\"getCrownLeaderboard\","
             + "\"parameters\":["
-            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Player UUID\"},"
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"}"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
+            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"},"
+            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
+            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
             + "],"
             + "\"responses\":{"
-            + "\"200\":{\"description\":\"Player advancement data with completion counts\"},"
-            + "\"400\":{\"description\":\"Invalid UUID format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + "\"404\":{\"description\":\"Player not found or no season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"200\":{\"description\":\"Paginated crown score leaderboard\"},"
+            + "\"404\":{\"description\":\"No season is currently active\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            // ── Advancements ──
+            + "\"/advancements/leaderboard\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Advancements\"],"
+            + "\"summary\":\"Advancement leaderboard\","
+            + "\"description\":\"Returns a global leaderboard ranking players by the number of Minecraft advancements they have completed. Only players with at least one completed advancement are included. Supports pagination with limit and offset.\","
+            + "\"operationId\":\"getAdvancementLeaderboard\","
+            + "\"parameters\":["
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
+            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"},"
+            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
+            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Paginated advancement completion leaderboard\"},"
+            + "\"404\":{\"description\":\"No season is currently active\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
             + "}"
@@ -473,23 +508,6 @@ public class WebServer {
                     return;
                 }
 
-                String path = exchange.getRequestURI().getPath();
-                // Handle /players/{name}
-                if (path.length() > "/players/".length()) {
-                    String name = path.substring("/players/".length());
-                    if (!USERNAME.matcher(name).matches()) {
-                        sendError(exchange, 400, "invalid username");
-                        return;
-                    }
-                    Optional<Player> target = plugin.getServer().getPlayer(name);
-                    if (target.isPresent()) {
-                        sendJson(exchange, GSON.toJson(buildPlayerJson(target.get())));
-                    } else {
-                        sendError(exchange, 404, "player not online");
-                    }
-                    return;
-                }
-
                 JsonArray players = new JsonArray();
                 for (Player player : plugin.getServer().getAllPlayers()) {
                     players.add(buildPlayerJson(player));
@@ -525,7 +543,9 @@ public class WebServer {
                 sendJson(exchange, GSON.toJson(result));
             });
 
-            httpServer.createContext("/awards/player/", exchange -> {
+            // Player sub-resources: /players/{uuid}/awards and /players/{uuid}/advancements
+            // Registered before /players so HttpServer matches the longer prefix first
+            httpServer.createContext("/players/", exchange -> {
                 if (!"GET".equals(exchange.getRequestMethod())) {
                     sendError(exchange, 405, "method not allowed");
                     return;
@@ -535,23 +555,63 @@ public class WebServer {
                     return;
                 }
                 String path = exchange.getRequestURI().getPath();
-                String uuid = path.substring("/awards/player/".length());
-                if (!UUID_PATTERN.matcher(uuid).matches()) {
-                    sendError(exchange, 400, "invalid uuid format");
+                String sub = path.substring("/players/".length());
+
+                // /players/{uuid}/awards
+                if (sub.endsWith("/awards")) {
+                    String uuid = sub.substring(0, sub.length() - "/awards".length());
+                    if (!UUID_PATTERN.matcher(uuid).matches()) {
+                        sendError(exchange, 400, "invalid uuid format");
+                        return;
+                    }
+                    var params = parseQuery(exchange.getRequestURI());
+                    var result = plugin.getAwardQueryService().getPlayerAwards(
+                            uuid, params.get("season"), params.get("server"));
+                    if (result == null) {
+                        sendError(exchange, 404, "no current season");
+                        return;
+                    }
+                    if (result.has("notFound")) {
+                        sendError(exchange, 404, "player has no award data");
+                        return;
+                    }
+                    sendJson(exchange, GSON.toJson(result));
                     return;
                 }
-                var params = parseQuery(exchange.getRequestURI());
-                var result = plugin.getAwardQueryService().getPlayerAwards(
-                        uuid, params.get("season"), params.get("server"));
-                if (result == null) {
-                    sendError(exchange, 404, "no current season");
+
+                // /players/{uuid}/advancements
+                if (sub.endsWith("/advancements")) {
+                    String uuid = sub.substring(0, sub.length() - "/advancements".length());
+                    if (!UUID_PATTERN.matcher(uuid).matches()) {
+                        sendError(exchange, 400, "invalid uuid format");
+                        return;
+                    }
+                    var params = parseQuery(exchange.getRequestURI());
+                    var result = plugin.getAdvancementQueryService().getPlayerAdvancements(
+                            uuid, params.get("season"), params.get("server"));
+                    if (result == null) {
+                        sendError(exchange, 404, "no current season");
+                        return;
+                    }
+                    if (result.has("notFound")) {
+                        sendError(exchange, 404, "player has no advancement data");
+                        return;
+                    }
+                    sendJson(exchange, GSON.toJson(result));
                     return;
                 }
-                if (result.has("notFound")) {
-                    sendError(exchange, 404, "player has no award data");
+
+                // /players/{name} — online player lookup
+                if (!USERNAME.matcher(sub).matches()) {
+                    sendError(exchange, 400, "invalid username");
                     return;
                 }
-                sendJson(exchange, GSON.toJson(result));
+                Optional<Player> target = plugin.getServer().getPlayer(sub);
+                if (target.isPresent()) {
+                    sendJson(exchange, GSON.toJson(buildPlayerJson(target.get())));
+                } else {
+                    sendError(exchange, 404, "player not online");
+                }
             });
 
             httpServer.createContext("/awards", exchange -> {
@@ -624,34 +684,6 @@ public class WebServer {
                 sendJson(exchange, GSON.toJson(result));
             });
 
-            httpServer.createContext("/advancements/player/", exchange -> {
-                if (!"GET".equals(exchange.getRequestMethod())) {
-                    sendError(exchange, 405, "method not allowed");
-                    return;
-                }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
-                    sendError(exchange, 429, "rate limit exceeded");
-                    return;
-                }
-                String path = exchange.getRequestURI().getPath();
-                String uuid = path.substring("/advancements/player/".length());
-                if (!UUID_PATTERN.matcher(uuid).matches()) {
-                    sendError(exchange, 400, "invalid uuid format");
-                    return;
-                }
-                var params = parseQuery(exchange.getRequestURI());
-                var result = plugin.getAdvancementQueryService().getPlayerAdvancements(
-                        uuid, params.get("season"), params.get("server"));
-                if (result == null) {
-                    sendError(exchange, 404, "no current season");
-                    return;
-                }
-                if (result.has("notFound")) {
-                    sendError(exchange, 404, "player has no advancement data");
-                    return;
-                }
-                sendJson(exchange, GSON.toJson(result));
-            });
 
             httpServer.start();
             plugin.getLogger().info("Web API started on port {}", port);

@@ -262,8 +262,8 @@ public final class AwardQueryService {
                              COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
                              COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
                              COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-                             (COUNT(*) FILTER (WHERE medal = 1) * 4
-                              + COUNT(*) FILTER (WHERE medal = 2) * 2
+                             (COUNT(*) FILTER (WHERE medal = 1) * 5
+                              + COUNT(*) FILTER (WHERE medal = 2) * 3
                               + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
                          FROM player_award_scores
                          WHERE season = ? AND server_id = ?
@@ -362,8 +362,8 @@ public final class AwardQueryService {
                             COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
                             COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
                             COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-                            (COUNT(*) FILTER (WHERE medal = 1) * 4
-                             + COUNT(*) FILTER (WHERE medal = 2) * 2
+                            (COUNT(*) FILTER (WHERE medal = 1) * 5
+                             + COUNT(*) FILTER (WHERE medal = 2) * 3
                              + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
                         FROM player_award_scores
                         WHERE season = ? AND server_id = ?

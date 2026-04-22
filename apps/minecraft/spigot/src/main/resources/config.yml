@@ -1,40 +1,42 @@
-# CrabUtilities configuration
+# CrabUtilities - Spigot Plugin Configuration
 
-# REQUIRED: You must set both server-id and season before stats will be pushed.
-# Identifier for this backend server. Must be unique across the network
-# and match the server name configured in the Velocity proxy.
+# REQUIRED: Both server-id and season must be set before the plugin
+# will push any stats, awards, or advancement data.
+
+# Unique identifier for this server. Must match the backend name
+# registered in the Velocity proxy (e.g. "survival", "creative").
 server-id: ""
 
-# Season this server writes data to. Examples: "6" for SMP season 6,
-# "creative" for a permanent creative server, "events" for an events server.
+# Season this server writes data to. SMP servers should match the
+# current season number (e.g. "6"). Permanent servers like creative
+# can use a fixed value (e.g. "creative").
 season: ""
 
+# Redis - used for publishing stats to the Velocity proxy
+# and syncing nicknames across servers.
 redis:
   host: "localhost"
   port: 6379
   password: ""
 
-# Periodic scan of the world's stats/ folder. Each changed
-# stats/<uuid>.json is published on the crabutilities:stats-push
-# Redis channel for the Velocity proxy to compute awards from.
+# Periodically scans the world's stats/ and advancements/ folders.
+# Changed files are published to Redis for the Velocity proxy to
+# process into awards, leaderboards, and advancement tracking.
 stats-push:
   interval-minutes: 5
 
+# Optional server resource pack. Players can toggle with /pack.
 resource-pack:
-  # URL to your resource pack (must be direct URL)
   url: ""
-  # Optional SHA-1 hash of the resource pack in hex (40 chars). If set, it's sent with the pack
   hash: ""
-  # Players (UUIDs) who have opted in to automatically receive the pack on join
   auto-enabled: []
 
-# Automatic updates — polls GitHub Releases and stages the new JAR into
-# plugins/update/ so Paper swaps it in on the next server restart.
+# Polls GitHub Releases for new versions and stages the JAR into
+# plugins/update/ so Paper swaps it in on the next restart.
 auto-update:
   enabled: true
   check-interval-hours: 6
   include-prereleases: false
   notify-ops: true
   github-repo: "CrabCraftMC/CrabCraft"
-  # Optional personal-access token; unauthenticated requests are limited to 60/hour.
   github-token: ""

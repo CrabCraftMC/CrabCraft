@@ -1,4 +1,3 @@
-import { gunzipSync } from "node:zlib";
 import {
   TextDisplayBuilder,
   ContainerBuilder,
@@ -9,7 +8,7 @@ import {
 import logger from "./logger.js";
 import rankEmojis from "../data/rankEmojis.json" with { type: "json" };
 
-const API_URL = "https://map.crabcraft.net/stats/data/summary.json.gz";
+const API_URL = "https://api.crabcraft.net/awards/crowns?limit=100";
 
 export interface PlayerStats {
   uuid: string;
@@ -34,31 +33,27 @@ export async function fetchLeaderboardData(): Promise<LeaderboardData | null> {
       throw new Error(`Failed to fetch leaderboard: ${response.statusText}`);
     }
 
-    const buffer = await response.arrayBuffer();
-    const decompressed = gunzipSync(Buffer.from(buffer));
-    const data = JSON.parse(decompressed.toString("utf-8"));
+    const data = await response.json();
+    const entries = data.leaderboard;
 
-    const { hof, players } = data;
-
-    if (!Array.isArray(hof)) {
-      throw new Error("Invalid data format: 'hof' is not an array");
+    if (!Array.isArray(entries)) {
+      throw new Error("Invalid data format: 'leaderboard' is not an array");
     }
 
-    // map hof to readable stats
-    const allStats: PlayerStats[] = hof.map((entry: any) => {
-      const uuid = entry.uuid;
-      const [total, gold, silver, bronze] = entry.value;
-      const name = players[uuid]?.name || "Unknown";
-      return { uuid, name, total, gold, silver, bronze };
-    });
+    const allStats: PlayerStats[] = entries.map((entry: any) => ({
+      uuid: entry.uuid,
+      name: entry.username || "Unknown",
+      total: entry.crown_score,
+      gold: entry.gold,
+      silver: entry.silver,
+      bronze: entry.bronze,
+    }));
 
-    // Calculate global stats
     const totalPoints = allStats.reduce((sum, p) => sum + p.total, 0);
-    const playerCount = allStats.length;
+    const playerCount = data.total || allStats.length;
     const averagePoints = playerCount > 0 ? totalPoints / playerCount : 0;
 
-    // Get top 10
-    const topPlayers = allStats.sort((a, b) => b.total - a.total).slice(0, 10);
+    const topPlayers = allStats.slice(0, 10);
 
     return {
       topPlayers,

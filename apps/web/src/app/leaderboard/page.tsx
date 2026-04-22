@@ -205,9 +205,9 @@ export default async function LeaderboardPage({ searchParams }: Props) {
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mt-2">
                 A <span className="text-yellow-500 font-bold">gold</span> medal
-                is worth <span className="font-bold">4</span> points, a{" "}
+                is worth <span className="font-bold">5</span> points, a{" "}
                 <span className="text-gray-400 font-bold">silver</span> medal is
-                worth <span className="font-bold">2</span> points and a{" "}
+                worth <span className="font-bold">3</span> points and a{" "}
                 <span className="text-amber-600 font-bold">bronze</span> medal
                 is worth <span className="font-bold">1</span> point.
               </p>

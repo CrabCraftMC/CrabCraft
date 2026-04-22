@@ -676,7 +676,7 @@ export async function getAwardsSummary(
  * Hall of Fame ranking (crown score). Serves /leaderboard.
  *
  * Aggregates medals from player_award_scores at query time. Crown
- * score weighting: gold * 4 + silver * 2 + bronze. At our scale the
+ * score weighting: gold * 5 + silver * 3 + bronze. At our scale the
  * scan is sub-millisecond; keeping this as a live query avoids the
  * write-amplification + sync problems of a rollup table.
  */
@@ -700,8 +700,8 @@ export async function getCrownLeaderboard(
           COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
           COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
           COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-          (COUNT(*) FILTER (WHERE medal = 1) * 4
-           + COUNT(*) FILTER (WHERE medal = 2) * 2
+          (COUNT(*) FILTER (WHERE medal = 1) * 5
+           + COUNT(*) FILTER (WHERE medal = 2) * 3
            + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
         FROM player_award_scores
         WHERE season = ${season}
@@ -796,8 +796,8 @@ export async function getPlayerCrownScore(
           COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
           COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
           COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-          (COUNT(*) FILTER (WHERE medal = 1) * 4
-           + COUNT(*) FILTER (WHERE medal = 2) * 2
+          (COUNT(*) FILTER (WHERE medal = 1) * 5
+           + COUNT(*) FILTER (WHERE medal = 2) * 3
            + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
         FROM player_award_scores
         WHERE season = ${season}
