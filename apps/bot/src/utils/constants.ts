@@ -15,3 +15,15 @@ export const APPLICATION_REMINDER_CHECK_MS = 30 * 60 * 1000;
 
 /** Interval between wiki recent changes polls (15 minutes). */
 export const WIKI_POLL_MS = 15 * 60 * 1000;
+
+/** Interval between YouTube RSS feed polls (2 minutes). */
+export const YOUTUBE_RSS_POLL_MS = 2 * 60 * 1000;
+
+/** Interval between YouTube live status checks for active streams (1 minute). */
+export const YOUTUBE_LIVE_CHECK_MS = 60 * 1000;
+
+/** Interval between Twitch stream status polls (1 minute). */
+export const TWITCH_POLL_MS = 60 * 1000;
+
+/** Interval between TikTok live status polls (2 minutes). */
+export const TIKTOK_POLL_MS = 2 * 60 * 1000;

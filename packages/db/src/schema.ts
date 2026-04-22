@@ -233,3 +233,23 @@ export const playerAdvancements = pgTable(
     index("pa_player_idx").on(table.minecraft_uuid, table.season),
   ],
 );
+
+// ── stream_channels ────────────────────────────────────────────
+// Monitored streaming channels for the Discord bot. When a channel
+// goes live, the linked Discord user receives a "live" role.
+export const streamChannels = pgTable(
+  "stream_channels",
+  {
+    id: serial("id").primaryKey(),
+    platform: text("platform").notNull(), // youtube | twitch | tiktok
+    channel_id: text("channel_id").notNull(),
+    discord_user_id: text("discord_user_id").notNull(),
+    display_name: text("display_name"),
+  },
+  (table) => [
+    uniqueIndex("sc_platform_channel_unique").on(
+      table.platform,
+      table.channel_id,
+    ),
+  ],
+);

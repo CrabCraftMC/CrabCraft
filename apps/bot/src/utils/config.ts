@@ -22,6 +22,11 @@ interface IConfig {
 
   DISCORD_DATABASE_URL: string;
   DATABASE_URL: string;
+
+  YOUTUBE_API_KEY: string;
+  TWITCH_CLIENT_ID: string;
+  TWITCH_CLIENT_SECRET: string;
+  LIVE_ROLE_ID: string;
 }
 
 const handler = {
