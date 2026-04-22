@@ -178,10 +178,11 @@ public class WebServer {
             + "\"parameters\":["
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
             + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"},"
-            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Max entries\"}"
+            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Max entries\"},"
+            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip\"}"
             + "],"
             + "\"responses\":{"
-            + "\"200\":{\"description\":\"Crown score leaderboard\"},"
+            + "\"200\":{\"description\":\"Crown score leaderboard with total, offset, limit\"},"
             + "\"404\":{\"description\":\"No current season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
@@ -216,10 +217,11 @@ public class WebServer {
             + "{\"name\":\"id\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\"},\"description\":\"Award ID (e.g. aviate, kill_any)\"},"
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID (defaults to current)\"},"
             + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID (defaults to aggregate)\"},"
-            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Max entries\"}"
+            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Max entries\"},"
+            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip\"}"
             + "],"
             + "\"responses\":{"
-            + "\"200\":{\"description\":\"Award metadata and leaderboard\"},"
+            + "\"200\":{\"description\":\"Award metadata and leaderboard with total, offset, limit\"},"
             + "\"400\":{\"description\":\"Invalid award ID format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + "\"404\":{\"description\":\"Award not found or no season\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
@@ -338,6 +340,11 @@ public class WebServer {
             httpServer.createContext("/", exchange -> {
                 if (!"GET".equals(exchange.getRequestMethod())) {
                     sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                String path = exchange.getRequestURI().getPath();
+                if (!"/".equals(path)) {
+                    sendError(exchange, 404, "not found");
                     return;
                 }
                 byte[] body = SCALAR_HTML.getBytes(StandardCharsets.UTF_8);
@@ -467,9 +474,11 @@ public class WebServer {
                 }
                 var params = parseQuery(exchange.getRequestURI());
                 int limit = 100;
+                int offset = 0;
                 try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
+                try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                 var result = plugin.getAwardQueryService().getCrownLeaderboard(
-                        params.get("season"), params.get("server"), limit);
+                        params.get("season"), params.get("server"), limit, offset);
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
                     return;
@@ -526,9 +535,11 @@ public class WebServer {
                         return;
                     }
                     int limit = 100;
+                    int offset = 0;
                     try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
+                    try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                     var result = plugin.getAwardQueryService().getAwardLeaderboard(
-                            awardId, params.get("season"), params.get("server"), limit);
+                            awardId, params.get("season"), params.get("server"), limit, offset);
                     if (result == null) {
                         sendError(exchange, 404, "no current season");
                         return;

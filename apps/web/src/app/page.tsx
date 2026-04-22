@@ -5,7 +5,7 @@ import config from "@/data/site-config.json";
 import CopyIPCard from "@/components/CopyIPCard";
 import CountdownBanner from "@/components/CountdownBanner";
 import Squircle from "@/components/Squircle";
-import { fetchGzipJson } from "@/lib/fetchGzip";
+import { getOverviewStats } from "@/lib/queries";
 
 export const metadata: Metadata = {
   description:
@@ -23,26 +23,35 @@ export default async function HomePage() {
   let onlinePlayers = 0;
   let onlinePlayerList: { name: string; uuid: string; nickname_raw?: string }[] = [];
 
-  const summaryPromise = fetchGzipJson<any>(
-    "https://map.crabcraft.net/stats/data/summary.json.gz"
-  );
+  const playerCountPromise = getOverviewStats()
+    .then((stats) => stats.playerCount)
+    .catch(() => 0);
   const playersPromise = fetch("https://api.crabcraft.net/players", {
     signal: AbortSignal.timeout(5000),
     cache: "no-store",
   }).catch(() => null);
+  const crownsPromise = fetch("https://api.crabcraft.net/awards/crowns?limit=5", {
+    signal: AbortSignal.timeout(5000),
+    next: { revalidate: 30 },
+  }).catch(() => null);
 
-  const [json, playersRes] = await Promise.all([
-    summaryPromise,
+  const [whitelistedCount, playersRes, crownsRes] = await Promise.all([
+    playerCountPromise,
     playersPromise,
+    crownsPromise,
   ]);
 
-  if (json) {
-    topPlayers = json.hof.slice(0, 5).map((entry: any) => ({
-      uuid: entry.uuid,
-      name: json.players[entry.uuid]?.name ?? "Unknown",
-      points: entry.value[0],
-    }));
-    whitelistedPlayers = json.info?.numPlayers ?? 0;
+  whitelistedPlayers = whitelistedCount;
+
+  if (crownsRes?.ok) {
+    try {
+      const data = await crownsRes.json();
+      topPlayers = (data.leaderboard ?? []).map((p: any) => ({
+        uuid: p.uuid,
+        name: p.username ?? "Unknown",
+        points: p.crown_score,
+      }));
+    } catch {}
   }
 
   if (playersRes?.ok) {

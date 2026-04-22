@@ -21,6 +21,7 @@ export {
   searchUsers,
   getUserApplications,
   getAdminUsers,
+  getOverviewStats,
 } from "@crabcraft/db/queries/web";
 
 // Re-export types for convenience

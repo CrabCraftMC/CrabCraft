@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { gunzipSync } from "zlib";
 import { searchUsers } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -31,25 +30,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let awardRoutes: MetadataRoute.Sitemap = [];
   try {
-    const res = await fetch("https://map.crabcraft.net/stats/data/summary.json.gz", {
-      headers: { "Accept-Encoding": "identity", Referer: "https://crabcraft.net" },
+    const res = await fetch("https://api.crabcraft.net/awards", {
+      signal: AbortSignal.timeout(10000),
+      next: { revalidate: 3600 },
     });
     if (res.ok) {
-      const buffer = Buffer.from(await res.arrayBuffer());
-      let text: string;
-      if (buffer[0] === 0x1f && buffer[1] === 0x8b) {
-        text = gunzipSync(buffer).toString();
-      } else {
-        text = buffer.toString();
-      }
-      const summary = JSON.parse(text);
-      if (summary.awards) {
-        awardRoutes = Object.keys(summary.awards).map((key) => ({
-          url: `${BASE_URL}/awards/${key}`,
-          changeFrequency: "daily" as const,
-          priority: 0.4,
-        }));
-      }
+      const data = await res.json();
+      awardRoutes = (data.awards ?? []).map((a: any) => ({
+        url: `${BASE_URL}/awards/${a.id}`,
+        changeFrequency: "daily" as const,
+        priority: 0.4,
+      }));
     }
   } catch {}
 

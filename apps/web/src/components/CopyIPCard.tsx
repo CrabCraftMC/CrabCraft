@@ -36,7 +36,7 @@ export default function CopyIPCard({
   useEffect(() => {
     const poll = async () => {
       try {
-        const res = await fetch("/api/players");
+        const res = await fetch("https://api.crabcraft.net/players");
         if (!res.ok) return;
         const data = await res.json();
         setCount(data.count ?? 0);
