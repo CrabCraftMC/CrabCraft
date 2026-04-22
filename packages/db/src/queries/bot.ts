@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../client";
-import { players, applications } from "../schema";
+import { players, applications, streamChannels } from "../schema";
 
 export interface UpsertUserData {
   discordId: string;
@@ -197,4 +197,81 @@ export async function updateApplication(
         eq(applications.status, "pending"),
       ),
     );
+}
+
+// ── Stream channels ────────────────────────────────────────────
+
+export type Platform = "youtube" | "twitch" | "tiktok";
+
+export interface StreamChannel {
+  id: number;
+  platform: Platform;
+  channel_id: string;
+  discord_user_id: string;
+  display_name: string | null;
+}
+
+export async function addStreamChannel(
+  platform: Platform,
+  channelId: string,
+  discordUserId: string,
+  displayName?: string,
+): Promise<void> {
+  await db
+    .insert(streamChannels)
+    .values({
+      platform,
+      channel_id: channelId,
+      discord_user_id: discordUserId,
+      display_name: displayName ?? null,
+    })
+    .onConflictDoUpdate({
+      target: [streamChannels.platform, streamChannels.channel_id],
+      set: {
+        discord_user_id: sql`excluded.discord_user_id`,
+        display_name: sql`COALESCE(excluded.display_name, ${streamChannels.display_name})`,
+      },
+    });
+}
+
+export async function removeStreamChannel(
+  platform: Platform,
+  channelId: string,
+): Promise<boolean> {
+  const result = await db
+    .delete(streamChannels)
+    .where(
+      and(
+        eq(streamChannels.platform, platform),
+        eq(streamChannels.channel_id, channelId),
+      ),
+    );
+  return (result as any).rowCount > 0;
+}
+
+export async function getAllStreamChannels(): Promise<StreamChannel[]> {
+  const rows = await db.select().from(streamChannels);
+  return rows.map((r) => ({
+    id: r.id,
+    platform: r.platform as Platform,
+    channel_id: r.channel_id,
+    discord_user_id: r.discord_user_id,
+    display_name: r.display_name,
+  }));
+}
+
+export async function getStreamChannelsByPlatform(
+  platform: Platform,
+): Promise<StreamChannel[]> {
+  const rows = await db
+    .select()
+    .from(streamChannels)
+    .where(eq(streamChannels.platform, platform));
+  return rows.map((r) => ({
+    id: r.id,
+    platform: r.platform as Platform,
+    channel_id: r.channel_id,
+    discord_user_id: r.discord_user_id,
+    display_name: r.display_name,
+  }));
 }

@@ -23,6 +23,7 @@ import * as appDb from "../utils/appDb.js";
 import { primaryContainer } from "../utils/embeds.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { initWikiPoller } from "../utils/wiki.js";
+import { initStreamMonitor } from "../utils/streamMonitor.js";
 
 export default class ReadyEvent extends Event {
   constructor() {
@@ -178,5 +179,8 @@ export default class ReadyEvent extends Event {
     } catch (error) {
       logger.error("Failed to deploy slash commands:", error);
     }
+
+    // Start stream monitor
+    await initStreamMonitor(client);
   }
 }
