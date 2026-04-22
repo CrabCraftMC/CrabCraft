@@ -48,7 +48,6 @@ public class CrabUtilitiesVelocity {
     private NicknameCache nicknameCache;
     private PendingJoinManager pendingJoinManager;
     private DiscordWebhook discordWebhook;
-    private JoinedPlayersStore joinedPlayersStore;
     private StatsPushSubscriber statsPushSubscriber;
     private PostgresStatsWriter pgWriter;
     private AwardEvaluator awardEvaluator;
@@ -75,7 +74,6 @@ public class CrabUtilitiesVelocity {
         this.nicknameCache = new NicknameCache();
         this.pendingJoinManager = new PendingJoinManager();
         this.discordWebhook = new DiscordWebhook(config.getDiscordWebhookUrl(), logger);
-        this.joinedPlayersStore = new JoinedPlayersStore(dataDirectory, logger);
 
         server.getChannelRegistrar().register(MinecraftChannelIdentifier.from("crabutilities:nicknames"));
         server.getEventManager().register(this, new NicknameListener(this));
@@ -198,7 +196,6 @@ public class CrabUtilitiesVelocity {
     public NicknameCache getNicknameCache() { return nicknameCache; }
     public PendingJoinManager getPendingJoinManager() { return pendingJoinManager; }
     public DiscordWebhook getDiscordWebhook() { return discordWebhook; }
-    public JoinedPlayersStore getJoinedPlayersStore() { return joinedPlayersStore; }
     public WebServer getWebServer() { return webServer; }
     public PostgresStatsWriter getPgWriter() { return pgWriter; }
     public AwardEvaluator getAwardEvaluator() { return awardEvaluator; }
