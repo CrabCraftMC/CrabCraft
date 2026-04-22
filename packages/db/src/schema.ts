@@ -253,3 +253,25 @@ export const streamChannels = pgTable(
     ),
   ],
 );
+
+// ── player_alts ────────────────────────────────────────────────
+// Alt Minecraft accounts linked by whitelisted players via the
+// Discord bot. Velocity checks this table on each proxy join to
+// assign the LuckPerms "alt" group.
+export const playerAlts = pgTable(
+  "player_alts",
+  {
+    id: serial("id").primaryKey(),
+    discord_id: text("discord_id")
+      .notNull()
+      .references(() => players.discord_id),
+    minecraft_uuid: text("minecraft_uuid").notNull().unique(),
+    minecraft_username: text("minecraft_username").notNull(),
+    created_at: integer("created_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    index("pa_discord_idx").on(table.discord_id),
+  ],
+);
