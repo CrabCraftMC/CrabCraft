@@ -4,13 +4,6 @@ import Link from "next/link";
 import Squircle from "@/components/Squircle";
 import ServerSelect from "@/components/ServerSelect";
 import { formatValue } from "@/lib/formatValue";
-import {
-  getAwardLeaderboard,
-  getAwardServers,
-  getCurrentSeason,
-  getAwardDefinition,
-  AWARD_AGGREGATE_SERVER_ID,
-} from "@/lib/queries";
 import { notFound } from "next/navigation";
 
 interface SearchParams {
@@ -22,10 +15,55 @@ interface Props {
   searchParams: Promise<SearchParams>;
 }
 
+interface ProxyAwardDef {
+  id: string;
+  title: string;
+  description: string;
+  unit: string;
+  bucket: string;
+  icon: string;
+}
+
+interface ProxyLeaderboardEntry {
+  rank: number;
+  uuid: string;
+  username: string | null;
+  score: number;
+  medal: number;
+}
+
+interface ProxyAwardResponse {
+  award: ProxyAwardDef;
+  leaderboard: ProxyLeaderboardEntry[];
+}
+
+async function fetchAwardLeaderboard(key: string, server?: string): Promise<ProxyAwardResponse | null> {
+  const url = new URL(`https://api.crabcraft.net/awards/${key}`);
+  if (server) url.searchParams.set("server", server);
+  try {
+    const res = await fetch(url, { next: { revalidate: 30 } });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchAwardServers(): Promise<string[]> {
+  try {
+    const res = await fetch("https://api.crabcraft.net/awards", { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.servers ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { key } = await params;
-  const meta = await getAwardDefinition(key);
-  const title = meta?.title ?? key;
+  const data = await fetchAwardLeaderboard(key);
+  const title = data?.award.title ?? key;
   return {
     title: `${title} Leaderboard`,
     description: `View the ${title} award leaderboard on CrabCraft.`,
@@ -37,23 +75,16 @@ export default async function AwardLeaderboardPage({
   searchParams,
 }: Props) {
   const [{ key }, { server }] = await Promise.all([params, searchParams]);
-  const meta = await getAwardDefinition(key);
-  if (!meta) notFound();
+  const [data, servers] = await Promise.all([
+    fetchAwardLeaderboard(key, server),
+    fetchAwardServers(),
+  ]);
 
-  const currentSeason = await getCurrentSeason();
-  const seasonId = currentSeason?.id;
+  if (!data) notFound();
 
-  const serverId =
-    server && server.length > 0 ? server : AWARD_AGGREGATE_SERVER_ID;
-
-  const [entries, servers] = seasonId
-    ? await Promise.all([
-        getAwardLeaderboard(key, seasonId, serverId, 100),
-        getAwardServers(seasonId),
-      ])
-    : [[], []];
-
-  // formatValue only needs the unit for this one award
+  const meta = data.award;
+  const entries = data.leaderboard;
+  const serverId = server && server.length > 0 ? server : "";
   const awardUnits: Record<string, string> = { [meta.id]: meta.unit };
 
   return (
@@ -107,8 +138,8 @@ export default async function AwardLeaderboardPage({
               </div>
               {entries.map((entry, i) => (
                 <Link
-                  key={entry.minecraft_uuid}
-                  href={`/stats/${entry.minecraft_uuid}`}
+                  key={entry.uuid}
+                  href={`/stats/${entry.uuid}`}
                   className={`flex items-center gap-5 px-6 py-3 transition-colors hover:bg-orange-50/60 dark:hover:bg-[#2a221b] ${
                     i % 2 === 0
                       ? "bg-paper-2"
@@ -136,14 +167,14 @@ export default async function AwardLeaderboardPage({
                           : "th"}
                   </span>
                   <Image
-                    src={`https://mc-heads.net/avatar/${entry.minecraft_uuid}/64.png`}
-                    alt={entry.minecraft_username ?? ""}
+                    src={`https://mc-heads.net/avatar/${entry.uuid}/64.png`}
+                    alt={entry.username ?? ""}
                     width={32}
                     height={32}
                     className="rounded shrink-0"
                   />
                   <span className="flex-1 font-bold text-sm text-gray-800 dark:text-gray-200 truncate">
-                    {entry.minecraft_username ?? "Unknown"}
+                    {entry.username ?? "Unknown"}
                   </span>
                   <span className="text-sm font-bold text-gray-600 dark:text-gray-400 shrink-0">
                     {formatValue(entry.score, key, awardUnits)}
