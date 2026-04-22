@@ -202,3 +202,33 @@ export const playerAwardScores = pgTable(
 // not stored — they're aggregated on read directly from
 // player_award_scores. See getCrownLeaderboard / getPlayerCrownScore
 // in packages/db/src/queries/web.ts.
+
+// ── player_advancements ────────────────────────────────────────
+// Per-player, per-advancement completion state for a season.
+// server_id = "__aggregate__" represents the union across all servers.
+export const playerAdvancements = pgTable(
+  "player_advancements",
+  {
+    id: serial("id").primaryKey(),
+    minecraft_uuid: text("minecraft_uuid").notNull(),
+    season: text("season").notNull(),
+    server_id: text("server_id").notNull(),
+    advancement_id: text("advancement_id").notNull(),
+    completed: boolean("completed").notNull().default(false),
+    completed_at: integer("completed_at"),
+  },
+  (table) => [
+    uniqueIndex("pa_uuid_season_server_adv_unique").on(
+      table.minecraft_uuid,
+      table.season,
+      table.server_id,
+      table.advancement_id,
+    ),
+    index("pa_leaderboard_idx").on(
+      table.season,
+      table.server_id,
+      table.completed,
+    ),
+    index("pa_player_idx").on(table.minecraft_uuid, table.season),
+  ],
+);
