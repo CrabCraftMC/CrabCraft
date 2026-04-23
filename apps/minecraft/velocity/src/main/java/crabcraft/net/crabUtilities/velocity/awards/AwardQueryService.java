@@ -1,6 +1,5 @@
 package crabcraft.net.crabUtilities.velocity.awards;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.zaxxer.hikari.HikariDataSource;
@@ -14,9 +13,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class AwardQueryService {
-
-    private static final String AGGREGATE_SERVER_ID = "__aggregate__";
-    private static final Gson GSON = new Gson();
 
     private final HikariDataSource dataSource;
     private final Logger logger;
@@ -43,34 +39,9 @@ public final class AwardQueryService {
         return getCurrentSeason();
     }
 
-    public String resolveServer(String serverParam) {
-        if (serverParam != null && !serverParam.isEmpty()) return serverParam;
-        return AGGREGATE_SERVER_ID;
-    }
-
-    public JsonArray getAwardServers(String season) {
-        JsonArray servers = new JsonArray();
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                 "SELECT DISTINCT server_id FROM player_award_scores " +
-                 "WHERE season = ? AND server_id <> ? ORDER BY server_id")) {
-            stmt.setString(1, season);
-            stmt.setString(2, AGGREGATE_SERVER_ID);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    servers.add(rs.getString("server_id"));
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("Failed to load award servers for season={}", season, e);
-        }
-        return servers;
-    }
-
-    public JsonObject getAllAwards(String seasonParam, String serverParam) {
+    public JsonObject getAllAwards(String seasonParam) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
-        String serverId = resolveServer(serverParam);
 
         JsonArray awardsArray = new JsonArray();
         try (Connection conn = dataSource.getConnection()) {
@@ -85,12 +56,10 @@ public final class AwardQueryService {
                     FROM player_award_scores p
                     LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
                     WHERE p.season = ?
-                      AND p.server_id = ?
                       AND p.score > 0
                     ORDER BY p.award_id, p.score DESC
                     """)) {
                 stmt.setString(1, season);
-                stmt.setString(2, serverId);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         JsonObject leader = new JsonObject();
@@ -128,7 +97,6 @@ public final class AwardQueryService {
 
         JsonObject response = new JsonObject();
         response.add("awards", awardsArray);
-        response.add("servers", getAwardServers(season));
         return response;
     }
 
@@ -152,10 +120,9 @@ public final class AwardQueryService {
     }
 
     public JsonObject getAwardLeaderboard(String awardId, String seasonParam,
-                                           String serverParam, int limit, int offset) {
+                                           int limit, int offset) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
-        String serverId = resolveServer(serverParam);
         if (limit <= 0 || limit > 100) limit = 100;
         if (offset < 0) offset = 0;
 
@@ -167,14 +134,12 @@ public final class AwardQueryService {
                 return notFound;
             }
 
-            // Get total count
             int total = 0;
             try (PreparedStatement stmt = conn.prepareStatement(
                     "SELECT COUNT(*)::int FROM player_award_scores " +
-                    "WHERE award_id = ? AND season = ? AND server_id = ? AND score > 0")) {
+                    "WHERE award_id = ? AND season = ? AND score > 0")) {
                 stmt.setString(1, awardId);
                 stmt.setString(2, season);
-                stmt.setString(3, serverId);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) total = rs.getInt(1);
                 }
@@ -185,15 +150,14 @@ public final class AwardQueryService {
                     SELECT p.minecraft_uuid, u.minecraft_username, p.score, p.medal
                     FROM player_award_scores p
                     LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
-                    WHERE p.award_id = ? AND p.season = ? AND p.server_id = ?
+                    WHERE p.award_id = ? AND p.season = ?
                     ORDER BY p.score DESC
                     LIMIT ? OFFSET ?
                     """)) {
                 stmt.setString(1, awardId);
                 stmt.setString(2, season);
-                stmt.setString(3, serverId);
-                stmt.setInt(4, limit);
-                stmt.setInt(5, offset);
+                stmt.setInt(3, limit);
+                stmt.setInt(4, offset);
                 try (ResultSet rs = stmt.executeQuery()) {
                     int rank = offset;
                     while (rs.next()) {
@@ -222,27 +186,24 @@ public final class AwardQueryService {
         }
     }
 
-    public JsonObject getCrownLeaderboard(String seasonParam, String serverParam, int limit, int offset) {
+    public JsonObject getCrownLeaderboard(String seasonParam, int limit, int offset) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
-        String serverId = resolveServer(serverParam);
         if (limit <= 0 || limit > 100) limit = 100;
         if (offset < 0) offset = 0;
 
         int total = 0;
         JsonArray leaderboard = new JsonArray();
         try (Connection conn = dataSource.getConnection()) {
-            // Get total count of players with crown_score > 0
             try (PreparedStatement stmt = conn.prepareStatement("""
                     SELECT COUNT(*)::int FROM (
                         SELECT minecraft_uuid
                         FROM player_award_scores
-                        WHERE season = ? AND server_id = ? AND medal > 0
+                        WHERE season = ? AND medal > 0
                         GROUP BY minecraft_uuid
                     ) ranked
                     """)) {
                 stmt.setString(1, season);
-                stmt.setString(2, serverId);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) total = rs.getInt(1);
                 }
@@ -266,7 +227,7 @@ public final class AwardQueryService {
                               + COUNT(*) FILTER (WHERE medal = 2) * 3
                               + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
                          FROM player_award_scores
-                         WHERE season = ? AND server_id = ?
+                         WHERE season = ?
                          GROUP BY minecraft_uuid
                      ) c
                      LEFT JOIN players u ON u.minecraft_uuid = c.minecraft_uuid
@@ -275,9 +236,8 @@ public final class AwardQueryService {
                      LIMIT ? OFFSET ?
                      """)) {
                 stmt.setString(1, season);
-                stmt.setString(2, serverId);
-                stmt.setInt(3, limit);
-                stmt.setInt(4, offset);
+                stmt.setInt(2, limit);
+                stmt.setInt(3, offset);
                 try (ResultSet rs = stmt.executeQuery()) {
                     int rank = offset;
                     while (rs.next()) {
@@ -303,14 +263,12 @@ public final class AwardQueryService {
         response.addProperty("total", total);
         response.addProperty("offset", offset);
         response.addProperty("limit", limit);
-        response.add("servers", getAwardServers(season != null ? season : ""));
         return response;
     }
 
-    public JsonObject getPlayerAwards(String uuid, String seasonParam, String serverParam) {
+    public JsonObject getPlayerAwards(String uuid, String seasonParam) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
-        String serverId = resolveServer(serverParam);
 
         try (Connection conn = dataSource.getConnection()) {
             String username = null;
@@ -331,13 +289,12 @@ public final class AwardQueryService {
                             score,
                             RANK() OVER (PARTITION BY award_id ORDER BY score DESC) AS rank
                         FROM player_award_scores
-                        WHERE season = ? AND server_id = ? AND score > 0
+                        WHERE season = ? AND score > 0
                     ) ranked
                     WHERE minecraft_uuid = ?
                     """)) {
                 stmt.setString(1, season);
-                stmt.setString(2, serverId);
-                stmt.setString(3, uuid);
+                stmt.setString(2, uuid);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         JsonObject entry = new JsonObject();
@@ -366,7 +323,7 @@ public final class AwardQueryService {
                              + COUNT(*) FILTER (WHERE medal = 2) * 3
                              + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
                         FROM player_award_scores
-                        WHERE season = ? AND server_id = ?
+                        WHERE season = ?
                         GROUP BY minecraft_uuid
                     ),
                     ranked AS (
@@ -379,8 +336,7 @@ public final class AwardQueryService {
                     SELECT * FROM ranked WHERE minecraft_uuid = ? LIMIT 1
                     """)) {
                 stmt.setString(1, season);
-                stmt.setString(2, serverId);
-                stmt.setString(3, uuid);
+                stmt.setString(2, uuid);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
                         crown = new JsonObject();

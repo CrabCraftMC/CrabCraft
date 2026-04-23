@@ -162,17 +162,13 @@ export const awards = pgTable("awards", {
 });
 
 // ── player_award_scores ─────────────────────────────────────────
-// Per-player, per-award, per-server score for a season.
-// server_id = "__aggregate__" represents the sum across all servers.
-export const AGGREGATE_SERVER_ID = "__aggregate__";
-
+// Per-player, per-award score for a season.
 export const playerAwardScores = pgTable(
   "player_award_scores",
   {
     id: serial("id").primaryKey(),
     minecraft_uuid: text("minecraft_uuid").notNull(),
     season: text("season").notNull(),
-    server_id: text("server_id").notNull(),
     award_id: text("award_id")
       .notNull()
       .references(() => awards.id, { onDelete: "cascade" }),
@@ -183,15 +179,13 @@ export const playerAwardScores = pgTable(
       .$defaultFn(() => Math.floor(Date.now() / 1000)),
   },
   (table) => [
-    uniqueIndex("pas_uuid_season_server_award_unique").on(
+    uniqueIndex("pas_uuid_season_award_unique").on(
       table.minecraft_uuid,
       table.season,
-      table.server_id,
       table.award_id,
     ),
     index("pas_leaderboard_idx").on(
       table.season,
-      table.server_id,
       table.award_id,
       table.score,
     ),
@@ -206,28 +200,24 @@ export const playerAwardScores = pgTable(
 
 // ── player_advancements ────────────────────────────────────────
 // Per-player, per-advancement completion state for a season.
-// server_id = "__aggregate__" represents the union across all servers.
 export const playerAdvancements = pgTable(
   "player_advancements",
   {
     id: serial("id").primaryKey(),
     minecraft_uuid: text("minecraft_uuid").notNull(),
     season: text("season").notNull(),
-    server_id: text("server_id").notNull(),
     advancement_id: text("advancement_id").notNull(),
     completed: boolean("completed").notNull().default(false),
     completed_at: integer("completed_at"),
   },
   (table) => [
-    uniqueIndex("pa_uuid_season_server_adv_unique").on(
+    uniqueIndex("pa_uuid_season_adv_unique").on(
       table.minecraft_uuid,
       table.season,
-      table.server_id,
       table.advancement_id,
     ),
     index("pa_leaderboard_idx").on(
       table.season,
-      table.server_id,
       table.completed,
     ),
     index("pa_player_idx").on(table.minecraft_uuid, table.season),

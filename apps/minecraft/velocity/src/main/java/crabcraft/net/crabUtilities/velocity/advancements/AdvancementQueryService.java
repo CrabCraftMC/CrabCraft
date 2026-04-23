@@ -12,8 +12,6 @@ import java.sql.SQLException;
 
 public final class AdvancementQueryService {
 
-    private static final String AGGREGATE_SERVER_ID = "__aggregate__";
-
     private final HikariDataSource dataSource;
     private final Logger logger;
 
@@ -35,15 +33,9 @@ public final class AdvancementQueryService {
         }
     }
 
-    private String resolveServer(String serverParam) {
-        if (serverParam != null && !serverParam.isEmpty()) return serverParam;
-        return AGGREGATE_SERVER_ID;
-    }
-
-    public JsonObject getPlayerAdvancements(String uuid, String seasonParam, String serverParam) {
+    public JsonObject getPlayerAdvancements(String uuid, String seasonParam) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
-        String serverId = resolveServer(serverParam);
 
         try (Connection conn = dataSource.getConnection()) {
             String username = null;
@@ -61,12 +53,12 @@ public final class AdvancementQueryService {
             try (PreparedStatement stmt = conn.prepareStatement("""
                     SELECT advancement_id, completed, completed_at
                     FROM player_advancements
-                    WHERE minecraft_uuid = ? AND season = ? AND server_id = ?
+                    WHERE minecraft_uuid = ? AND season = ?
+                      AND advancement_id NOT LIKE 'minecraft:recipes/%'
                     ORDER BY advancement_id
                     """)) {
                 stmt.setString(1, uuid);
                 stmt.setString(2, season);
-                stmt.setString(3, serverId);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         total++;
@@ -105,11 +97,9 @@ public final class AdvancementQueryService {
         }
     }
 
-    public JsonObject getAdvancementLeaderboard(String seasonParam, String serverParam,
-                                                 int limit, int offset) {
+    public JsonObject getAdvancementLeaderboard(String seasonParam, int limit, int offset) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
-        String serverId = resolveServer(serverParam);
         if (limit <= 0 || limit > 100) limit = 100;
         if (offset < 0) offset = 0;
 
@@ -119,10 +109,10 @@ public final class AdvancementQueryService {
             try (PreparedStatement stmt = conn.prepareStatement("""
                     SELECT COUNT(DISTINCT minecraft_uuid)::int
                     FROM player_advancements
-                    WHERE season = ? AND server_id = ? AND completed = true
+                    WHERE season = ? AND completed = true
+                      AND advancement_id NOT LIKE 'minecraft:recipes/%'
                     """)) {
                 stmt.setString(1, season);
-                stmt.setString(2, serverId);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) total = rs.getInt(1);
                 }
@@ -135,16 +125,16 @@ public final class AdvancementQueryService {
                         COUNT(*) FILTER (WHERE p.completed = true)::int AS completed
                     FROM player_advancements p
                     LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
-                    WHERE p.season = ? AND p.server_id = ?
+                    WHERE p.season = ?
+                      AND p.advancement_id NOT LIKE 'minecraft:recipes/%'
                     GROUP BY p.minecraft_uuid, u.minecraft_username
                     HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0
                     ORDER BY completed DESC, p.minecraft_uuid
                     LIMIT ? OFFSET ?
                     """)) {
                 stmt.setString(1, season);
-                stmt.setString(2, serverId);
-                stmt.setInt(3, limit);
-                stmt.setInt(4, offset);
+                stmt.setInt(2, limit);
+                stmt.setInt(3, offset);
                 try (ResultSet rs = stmt.executeQuery()) {
                     int rank = offset;
                     while (rs.next()) {

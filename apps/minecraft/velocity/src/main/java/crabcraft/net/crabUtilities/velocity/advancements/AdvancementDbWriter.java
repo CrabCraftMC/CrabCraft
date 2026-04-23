@@ -15,30 +15,11 @@ import java.util.Map;
 
 public final class AdvancementDbWriter {
 
-    private static final String AGGREGATE_SERVER_ID = "__aggregate__";
-
     private static final String UPSERT_ADVANCEMENT = """
         INSERT INTO player_advancements
-            (minecraft_uuid, season, server_id, advancement_id, completed, completed_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT (minecraft_uuid, season, server_id, advancement_id) DO UPDATE SET
-            completed = EXCLUDED.completed,
-            completed_at = COALESCE(EXCLUDED.completed_at, player_advancements.completed_at)
-        """;
-
-    private static final String RECOMPUTE_AGGREGATE = """
-        INSERT INTO player_advancements
-            (minecraft_uuid, season, server_id, advancement_id, completed, completed_at)
-        SELECT
-            minecraft_uuid, season, ?::text, advancement_id,
-            BOOL_OR(completed),
-            MIN(completed_at) FILTER (WHERE completed_at IS NOT NULL)
-        FROM player_advancements
-        WHERE minecraft_uuid = ?
-          AND season = ?
-          AND server_id <> ?
-        GROUP BY minecraft_uuid, season, advancement_id
-        ON CONFLICT (minecraft_uuid, season, server_id, advancement_id) DO UPDATE SET
+            (minecraft_uuid, season, advancement_id, completed, completed_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT (minecraft_uuid, season, advancement_id) DO UPDATE SET
             completed = EXCLUDED.completed,
             completed_at = COALESCE(EXCLUDED.completed_at, player_advancements.completed_at)
         """;
@@ -54,14 +35,12 @@ public final class AdvancementDbWriter {
         this.logger = logger;
     }
 
-    public void writeForPlayerOnServer(String uuid, String season,
-                                        String serverId, JsonObject advancements) {
+    public void writeForPlayer(String uuid, String season, JsonObject advancements) {
         if (advancements == null || advancements.size() == 0) return;
         try (Connection conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                upsertAdvancements(conn, uuid, season, serverId, advancements);
-                recomputeAggregate(conn, uuid, season);
+                upsertAdvancements(conn, uuid, season, advancements);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -70,16 +49,16 @@ public final class AdvancementDbWriter {
                 conn.setAutoCommit(true);
             }
         } catch (SQLException e) {
-            logger.error("Failed to write advancements for uuid={} server={}", uuid, serverId, e);
+            logger.error("Failed to write advancements for uuid={}", uuid, e);
         }
     }
 
     private void upsertAdvancements(Connection conn, String uuid, String season,
-                                     String serverId, JsonObject advancements) throws SQLException {
+                                     JsonObject advancements) throws SQLException {
         try (PreparedStatement stmt = conn.prepareStatement(UPSERT_ADVANCEMENT)) {
             for (Map.Entry<String, JsonElement> entry : advancements.entrySet()) {
                 String advId = entry.getKey();
-                if (advId.equals("DataVersion") || !entry.getValue().isJsonObject()) continue;
+                if (advId.equals("DataVersion") || advId.startsWith("minecraft:recipes/") || !entry.getValue().isJsonObject()) continue;
 
                 JsonObject adv = entry.getValue().getAsJsonObject();
                 boolean done = adv.has("done") && adv.get("done").getAsBoolean();
@@ -87,27 +66,16 @@ public final class AdvancementDbWriter {
 
                 stmt.setString(1, uuid);
                 stmt.setString(2, season);
-                stmt.setString(3, serverId);
-                stmt.setString(4, advId);
-                stmt.setBoolean(5, done);
+                stmt.setString(3, advId);
+                stmt.setBoolean(4, done);
                 if (completedAt != null) {
-                    stmt.setInt(6, completedAt);
+                    stmt.setInt(5, completedAt);
                 } else {
-                    stmt.setNull(6, java.sql.Types.INTEGER);
+                    stmt.setNull(5, java.sql.Types.INTEGER);
                 }
                 stmt.addBatch();
             }
             stmt.executeBatch();
-        }
-    }
-
-    private void recomputeAggregate(Connection conn, String uuid, String season) throws SQLException {
-        try (PreparedStatement stmt = conn.prepareStatement(RECOMPUTE_AGGREGATE)) {
-            stmt.setString(1, AGGREGATE_SERVER_ID);
-            stmt.setString(2, uuid);
-            stmt.setString(3, season);
-            stmt.setString(4, AGGREGATE_SERVER_ID);
-            stmt.executeUpdate();
         }
     }
 

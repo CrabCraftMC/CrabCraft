@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import AwardsTabs from "@/components/AwardsTabs";
-import ServerSelect from "@/components/ServerSelect";
 import { categorise } from "@/lib/categories";
-
-interface SearchParams {
-  server?: string;
-}
-
-interface Props {
-  searchParams: Promise<SearchParams>;
-}
 
 export const metadata: Metadata = {
   title: "Awards",
@@ -29,14 +20,13 @@ interface ProxyAward {
 
 interface ProxyAwardsResponse {
   awards: ProxyAward[];
-  servers: string[];
 }
 
-async function fetchAwards(server?: string): Promise<ProxyAwardsResponse | null> {
-  const url = new URL("https://api.crabcraft.net/awards");
-  if (server) url.searchParams.set("server", server);
+async function fetchAwards(): Promise<ProxyAwardsResponse | null> {
   try {
-    const res = await fetch(url, { next: { revalidate: 30 } });
+    const res = await fetch("https://api.crabcraft.net/awards", {
+      next: { revalidate: 30 },
+    });
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -44,13 +34,10 @@ async function fetchAwards(server?: string): Promise<ProxyAwardsResponse | null>
   }
 }
 
-export default async function AwardsPage({ searchParams }: Props) {
-  const { server } = await searchParams;
-  const data = await fetchAwards(server);
+export default async function AwardsPage() {
+  const data = await fetchAwards();
 
   const awards = data?.awards ?? [];
-  const servers = data?.servers ?? [];
-  const serverId = server && server.length > 0 ? server : "";
 
   const awardUnits: Record<string, string> = {};
   for (const d of awards) awardUnits[d.id] = d.unit;
@@ -80,16 +67,6 @@ export default async function AwardsPage({ searchParams }: Props) {
             {awards.length} awards to compete for
           </p>
         </div>
-
-        {servers.length > 0 && (
-          <div className="flex justify-center mb-6 animate-in">
-            <ServerSelect
-              servers={servers}
-              current={serverId}
-              basePath="/awards"
-            />
-          </div>
-        )}
 
         <AwardsTabs buckets={buckets} units={awardUnits} />
 

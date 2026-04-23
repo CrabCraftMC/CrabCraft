@@ -2,17 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import Squircle from "@/components/Squircle";
-import ServerSelect from "@/components/ServerSelect";
 import { formatValue } from "@/lib/formatValue";
 import { notFound } from "next/navigation";
 
-interface SearchParams {
-  server?: string;
-}
-
 interface Props {
   params: Promise<{ key: string }>;
-  searchParams: Promise<SearchParams>;
 }
 
 interface ProxyAwardDef {
@@ -37,26 +31,15 @@ interface ProxyAwardResponse {
   leaderboard: ProxyLeaderboardEntry[];
 }
 
-async function fetchAwardLeaderboard(key: string, server?: string): Promise<ProxyAwardResponse | null> {
-  const url = new URL(`https://api.crabcraft.net/awards/${key}`);
-  if (server) url.searchParams.set("server", server);
+async function fetchAwardLeaderboard(key: string): Promise<ProxyAwardResponse | null> {
   try {
-    const res = await fetch(url, { next: { revalidate: 30 } });
+    const res = await fetch(`https://api.crabcraft.net/awards/${key}`, {
+      next: { revalidate: 30 },
+    });
     if (!res.ok) return null;
     return await res.json();
   } catch {
     return null;
-  }
-}
-
-async function fetchAwardServers(): Promise<string[]> {
-  try {
-    const res = await fetch("https://api.crabcraft.net/awards", { next: { revalidate: 60 } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.servers ?? [];
-  } catch {
-    return [];
   }
 }
 
@@ -70,21 +53,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function AwardLeaderboardPage({
-  params,
-  searchParams,
-}: Props) {
-  const [{ key }, { server }] = await Promise.all([params, searchParams]);
-  const [data, servers] = await Promise.all([
-    fetchAwardLeaderboard(key, server),
-    fetchAwardServers(),
-  ]);
+export default async function AwardLeaderboardPage({ params }: Props) {
+  const { key } = await params;
+  const data = await fetchAwardLeaderboard(key);
 
   if (!data) notFound();
 
   const meta = data.award;
   const entries = data.leaderboard;
-  const serverId = server && server.length > 0 ? server : "";
   const awardUnits: Record<string, string> = { [meta.id]: meta.unit };
 
   return (
@@ -113,16 +89,6 @@ export default async function AwardLeaderboardPage({
             {entries.length} players ranked
           </p>
         </div>
-
-        {servers.length > 0 && (
-          <div className="flex justify-center mb-6 animate-in">
-            <ServerSelect
-              servers={servers}
-              current={serverId}
-              basePath={`/awards/${key}`}
-            />
-          </div>
-        )}
 
         <Squircle
           cornerRadius={32}

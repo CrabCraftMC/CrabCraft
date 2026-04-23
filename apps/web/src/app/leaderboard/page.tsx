@@ -2,25 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import Squircle from "@/components/Squircle";
-import ServerSelect from "@/components/ServerSelect";
 
 export const metadata: Metadata = {
   title: "Leaderboard",
   description: "View all CrabCraft players ranked by award points.",
 };
 
-interface SearchParams {
-  server?: string;
-}
-
-interface Props {
-  searchParams: Promise<SearchParams>;
-}
-
-export default async function LeaderboardPage({ searchParams }: Props) {
-  const { server } = await searchParams;
-  const serverId = server && server.length > 0 ? server : "";
-
+export default async function LeaderboardPage() {
   let players: Array<{
     rank: number;
     uuid: string;
@@ -32,12 +20,11 @@ export default async function LeaderboardPage({ searchParams }: Props) {
     minecraft_uuid: string;
     minecraft_username: string | null;
   }> = [];
-  let servers: string[] = [];
 
   try {
-    const url = new URL("https://api.crabcraft.net/awards/crowns");
-    if (server) url.searchParams.set("server", server);
-    const res = await fetch(url, { next: { revalidate: 30 } });
+    const res = await fetch("https://api.crabcraft.net/awards/crowns", {
+      next: { revalidate: 30 },
+    });
     if (res.ok) {
       const data = await res.json();
       players = (data.leaderboard ?? []).map((p: any) => ({
@@ -45,7 +32,6 @@ export default async function LeaderboardPage({ searchParams }: Props) {
         minecraft_uuid: p.uuid,
         minecraft_username: p.username,
       }));
-      servers = data.servers ?? [];
     }
   } catch {}
 
@@ -111,16 +97,6 @@ export default async function LeaderboardPage({ searchParams }: Props) {
             Browse all awards &rarr;
           </Link>
         </div>
-
-        {servers.length > 0 && (
-          <div className="flex justify-center mb-6 animate-in">
-            <ServerSelect
-              servers={servers}
-              current={serverId}
-              basePath="/leaderboard"
-            />
-          </div>
-        )}
 
         {top3.length > 2 && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-10">
