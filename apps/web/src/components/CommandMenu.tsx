@@ -139,7 +139,7 @@ export default function CommandMenu() {
     el?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
-  // Global keyboard shortcut
+  // Global keyboard shortcut + custom event
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -151,8 +151,13 @@ export default function CommandMenu() {
         setOpen(false);
       }
     };
+    const handleOpen = () => setOpen(true);
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("open-command-menu", handleOpen);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("open-command-menu", handleOpen);
+    };
   }, [open]);
 
   const navigate = useCallback(

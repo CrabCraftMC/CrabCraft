@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 
 import { Button } from "./ui/button";
-import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User } from "lucide-react";
+import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import config from "../data/site-config.json";
 
@@ -27,6 +27,7 @@ interface UserData {
     minecraftUuid: string | null;
     minecraftUsername: string | null;
     role: string;
+    nicknameRaw: string | null;
 }
 
 export default function Navbar({ user }: { user?: UserData | null }) {
@@ -38,19 +39,9 @@ export default function Navbar({ user }: { user?: UserData | null }) {
     const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
     const currentPath = usePathname();
     const [isDark, setIsDark] = useState(false);
-    const [isMac, setIsMac] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState<{ minecraft_uuid: string; minecraft_username: string }[]>([]);
-    const [searchLoading, setSearchLoading] = useState(false);
-    const [searchDropdownPos, setSearchDropdownPos] = useState({ top: 0, right: 0 });
-    const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-    const searchRef = useRef<HTMLDivElement>(null);
-    const searchInputRef = useRef<HTMLInputElement>(null);
-    const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
     useEffect(() => {
         setIsDark(document.documentElement.classList.contains("dark"));
-        setIsMac(/Mac|iPhone|iPad/.test(navigator.userAgent));
 
         const handleClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
@@ -60,51 +51,10 @@ export default function Navbar({ user }: { user?: UserData | null }) {
             if (!target.closest('.tools-dropdown-wrapper')) {
                 setIsToolsOpen(false);
             }
-            if (!target.closest('.search-wrapper')) {
-                setShowSearchDropdown(false);
-            }
         };
         document.addEventListener('click', handleClick);
         return () => document.removeEventListener('click', handleClick);
     }, []);
-
-    const updateSearchDropdownPos = () => {
-        if (searchRef.current) {
-            const rect = searchRef.current.getBoundingClientRect();
-            setSearchDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
-        }
-    };
-
-    const handleSearch = (value: string) => {
-        setSearchQuery(value);
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        if (value.length < 2) {
-            setSearchResults([]);
-            setShowSearchDropdown(false);
-            return;
-        }
-        setSearchLoading(true);
-        updateSearchDropdownPos();
-        setShowSearchDropdown(true);
-        debounceRef.current = setTimeout(async () => {
-            try {
-                const res = await fetch(`/api/players/search?q=${encodeURIComponent(value)}`);
-                const data = await res.json();
-                setSearchResults(data);
-            } catch {
-                setSearchResults([]);
-            }
-            setSearchLoading(false);
-        }, 300);
-    };
-
-    const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Escape') {
-            setShowSearchDropdown(false);
-            setSearchQuery("");
-            setSearchResults([]);
-        }
-    };
 
     const toggleDarkMode = () => {
         trigger();
@@ -194,24 +144,13 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                     </div>
 
                     <div className="hidden md:flex flex-1 justify-end items-center gap-5 text-gray-800 dark:text-gray-200">
-                        <div className="search-wrapper" ref={searchRef}>
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-paper/60 dark:bg-white/5 backdrop-blur-lg border border-line/60 dark:border-white/10">
-                                <Search className="w-4 h-4 text-gray-400 shrink-0" />
-                                <input
-                                    ref={searchInputRef}
-                                    type="search"
-                                    value={searchQuery}
-                                    onChange={(e) => handleSearch(e.target.value)}
-                                    onKeyDown={handleSearchKeyDown}
-                                    placeholder="Search players"
-                                    aria-label="Search players"
-                                    className="w-36 text-sm bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none"
-                                />
-                                <kbd suppressHydrationWarning className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold text-gray-400 bg-paper border border-line/60 pointer-events-none leading-none">
-                                    {isMac ? "⌘" : "Ctrl+"}K
-                                </kbd>
-                            </div>
-                        </div>
+                        <button
+                            onClick={() => window.dispatchEvent(new Event("open-command-menu"))}
+                            aria-label="Search"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200/50 dark:hover:bg-[#3d3028]/50 transition-colors cursor-pointer"
+                        >
+                            <Search className="w-4 h-4 text-gray-400" />
+                        </button>
                         {user ? (
                             <div className="user-menu-wrapper">
                                 <button
@@ -265,32 +204,6 @@ export default function Navbar({ user }: { user?: UserData | null }) {
 
             </div>
         </nav>
-        {showSearchDropdown && searchQuery.length >= 2 && (
-            <div className="hidden md:block fixed w-64 bg-paper-2 rounded-xl shadow-lg border border-gray-200 dark:border-[#3d3028] overflow-hidden z-50 search-wrapper" style={{ top: searchDropdownPos.top, right: searchDropdownPos.right }}>
-                {searchLoading ? (
-                    <div className="px-4 py-3 text-sm text-gray-400">Searching...</div>
-                ) : searchResults.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-400">No players found</div>
-                ) : (
-                    searchResults.map((player) => (
-                        <Link
-                            key={player.minecraft_uuid}
-                            href={`/stats/${player.minecraft_uuid}`}
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
-                        >
-                            <Image
-                                src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/24.png`}
-                                alt={player.minecraft_username}
-                                width={24}
-                                height={24}
-                                className="rounded"
-                            />
-                            <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{player.minecraft_username}</span>
-                        </Link>
-                    ))
-                )}
-            </div>
-        )}
         {isUserMenuOpen && user && (
             <div className="hidden md:block fixed w-44 bg-paper-2 rounded-xl shadow-lg border border-gray-200 dark:border-[#3d3028] overflow-hidden z-50 animate-[scaleIn_0.15s_ease-out] user-menu-wrapper" style={{ top: dropdownPos.top, right: dropdownPos.right }}>
                 {user.minecraftUuid && (
@@ -303,18 +216,11 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                     </Link>
                 )}
                 <Link
-                    href="/applications"
+                    href="/settings"
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
                 >
-                    <ClipboardList className="w-4 h-4" />
-                    Applications
-                </Link>
-                <Link
-                    href="/wrapped"
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
-                >
-                    <Gift className="w-4 h-4" />
-                    Wrapped
+                    <Settings className="w-4 h-4" />
+                    Settings
                 </Link>
                 {(user.role === "moderator" || user.role === "admin") && (
                     <Link
@@ -325,13 +231,6 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                         Admin Panel
                     </Link>
                 )}
-                <button
-                    onClick={() => toggleDarkMode()}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors cursor-pointer"
-                >
-                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                    {isDark ? "Light Mode" : "Dark Mode"}
-                </button>
                 <button
                     onClick={() => signOut()}
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors cursor-pointer"
@@ -347,47 +246,13 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                 >
                     <div className="p-4 space-y-1">
                         {/* Search */}
-                        <div className="relative search-wrapper mb-3">
-                            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-paper/80 dark:bg-white/5">
-                                <Search className="w-4 h-4 text-gray-400 shrink-0" />
-                                <input
-                                    type="search"
-                                    value={searchQuery}
-                                    onChange={(e) => handleSearch(e.target.value)}
-                                    onKeyDown={handleSearchKeyDown}
-                                    placeholder="Search players"
-                                    aria-label="Search players"
-                                    className="flex-1 text-sm bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none"
-                                />
-                            </div>
-                            {searchQuery.length >= 2 && (
-                                <div className="mt-1 bg-paper-2 rounded-xl border border-gray-200 dark:border-[#3d3028] overflow-hidden">
-                                    {searchLoading ? (
-                                        <div className="px-4 py-3 text-sm text-gray-400">Searching...</div>
-                                    ) : searchResults.length === 0 ? (
-                                        <div className="px-4 py-3 text-sm text-gray-400">No players found</div>
-                                    ) : (
-                                        searchResults.map((player) => (
-                                            <Link
-                                                key={player.minecraft_uuid}
-                                                href={`/stats/${player.minecraft_uuid}`}
-                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
-                                                onClick={() => setIsMenuOpen(false)}
-                                            >
-                                                <Image
-                                                    src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/24.png`}
-                                                    alt={player.minecraft_username}
-                                                    width={24}
-                                                    height={24}
-                                                    className="rounded"
-                                                />
-                                                <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{player.minecraft_username}</span>
-                                            </Link>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                        <button
+                            onClick={() => { setIsMenuOpen(false); window.dispatchEvent(new Event("open-command-menu")); }}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-paper/60 dark:hover:bg-white/5 transition-colors w-full cursor-pointer mb-2"
+                        >
+                            <Search className="w-4 h-4" />
+                            Search players
+                        </button>
 
                         {/* Nav links */}
                         {config.navbar.links.map((link) => {
@@ -448,13 +313,13 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                         Your Profile
                                     </Link>
                                 )}
-                                <Link href="/applications" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-paper/60 dark:hover:bg-white/5 transition-colors" onClick={() => setIsMenuOpen(false)}>
-                                    <ClipboardList className="w-4 h-4" />
-                                    Applications
-                                </Link>
                                 <Link href="/wrapped" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-paper/60 dark:hover:bg-white/5 transition-colors" onClick={() => setIsMenuOpen(false)}>
                                     <Gift className="w-4 h-4" />
                                     Wrapped
+                                </Link>
+                                <Link href="/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-paper/60 dark:hover:bg-white/5 transition-colors" onClick={() => setIsMenuOpen(false)}>
+                                    <Settings className="w-4 h-4" />
+                                    Settings
                                 </Link>
                                 {(user.role === "moderator" || user.role === "admin") && (
                                     <Link href="/admin" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-orange-500 hover:bg-orange-500/10 transition-colors" onClick={() => setIsMenuOpen(false)}>

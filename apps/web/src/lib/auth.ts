@@ -13,6 +13,7 @@ declare module "next-auth" {
       minecraftUuid: string | null;
       minecraftUsername: string | null;
       role: string;
+      nicknameRaw: string | null;
     };
   }
 }
@@ -23,6 +24,7 @@ declare module "@auth/core/jwt" {
     minecraftUuid?: string | null;
     minecraftUsername?: string | null;
     role?: string;
+    nicknameRaw?: string | null;
   }
 }
 
@@ -56,6 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.minecraftUuid = user.minecraft_uuid;
             token.minecraftUsername = mcName;
             token.role = user.role;
+            token.nicknameRaw = user.nickname_raw;
             await updateOnLogin(
               profile.id as string,
               profile.username as string,
@@ -65,11 +68,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.minecraftUuid = null;
             token.minecraftUsername = null;
             token.role = "unverified";
+            token.nicknameRaw = null;
           }
         } catch {
           token.minecraftUuid = null;
           token.minecraftUsername = null;
           token.role = "unverified";
+          token.nicknameRaw = null;
         }
       }
 
@@ -77,7 +82,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token.discordId) {
         try {
           const user = await getUserForAuth(token.discordId);
-          if (user) token.role = user.role;
+          if (user) {
+            token.role = user.role;
+            token.nicknameRaw = user.nickname_raw;
+          }
         } catch {}
       }
 
@@ -88,6 +96,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.minecraftUuid = token.minecraftUuid ?? null;
       session.user.minecraftUsername = token.minecraftUsername ?? null;
       session.user.role = token.role ?? "unverified";
+      session.user.nicknameRaw = token.nicknameRaw ?? null;
       return session;
     },
   },
