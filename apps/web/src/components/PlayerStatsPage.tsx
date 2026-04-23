@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Squircle from "@/components/Squircle";
 import PlayerDetailedStats from "@/components/PlayerDetailedStats";
+import { SiTwitch, SiYoutube, SiTiktok } from "react-icons/si";
 
 interface PlayerProps {
     nickname: string;
@@ -44,29 +45,27 @@ export default function PlayerStatsPage(props: PlayerProps) {
             <div className="container mx-auto px-4 max-w-4xl">
                 {/* Header card */}
                 <div className="relative mt-0 lg:mt-12 animate-in">
+                    {profile?.channels && profile.channels.length > 0 && (
+                        <div className="flex justify-end gap-2 mb-3">
+                            {profile.channels.map((ch) => {
+                                const url = ch.platform === "twitch" ? `https://twitch.tv/${ch.channel_id}`
+                                    : ch.platform === "youtube" ? `https://youtube.com/${ch.channel_id}`
+                                    : `https://tiktok.com/${ch.channel_id}`;
+                                const Icon = ch.platform === "twitch" ? SiTwitch
+                                    : ch.platform === "youtube" ? SiYoutube
+                                    : SiTiktok;
+                                const color = ch.platform === "twitch" ? "text-purple-400 hover:text-purple-300"
+                                    : ch.platform === "youtube" ? "text-red-400 hover:text-red-300"
+                                    : "text-pink-400 hover:text-pink-300";
+                                return (
+                                    <a key={ch.platform} href={url} target="_blank" rel="noopener noreferrer" className={`${color} transition-colors`} title={ch.display_name || ch.channel_id}>
+                                        <Icon className="w-5 h-5" />
+                                    </a>
+                                );
+                            })}
+                        </div>
+                    )}
                     <Squircle cornerRadius={32} className="bg-gradient-to-br from-[#F97316] to-[#FB923C] p-8 lg:p-10 relative overflow-hidden">
-                        {profile?.channels && profile.channels.length > 0 && (
-                            <div className="absolute top-4 right-4 lg:top-6 lg:right-6 z-20 flex items-center gap-2">
-                                {profile.channels.map((ch) => {
-                                    const url = ch.platform === "twitch" ? `https://twitch.tv/${ch.channel_id}`
-                                        : ch.platform === "youtube" ? `https://youtube.com/${ch.channel_id}`
-                                        : `https://tiktok.com/${ch.channel_id}`;
-                                    return (
-                                        <a key={ch.platform} href={url} target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors" title={ch.display_name || ch.channel_id}>
-                                            {ch.platform === "twitch" && (
-                                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
-                                            )}
-                                            {ch.platform === "youtube" && (
-                                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12z"/></svg>
-                                            )}
-                                            {ch.platform === "tiktok" && (
-                                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-                                            )}
-                                        </a>
-                                    );
-                                })}
-                            </div>
-                        )}
                         {rank > 0 && (
                             <span className="hidden sm:block absolute top-1/2 right-6 lg:right-10 -translate-y-1/2 text-[80px] lg:text-[150px] font-bold text-white/10 z-0 select-none pointer-events-none whitespace-nowrap">
                                 #{rank}
