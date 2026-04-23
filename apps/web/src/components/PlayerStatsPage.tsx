@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Squircle from "@/components/Squircle";
 import PlayerDetailedStats from "@/components/PlayerDetailedStats";
+import { SiTwitch, SiYoutube, SiTiktok } from "react-icons/si";
 
 interface PlayerProps {
     nickname: string;
@@ -18,7 +19,10 @@ interface PlayerProps {
     awardsById?: Record<string, { title: string; description: string; icon: string }> | null;
     localization?: Record<string, string> | null;
     awardUnits?: Record<string, string> | null;
-    profile?: { discord_username: string | null } | null;
+    profile?: {
+        discord_username: string | null;
+        channels?: Array<{ platform: string; channel_id: string; display_name: string | null }>;
+    } | null;
 }
 
 export default function PlayerStatsPage(props: PlayerProps) {
@@ -41,6 +45,26 @@ export default function PlayerStatsPage(props: PlayerProps) {
             <div className="container mx-auto px-4 max-w-4xl">
                 {/* Header card */}
                 <div className="relative mt-0 lg:mt-12 animate-in">
+                    {profile?.channels && profile.channels.length > 0 && (
+                        <div className="flex justify-end gap-3 mb-3 pr-2">
+                            {profile.channels.map((ch) => {
+                                const url = ch.platform === "twitch" ? `https://twitch.tv/${ch.channel_id}`
+                                    : ch.platform === "youtube" ? `https://youtube.com/${ch.channel_id}`
+                                    : `https://tiktok.com/${ch.channel_id}`;
+                                const Icon = ch.platform === "twitch" ? SiTwitch
+                                    : ch.platform === "youtube" ? SiYoutube
+                                    : SiTiktok;
+                                const color = ch.platform === "twitch" ? "text-purple-400 hover:text-purple-300"
+                                    : ch.platform === "youtube" ? "text-red-400 hover:text-red-300"
+                                    : "text-pink-400 hover:text-pink-300";
+                                return (
+                                    <a key={ch.platform} href={url} target="_blank" rel="noopener noreferrer" className={`${color} transition-all hover:scale-125`} title={ch.display_name || ch.channel_id}>
+                                        <Icon className="w-7 h-7" />
+                                    </a>
+                                );
+                            })}
+                        </div>
+                    )}
                     <Squircle cornerRadius={32} className="bg-gradient-to-br from-[#F97316] to-[#FB923C] p-8 lg:p-10 relative overflow-hidden">
                         {rank > 0 && (
                             <span className="hidden sm:block absolute top-1/2 right-6 lg:right-10 -translate-y-1/2 text-[80px] lg:text-[150px] font-bold text-white/10 z-0 select-none pointer-events-none whitespace-nowrap">
