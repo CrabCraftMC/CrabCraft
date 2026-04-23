@@ -354,16 +354,29 @@ export async function getPlayerProfile(
   minecraftUuid: string,
 ): Promise<{
   discord_username: string | null;
+  channels: Array<{ platform: string; channel_id: string; display_name: string | null }>;
 } | null> {
   const rows = await db
     .select({
+      discord_id: players.discord_id,
       discord_username: players.discord_username,
     })
     .from(players)
     .where(eq(players.minecraft_uuid, minecraftUuid));
   if (rows.length === 0) return null;
+
+  const channels = await db
+    .select({
+      platform: streamChannels.platform,
+      channel_id: streamChannels.channel_id,
+      display_name: streamChannels.display_name,
+    })
+    .from(streamChannels)
+    .where(eq(streamChannels.discord_user_id, rows[0].discord_id));
+
   return {
     discord_username: rows[0].discord_username,
+    channels,
   };
 }
 
