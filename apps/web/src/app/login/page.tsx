@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const raw = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
 
   useEffect(() => {
     signIn("discord", { callbackUrl });

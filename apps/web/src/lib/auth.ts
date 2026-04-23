@@ -71,7 +71,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.role = "unverified";
             token.nicknameRaw = null;
           }
-        } catch {
+        } catch (err) {
+          console.error("[auth] JWT callback failed during sign-in:", err);
           token.minecraftUuid = null;
           token.minecraftUsername = null;
           token.role = "unverified";
@@ -87,7 +88,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.role = user.role;
             token.nicknameRaw = user.nickname_raw;
           }
-        } catch {}
+        } catch (err) {
+          console.error("[auth] JWT role refresh failed:", err);
+        }
       }
 
       return token;
