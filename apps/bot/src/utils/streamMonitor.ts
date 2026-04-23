@@ -71,7 +71,32 @@ async function removeLiveRole(guild: Guild, discordUserId: string, key: string):
 
 // ── YouTube ─────────────────────────────────────────────────────────
 
-async function fetchYouTubeRSS(channelId: string): Promise<string[]> {
+const youtubeChannelIdCache = new Map<string, string>();
+
+async function resolveYouTubeChannelId(input: string): Promise<string> {
+  // Already a channel ID
+  if (input.startsWith("UC") && !input.startsWith("@")) return input;
+
+  const cached = youtubeChannelIdCache.get(input);
+  if (cached) return cached;
+
+  // Resolve @handle to channel ID by fetching the channel page
+  const handle = input.startsWith("@") ? input : `@${input}`;
+  const res = await fetch(`https://www.youtube.com/${handle}`, {
+    headers: { "Accept-Language": "en" },
+  });
+  if (!res.ok) throw new Error(`YouTube returned ${res.status} for ${handle}`);
+  const html = await res.text();
+
+  const match = html.match(/"externalId"\s*:\s*"(UC[^"]+)"/);
+  if (!match) throw new Error(`Could not resolve YouTube channel ID for ${handle}`);
+
+  youtubeChannelIdCache.set(input, match[1]);
+  return match[1];
+}
+
+async function fetchYouTubeRSS(channelInput: string): Promise<string[]> {
+  const channelId = await resolveYouTubeChannelId(channelInput);
   const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`YouTube RSS returned ${res.status}`);
