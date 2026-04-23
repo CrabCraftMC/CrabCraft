@@ -136,7 +136,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                 {advancementsData ? (
                     <div className="grid grid-cols-1 lg:grid-cols-[13fr_7fr] gap-4 mt-6">
                         <div className="min-w-0">
-                            {detailedStats && <PlayerDetailedStats stats={detailedStats} awardsById={awardsById ?? undefined} localization={localization} awardUnits={awardUnits} />}
+                            <PlayerDetailedStats stats={detailedStats ?? {}} awardsById={awardsById ?? undefined} localization={localization} awardUnits={awardUnits} />
                         </div>
                         <div className="min-w-0">
                             <PlayerAdvancements
@@ -147,7 +147,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                         </div>
                     </div>
                 ) : (
-                    detailedStats && <PlayerDetailedStats stats={detailedStats} awardsById={awardsById ?? undefined} localization={localization} awardUnits={awardUnits} />
+                    <PlayerDetailedStats stats={detailedStats ?? {}} awardsById={awardsById ?? undefined} localization={localization} awardUnits={awardUnits} />
                 )}
 
                 {/* Back link */}

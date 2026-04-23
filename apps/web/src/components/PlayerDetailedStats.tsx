@@ -60,7 +60,20 @@ export default function PlayerDetailedStats({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, statItems, loc]);
 
-  if (tabs.length === 0) return null;
+  if (tabs.length === 0) return (
+    <div className="animate-in" style={{ animationDelay: "0.3s" }}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-500 pl-1">
+          Awards & Statistics
+        </p>
+      </div>
+      <Squircle cornerRadius={32} className="bg-paper-2">
+        <div className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+          <p className="text-sm">No awards data for this season yet</p>
+        </div>
+      </Squircle>
+    </div>
+  );
 
   const allItems = useMemo(() => {
     const all = Object.values(buckets).flat();
@@ -122,7 +135,8 @@ export default function PlayerDetailedStats({
       )}
 
       {/* Stats table */}
-      <Squircle cornerRadius={32} className="bg-paper-2 overflow-hidden">
+      <Squircle cornerRadius={32} className="bg-paper-2">
+        <div className="max-h-[70vh] lg:max-h-none overflow-y-auto themed-scrollbar">
         <div className="grid grid-cols-12 gap-4 px-5 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028]">
           <div className="col-span-2 sm:col-span-1">Rank</div>
           <div className="col-span-6 sm:col-span-7">Award</div>
@@ -183,6 +197,7 @@ export default function PlayerDetailedStats({
             <p className="text-sm">No awards found for &ldquo;{search}&rdquo;</p>
           </div>
         )}
+        </div>
       </Squircle>
     </div>
   );

@@ -85,6 +85,7 @@ export default function PlayerAdvancements({
             className="absolute -inset-12 z-20 pointer-events-none"
             options={{
               rocketsPoint: { min: 30, max: 70 },
+              hue: { min: 0, max: 360 },
               particles: 30,
               intensity: 12,
               explosion: 2,
@@ -95,7 +96,6 @@ export default function PlayerAdvancements({
               brightness: { min: 50, max: 80 },
               decay: { min: 0.02, max: 0.04 },
               mouse: { click: false, move: false, max: 1 },
-              colors: ["#ff6b35", "#ffd700", "#ff4081", "#00e5ff", "#76ff03", "#e040fb"],
             }}
           />
         )}
