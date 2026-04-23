@@ -8,12 +8,14 @@ export async function getUserForAuth(
   minecraft_uuid: string | null;
   minecraft_username: string | null;
   role: string;
+  nickname_raw: string | null;
 } | null> {
   const rows = await db
     .select({
       minecraft_uuid: players.minecraft_uuid,
       minecraft_username: players.minecraft_username,
       role: players.role,
+      nickname_raw: players.nickname_raw,
     })
     .from(players)
     .where(eq(players.discord_id, discordId));

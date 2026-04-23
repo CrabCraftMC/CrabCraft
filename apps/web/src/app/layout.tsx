@@ -104,6 +104,7 @@ export default async function RootLayout({
       minecraftUuid: user.minecraftUuid,
       minecraftUsername: user.minecraftUsername,
       role: user.role,
+      nicknameRaw: user.nicknameRaw,
     };
   }
 
