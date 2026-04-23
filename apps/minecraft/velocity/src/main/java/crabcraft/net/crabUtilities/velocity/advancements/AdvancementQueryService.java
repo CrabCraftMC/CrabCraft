@@ -9,15 +9,20 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class AdvancementQueryService {
 
     private final HikariDataSource dataSource;
     private final Logger logger;
+    private final AdvancementRegistry registry;
 
-    public AdvancementQueryService(HikariDataSource dataSource, Logger logger) {
+    public AdvancementQueryService(HikariDataSource dataSource, Logger logger,
+                                    AdvancementRegistry registry) {
         this.dataSource = dataSource;
         this.logger = logger;
+        this.registry = registry;
     }
 
     private String resolveSeason(String seasonParam) {
@@ -47,48 +52,57 @@ public final class AdvancementQueryService {
                 }
             }
 
-            JsonObject advancements = new JsonObject();
-            int completed = 0;
-            int total = 0;
+            Map<String, Boolean> completionStatus = new HashMap<>();
+            Map<String, Integer> timestamps = new HashMap<>();
             try (PreparedStatement stmt = conn.prepareStatement("""
                     SELECT advancement_id, completed, completed_at
                     FROM player_advancements
                     WHERE minecraft_uuid = ? AND season = ?
                       AND advancement_id NOT LIKE 'minecraft:recipes/%'
-                    ORDER BY advancement_id
                     """)) {
                 stmt.setString(1, uuid);
                 stmt.setString(2, season);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
-                        total++;
-                        boolean done = rs.getBoolean("completed");
-                        if (done) completed++;
-
-                        JsonObject entry = new JsonObject();
-                        entry.addProperty("completed", done);
+                        String advId = rs.getString("advancement_id");
+                        completionStatus.put(advId, rs.getBoolean("completed"));
                         int completedAt = rs.getInt("completed_at");
-                        if (rs.wasNull()) {
-                            entry.add("completed_at", null);
-                        } else {
-                            entry.addProperty("completed_at", completedAt);
+                        if (!rs.wasNull()) {
+                            timestamps.put(advId, completedAt);
                         }
-                        advancements.add(rs.getString("advancement_id"), entry);
                     }
                 }
             }
 
-            if (total == 0) {
-                JsonObject notFound = new JsonObject();
-                notFound.addProperty("notFound", true);
-                return notFound;
+            JsonObject advancements = new JsonObject();
+            int completed = 0;
+
+            for (Map.Entry<String, JsonObject> regEntry : registry.getAll().entrySet()) {
+                String advId = regEntry.getKey();
+                JsonObject meta = regEntry.getValue();
+
+                boolean done = Boolean.TRUE.equals(completionStatus.get(advId));
+                if (done) completed++;
+
+                JsonObject entry = new JsonObject();
+                entry.addProperty("name", meta.get("name").getAsString());
+                entry.addProperty("description", meta.get("description").getAsString());
+                entry.addProperty("category", meta.get("category").getAsString());
+                entry.addProperty("completed", done);
+                Integer ts = timestamps.get(advId);
+                if (ts != null) {
+                    entry.addProperty("completed_at", ts);
+                } else {
+                    entry.add("completed_at", null);
+                }
+                advancements.add(advId, entry);
             }
 
             JsonObject response = new JsonObject();
             response.addProperty("uuid", uuid);
             response.addProperty("username", username);
             response.addProperty("completed", completed);
-            response.addProperty("total", total);
+            response.addProperty("total", registry.getTotal());
             response.add("advancements", advancements);
             return response;
         } catch (SQLException e) {
@@ -155,6 +169,7 @@ public final class AdvancementQueryService {
         JsonObject response = new JsonObject();
         response.add("leaderboard", leaderboard);
         response.addProperty("total", total);
+        response.addProperty("totalAdvancements", registry.getTotal());
         response.addProperty("offset", offset);
         response.addProperty("limit", limit);
         return response;
