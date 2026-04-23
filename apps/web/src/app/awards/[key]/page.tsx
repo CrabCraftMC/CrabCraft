@@ -32,15 +32,12 @@ interface ProxyAwardResponse {
 }
 
 async function fetchAwardLeaderboard(key: string): Promise<ProxyAwardResponse | null> {
-  try {
-    const res = await fetch(`https://api.crabcraft.net/awards/${key}`, {
-      next: { revalidate: 30 },
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
+  const res = await fetch(`https://api.crabcraft.net/awards/${key}`, {
+    next: { revalidate: 30 },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API returned ${res.status}`);
+  return await res.json();
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
