@@ -286,7 +286,8 @@ public class WebServer {
             + "\"parameters\":["
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
             + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
-            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
+            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"},"
+            + "{\"name\":\"category\",\"in\":\"query\",\"schema\":{\"type\":\"string\",\"enum\":[\"story\",\"nether\",\"end\",\"adventure\",\"husbandry\"]},\"description\":\"Filter by advancement category. Omit for overall leaderboard.\"}"
             + "],"
             + "\"responses\":{"
             + "\"200\":{\"description\":\"Paginated advancement completion leaderboard\"},"
@@ -669,7 +670,7 @@ public class WebServer {
                 try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
                 try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                 var result = plugin.getAdvancementQueryService().getAdvancementLeaderboard(
-                        params.get("season"), limit, offset);
+                        params.get("season"), limit, offset, params.get("category"));
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
                     return;
