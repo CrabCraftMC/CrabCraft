@@ -53,4 +53,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["infisical", "run", "--domain", "https://eu.infisical.com", "--", "node", "apps/web/server.js"]
+CMD ["infisical", "run", "--domain", "https://eu.infisical.com", "--projectId", "bc702274-f9a0-49fd-9932-b63c23a6d702", "--", "node", "apps/web/server.js"]
