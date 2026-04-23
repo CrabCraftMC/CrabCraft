@@ -17,6 +17,7 @@ import crabcraft.net.crabUtilities.velocity.awards.AwardLoader;
 import crabcraft.net.crabUtilities.velocity.awards.AwardQueryService;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementDbWriter;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementQueryService;
+import crabcraft.net.crabUtilities.velocity.advancements.AdvancementRegistry;
 import crabcraft.net.crabUtilities.velocity.awards.AwardSeeder;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
@@ -58,6 +59,7 @@ public class CrabUtilitiesVelocity {
     private AwardDbWriter awardDbWriter;
     private AwardQueryService awardQueryService;
     private AdvancementDbWriter advancementDbWriter;
+    private AdvancementRegistry advancementRegistry;
     private AdvancementQueryService advancementQueryService;
     private VelocityConfig config;
     private UpdateService updateService;
@@ -95,7 +97,8 @@ public class CrabUtilitiesVelocity {
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
         this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
         this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
-        this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger);
+        this.advancementRegistry = new AdvancementRegistry(logger);
+        this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger, advancementRegistry);
 
         this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
 
@@ -170,7 +173,8 @@ public class CrabUtilitiesVelocity {
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
         this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
         this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
-        this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger);
+        this.advancementRegistry = new AdvancementRegistry(logger);
+        this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger, advancementRegistry);
         this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
 
         if (statsPushSubscriber != null) {
