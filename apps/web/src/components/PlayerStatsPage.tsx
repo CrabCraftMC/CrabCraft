@@ -46,7 +46,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                 {/* Header card */}
                 <div className="relative mt-0 lg:mt-12 animate-in">
                     {profile?.channels && profile.channels.length > 0 && (
-                        <div className="flex justify-end gap-2 mb-3">
+                        <div className="flex justify-end gap-3 mb-3 pr-2">
                             {profile.channels.map((ch) => {
                                 const url = ch.platform === "twitch" ? `https://twitch.tv/${ch.channel_id}`
                                     : ch.platform === "youtube" ? `https://youtube.com/${ch.channel_id}`
@@ -58,8 +58,8 @@ export default function PlayerStatsPage(props: PlayerProps) {
                                     : ch.platform === "youtube" ? "text-red-400 hover:text-red-300"
                                     : "text-pink-400 hover:text-pink-300";
                                 return (
-                                    <a key={ch.platform} href={url} target="_blank" rel="noopener noreferrer" className={`${color} transition-colors`} title={ch.display_name || ch.channel_id}>
-                                        <Icon className="w-5 h-5" />
+                                    <a key={ch.platform} href={url} target="_blank" rel="noopener noreferrer" className={`${color} transition-all hover:scale-125`} title={ch.display_name || ch.channel_id}>
+                                        <Icon className="w-7 h-7" />
                                     </a>
                                 );
                             })}
