@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const results = await searchUsers(q);
+    const limit = Math.min(Number(request.nextUrl.searchParams.get("limit")) || 10, 25);
+    const results = await searchUsers(q, limit);
     return NextResponse.json(results);
   } catch {
     return NextResponse.json([], { status: 500 });
