@@ -2,11 +2,15 @@
 
 import { useEffect } from "react";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
   useEffect(() => {
-    signIn("discord");
-  }, []);
+    signIn("discord", { callbackUrl });
+  }, [callbackUrl]);
 
   return (
     <div className="flex-1 flex items-center justify-center">

@@ -7,7 +7,7 @@ export default async function SettingsLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user) redirect("/login?callbackUrl=/settings");
 
   return <>{children}</>;
 }
