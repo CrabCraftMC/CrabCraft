@@ -179,6 +179,7 @@ public class ConnectionListener {
             String plain = plugin.getNicknameCache().getPlainNickname(player.getUniqueId());
             String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
             plugin.getPgWriter().upsertPlayer(playerUuid, playerName, plain, raw);
+            plugin.getPgWriter().upsertAltUsername(playerUuid, playerName);
         });
     }
 

@@ -151,6 +151,21 @@ public class PostgresStatsWriter {
     }
 
     /**
+     * Updates alt account username by minecraft_uuid if it exists in player_alts.
+     */
+    public void upsertAltUsername(String uuid, String username) {
+        String sql = "UPDATE player_alts SET minecraft_username = ? WHERE minecraft_uuid = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, username);
+            stmt.setString(2, uuid);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Failed to update alt username for {}", uuid, e);
+        }
+    }
+
+    /**
      * Check if a player has ever logged into Minecraft (last_mc_login_at is set),
      * or if the UUID belongs to a known alt account.
      */
