@@ -48,4 +48,18 @@ public final class AdvancementRegistry {
     public int getTotal() {
         return advancements.size();
     }
+
+    public int getTotalForCategory(String category) {
+        String prefix = "minecraft:" + category + "/";
+        return (int) advancements.keySet().stream()
+                .filter(id -> id.startsWith(prefix))
+                .count();
+    }
+
+    private static final java.util.Set<String> VALID_CATEGORIES =
+            java.util.Set.of("story", "nether", "end", "adventure", "husbandry");
+
+    public boolean isValidCategory(String category) {
+        return category != null && VALID_CATEGORIES.contains(category);
+    }
 }

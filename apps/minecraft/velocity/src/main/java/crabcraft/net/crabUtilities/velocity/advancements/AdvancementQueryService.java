@@ -111,41 +111,47 @@ public final class AdvancementQueryService {
         }
     }
 
-    public JsonObject getAdvancementLeaderboard(String seasonParam, int limit, int offset) {
+    public JsonObject getAdvancementLeaderboard(String seasonParam, int limit, int offset,
+                                                String category) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
         if (limit <= 0 || limit > 100) limit = 100;
         if (offset < 0) offset = 0;
 
+        String categoryFilter = "";
+        if (category != null && registry.isValidCategory(category)) {
+            categoryFilter = " AND advancement_id LIKE 'minecraft:" + category + "/%'";
+        }
+
         int total = 0;
         JsonArray leaderboard = new JsonArray();
         try (Connection conn = dataSource.getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement("""
-                    SELECT COUNT(DISTINCT minecraft_uuid)::int
-                    FROM player_advancements
-                    WHERE season = ? AND completed = true
-                      AND advancement_id NOT LIKE 'minecraft:recipes/%'
-                    """)) {
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT COUNT(DISTINCT minecraft_uuid)::int"
+                    + " FROM player_advancements"
+                    + " WHERE season = ? AND completed = true"
+                    + " AND advancement_id NOT LIKE 'minecraft:recipes/%'"
+                    + categoryFilter)) {
                 stmt.setString(1, season);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) total = rs.getInt(1);
                 }
             }
 
-            try (PreparedStatement stmt = conn.prepareStatement("""
-                    SELECT
-                        p.minecraft_uuid,
-                        u.minecraft_username,
-                        COUNT(*) FILTER (WHERE p.completed = true)::int AS completed
-                    FROM player_advancements p
-                    LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
-                    WHERE p.season = ?
-                      AND p.advancement_id NOT LIKE 'minecraft:recipes/%'
-                    GROUP BY p.minecraft_uuid, u.minecraft_username
-                    HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0
-                    ORDER BY completed DESC, p.minecraft_uuid
-                    LIMIT ? OFFSET ?
-                    """)) {
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT"
+                    + " p.minecraft_uuid,"
+                    + " u.minecraft_username,"
+                    + " COUNT(*) FILTER (WHERE p.completed = true)::int AS completed"
+                    + " FROM player_advancements p"
+                    + " LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid"
+                    + " WHERE p.season = ?"
+                    + " AND p.advancement_id NOT LIKE 'minecraft:recipes/%'"
+                    + categoryFilter
+                    + " GROUP BY p.minecraft_uuid, u.minecraft_username"
+                    + " HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0"
+                    + " ORDER BY completed DESC, p.minecraft_uuid"
+                    + " LIMIT ? OFFSET ?")) {
                 stmt.setString(1, season);
                 stmt.setInt(2, limit);
                 stmt.setInt(3, offset);
@@ -166,10 +172,17 @@ public final class AdvancementQueryService {
             logger.error("Failed to load advancement leaderboard", e);
         }
 
+        int advTotal = (category != null && registry.isValidCategory(category))
+                ? registry.getTotalForCategory(category)
+                : registry.getTotal();
+
         JsonObject response = new JsonObject();
         response.add("leaderboard", leaderboard);
         response.addProperty("total", total);
-        response.addProperty("totalAdvancements", registry.getTotal());
+        response.addProperty("totalAdvancements", advTotal);
+        if (category != null && registry.isValidCategory(category)) {
+            response.addProperty("category", category);
+        }
         response.addProperty("offset", offset);
         response.addProperty("limit", limit);
         return response;
