@@ -29,6 +29,7 @@ declare module "@auth/core/jwt" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   useSecureCookies: process.env.NODE_ENV === "production",
   providers: [
     Discord({
