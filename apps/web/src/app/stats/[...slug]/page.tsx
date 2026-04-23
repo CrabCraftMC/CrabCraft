@@ -45,6 +45,24 @@ async function fetchPlayerAwards(uuid: string): Promise<ProxyPlayerAwards | null
   }
 }
 
+interface PlayerAdvancementsData {
+  advancements: Record<string, { completed: boolean; completed_at: number | null }>;
+  total: number;
+  completed: number;
+}
+
+async function fetchPlayerAdvancements(uuid: string): Promise<PlayerAdvancementsData | null> {
+  try {
+    const res = await fetch(`https://api.crabcraft.net/players/${uuid}/advancements`, {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 interface Props {
   params: Promise<{ slug?: string[] }>;
 }
@@ -131,10 +149,11 @@ export default async function StatsPage({ params }: Props) {
     );
   }
 
-  const [joinedSeason, playerAwards, profile] = await Promise.all([
+  const [joinedSeason, playerAwards, profile, advancementsData] = await Promise.all([
     getJoinedSeason(playerData.uuid).catch(() => null),
     fetchPlayerAwards(playerData.uuid),
     getPlayerProfile(playerData.uuid).catch(() => null),
+    fetchPlayerAdvancements(playerData.uuid),
   ]);
 
   // Convert proxy scores format to what PlayerStatsPage expects
@@ -169,6 +188,7 @@ export default async function StatsPage({ params }: Props) {
       localization={null}
       awardUnits={awardUnits}
       profile={profile}
+      advancements={advancementsData}
     />
   );
 }

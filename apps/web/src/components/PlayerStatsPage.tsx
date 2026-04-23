@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Squircle from "@/components/Squircle";
 import PlayerDetailedStats from "@/components/PlayerDetailedStats";
+import PlayerAdvancements from "@/components/PlayerAdvancements";
 import { SiTwitch, SiYoutube, SiTiktok } from "react-icons/si";
 
 interface PlayerProps {
@@ -23,6 +24,11 @@ interface PlayerProps {
         discord_username: string | null;
         channels?: Array<{ platform: string; channel_id: string; display_name: string | null }>;
     } | null;
+    advancements?: {
+        advancements: Record<string, { completed: boolean; completed_at: number | null }>;
+        total: number;
+        completed: number;
+    } | null;
 }
 
 export default function PlayerStatsPage(props: PlayerProps) {
@@ -38,11 +44,11 @@ export default function PlayerStatsPage(props: PlayerProps) {
         );
     }
 
-    const { nickname, uuid, rank, points, gold, silver, bronze, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile } = props;
+    const { nickname, uuid, rank, points, gold, silver, bronze, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile, advancements: advancementsData } = props;
 
     return (
         <div className="min-h-screen pt-16 lg:pt-24 pb-16">
-            <div className="container mx-auto px-4 max-w-4xl">
+            <div className={`container mx-auto px-4 ${advancementsData ? "max-w-6xl" : "max-w-4xl"}`}>
                 {/* Header card */}
                 <div className="relative mt-0 lg:mt-12 animate-in">
                     {profile?.channels && profile.channels.length > 0 && (
@@ -126,8 +132,23 @@ export default function PlayerStatsPage(props: PlayerProps) {
                     </Squircle>
                 </div>
 
-                {/* Detailed stats */}
-                {detailedStats && <PlayerDetailedStats stats={detailedStats} awardsById={awardsById ?? undefined} localization={localization} awardUnits={awardUnits} />}
+                {/* Two-column layout: stats left, advancements right */}
+                {advancementsData ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-[13fr_7fr] gap-4 mt-6">
+                        <div className="min-w-0">
+                            {detailedStats && <PlayerDetailedStats stats={detailedStats} awardsById={awardsById ?? undefined} localization={localization} awardUnits={awardUnits} />}
+                        </div>
+                        <div className="min-w-0">
+                            <PlayerAdvancements
+                                advancements={advancementsData.advancements}
+                                total={advancementsData.total}
+                                completed={advancementsData.completed}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    detailedStats && <PlayerDetailedStats stats={detailedStats} awardsById={awardsById ?? undefined} localization={localization} awardUnits={awardUnits} />
+                )}
 
                 {/* Back link */}
                 <div className="mt-8 text-center animate-in" style={{ animationDelay: "0.25s" }}>
