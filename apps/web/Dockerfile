@@ -53,4 +53,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["infisical", "run", "--domain", "https://eu.infisical.com", "--projectId", "bc702274-f9a0-49fd-9932-b63c23a6d702", "--", "node", "apps/web/server.js"]
+CMD INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id=${INFISICAL_CLIENT_ID} --client-secret=${INFISICAL_CLIENT_SECRET} --domain https://eu.infisical.com --silent --plain) infisical run --domain https://eu.infisical.com --env=${INFISICAL_ENV:-prod} --projectId=bc702274-f9a0-49fd-9932-b63c23a6d702 -- node apps/web/server.js
