@@ -18,7 +18,8 @@ export default async function SettingsPage({
   const params = await searchParams;
   const activeTab = (TABS.includes(params.tab as Tab) ? params.tab : "account") as Tab;
   const session = await auth();
-  const user = session!.user;
+  if (!session?.user) return null;
+  const user = session.user;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-3 pt-12 pb-6 sm:px-4 sm:pt-16 sm:pb-8">

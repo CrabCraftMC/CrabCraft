@@ -40,7 +40,8 @@ export default function PlayerDetailedStats({
     items.sort((a, b) => b.entry.value - a.entry.value);
   }
   const tabs = Object.keys(buckets);
-  const [activeTab, setActiveTab] = useState(tabs[0] || "");
+  const ALL_TAB = "__all__";
+  const [activeTab, setActiveTab] = useState(ALL_TAB);
   const [search, setSearch] = useState("");
 
   const resolveTitle = (key: string) =>
@@ -61,38 +62,60 @@ export default function PlayerDetailedStats({
 
   if (tabs.length === 0) return null;
 
-  const items = searchResults ?? buckets[activeTab] ?? [];
+  const allItems = useMemo(() => {
+    const all = Object.values(buckets).flat();
+    all.sort((a, b) => b.entry.value - a.entry.value);
+    return all;
+  }, [buckets]);
+
+  const items = searchResults ?? (activeTab === ALL_TAB ? allItems : buckets[activeTab] ?? []);
 
   return (
-    <div className="mt-6 animate-in" style={{ animationDelay: "0.3s" }}>
-      {/* Search */}
-      <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100/80 dark:bg-white/5 mb-4 max-w-md mx-auto">
-        <Search className="w-4 h-4 text-gray-400 shrink-0" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search awards..."
-          className="flex-1 text-sm bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none"
-        />
+    <div className="animate-in" style={{ animationDelay: "0.3s" }}>
+      {/* Header: label + search */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-500 pl-1">
+          Awards & Statistics
+        </p>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100/80 dark:bg-white/5 border border-gray-200 dark:border-line w-48">
+          <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search awards..."
+            className="flex-1 text-xs bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none"
+          />
+        </div>
       </div>
 
       {/* Tab bar — hidden when searching */}
       {!searchResults && (
-      <div className="flex gap-2 pb-2 mb-4 justify-center flex-wrap">
+      <div className="flex gap-1.5 pb-2 mb-4 flex-wrap">
+        <Squircle
+          cornerRadius={10}
+          onClick={() => setActiveTab(ALL_TAB)}
+          className={`px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            activeTab === ALL_TAB
+              ? "bg-orange-500 text-white"
+              : "bg-gray-200 dark:bg-[#2a221b] text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-[#3d3028]"
+          }`}
+        >
+          All
+        </Squircle>
         {tabs.map((tab) => (
           <Squircle
             key={tab}
-            cornerRadius={14}
+            cornerRadius={10}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-bold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
               activeTab === tab
                 ? "bg-orange-500 text-white"
                 : "bg-gray-200 dark:bg-[#2a221b] text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-[#3d3028]"
             }`}
           >
             {tab}
-            <span className="ml-1.5 text-xs opacity-70">{buckets[tab].length}</span>
+            <span className="ml-1 text-[10px] opacity-70">{buckets[tab].length}</span>
           </Squircle>
         ))}
       </div>
