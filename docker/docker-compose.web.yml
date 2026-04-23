@@ -1,0 +1,17 @@
+services:
+  crabcraft-web:
+    container_name: crabcraft-web
+    image: ghcr.io/crabcraftmc/web:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_ID=bc702274-f9a0-49fd-9932-b63c23a6d702
+      - INFISICAL_ENV=${INFISICAL_ENV:-prod}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
