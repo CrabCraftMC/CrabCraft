@@ -24,7 +24,7 @@ import java.util.Map;
  * {@code player_season_stats} row and the award/medal tables.
  *
  * <p>Envelope shape (published by the Spigot {@code StatsPushTask}):
- * <pre>{"serverId":"survival","uuid":"&lt;uuid&gt;","stats":&lt;raw stats object&gt;}</pre>
+ * <pre>{"season":"6","uuid":"&lt;uuid&gt;","stats":&lt;raw stats object&gt;}</pre>
  *
  * <p>Reconnects on Redis errors with a 3s backoff, same as the other
  * Redis subscribers in this plugin.
@@ -108,14 +108,12 @@ public class StatsPushSubscriber {
         }
         if (envelope == null) return;
 
-        String serverId = envelope.has("serverId")
-                ? envelope.get("serverId").getAsString() : null;
         String uuid = envelope.has("uuid")
                 ? envelope.get("uuid").getAsString() : null;
         JsonObject stats = envelope.has("stats") && envelope.get("stats").isJsonObject()
                 ? envelope.getAsJsonObject("stats") : null;
 
-        if (serverId == null || uuid == null || stats == null) {
+        if (uuid == null || stats == null) {
             logger.warn("Ignoring stats-push envelope with missing fields");
             return;
         }
@@ -139,8 +137,7 @@ public class StatsPushSubscriber {
             ComputedStats computed = StatsParser.parse(rawStatsJson);
             plugin.getPgWriter().writePlayerSeasonStats(uuid, season, computed);
         } catch (Exception e) {
-            logger.warn("Failed to write player_season_stats for uuid={} server={}",
-                    uuid, serverId, e);
+            logger.warn("Failed to write player_season_stats for uuid={}", uuid, e);
         }
 
         // Award scores + medals.
@@ -149,10 +146,9 @@ public class StatsPushSubscriber {
         if (evaluator == null || writer == null) return;
         try {
             Map<String, Double> scores = evaluator.evaluate(stats);
-            writer.writeForPlayerOnServer(uuid, season, serverId, scores);
+            writer.writeForPlayer(uuid, season, scores);
         } catch (Exception e) {
-            logger.warn("Failed to write award scores for uuid={} server={}",
-                    uuid, serverId, e);
+            logger.warn("Failed to write award scores for uuid={}", uuid, e);
         }
 
         // Advancements.
@@ -162,10 +158,9 @@ public class StatsPushSubscriber {
             AdvancementDbWriter advWriter = plugin.getAdvancementDbWriter();
             if (advWriter != null) {
                 try {
-                    advWriter.writeForPlayerOnServer(uuid, season, serverId, advancements);
+                    advWriter.writeForPlayer(uuid, season, advancements);
                 } catch (Exception e) {
-                    logger.warn("Failed to write advancements for uuid={} server={}",
-                            uuid, serverId, e);
+                    logger.warn("Failed to write advancements for uuid={}", uuid, e);
                 }
             }
         }

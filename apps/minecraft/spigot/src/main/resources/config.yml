@@ -1,15 +1,7 @@
 # CrabUtilities - Spigot Plugin Configuration
 
-# REQUIRED: Both server-id and season must be set before the plugin
-# will push any stats, awards, or advancement data.
-
-# Unique identifier for this server. Must match the backend name
-# registered in the Velocity proxy (e.g. "survival", "creative").
-server-id: ""
-
-# Season this server writes data to. SMP servers should match the
-# current season number (e.g. "6"). Permanent servers like creative
-# can use a fixed value (e.g. "creative").
+# Season this server writes data to (e.g. "6").
+# Leave empty to disable stats, awards, and advancement syncing.
 season: ""
 
 # Redis - used for publishing stats to the Velocity proxy

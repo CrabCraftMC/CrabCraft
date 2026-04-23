@@ -7,7 +7,7 @@ import {
   playerSeasonStats,
   playerAwardScores,
   awards,
-  AGGREGATE_SERVER_ID,
+  streamChannels,
 } from "../schema";
 import type {
   PlayerSeasonStats,
@@ -592,15 +592,12 @@ export interface PlayerAwardHolding {
   rank: number;
 }
 
-export const AWARD_AGGREGATE_SERVER_ID = AGGREGATE_SERVER_ID;
-
 /**
  * Per-award leaderboard, ordered by score desc. Serves /awards/[key].
  */
 export async function getAwardLeaderboard(
   awardId: string,
   season: string,
-  serverId: string = AGGREGATE_SERVER_ID,
   limit = 50,
 ): Promise<AwardLeaderboardEntry[]> {
   const rows = await db
@@ -619,7 +616,6 @@ export async function getAwardLeaderboard(
       and(
         eq(playerAwardScores.award_id, awardId),
         eq(playerAwardScores.season, season),
-        eq(playerAwardScores.server_id, serverId),
       ),
     )
     .orderBy(desc(playerAwardScores.score))
@@ -640,7 +636,6 @@ export async function getAwardLeaderboard(
  */
 export async function getAwardsSummary(
   season: string,
-  serverId: string = AGGREGATE_SERVER_ID,
 ): Promise<AwardSummaryEntry[]> {
   const rows = await db.execute(
     sql`
@@ -652,7 +647,6 @@ export async function getAwardsSummary(
       FROM player_award_scores p
       LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
       WHERE p.season = ${season}
-        AND p.server_id = ${serverId}
         AND p.score > 0
       ORDER BY p.award_id, p.score DESC
     `,
@@ -682,7 +676,6 @@ export async function getAwardsSummary(
  */
 export async function getCrownLeaderboard(
   season: string,
-  serverId: string = AGGREGATE_SERVER_ID,
   limit = 100,
 ): Promise<CrownLeaderboardEntry[]> {
   const rows = await db.execute(
@@ -705,7 +698,6 @@ export async function getCrownLeaderboard(
            + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
         FROM player_award_scores
         WHERE season = ${season}
-          AND server_id = ${serverId}
         GROUP BY minecraft_uuid
       ) c
       LEFT JOIN players u ON u.minecraft_uuid = c.minecraft_uuid
@@ -741,7 +733,6 @@ export async function getCrownLeaderboard(
 export async function getPlayerAwardHoldings(
   uuid: string,
   season: string,
-  serverId: string = AGGREGATE_SERVER_ID,
 ): Promise<PlayerAwardHolding[]> {
   const rows = await db.execute(
     sql`
@@ -754,7 +745,6 @@ export async function getPlayerAwardHoldings(
           RANK() OVER (PARTITION BY award_id ORDER BY score DESC) AS rank
         FROM player_award_scores
         WHERE season = ${season}
-          AND server_id = ${serverId}
           AND score > 0
       ) ranked
       WHERE minecraft_uuid = ${uuid} AND medal > 0
@@ -780,13 +770,12 @@ export async function getPlayerAwardHoldings(
  * Single crown-score row for a player (for their profile page).
  *
  * Computes the player's medals and their rank within the
- * (season, server_id) slice from player_award_scores in one pass.
+ * season slice from player_award_scores in one pass.
  * Returns null when the player has no medal-earning awards.
  */
 export async function getPlayerCrownScore(
   uuid: string,
   season: string,
-  serverId: string = AGGREGATE_SERVER_ID,
 ): Promise<CrownLeaderboardEntry | null> {
   const rows = await db.execute(
     sql`
@@ -801,7 +790,6 @@ export async function getPlayerCrownScore(
            + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
         FROM player_award_scores
         WHERE season = ${season}
-          AND server_id = ${serverId}
         GROUP BY minecraft_uuid
       ),
       ranked AS (
@@ -850,7 +838,6 @@ export async function getPlayerCrownScore(
 export async function getPlayerAwardScores(
   uuid: string,
   season: string,
-  serverId: string = AGGREGATE_SERVER_ID,
 ): Promise<Record<string, { rank: number; value: number }>> {
   const rows = await db.execute(
     sql`
@@ -862,7 +849,6 @@ export async function getPlayerAwardScores(
           RANK() OVER (PARTITION BY award_id ORDER BY score DESC) AS rank
         FROM player_award_scores
         WHERE season = ${season}
-          AND server_id = ${serverId}
           AND score > 0
       ) ranked
       WHERE minecraft_uuid = ${uuid}
@@ -879,20 +865,58 @@ export async function getPlayerAwardScores(
   return out;
 }
 
-/**
- * Distinct server_ids that have award data for a season, for the UI server toggle.
- * Excludes the aggregate sentinel — callers typically render it separately.
- */
-export async function getAwardServers(season: string): Promise<string[]> {
+// ── Settings page queries ─────────────────────────────────────
+
+export async function getPlayerJoinInfo(discordId: string): Promise<{ created_at: number; join_rank: number } | null> {
+  const rows = await db.execute(sql`
+    SELECT created_at, (
+      SELECT COUNT(*) + 1 FROM players p2 WHERE p2.created_at < players.created_at
+    )::integer AS join_rank
+    FROM players
+    WHERE discord_id = ${discordId}
+    LIMIT 1
+  `);
+  const row = (rows as any)[0];
+  if (!row) return null;
+  return { created_at: row.created_at, join_rank: row.join_rank };
+}
+
+export async function isUuidPrimaryAccount(minecraftUuid: string): Promise<boolean> {
   const rows = await db
-    .selectDistinct({ server_id: playerAwardScores.server_id })
-    .from(playerAwardScores)
+    .select({ discord_id: players.discord_id })
+    .from(players)
+    .where(eq(players.minecraft_uuid, minecraftUuid))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function removeStreamChannelForUser(
+  platform: string,
+  channelId: string,
+  discordUserId: string,
+): Promise<boolean> {
+  const result = await db
+    .delete(streamChannels)
     .where(
       and(
-        eq(playerAwardScores.season, season),
-        sql`${playerAwardScores.server_id} <> ${AGGREGATE_SERVER_ID}`,
+        eq(streamChannels.platform, platform),
+        eq(streamChannels.channel_id, channelId),
+        eq(streamChannels.discord_user_id, discordUserId),
       ),
-    )
-    .orderBy(asc(playerAwardScores.server_id));
-  return rows.map((r) => r.server_id);
+    );
+  return (result as any).rowCount > 0;
+}
+
+export async function getStreamChannelsForUser(
+  discordUserId: string,
+): Promise<{ id: number; platform: string; channel_id: string; display_name: string | null }[]> {
+  return db
+    .select({
+      id: streamChannels.id,
+      platform: streamChannels.platform,
+      channel_id: streamChannels.channel_id,
+      display_name: streamChannels.display_name,
+    })
+    .from(streamChannels)
+    .where(eq(streamChannels.discord_user_id, discordUserId));
 }

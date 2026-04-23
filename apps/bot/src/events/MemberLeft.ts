@@ -8,6 +8,7 @@ import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
 import { fetchPlayerName } from "../utils/mojang.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
+import { deleteAllAltsForUser } from "../utils/altDb.js";
 
 export default class MemberLeftEvent extends Event {
   constructor() {
@@ -96,6 +97,13 @@ export default class MemberLeftEvent extends Event {
       await appDb.cancelPendingApplications(member.user.id);
     } catch (error) {
       logger.error("Failed to cancel pending applications for departing member:", error);
+    }
+
+    // 5. Remove alt accounts
+    try {
+      await deleteAllAltsForUser(member.user.id);
+    } catch (error) {
+      logger.error("Failed to remove alt accounts for departing member:", error);
     }
   }
 }

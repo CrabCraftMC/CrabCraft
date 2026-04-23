@@ -24,7 +24,10 @@ import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatListener;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
+import crabcraft.net.crabUtilities.velocity.db.AltQueryService;
 import crabcraft.net.crabUtilities.velocity.update.UpdateService;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -58,6 +61,8 @@ public class CrabUtilitiesVelocity {
     private AdvancementQueryService advancementQueryService;
     private VelocityConfig config;
     private UpdateService updateService;
+    private AltQueryService altQueryService;
+    private LuckPerms luckPerms;
 
     @Inject
     public CrabUtilitiesVelocity(ProxyServer server, Logger logger,
@@ -91,6 +96,16 @@ public class CrabUtilitiesVelocity {
         this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
         this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
         this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger);
+
+        this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
+
+        try {
+            this.luckPerms = LuckPermsProvider.get();
+            logger.info("LuckPerms API connected.");
+        } catch (IllegalStateException e) {
+            logger.warn("LuckPerms not available — alt whitelist checks disabled.", e);
+            this.luckPerms = null;
+        }
 
         this.statsPushSubscriber = new StatsPushSubscriber(this, config, logger);
         this.statsPushSubscriber.start();
@@ -156,6 +171,7 @@ public class CrabUtilitiesVelocity {
         this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
         this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
         this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger);
+        this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
 
         if (statsPushSubscriber != null) {
             statsPushSubscriber.shutdown();
@@ -206,4 +222,6 @@ public class CrabUtilitiesVelocity {
     public AdvancementQueryService getAdvancementQueryService() { return advancementQueryService; }
     public VelocityConfig getConfig() { return config; }
     public UpdateService getUpdateService() { return updateService; }
+    public AltQueryService getAltQueryService() { return altQueryService; }
+    public LuckPerms getLuckPerms() { return luckPerms; }
 }

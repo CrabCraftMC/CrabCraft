@@ -3,7 +3,10 @@ package crabcraft.net.crabUtilities.velocity;
 import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
+import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.player.ServerPostConnectEvent;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.node.types.InheritanceNode;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.text.Component;
@@ -32,12 +35,44 @@ public class ConnectionListener {
             .hexCharacter('#')
             .hexColors()
             .build();
+    private static final String ALT_GROUP = "alt";
 
     private final CrabUtilitiesVelocity plugin;
     private final Set<UUID> announcedPlayers = ConcurrentHashMap.newKeySet();
 
     public ConnectionListener(CrabUtilitiesVelocity plugin) {
         this.plugin = plugin;
+    }
+
+    @Subscribe(order = PostOrder.EARLY)
+    public void onLogin(LoginEvent event) {
+        Player player = event.getPlayer();
+        LuckPerms luckPerms = plugin.getLuckPerms();
+        if (luckPerms == null) return; // LuckPerms not available
+
+        String uuid = player.getUniqueId().toString();
+        boolean isAlt = plugin.getAltQueryService().isAlt(uuid);
+
+        if (isAlt) {
+            luckPerms.getUserManager().modifyUser(player.getUniqueId(), user -> {
+                user.data().add(InheritanceNode.builder(ALT_GROUP).build());
+            }).exceptionally(e -> {
+                plugin.getLogger().error("Failed to assign '{}' group to alt {} ({})",
+                        ALT_GROUP, player.getUsername(), uuid, e);
+                return null;
+            });
+            plugin.getLogger().info("Alt account {} ({}) — assigned '{}' group",
+                    player.getUsername(), uuid, ALT_GROUP);
+        } else {
+            // Clean up stale alt group if the alt was removed from the database
+            luckPerms.getUserManager().modifyUser(player.getUniqueId(), user -> {
+                user.data().remove(InheritanceNode.builder(ALT_GROUP).build());
+            }).exceptionally(e -> {
+                plugin.getLogger().error("Failed to remove '{}' group from {} ({})",
+                        ALT_GROUP, player.getUsername(), uuid, e);
+                return null;
+            });
+        }
     }
 
     @Subscribe

@@ -26,7 +26,7 @@ import java.util.Map;
  * active players, not total player count.
  *
  * <p>Payload on channel {@code crabutilities:stats-push}:
- * <pre>{"serverId":"survival","uuid":"&lt;uuid&gt;","stats":&lt;raw contents&gt;}</pre>
+ * <pre>{"season":"6","uuid":"&lt;uuid&gt;","stats":&lt;raw contents&gt;}</pre>
  */
 public class StatsPushTask {
 
@@ -37,7 +37,6 @@ public class StatsPushTask {
     private final String host;
     private final int port;
     private final String password;
-    private final String serverId;
     private final String season;
     private final long intervalMinutes;
 
@@ -50,15 +49,14 @@ public class StatsPushTask {
         this.host = plugin.getConfig().getString("redis.host", "localhost");
         this.port = plugin.getConfig().getInt("redis.port", 6379);
         this.password = plugin.getConfig().getString("redis.password", "");
-        this.serverId = plugin.getConfig().getString("server-id", "").trim();
         this.season = plugin.getConfig().getString("season", "").trim();
         this.intervalMinutes = Math.max(1L,
                 plugin.getConfig().getLong("stats-push.interval-minutes", 5L));
     }
 
     public void start() {
-        if (serverId.isEmpty() || season.isEmpty()) {
-            plugin.getLogger().severe("Stats push DISABLED: 'server-id' and 'season' must both be set in config.yml");
+        if (season.isEmpty()) {
+            plugin.getLogger().info("Stats push DISABLED: 'season' is not set in config.yml");
             return;
         }
         JedisPoolConfig poolConfig = new JedisPoolConfig();
@@ -124,7 +122,6 @@ public class StatsPushTask {
             }
 
             JsonObject envelope = new JsonObject();
-            envelope.addProperty("serverId", serverId);
             envelope.addProperty("season", season);
             envelope.addProperty("uuid", uuid);
             envelope.add("stats", JsonParser.parseString(raw));
@@ -137,7 +134,10 @@ public class StatsPushTask {
             if (advFile.isFile()) {
                 try {
                     String advRaw = Files.readString(advFile.toPath());
-                    envelope.add("advancements", JsonParser.parseString(advRaw));
+                    JsonObject advJson = JsonParser.parseString(advRaw).getAsJsonObject();
+                    // Strip recipe unlocks — they bloat the payload and aren't real advancements
+                    advJson.keySet().removeIf(k -> k.startsWith("minecraft:recipes/"));
+                    envelope.add("advancements", advJson);
                 } catch (Exception e) {
                     // Advancement read failure is non-fatal; just skip it
                     plugin.getLogger().fine("Could not read advancements for " + uuid + ": " + e.getMessage());

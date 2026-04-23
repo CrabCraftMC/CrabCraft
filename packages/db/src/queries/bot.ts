@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../client";
-import { players, applications, streamChannels } from "../schema";
+import { players, applications, streamChannels, playerAlts } from "../schema";
 
 export interface UpsertUserData {
   discordId: string;
@@ -274,4 +274,81 @@ export async function getStreamChannelsByPlatform(
     discord_user_id: r.discord_user_id,
     display_name: r.display_name,
   }));
+}
+
+// ── Player alts ────────────────────────────────────────────────
+
+export const MAX_ALTS = 2;
+
+export interface PlayerAlt {
+  id: number;
+  discord_id: string;
+  minecraft_uuid: string;
+  minecraft_username: string;
+  created_at: number;
+}
+
+export async function addPlayerAlt(
+  discordId: string,
+  minecraftUuid: string,
+  minecraftUsername: string,
+): Promise<void> {
+  await db.insert(playerAlts).values({
+    discord_id: discordId,
+    minecraft_uuid: minecraftUuid,
+    minecraft_username: minecraftUsername,
+  });
+}
+
+export async function removePlayerAlt(
+  discordId: string,
+  minecraftUuid: string,
+): Promise<boolean> {
+  const result = await db
+    .delete(playerAlts)
+    .where(
+      and(
+        eq(playerAlts.discord_id, discordId),
+        eq(playerAlts.minecraft_uuid, minecraftUuid),
+      ),
+    );
+  return (result as any).rowCount > 0;
+}
+
+export async function getPlayerAlts(discordId: string): Promise<PlayerAlt[]> {
+  const rows = await db
+    .select()
+    .from(playerAlts)
+    .where(eq(playerAlts.discord_id, discordId));
+  return rows as PlayerAlt[];
+}
+
+export async function getAltCountForUser(discordId: string): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`COUNT(*)::INTEGER` })
+    .from(playerAlts)
+    .where(eq(playerAlts.discord_id, discordId));
+  return rows[0]?.count ?? 0;
+}
+
+export async function deleteAllAltsForUser(discordId: string): Promise<void> {
+  await db.delete(playerAlts).where(eq(playerAlts.discord_id, discordId));
+}
+
+export async function getPlayerPrimaryUuid(discordId: string): Promise<string | null> {
+  const rows = await db
+    .select({ minecraft_uuid: players.minecraft_uuid })
+    .from(players)
+    .where(eq(players.discord_id, discordId))
+    .limit(1);
+  return rows[0]?.minecraft_uuid ?? null;
+}
+
+export async function isAltUuidTaken(minecraftUuid: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: playerAlts.id })
+    .from(playerAlts)
+    .where(eq(playerAlts.minecraft_uuid, minecraftUuid))
+    .limit(1);
+  return rows.length > 0;
 }

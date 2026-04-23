@@ -60,11 +60,10 @@ public class WebServer {
             + "## Rate Limiting\\n\\n"
             + "All endpoints (except docs) are rate limited to **60 requests per minute per IP**. "
             + "Exceeding this limit returns a 429 status code.\\n\\n"
-            + "## Seasons and Servers\\n\\n"
-            + "Many endpoints accept optional `season` and `server` query parameters. "
-            + "If omitted, `season` defaults to the currently active season and `server` defaults to the cross-server aggregate. "
-            + "Seasons are identified by short IDs like `6` or `creative`. "
-            + "Server IDs match the backend server names registered in the proxy (e.g. `survival`).\\n\\n"
+            + "## Seasons\\n\\n"
+            + "Many endpoints accept an optional `season` query parameter. "
+            + "If omitted, it defaults to the currently active season. "
+            + "Seasons are identified by short IDs like `6` or `creative`.\\n\\n"
             + "## Pagination\\n\\n"
             + "Leaderboard endpoints support pagination with `limit` (max 100, default 100) and `offset` (default 0). "
             + "Paginated responses include `total`, `offset`, and `limit` fields alongside the data array.\\n\\n"
@@ -189,8 +188,7 @@ public class WebServer {
             + "\"operationId\":\"getPlayerAwards\","
             + "\"parameters\":["
             + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"},"
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"}"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}"
             + "],"
             + "\"responses\":{"
             + "\"200\":{\"description\":\"Player award data retrieved successfully\"},"
@@ -209,8 +207,7 @@ public class WebServer {
             + "\"operationId\":\"getPlayerAdvancements\","
             + "\"parameters\":["
             + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"},"
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"}"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}"
             + "],"
             + "\"responses\":{"
             + "\"200\":{\"description\":\"Player advancement data retrieved successfully\"},"
@@ -226,11 +223,10 @@ public class WebServer {
             + "\"get\":{"
             + "\"tags\":[\"Awards\"],"
             + "\"summary\":\"List all awards\","
-            + "\"description\":\"Returns every enabled award definition along with the current #1 holder for each. Awards are grouped by bucket (combat, mining, crafting, building, items, food, movement, misc) and sorted by display order within each bucket. The response also includes a list of server IDs that have award data, which can be used to populate a server filter in the UI.\","
+            + "\"description\":\"Returns every enabled award definition along with the current #1 holder for each. Awards are grouped by bucket (combat, mining, crafting, building, items, food, movement, misc) and sorted by display order within each bucket.\","
             + "\"operationId\":\"getAwards\","
             + "\"parameters\":["
-            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"}"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}"
             + "],"
             + "\"responses\":{"
             + "\"200\":{\"description\":\"Full list of awards with leader information\"},"
@@ -249,7 +245,6 @@ public class WebServer {
             + "\"parameters\":["
             + "{\"name\":\"id\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9_]+$\"},\"description\":\"Award ID (e.g. aviate, kill_any, mine_diamond_ore)\"},"
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"},"
             + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
             + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
             + "],"
@@ -270,7 +265,6 @@ public class WebServer {
             + "\"operationId\":\"getCrownLeaderboard\","
             + "\"parameters\":["
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"},"
             + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
             + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
             + "],"
@@ -291,7 +285,6 @@ public class WebServer {
             + "\"operationId\":\"getAdvancementLeaderboard\","
             + "\"parameters\":["
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
-            + "{\"name\":\"server\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Server ID. Defaults to the cross-server aggregate.\"},"
             + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
             + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
             + "],"
@@ -535,7 +528,7 @@ public class WebServer {
                 try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
                 try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                 var result = plugin.getAwardQueryService().getCrownLeaderboard(
-                        params.get("season"), params.get("server"), limit, offset);
+                        params.get("season"), limit, offset);
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
                     return;
@@ -566,7 +559,7 @@ public class WebServer {
                     }
                     var params = parseQuery(exchange.getRequestURI());
                     var result = plugin.getAwardQueryService().getPlayerAwards(
-                            uuid, params.get("season"), params.get("server"));
+                            uuid, params.get("season"));
                     if (result == null) {
                         sendError(exchange, 404, "no current season");
                         return;
@@ -588,7 +581,7 @@ public class WebServer {
                     }
                     var params = parseQuery(exchange.getRequestURI());
                     var result = plugin.getAdvancementQueryService().getPlayerAdvancements(
-                            uuid, params.get("season"), params.get("server"));
+                            uuid, params.get("season"));
                     if (result == null) {
                         sendError(exchange, 404, "no current season");
                         return;
@@ -638,7 +631,7 @@ public class WebServer {
                     try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
                     try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                     var result = plugin.getAwardQueryService().getAwardLeaderboard(
-                            awardId, params.get("season"), params.get("server"), limit, offset);
+                            awardId, params.get("season"), limit, offset);
                     if (result == null) {
                         sendError(exchange, 404, "no current season");
                         return;
@@ -653,7 +646,7 @@ public class WebServer {
 
                 // /awards — list all awards with leaders
                 var result = plugin.getAwardQueryService().getAllAwards(
-                        params.get("season"), params.get("server"));
+                        params.get("season"));
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
                     return;
@@ -676,7 +669,7 @@ public class WebServer {
                 try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
                 try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                 var result = plugin.getAdvancementQueryService().getAdvancementLeaderboard(
-                        params.get("season"), params.get("server"), limit, offset);
+                        params.get("season"), limit, offset);
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
                     return;
