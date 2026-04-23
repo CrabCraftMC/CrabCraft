@@ -151,18 +151,22 @@ public class PostgresStatsWriter {
     }
 
     /**
-     * Check if a player has ever logged into Minecraft (last_mc_login_at is set).
+     * Check if a player has ever logged into Minecraft (last_mc_login_at is set),
+     * or if the UUID belongs to a known alt account.
      */
     public boolean hasJoinedBefore(String uuid) {
-        String sql = "SELECT last_mc_login_at FROM players WHERE minecraft_uuid = ? LIMIT 1";
+        String sql = """
+                SELECT 1 FROM players WHERE minecraft_uuid = ? AND last_mc_login_at IS NOT NULL
+                UNION ALL
+                SELECT 1 FROM player_alts WHERE minecraft_uuid = ?
+                LIMIT 1
+                """;
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, uuid);
+            stmt.setString(2, uuid);
             try (java.sql.ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    rs.getInt("last_mc_login_at");
-                    return !rs.wasNull();
-                }
+                return rs.next();
             }
         } catch (SQLException e) {
             logger.error("Failed to check join status for {}", uuid, e);
