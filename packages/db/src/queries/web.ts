@@ -244,7 +244,7 @@ export async function searchUsers(
       minecraft_username: players.minecraft_username,
     })
     .from(players)
-    .where(ilike(players.minecraft_username, `%${query}%`))
+    .where(ilike(players.minecraft_username, `%${query.replace(/[%_\\]/g, (c) => '\\' + c)}%`))
     .orderBy(asc(players.minecraft_username))
     .limit(limit);
   return rows.filter(

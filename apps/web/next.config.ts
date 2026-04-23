@@ -63,6 +63,10 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://web.maxmoon.sh; img-src 'self' https://mc-heads.net https://cdn.discordapp.com https://map.crabcraft.net https://starlightskins.lunareclipse.studio; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net; font-src 'self'; frame-ancestors 'none'",
+          },
         ],
       },
     ];
