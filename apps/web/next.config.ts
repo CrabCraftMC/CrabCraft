@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    const scriptSrc =
+      process.env.NODE_ENV === "development"
+        ? "'self' 'unsafe-inline' 'unsafe-eval' https://web.maxmoon.sh"
+        : "'self' 'unsafe-inline' https://web.maxmoon.sh";
+    const csp = `default-src 'self'; script-src ${scriptSrc}; img-src 'self' data: https://mc-heads.net https://cdn.discordapp.com https://map.crabcraft.net https://starlightskins.lunareclipse.studio; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net https://web.maxmoon.sh; font-src 'self'; frame-ancestors 'none'`;
     return [
       {
         source: "/_next/static/:path*",
@@ -65,7 +70,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://web.maxmoon.sh; img-src 'self' https://mc-heads.net https://cdn.discordapp.com https://map.crabcraft.net https://starlightskins.lunareclipse.studio; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net; font-src 'self'; frame-ancestors 'none'",
+            value: csp,
           },
         ],
       },
