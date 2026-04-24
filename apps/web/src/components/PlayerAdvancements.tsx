@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { Fireworks } from "@fireworks-js/react";
 import Squircle from "@/components/Squircle";
 import advancementRegistry from "@/data/advancements.json";
+import { CATEGORY_ORDER, CATEGORY_LABELS } from "@/lib/advancementCategories";
 
 interface AdvancementData {
   completed: boolean;
@@ -24,15 +26,6 @@ interface RegistryEntry {
   icon: string;
 }
 
-
-const CATEGORY_ORDER = ["story", "nether", "end", "adventure", "husbandry"];
-const CATEGORY_LABELS: Record<string, string> = {
-  story: "Story",
-  nether: "Nether",
-  end: "End",
-  adventure: "Adventure",
-  husbandry: "Husbandry",
-};
 
 export default function PlayerAdvancements({
   advancements,
@@ -74,9 +67,12 @@ export default function PlayerAdvancements({
 
   return (
     <div className="flex flex-col gap-3 animate-in" style={{ animationDelay: "0.3s" }}>
-      <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-500 pl-1">
-        Advancements
-      </p>
+      <Link
+        href="/leaderboard/advancements"
+        className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-500 pl-1 hover:text-orange-500 dark:hover:text-orange-500 transition-colors"
+      >
+        Advancements &rarr;
+      </Link>
 
       {/* Progress summary card */}
       <div className="relative">

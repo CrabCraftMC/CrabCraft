@@ -81,25 +81,26 @@ export default async function LeaderboardPage() {
   const podiumOrder = [1, 0, 2];
 
   return (
-    <div className="min-h-screen pt-24 pb-16">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-10 animate-in">
-          <h1 className="text-4xl lg:text-5xl font-bold text-orange-500 font-mc">
-            Leaderboard
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
+    <>
+        <div className="text-center mb-10">
+          <p className="text-gray-600 dark:text-gray-400 animate-in">
             {players.length} players ranked by award points
           </p>
-          <Link
-            href="/awards"
-            className="inline-block mt-3 text-sm font-bold text-orange-500 hover:text-orange-600 transition-colors"
+          <div
+            className="mt-3 flex gap-4 justify-center flex-wrap animate-in"
+            style={{ animationDelay: "0.05s" }}
           >
-            Browse all awards &rarr;
-          </Link>
+            <Link
+              href="/awards"
+              className="text-sm font-bold text-orange-500 hover:text-orange-600 transition-colors"
+            >
+              Browse all awards &rarr;
+            </Link>
+          </div>
         </div>
 
         {top3.length > 2 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-10 max-w-7xl mx-auto">
             {podiumOrder.map((idx) => {
               const player = top3[idx];
               const style = podiumStyles[idx];
@@ -160,7 +161,7 @@ export default async function LeaderboardPage() {
         )}
 
         <div
-          className="flex justify-end mb-2 px-1 animate-in relative z-30"
+          className="flex justify-end mb-2 px-1 animate-in relative z-30 max-w-6xl mx-auto"
           style={{ animationDelay: "0.25s" }}
         >
           <div className="group relative" tabIndex={0}>
@@ -193,7 +194,7 @@ export default async function LeaderboardPage() {
 
         <Squircle
           cornerRadius={32}
-          className="bg-paper-2 shadow-sm overflow-hidden relative animate-in"
+          className="bg-paper-2 shadow-sm overflow-hidden relative animate-in max-w-6xl mx-auto"
           style={{ animationDelay: "0.25s" }}
         >
           <div className="hidden sm:grid grid-cols-10 gap-2 px-6 py-3 bg-paper/80 dark:bg-paper-2/80 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028] relative z-10">
@@ -273,7 +274,6 @@ export default async function LeaderboardPage() {
             </div>
           )}
         </Squircle>
-      </div>
-    </div>
+    </>
   );
 }

@@ -208,3 +208,112 @@ input[type="range"]::-moz-range-track {
   color: inherit;
 }
 
+/* ===== Holographic / iridescent treatment for 100% completers ===== */
+
+@keyframes holo-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+@keyframes holo-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes holo-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}
+
+/* Animated rainbow gradient background — for fills */
+.holo-bg {
+  background-image: linear-gradient(
+    115deg,
+    #ffd166 0%,
+    #ff6ec7 22%,
+    #7ee8fa 45%,
+    #b794f6 68%,
+    #ffd166 100%
+  );
+  background-size: 220% 100%;
+  animation: holo-shift 4.5s ease-in-out infinite;
+}
+
+/* Same animated gradient clipped to text glyphs, plus a subtle chromatic
+   aberration via offset text-shadows. */
+.holo-text {
+  background-image: linear-gradient(
+    115deg,
+    #ff7eb6 0%,
+    #ffd166 25%,
+    #7ee8fa 50%,
+    #b794f6 75%,
+    #ff7eb6 100%
+  );
+  background-size: 220% 100%;
+  animation: holo-shift 4.5s ease-in-out infinite;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow:
+    0.6px 0 0 rgba(255, 0, 110, 0.45),
+   -0.6px 0 0 rgba(0, 200, 255, 0.45);
+}
+
+/* Conic shimmer overlay — paint inside any positioned element by adding
+   the .holo-shimmer class. Works on top of any background via mix-blend. */
+.holo-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.holo-shimmer::before {
+  content: "";
+  position: absolute;
+  inset: -55%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 105, 180, 0.55),
+    rgba(255, 209, 102, 0.55),
+    rgba(126, 232, 250, 0.55),
+    rgba(168, 144, 255, 0.55),
+    rgba(255, 105, 180, 0.55)
+  );
+  animation: holo-spin 7s linear infinite, holo-pulse 3.5s ease-in-out infinite;
+  mix-blend-mode: color-dodge;
+  pointer-events: none;
+  z-index: 1;
+  filter: blur(14px) saturate(1.4);
+}
+.dark .holo-shimmer::before {
+  mix-blend-mode: screen;
+}
+
+/* A second, subtler chromatic-edge layer for cards with their own bg. */
+.holo-edge {
+  position: relative;
+}
+.holo-edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    115deg,
+    #ff7eb6,
+    #ffd166,
+    #7ee8fa,
+    #b794f6,
+    #ff7eb6
+  );
+  background-size: 220% 100%;
+  animation: holo-shift 4.5s ease-in-out infinite;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+
