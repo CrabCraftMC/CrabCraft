@@ -74,7 +74,7 @@ public class PostgresStatsWriter {
         config.setJdbcUrl(jdbcUrl);
         config.setUsername(username);
         config.setPassword(password);
-        config.setMaximumPoolSize(3);
+        config.setMaximumPoolSize(10);
         config.setConnectionTimeout(5000);
         config.setPoolName("CrabUtilities-PG");
         // Velocity isolates plugin classloaders, so DriverManager's
@@ -166,11 +166,20 @@ public class PostgresStatsWriter {
     }
 
     /**
-     * Check if a player has ever logged into Minecraft (last_mc_login_at is set),
-     * or if the UUID belongs to a known alt account.
+     * Check if a player has ever logged into Minecraft. Looks at:
+     *   - mc_login_history (covers every player, including unverified)
+     *   - players.last_mc_login_at (legacy, kept for safety)
+     *   - player_alts (alt accounts linked via Discord)
+     *
+     * Fail-safe: on any SQLException (pool exhaustion, slow query, DB
+     * outage) this returns {@code true}, so the join broadcaster falls
+     * through to the regular "joined the game" message rather than
+     * wrongly announcing a returning player as a first-time visitor.
      */
     public boolean hasJoinedBefore(String uuid) {
         String sql = """
+                SELECT 1 FROM mc_login_history WHERE minecraft_uuid = ?
+                UNION ALL
                 SELECT 1 FROM players WHERE minecraft_uuid = ? AND last_mc_login_at IS NOT NULL
                 UNION ALL
                 SELECT 1 FROM player_alts WHERE minecraft_uuid = ?
@@ -180,13 +189,36 @@ public class PostgresStatsWriter {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, uuid);
             stmt.setString(2, uuid);
+            stmt.setString(3, uuid);
             try (java.sql.ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }
         } catch (SQLException e) {
-            logger.error("Failed to check join status for {}", uuid, e);
+            logger.error("Failed to check join status for {} — defaulting to 'joined before' to avoid wrongly announcing them as a first-time player", uuid, e);
+            return true;
         }
-        return false;
+    }
+
+    /**
+     * Records a Minecraft login in mc_login_history. Inserts on first
+     * sight, otherwise bumps last_seen_at. Independent of Discord
+     * verification — every connecting UUID is tracked here so the
+     * "first join" check works for unverified players.
+     */
+    public void recordMcLogin(String uuid) {
+        String sql = """
+                INSERT INTO mc_login_history (minecraft_uuid, first_seen_at, last_seen_at)
+                VALUES (?, EXTRACT(EPOCH FROM NOW())::INTEGER, EXTRACT(EPOCH FROM NOW())::INTEGER)
+                ON CONFLICT (minecraft_uuid) DO UPDATE SET
+                    last_seen_at = EXTRACT(EPOCH FROM NOW())::INTEGER
+                """;
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Failed to record mc login for {}", uuid, e);
+        }
     }
 
     /**

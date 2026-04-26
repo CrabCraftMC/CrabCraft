@@ -244,6 +244,22 @@ export const streamChannels = pgTable(
   ],
 );
 
+// ── mc_login_history ───────────────────────────────────────────
+// Tracks every Minecraft login by UUID, independent of Discord
+// verification status. Used by the Velocity proxy to decide
+// whether a connecting player should see the "first join"
+// message — works for unverified players who have no row in
+// `players` or `player_alts`.
+export const mcLoginHistory = pgTable("mc_login_history", {
+  minecraft_uuid: text("minecraft_uuid").primaryKey(),
+  first_seen_at: integer("first_seen_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  last_seen_at: integer("last_seen_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
 // ── player_alts ────────────────────────────────────────────────
 // Alt Minecraft accounts linked by whitelisted players via the
 // Discord bot. Velocity checks this table on each proxy join to

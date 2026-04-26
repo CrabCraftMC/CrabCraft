@@ -153,33 +153,50 @@ public class ConnectionListener {
     private void broadcastJoin(Player player) {
         if (!player.isActive()) return;
 
-        boolean firstJoin = !plugin.getPgWriter().hasJoinedBefore(player.getUniqueId().toString());
-
-        Component displayName = getDisplayName(player);
-        String inGameFormat = firstJoin
-                ? plugin.getConfig().getFirstJoinFormat()
-                : "<yellow><name> joined the game</yellow>";
-        Component message = MINI_MESSAGE.deserialize(inGameFormat,
-                Placeholder.component("name", displayName),
-                Placeholder.unparsed("username", player.getUsername())
-        );
-        broadcast(message);
-        announcedPlayers.add(player.getUniqueId());
-
-        String discordFormat = firstJoin
-                ? plugin.getConfig().getDiscordFirstJoinFormat()
-                : plugin.getConfig().getDiscordJoinFormat();
-        String discordMsg = formatDiscord(discordFormat, player, null);
-        plugin.getDiscordWebhook().send(discordMsg);
-
-        // Update player info in PostgreSQL (also sets last_mc_login_at)
-        final String playerUuid = player.getUniqueId().toString();
+        // Run the DB lookup and per-join writes off-thread so a slow
+        // Postgres response (up to the Hikari connectionTimeout) doesn't
+        // stall the broadcast. Player.sendMessage and MiniMessage are
+        // thread-safe, so we can broadcast directly from the async block.
+        final UUID playerId = player.getUniqueId();
+        final String playerUuid = playerId.toString();
         final String playerName = player.getUsername();
         CompletableFuture.runAsync(() -> {
-            String plain = plugin.getNicknameCache().getPlainNickname(player.getUniqueId());
-            String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
+            boolean firstJoin = !plugin.getPgWriter().hasJoinedBefore(playerUuid);
+
+            // Player may have disconnected during the lookup — skip the
+            // broadcast in that case so we don't announce a join for
+            // someone who's no longer here.
+            if (!player.isActive()) return;
+
+            // Atomic check-and-add: if a previous in-flight task already
+            // announced this UUID (rapid disconnect/reconnect), skip.
+            if (!announcedPlayers.add(playerId)) return;
+
+            Component displayName = getDisplayName(player);
+            String inGameFormat = firstJoin
+                    ? plugin.getConfig().getFirstJoinFormat()
+                    : "<yellow><name> joined the game</yellow>";
+            Component message = MINI_MESSAGE.deserialize(inGameFormat,
+                    Placeholder.component("name", displayName),
+                    Placeholder.unparsed("username", player.getUsername())
+            );
+            broadcast(message);
+
+            String discordFormat = firstJoin
+                    ? plugin.getConfig().getDiscordFirstJoinFormat()
+                    : plugin.getConfig().getDiscordJoinFormat();
+            String discordMsg = formatDiscord(discordFormat, player, null);
+            plugin.getDiscordWebhook().send(discordMsg);
+
+            // Update player info in PostgreSQL (also sets last_mc_login_at).
+            // Order matters: must run after hasJoinedBefore captured the
+            // boolean above, otherwise the player would record their own
+            // first login as a prior visit.
+            String plain = plugin.getNicknameCache().getPlainNickname(playerId);
+            String raw = plugin.getNicknameCache().getRawNickname(playerId);
             plugin.getPgWriter().upsertPlayer(playerUuid, playerName, plain, raw);
             plugin.getPgWriter().upsertAltUsername(playerUuid, playerName);
+            plugin.getPgWriter().recordMcLogin(playerUuid);
         });
     }
 

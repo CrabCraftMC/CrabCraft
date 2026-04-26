@@ -2,6 +2,8 @@ package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
+import crabcraft.net.crabUtilities.voicechat.CrabVoicechatPlugin;
+import de.maxhenkel.voicechat.api.BukkitVoicechatService;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -14,6 +16,7 @@ public final class CrabUtilities extends JavaPlugin {
     private ResourcePackManager resourcePackManager;
     private StatsPushTask statsPushTask;
     private UpdateService updateService;
+    private CrabVoicechatPlugin voicechatPlugin;
 
     @Override
     public void onEnable() {
@@ -77,6 +80,16 @@ public final class CrabUtilities extends JavaPlugin {
         this.statsPushTask = new StatsPushTask(this);
         statsPushTask.start();
 
+        // Simple Voice Chat integration: creates 3 persistent open groups
+        // (Global #1/2/3) once the SVC server starts. Soft dependency —
+        // skipped silently if the SVC plugin isn't installed.
+        BukkitVoicechatService voicechatService = getServer().getServicesManager().load(BukkitVoicechatService.class);
+        if (voicechatService != null) {
+            this.voicechatPlugin = new CrabVoicechatPlugin(getLogger());
+            voicechatService.registerPlugin(voicechatPlugin);
+            getLogger().info("Registered Simple Voice Chat plugin");
+        }
+
         getLogger().info("CrabUtilities enabled. EssentialsX present: " + (essentials != null));
     }
 
@@ -103,6 +116,9 @@ public final class CrabUtilities extends JavaPlugin {
         }
         if (updateService != null) {
             updateService.shutdown();
+        }
+        if (voicechatPlugin != null) {
+            getServer().getServicesManager().unregister(voicechatPlugin);
         }
     }
 }
