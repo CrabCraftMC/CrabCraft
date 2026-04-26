@@ -170,6 +170,11 @@ public class PostgresStatsWriter {
      *   - mc_login_history (covers every player, including unverified)
      *   - players.last_mc_login_at (legacy, kept for safety)
      *   - player_alts (alt accounts linked via Discord)
+     *
+     * Fail-safe: on any SQLException (pool exhaustion, slow query, DB
+     * outage) this returns {@code true}, so the join broadcaster falls
+     * through to the regular "joined the game" message rather than
+     * wrongly announcing a returning player as a first-time visitor.
      */
     public boolean hasJoinedBefore(String uuid) {
         String sql = """
@@ -189,9 +194,9 @@ public class PostgresStatsWriter {
                 return rs.next();
             }
         } catch (SQLException e) {
-            logger.error("Failed to check join status for {}", uuid, e);
+            logger.error("Failed to check join status for {} — defaulting to 'joined before' to avoid wrongly announcing them as a first-time player", uuid, e);
+            return true;
         }
-        return false;
     }
 
     /**
