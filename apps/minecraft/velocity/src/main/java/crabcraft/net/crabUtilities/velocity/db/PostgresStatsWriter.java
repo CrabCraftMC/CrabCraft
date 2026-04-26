@@ -74,7 +74,7 @@ public class PostgresStatsWriter {
         config.setJdbcUrl(jdbcUrl);
         config.setUsername(username);
         config.setPassword(password);
-        config.setMaximumPoolSize(3);
+        config.setMaximumPoolSize(10);
         config.setConnectionTimeout(5000);
         config.setPoolName("CrabUtilities-PG");
         // Velocity isolates plugin classloaders, so DriverManager's
