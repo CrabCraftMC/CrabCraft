@@ -48,7 +48,7 @@ function linearToSrgb(c: number): number {
   return Math.round(Math.min(255, Math.max(0, s * 255)));
 }
 
-async function applyBiomeTint(buffer: Buffer, hexTint: string): Promise<Buffer> {
+async function applyBiomeTint(buffer: Buffer<ArrayBufferLike>, hexTint: string): Promise<Buffer> {
   const r = parseInt(hexTint.slice(1, 3), 16);
   const g = parseInt(hexTint.slice(3, 5), 16);
   const b = parseInt(hexTint.slice(5, 7), 16);
@@ -109,7 +109,7 @@ async function main() {
 
           // Ensure subdirectory exists (some textures have paths like "deepslate/...")
           mkdirSync(dirname(outPath), { recursive: true });
-          let buffer = Buffer.from(await res.arrayBuffer());
+          let buffer: Buffer<ArrayBufferLike> = Buffer.from(await res.arrayBuffer());
           if (BIOME_TINTS[texture]) {
             buffer = await applyBiomeTint(buffer, BIOME_TINTS[texture]);
           }
