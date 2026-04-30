@@ -8,6 +8,7 @@
 import { readFileSync, mkdirSync, existsSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import sharp from "sharp";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,6 +21,56 @@ interface Block {
   name: string;
   color: string;
   texture: string;
+}
+
+// Mojang ships leaves as grayscale PNGs intended for runtime biome tinting.
+// Bake a representative tint into the local PNG so the static-color pipeline
+// (compute-block-colors.ts) and the picker thumbnails show real green leaves.
+// Tints are linear-RGB multipliers (sRGB hex → linear when applied).
+const BIOME_TINTS: Record<string, string> = {
+  leaves_oak_opaque: "#77AB2F",
+  leaves_jungle_opaque: "#59C93C",
+  leaves_acacia_opaque: "#77AB2F",
+  leaves_big_oak_opaque: "#59AE30",
+  leaves_spruce_opaque: "#619961",
+  leaves_birch_opaque: "#80A755",
+  mangrove_leaves_opaque: "#71A047",
+};
+
+function srgbToLinear(c: number): number {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+function linearToSrgb(c: number): number {
+  const s =
+    c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  return Math.round(Math.min(255, Math.max(0, s * 255)));
+}
+
+async function applyBiomeTint(buffer: Buffer, hexTint: string): Promise<Buffer> {
+  const r = parseInt(hexTint.slice(1, 3), 16);
+  const g = parseInt(hexTint.slice(3, 5), 16);
+  const b = parseInt(hexTint.slice(5, 7), 16);
+  const tR = srgbToLinear(r);
+  const tG = srgbToLinear(g);
+  const tB = srgbToLinear(b);
+
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const out = Buffer.from(data);
+  for (let i = 0; i < out.length; i += 4) {
+    out[i] = linearToSrgb(srgbToLinear(out[i]) * tR);
+    out[i + 1] = linearToSrgb(srgbToLinear(out[i + 1]) * tG);
+    out[i + 2] = linearToSrgb(srgbToLinear(out[i + 2]) * tB);
+  }
+  return await sharp(out, {
+    raw: { width: info.width, height: info.height, channels: 4 },
+  })
+    .png()
+    .toBuffer();
 }
 
 async function main() {
@@ -58,7 +109,10 @@ async function main() {
 
           // Ensure subdirectory exists (some textures have paths like "deepslate/...")
           mkdirSync(dirname(outPath), { recursive: true });
-          const buffer = Buffer.from(await res.arrayBuffer());
+          let buffer = Buffer.from(await res.arrayBuffer());
+          if (BIOME_TINTS[texture]) {
+            buffer = await applyBiomeTint(buffer, BIOME_TINTS[texture]);
+          }
           writeFileSync(outPath, buffer);
           downloaded++;
         } catch {

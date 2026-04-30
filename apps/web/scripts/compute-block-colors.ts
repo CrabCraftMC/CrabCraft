@@ -1,21 +1,31 @@
 /**
- * Compute accurate average colors for all blocks by downloading their
- * actual textures from the Mojang bedrock-samples repo and averaging
- * pixel colors in linear RGB space (gamma-corrected).
+ * Compute accurate average colors for all blocks by reading the local
+ * texture PNGs (under public/textures/blocks) and averaging pixel colors
+ * in linear RGB space (gamma-corrected). Local files are used so any
+ * download-time post-processing (e.g. biome tinting in download-textures.ts)
+ * is reflected in the computed colors.
+ *
+ * Run scripts/download-textures.ts first to ensure textures are present.
  *
  * Usage: bun run scripts/compute-block-colors.ts
  */
 
 import sharp from "sharp";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const TEXTURE_BASE =
-  "https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/textures/blocks";
+const TEXTURE_DIR = resolve(
+  fileURLToPath(import.meta.url),
+  "..",
+  "..",
+  "public",
+  "textures",
+  "blocks"
+);
 
 interface Block {
   id: string;
@@ -48,14 +58,12 @@ function rgbToHex(r: number, g: number, b: number): string {
 }
 
 async function computeAverageColor(
-  textureUrl: string
+  texturePath: string
 ): Promise<string | null> {
   try {
-    const res = await fetch(textureUrl);
-    if (!res.ok) return null;
+    if (!existsSync(texturePath)) return null;
 
-    const buffer = Buffer.from(await res.arrayBuffer());
-    const { data } = await sharp(buffer)
+    const { data } = await sharp(texturePath)
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
@@ -105,8 +113,8 @@ async function main() {
     const batch = blocks.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(
       batch.map(async (block) => {
-        const url = `${TEXTURE_BASE}/${block.texture}.png`;
-        const color = await computeAverageColor(url);
+        const path = resolve(TEXTURE_DIR, `${block.texture}.png`);
+        const color = await computeAverageColor(path);
         return { block, color };
       })
     );

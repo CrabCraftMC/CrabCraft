@@ -1870,5 +1870,77 @@
     "name": "Crafter",
     "color": "#827769",
     "texture": "crafter_south"
+  },
+  {
+    "id": "grass_block",
+    "name": "Grass Block",
+    "color": "#837344",
+    "texture": "grass_side_carried"
+  },
+  {
+    "id": "oak_leaves",
+    "name": "Oak Leaves",
+    "color": "#3C5914",
+    "texture": "leaves_oak_opaque"
+  },
+  {
+    "id": "spruce_leaves",
+    "name": "Spruce Leaves",
+    "color": "#264026",
+    "texture": "leaves_spruce_opaque"
+  },
+  {
+    "id": "birch_leaves",
+    "name": "Birch Leaves",
+    "color": "#3B4D25",
+    "texture": "leaves_birch_opaque"
+  },
+  {
+    "id": "jungle_leaves",
+    "name": "Jungle Leaves",
+    "color": "#30701C",
+    "texture": "leaves_jungle_opaque"
+  },
+  {
+    "id": "acacia_leaves",
+    "name": "Acacia Leaves",
+    "color": "#3C5814",
+    "texture": "leaves_acacia_opaque"
+  },
+  {
+    "id": "dark_oak_leaves",
+    "name": "Dark Oak Leaves",
+    "color": "#2E5F16",
+    "texture": "leaves_big_oak_opaque"
+  },
+  {
+    "id": "mangrove_leaves",
+    "name": "Mangrove Leaves",
+    "color": "#354D1E",
+    "texture": "mangrove_leaves_opaque"
+  },
+  {
+    "id": "cherry_leaves",
+    "name": "Cherry Leaves",
+    "color": "#E6A8C6",
+    "texture": "cherry_leaves_opaque"
+  },
+  {
+    "id": "pale_oak_leaves",
+    "name": "Pale Oak Leaves",
+    "color": "#71766F",
+    "texture": "pale_oak_leaves_opaque"
+  },
+  {
+    "id": "azalea_leaves",
+    "name": "Azalea Leaves",
+    "color": "#566E2B",
+    "texture": "azalea_leaves_opaque"
+  },
+  {
+    "id": "flowering_azalea_leaves",
+    "name": "Flowering Azalea Leaves",
+    "color": "#646C4C",
+    "texture": "azalea_leaves_flowers_opaque"
   }
 ]
