@@ -42,7 +42,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.thisBackend = plugin.getConfig().getString("voicechat.cross-server.this-backend", "");
         List<String> configured = plugin.getConfig().getStringList("voicechat.cross-server.persistent-groups");
         this.persistentGroupNames = configured.isEmpty()
-                ? List.of("Global #1 (cross server)", "Global #2 (cross server)", "Global #3 (cross server)")
+                ? List.of("Global #1", "Global #2", "Global #3")
                 : configured;
     }
 
