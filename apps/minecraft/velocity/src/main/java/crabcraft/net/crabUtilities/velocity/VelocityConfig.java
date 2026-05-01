@@ -55,6 +55,8 @@ public class VelocityConfig {
     private final boolean updateIncludePrereleases;
     private final String updateGithubRepo;
     private final String updateGithubToken;
+    private final boolean voicechatCrossServerEnabled;
+    private final long voicechatPlayerHomeTtlSeconds;
 
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
                            String redisChannel, String staffChatFormat,
@@ -69,7 +71,9 @@ public class VelocityConfig {
                            String dbUrl, String dbUsername, String dbPassword,
                            boolean updateEnabled, long updateCheckIntervalHours,
                            boolean updateIncludePrereleases,
-                           String updateGithubRepo, String updateGithubToken) {
+                           String updateGithubRepo, String updateGithubToken,
+                           boolean voicechatCrossServerEnabled,
+                           long voicechatPlayerHomeTtlSeconds) {
         this.redisHost = redisHost;
         this.redisPort = redisPort;
         this.redisPassword = redisPassword;
@@ -98,6 +102,8 @@ public class VelocityConfig {
         this.updateIncludePrereleases = updateIncludePrereleases;
         this.updateGithubRepo = updateGithubRepo;
         this.updateGithubToken = updateGithubToken;
+        this.voicechatCrossServerEnabled = voicechatCrossServerEnabled;
+        this.voicechatPlayerHomeTtlSeconds = voicechatPlayerHomeTtlSeconds;
     }
 
     public static VelocityConfig load(Path dataDirectory, Logger logger) {
@@ -182,13 +188,18 @@ public class VelocityConfig {
             String updateRepo = update.node("github-repo").getString("CrabCraftMC/CrabCraft");
             String updateToken = update.node("github-token").getString("");
 
+            ConfigurationNode voicechat = root.node("voicechat", "cross-server");
+            boolean vcEnabled = voicechat.node("enabled").getBoolean(true);
+            long vcHomeTtl = voicechat.node("player-home-ttl-seconds").getLong(300L);
+
             return new VelocityConfig(host, port, password, channel, format,
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
                     msgOutgoing, msgIncoming, msgNotFound, msgNoReply, msgSelf, apiPort,
                     ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
-                    updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken);
+                    updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken,
+                    vcEnabled, vcHomeTtl);
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT,
@@ -199,7 +210,8 @@ public class VelocityConfig {
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
                     "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "",
-                    true, 6L, false, "CrabCraftMC/CrabCraft", "");
+                    true, 6L, false, "CrabCraftMC/CrabCraft", "",
+                    true, 300L);
         }
     }
 
@@ -231,4 +243,6 @@ public class VelocityConfig {
     public boolean isUpdateIncludePrereleases() { return updateIncludePrereleases; }
     public String getUpdateGithubRepo() { return updateGithubRepo; }
     public String getUpdateGithubToken() { return updateGithubToken; }
+    public boolean isVoicechatCrossServerEnabled() { return voicechatCrossServerEnabled; }
+    public long getVoicechatPlayerHomeTtlSeconds() { return voicechatPlayerHomeTtlSeconds; }
 }

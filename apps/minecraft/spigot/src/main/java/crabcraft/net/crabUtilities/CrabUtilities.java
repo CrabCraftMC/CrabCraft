@@ -80,12 +80,12 @@ public final class CrabUtilities extends JavaPlugin {
         this.statsPushTask = new StatsPushTask(this);
         statsPushTask.start();
 
-        // Simple Voice Chat integration: creates 3 persistent open groups
-        // (Global #1/2/3) once the SVC server starts. Soft dependency —
-        // skipped silently if the SVC plugin isn't installed.
+        // Simple Voice Chat integration: creates persistent open groups with
+        // deterministic UUIDs and bridges voice across backends via Redis.
+        // Soft dependency — skipped silently if the SVC plugin isn't installed.
         BukkitVoicechatService voicechatService = getServer().getServicesManager().load(BukkitVoicechatService.class);
         if (voicechatService != null) {
-            this.voicechatPlugin = new CrabVoicechatPlugin(getLogger());
+            this.voicechatPlugin = new CrabVoicechatPlugin(this);
             voicechatService.registerPlugin(voicechatPlugin);
             getLogger().info("Registered Simple Voice Chat plugin");
         }
@@ -118,6 +118,7 @@ public final class CrabUtilities extends JavaPlugin {
             updateService.shutdown();
         }
         if (voicechatPlugin != null) {
+            voicechatPlugin.shutdown();
             getServer().getServicesManager().unregister(voicechatPlugin);
         }
     }

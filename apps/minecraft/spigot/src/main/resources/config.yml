@@ -32,3 +32,26 @@ auto-update:
   notify-ops: true
   github-repo: "CrabCraftMC/CrabCraft"
   github-token: ""
+
+# Simple Voice Chat cross-server bridge.
+# Mirrors voice groups across all backend servers and forwards opus
+# frames over Redis so players on different backends can talk in the
+# same group. Requires Redis (uses the same connection as stats-push).
+voicechat:
+  cross-server:
+    # Toggle the whole bridge. If false, voice still works locally on
+    # each backend (native SVC behaviour) but groups don't sync.
+    enabled: true
+    # Velocity-side server name for THIS backend. Must match the name
+    # configured in velocity.toml's [servers] section. Used so the
+    # receiver can verify that frames claiming to come from "this
+    # backend" really originated here, preventing a brief audio glitch
+    # when a player switches servers while talking.
+    this-backend: ""
+    # Persistent open groups created automatically with deterministic
+    # UUIDs so all backends have the same group IDs and they appear
+    # in every player's GUI list.
+    persistent-groups:
+      - "Global #1"
+      - "Global #2"
+      - "Global #3"
