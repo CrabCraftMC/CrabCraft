@@ -4,6 +4,19 @@ redis:
   password: ""
   channel: "crabutilities:staffchat"
 
+# Simple Voice Chat cross-server bridge — Velocity side.
+# This proxy plugin tracks which backend each player is on and writes
+# the answer to a short-TTL Redis key so backends can validate the
+# origin of inbound voice frames during the brief window when a
+# player is mid-switch between servers.
+voicechat:
+  cross-server:
+    enabled: true
+    # TTL for the player-home Redis key, in seconds. Keep this longer
+    # than the typical server-switch window so the key never expires
+    # for an active player. Refreshed on every server switch.
+    player-home-ttl-seconds: 300
+
 api:
   port: 8080
 

@@ -32,7 +32,7 @@ dependencies {
     compileOnly("net.essentialsx:EssentialsX:2.20.1")
     compileOnly("net.kyori:adventure-text-serializer-legacy:4.17.0")
     compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
-    compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.27")
+    compileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     implementation("redis.clients:jedis:5.1.0")
 }
 

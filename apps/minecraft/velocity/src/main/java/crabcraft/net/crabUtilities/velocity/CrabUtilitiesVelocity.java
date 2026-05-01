@@ -24,6 +24,7 @@ import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.ReplyCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
+import crabcraft.net.crabUtilities.velocity.voicechat.PlayerLocationTracker;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatListener;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
@@ -51,6 +52,7 @@ public class CrabUtilitiesVelocity {
     private final Path dataDirectory;
 
     private RedisStaffChat redisStaffChat;
+    private PlayerLocationTracker playerLocationTracker;
     private StaffChatManager staffChatManager;
     private MessageManager messageManager;
     private WebServer webServer;
@@ -144,6 +146,13 @@ public class CrabUtilitiesVelocity {
         server.getEventManager().register(this, new StaffChatListener(this));
         server.getEventManager().register(this, new ConnectionListener(this));
 
+        if (config.isVoicechatCrossServerEnabled()) {
+            this.playerLocationTracker = new PlayerLocationTracker(this, config);
+            this.playerLocationTracker.start();
+            server.getEventManager().register(this, playerLocationTracker);
+            logger.info("Voice cross-server location tracker enabled.");
+        }
+
         logger.info("CrabUtilities Velocity enabled.");
     }
 
@@ -157,6 +166,9 @@ public class CrabUtilitiesVelocity {
         }
         if (redisStaffChat != null) {
             redisStaffChat.shutdown();
+        }
+        if (playerLocationTracker != null) {
+            playerLocationTracker.shutdown();
         }
         if (pgWriter != null) {
             pgWriter.close();
@@ -205,6 +217,16 @@ public class CrabUtilitiesVelocity {
         }
         this.redisStaffChat = new RedisStaffChat(this, config);
         this.redisStaffChat.start();
+
+        if (playerLocationTracker != null) {
+            playerLocationTracker.shutdown();
+            this.playerLocationTracker = null;
+        }
+        if (config.isVoicechatCrossServerEnabled()) {
+            this.playerLocationTracker = new PlayerLocationTracker(this, config);
+            this.playerLocationTracker.start();
+            server.getEventManager().register(this, playerLocationTracker);
+        }
 
         this.discordWebhook = new DiscordWebhook(config.getDiscordWebhookUrl(), logger);
         this.staffChatDiscordWebhook = new DiscordWebhook(config.getStaffChatDiscordWebhookUrl(), logger);
