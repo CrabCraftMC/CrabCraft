@@ -37,7 +37,7 @@ class MembershipTracker {
     void onLeaveGroupEvent(LeaveGroupEvent event) {
         VoicechatConnection conn = event.getConnection();
         if (conn == null) return;
-        Group group = conn.getGroup();
+        Group group = event.getGroup();
         if (group == null) return;
         removeLocal(group.getId(), conn.getPlayer().getUuid());
     }
