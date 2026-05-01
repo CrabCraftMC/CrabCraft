@@ -10,12 +10,14 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MessageManager {
 
     public static final UUID CONSOLE_UUID = new UUID(0L, 0L);
+    public static final String SOCIALSPY_PERMISSION = "crabutilities.socialspy";
     private static final String CONSOLE_NAME = "Console";
 
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
@@ -27,6 +29,7 @@ public class MessageManager {
 
     private final CrabUtilitiesVelocity plugin;
     private final Map<UUID, UUID> replyTargets = new ConcurrentHashMap<>();
+    private final Set<UUID> socialSpies = ConcurrentHashMap.newKeySet();
 
     public MessageManager(CrabUtilitiesVelocity plugin) {
         this.plugin = plugin;
@@ -57,9 +60,47 @@ public class MessageManager {
         replyTargets.put(senderId, target.getUniqueId());
         replyTargets.put(target.getUniqueId(), senderId);
 
+        broadcastToSpies(senderComponent, targetComponent, message, senderId, target.getUniqueId());
+
         String plainSender = PlainTextComponentSerializer.plainText().serialize(senderComponent);
         String plainTarget = PlainTextComponentSerializer.plainText().serialize(targetComponent);
         plugin.getLogger().info("[MSG] {} -> {}: {}", plainSender, plainTarget, message);
+    }
+
+    private void broadcastToSpies(Component senderComponent, Component targetComponent,
+                                  String message, UUID senderId, UUID targetId) {
+        if (socialSpies.isEmpty()) return;
+
+        Component spyMessage = MINI_MESSAGE.deserialize(plugin.getConfig().getMsgSpyFormat(),
+                Placeholder.component("sender", senderComponent),
+                Placeholder.component("target", targetComponent),
+                Placeholder.unparsed("message", message)
+        );
+
+        for (UUID spyId : socialSpies) {
+            if (spyId.equals(senderId) || spyId.equals(targetId)) continue;
+            plugin.getServer().getPlayer(spyId).ifPresent(spy -> {
+                if (spy.hasPermission(SOCIALSPY_PERMISSION)) {
+                    spy.sendMessage(spyMessage);
+                }
+            });
+        }
+    }
+
+    public boolean toggleSpy(UUID uuid) {
+        if (socialSpies.remove(uuid)) {
+            return false;
+        }
+        socialSpies.add(uuid);
+        return true;
+    }
+
+    public boolean isSpying(UUID uuid) {
+        return socialSpies.contains(uuid);
+    }
+
+    public void clearSpy(UUID uuid) {
+        socialSpies.remove(uuid);
     }
 
     public UUID getReplyTarget(UUID uuid) {

@@ -23,6 +23,7 @@ import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.ReplyCommand;
+import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
 import crabcraft.net.crabUtilities.velocity.voicechat.PlayerLocationTracker;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
@@ -141,6 +142,7 @@ public class CrabUtilitiesVelocity {
         StaffChatToggleCommand.register(this);
         MsgCommand.register(this);
         ReplyCommand.register(this);
+        SocialSpyCommand.register(this);
         ReloadCommand.register(this);
 
         server.getEventManager().register(this, new StaffChatListener(this));

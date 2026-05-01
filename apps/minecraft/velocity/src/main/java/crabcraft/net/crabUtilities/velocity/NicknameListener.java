@@ -56,6 +56,7 @@ public class NicknameListener {
         plugin.getNicknameCache().remove(uuid);
         if (plugin.getMessageManager() != null) {
             plugin.getMessageManager().clearReplyTargets(uuid);
+            plugin.getMessageManager().clearSpy(uuid);
         }
     }
 }

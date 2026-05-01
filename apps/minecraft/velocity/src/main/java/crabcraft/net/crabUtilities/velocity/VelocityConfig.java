@@ -20,6 +20,8 @@ public class VelocityConfig {
             "<gold>(to <target>) <white><message>";
     private static final String DEFAULT_MSG_INCOMING =
             "<gold>(from <sender>) <white><message>";
+    private static final String DEFAULT_MSG_SPY =
+            "<gray>[SPY] (<sender> → <target>) <white><message>";
     private static final String DEFAULT_MSG_PLAYER_NOT_FOUND =
             "<red>Player not found or not online.";
     private static final String DEFAULT_MSG_NO_REPLY_TARGET =
@@ -36,6 +38,7 @@ public class VelocityConfig {
     private final String staffChatDiscordAvatarUrl;
     private final String msgOutgoingFormat;
     private final String msgIncomingFormat;
+    private final String msgSpyFormat;
     private final String msgPlayerNotFound;
     private final String msgNoReplyTarget;
     private final String msgSelfError;
@@ -62,6 +65,7 @@ public class VelocityConfig {
                            String redisChannel, String staffChatFormat,
                            String staffChatDiscordWebhookUrl, String staffChatDiscordAvatarUrl,
                            String msgOutgoingFormat, String msgIncomingFormat,
+                           String msgSpyFormat,
                            String msgPlayerNotFound, String msgNoReplyTarget,
                            String msgSelfError, int apiPort,
                            List<String> ignoredServers, String firstJoinFormat,
@@ -83,6 +87,7 @@ public class VelocityConfig {
         this.staffChatDiscordAvatarUrl = staffChatDiscordAvatarUrl;
         this.msgOutgoingFormat = msgOutgoingFormat;
         this.msgIncomingFormat = msgIncomingFormat;
+        this.msgSpyFormat = msgSpyFormat;
         this.msgPlayerNotFound = msgPlayerNotFound;
         this.msgNoReplyTarget = msgNoReplyTarget;
         this.msgSelfError = msgSelfError;
@@ -152,6 +157,7 @@ public class VelocityConfig {
             ConfigurationNode msgNode = root.node("private-messages");
             String msgOutgoing = msgNode.node("outgoing-format").getString(DEFAULT_MSG_OUTGOING);
             String msgIncoming = msgNode.node("incoming-format").getString(DEFAULT_MSG_INCOMING);
+            String msgSpy = msgNode.node("spy-format").getString(DEFAULT_MSG_SPY);
             String msgNotFound = msgNode.node("player-not-found").getString(DEFAULT_MSG_PLAYER_NOT_FOUND);
             String msgNoReply = msgNode.node("no-reply-target").getString(DEFAULT_MSG_NO_REPLY_TARGET);
             String msgSelf = msgNode.node("self-error").getString(DEFAULT_MSG_SELF);
@@ -194,7 +200,7 @@ public class VelocityConfig {
 
             return new VelocityConfig(host, port, password, channel, format,
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
-                    msgOutgoing, msgIncoming, msgNotFound, msgNoReply, msgSelf, apiPort,
+                    msgOutgoing, msgIncoming, msgSpy, msgNotFound, msgNoReply, msgSelf, apiPort,
                     ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
@@ -204,8 +210,8 @@ public class VelocityConfig {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT,
                     "", "https://mc-heads.net/head/{uuid}",
-                    DEFAULT_MSG_OUTGOING, DEFAULT_MSG_INCOMING, DEFAULT_MSG_PLAYER_NOT_FOUND,
-                    DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF, 8080,
+                    DEFAULT_MSG_OUTGOING, DEFAULT_MSG_INCOMING, DEFAULT_MSG_SPY,
+                    DEFAULT_MSG_PLAYER_NOT_FOUND, DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF, 8080,
                     List.of(), "<yellow><name> joined the game for the first time</yellow>",
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
@@ -224,6 +230,7 @@ public class VelocityConfig {
     public String getStaffChatDiscordAvatarUrl() { return staffChatDiscordAvatarUrl; }
     public String getMsgOutgoingFormat() { return msgOutgoingFormat; }
     public String getMsgIncomingFormat() { return msgIncomingFormat; }
+    public String getMsgSpyFormat() { return msgSpyFormat; }
     public String getMsgPlayerNotFound() { return msgPlayerNotFound; }
     public String getMsgNoReplyTarget() { return msgNoReplyTarget; }
     public String getMsgSelfError() { return msgSelfError; }
