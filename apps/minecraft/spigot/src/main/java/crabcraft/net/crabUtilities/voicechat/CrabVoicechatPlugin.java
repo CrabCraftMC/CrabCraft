@@ -39,7 +39,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private RosterTracker roster;
     private SvcPacketSender svcPackets;
     private SkinSyncer skinSyncer;
-    private BukkitTask heartbeatTask;
+    private BukkitTask rosterRebroadcastTask;
+    private BukkitTask aliveTask;
+    private BukkitTask sweepTask;
     private Set<UUID> crossServerGroupIds = Set.of();
 
     public CrabVoicechatPlugin(CrabUtilities plugin) {
@@ -124,15 +126,56 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
         audioRelay.start();
 
-        // Heartbeat: every 30s broadcast our current local roster so other
-        // backends can reconcile and drop stale entries from us if we crash.
-        heartbeatTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
-                () -> bus.publishRoster(roster.buildOurHeartbeat()),
+        // Re-broadcast the full local roster every 30s. Each entry carries
+        // the player's profile blob, so any backend that comes online late
+        // will learn about all existing members within 30s without anyone
+        // needing to re-join. (This replaces the older bare heartbeat which
+        // only carried (group, player) pairs and so could only reconcile,
+        // never backfill — a cold-start gap that left late backends with
+        // empty GUI rosters.)
+        rosterRebroadcastTask = Bukkit.getScheduler().runTaskTimer(plugin,
+                this::rebroadcastLocalRoster,
                 20L * 30L, 20L * 30L);
+
+        // Tiny aliveness ping — tells other backends we're up so they don't
+        // sweep our entries on the 90s timeout.
+        aliveTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
+                () -> bus.publishRoster(VoiceMessages.encodeBackendAlive(thisBackend)),
+                20L * 5L, 20L * 30L);
+
+        // Sweep stale backends every 30s — anyone we haven't heard a ping
+        // from in 90s gets their members dropped from our local GUI.
+        sweepTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
+                () -> roster.sweepStaleBackends(),
+                20L * 60L, 20L * 30L);
 
         logger.info("Cross-server voice bridge started (backend='" + thisBackend + "', "
                 + crossServerGroupIds.size() + " groups, skins="
                 + (skinSyncer.isAvailable() ? "real" : "default") + ")");
+    }
+
+    /**
+     * Re-publish a {@code ROSTER_JOIN} for every local member of every
+     * cross-server group. Runs on the main thread because it needs to
+     * call {@link Player#getPlayerProfile()}; the actual Redis publish
+     * is async via {@link RedisVoiceBus#publishRoster}.
+     */
+    private void rebroadcastLocalRoster() {
+        if (bus == null || membership == null) return;
+        int count = 0;
+        for (UUID groupId : crossServerGroupIds) {
+            for (UUID localId : membership.getLocalMembers(groupId)) {
+                Player p = Bukkit.getPlayer(localId);
+                if (p == null || !p.isOnline()) continue;
+                ProfileCodec.Snapshot snapshot = ProfileCodec.capture(p);
+                bus.publishRoster(VoiceMessages.encodeRosterJoin(
+                        groupId, localId, thisBackend, ProfileCodec.encode(snapshot)));
+                count++;
+            }
+        }
+        if (count > 0) {
+            logger.fine("Rebroadcast roster (" + count + " entries)");
+        }
     }
 
     private void onJoinGroup(JoinGroupEvent event) {
@@ -145,18 +188,24 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (!crossServerGroupIds.contains(group.getId())) return;
 
         UUID playerId = event.getConnection().getPlayer().getUuid();
-        Player bukkitPlayer = Bukkit.getPlayer(playerId);
-        if (bukkitPlayer == null) return;
+        UUID groupId = group.getId();
 
-        // 1) Tell other backends we have a new local member of this group.
-        ProfileCodec.Snapshot snapshot = ProfileCodec.capture(bukkitPlayer);
-        bus.publishRoster(VoiceMessages.encodeRosterJoin(group.getId(), playerId,
-                thisBackend, ProfileCodec.encode(snapshot)));
+        // SVC fires JoinGroupEvent on its own network thread. Bukkit API
+        // calls (getPlayer, getPlayerProfile) aren't safe off the main
+        // thread on Paper, so hop over for the profile capture; the
+        // actual Redis publish is already async inside RedisVoiceBus.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Player bukkitPlayer = Bukkit.getPlayer(playerId);
+            if (bukkitPlayer == null) return;
 
-        // 2) Catch the new joiner up with the existing remote roster on
-        //    the next tick (event currently runs on a non-main thread).
-        Bukkit.getScheduler().runTask(plugin,
-                () -> roster.catchUpNewLocalJoiner(group.getId(), bukkitPlayer));
+            ProfileCodec.Snapshot snapshot = ProfileCodec.capture(bukkitPlayer);
+            bus.publishRoster(VoiceMessages.encodeRosterJoin(
+                    groupId, playerId, thisBackend, ProfileCodec.encode(snapshot)));
+            logger.info("Roster published: " + bukkitPlayer.getName()
+                    + " joined " + groupId);
+
+            roster.catchUpNewLocalJoiner(groupId, bukkitPlayer);
+        });
     }
 
     private void onLeaveGroup(LeaveGroupEvent event) {
@@ -190,8 +239,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     /** Public hook so {@link CrabUtilities#onDisable()} can release resources. */
     public void shutdown() {
-        if (heartbeatTask != null) {
-            try { heartbeatTask.cancel(); } catch (Exception ignored) {}
+        for (BukkitTask task : new BukkitTask[]{rosterRebroadcastTask, aliveTask, sweepTask}) {
+            if (task != null) {
+                try { task.cancel(); } catch (Exception ignored) {}
+            }
         }
         // Tell other backends our local players are leaving (best-effort).
         if (bus != null && membership != null) {

@@ -54,6 +54,19 @@ class AudioRelay {
     private final Map<UUID, ChannelEntry> channels = new ConcurrentHashMap<>();
     private final Map<UUID, PlayerHomeCache> playerHomeCache = new ConcurrentHashMap<>();
 
+    /** Speakers we've successfully relayed at least one frame for — used
+     *  to log a single INFO line on first relay so the operator can see
+     *  the cross-server audio path is working without per-frame spam. */
+    private final Set<UUID> firstRelayLogged = ConcurrentHashMap.newKeySet();
+
+    /** Speakers we've already complained about a null-channel for, so we
+     *  don't spam the log on every retry. Cleared on successful create. */
+    private final Set<UUID> nullChannelLogged = ConcurrentHashMap.newKeySet();
+
+    /** Speakers we've already logged an origin-mismatch drop for, again
+     *  for log-spam control. Cleared on first matching frame. */
+    private final Set<UUID> originMismatchLogged = ConcurrentHashMap.newKeySet();
+
     private BukkitTask evictionTask;
 
     AudioRelay(CrabUtilities plugin, RedisVoiceBus bus, MembershipTracker membership,
@@ -129,14 +142,44 @@ class AudioRelay {
         if (thisBackend.equals(frame.homeBackend())) return;
         // Single-writer guarantee: only the speaker's actual current
         // home backend (per Velocity) is allowed to publish for them.
-        if (!isAuthoritativeOrigin(frame.speaker(), frame.homeBackend())) return;
+        if (!isAuthoritativeOrigin(frame.speaker(), frame.homeBackend())) {
+            if (originMismatchLogged.add(frame.speaker())) {
+                PlayerHomeCache cached = playerHomeCache.get(frame.speaker());
+                String actual = cached == null ? "null" : cached.homeBackend();
+                logger.warning("Dropping audio frame: speaker " + frame.speaker()
+                        + " claims home='" + frame.homeBackend()
+                        + "' but Velocity says home='" + actual
+                        + "'. (Likely cause: voicechat.cross-server.this-backend on the "
+                        + "speaker's backend doesn't match its name in velocity.toml. "
+                        + "Names are case-sensitive.)");
+            }
+            return;
+        }
+        // Re-arm the mismatch logger so we'd warn again if it starts flapping.
+        originMismatchLogged.remove(frame.speaker());
 
         Set<UUID> localTargets = membership.getLocalMembers(groupId);
         if (localTargets.isEmpty()) return;
 
-        ChannelEntry entry = channels.computeIfAbsent(frame.speaker(),
-                id -> new ChannelEntry(createChannel(id)));
-        if (entry.channel == null) return;
+        // Get-or-create channel without caching null. If createChannel
+        // fails (e.g. the API rejects the speaker's UUID for some reason),
+        // we fall through and try again on the next frame instead of
+        // silently dropping audio for 60s.
+        ChannelEntry entry = channels.get(frame.speaker());
+        if (entry == null || entry.channel == null) {
+            StaticAudioChannel ch = createChannel(frame.speaker());
+            if (ch == null) {
+                if (nullChannelLogged.add(frame.speaker())) {
+                    logger.warning("StaticAudioChannel.create returned null for speaker "
+                            + frame.speaker() + " — audio for this player will be dropped "
+                            + "until the API accepts the channel ID. Will retry every frame.");
+                }
+                return;
+            }
+            nullChannelLogged.remove(frame.speaker());
+            entry = new ChannelEntry(ch);
+            channels.put(frame.speaker(), entry);
+        }
 
         // Refresh targets every frame — cheap, and avoids stale state when
         // a local listener leaves the group mid-conversation.
@@ -144,8 +187,13 @@ class AudioRelay {
         entry.lastUsed = System.currentTimeMillis();
         try {
             entry.channel.send(frame.opus());
+            if (firstRelayLogged.add(frame.speaker())) {
+                logger.info("Now relaying audio from " + frame.speaker()
+                        + " (backend='" + frame.homeBackend() + "') to "
+                        + localTargets.size() + " local listener(s)");
+            }
         } catch (Exception e) {
-            logger.fine(() -> "Audio send failed for " + frame.speaker() + ": " + e.getMessage());
+            logger.warning("Audio send failed for " + frame.speaker() + ": " + e.getMessage());
         }
     }
 
@@ -160,6 +208,9 @@ class AudioRelay {
             try { entry.channel.flush(); } catch (Exception ignored) {}
         }
         playerHomeCache.remove(speakerId);
+        firstRelayLogged.remove(speakerId);
+        nullChannelLogged.remove(speakerId);
+        originMismatchLogged.remove(speakerId);
     }
 
     void onPlayerDisconnect(PlayerDisconnectedEvent event) {

@@ -22,6 +22,9 @@ import java.util.logging.Logger;
  */
 class RosterTracker {
 
+    /** Time without a BACKEND_ALIVE ping before we drop a backend's entries. */
+    private static final long BACKEND_TIMEOUT_MS = 90_000L;
+
     private final CrabUtilities plugin;
     private final MembershipTracker membership;
     private final SvcPacketSender svcPackets;
@@ -33,8 +36,8 @@ class RosterTracker {
     /** groupId -> playerId -> remote member metadata. */
     private final Map<UUID, Map<UUID, RemoteMember>> remoteByGroup = new ConcurrentHashMap<>();
 
-    /** When was the last heartbeat seen from each backend (millis). */
-    private final Map<String, Long> lastHeartbeatAt = new ConcurrentHashMap<>();
+    /** When was the last BACKEND_ALIVE ping seen from each backend (millis). */
+    private final Map<String, Long> lastSeenAt = new ConcurrentHashMap<>();
 
     RosterTracker(CrabUtilities plugin, MembershipTracker membership,
                   SvcPacketSender svcPackets, SkinSyncer skinSyncer,
@@ -57,7 +60,7 @@ class RosterTracker {
         switch (op) {
             case VoiceMessages.OP_ROSTER_JOIN -> handleJoin(message);
             case VoiceMessages.OP_ROSTER_LEAVE -> handleLeave(message);
-            case VoiceMessages.OP_ROSTER_HEARTBEAT -> handleHeartbeat(message);
+            case VoiceMessages.OP_BACKEND_ALIVE -> handleBackendAlive(message);
             default -> {}
         }
     }
@@ -65,22 +68,29 @@ class RosterTracker {
     private void handleJoin(String message) {
         VoiceMessages.RosterJoin join = VoiceMessages.decodeRosterJoin(message);
         if (join == null) return;
-        // Ignore our own broadcasts; we already injected packets locally
-        // when we sent ROSTER_JOIN, plus clients on this backend already
-        // get the PlayerStatePacket from native SVC.
         if (thisBackend.equals(join.backend())) return;
         if (!crossServerGroupIds.contains(join.groupId())) return;
 
         ProfileCodec.Snapshot snapshot = ProfileCodec.decode(join.encodedProfile());
         if (snapshot == null) return;
 
+        // Treat the receipt as an aliveness signal too — saves a tick.
+        lastSeenAt.put(join.backend(), System.currentTimeMillis());
+
+        Map<UUID, RemoteMember> groupMap = remoteByGroup
+                .computeIfAbsent(join.groupId(), k -> new ConcurrentHashMap<>());
+        RemoteMember existing = groupMap.get(snapshot.uuid());
         RemoteMember member = new RemoteMember(snapshot.uuid(), snapshot.name(),
                 snapshot, join.backend());
-        remoteByGroup
-                .computeIfAbsent(join.groupId(), k -> new ConcurrentHashMap<>())
-                .put(snapshot.uuid(), member);
 
-        // Push to every local player currently in this group.
+        // Dedupe: if we already had this same (group, player, backend, profile)
+        // entry, this is a periodic re-broadcast — silently update the
+        // bookkeeping without re-pushing PlayerInfoUpdate to local listeners.
+        if (existing != null && existing.equals(member)) return;
+
+        groupMap.put(snapshot.uuid(), member);
+        logger.info("Roster join: " + snapshot.name() + " (" + snapshot.uuid()
+                + ") in group " + join.groupId() + " from backend '" + join.backend() + "'");
         Bukkit.getScheduler().runTask(plugin,
                 () -> pushMemberToLocalListeners(join.groupId(), member));
     }
@@ -101,38 +111,55 @@ class RosterTracker {
                 () -> removeMemberFromLocalListeners(leave.groupId(), removed));
     }
 
-    private void handleHeartbeat(String message) {
-        VoiceMessages.RosterHeartbeat hb = VoiceMessages.decodeRosterHeartbeat(message);
-        if (hb == null) return;
-        if (thisBackend.equals(hb.backend())) return;
-        lastHeartbeatAt.put(hb.backend(), System.currentTimeMillis());
+    private void handleBackendAlive(String message) {
+        String backend = VoiceMessages.decodeBackendAlive(message);
+        if (backend == null || thisBackend.equals(backend)) return;
+        lastSeenAt.put(backend, System.currentTimeMillis());
+    }
 
-        // Reconcile: drop any tracked entries for this backend that AREN'T in
-        // the heartbeat. Catches the kill -9 case where leaves never fired.
-        Set<String> liveKeys = new java.util.HashSet<>();
-        for (UUID[] pair : hb.groupPlayerPairs()) {
-            liveKeys.add(pair[0] + ":" + pair[1]);
-        }
-        List<UUID[]> toRemove = new ArrayList<>();
-        for (Map.Entry<UUID, Map<UUID, RemoteMember>> entry : remoteByGroup.entrySet()) {
-            for (Map.Entry<UUID, RemoteMember> m : entry.getValue().entrySet()) {
-                if (!hb.backend().equals(m.getValue().backend())) continue;
-                String key = entry.getKey() + ":" + m.getKey();
-                if (!liveKeys.contains(key)) {
-                    toRemove.add(new UUID[]{entry.getKey(), m.getKey()});
+    /**
+     * Drops every roster entry from backends we haven't heard from in
+     * {@link #BACKEND_TIMEOUT_MS}. Called from a periodic timer in the
+     * plugin so that a {@code kill -9}'d backend doesn't leave its
+     * members hanging in the UI forever.
+     */
+    void sweepStaleBackends() {
+        long now = System.currentTimeMillis();
+        Set<String> dead = new java.util.HashSet<>();
+        for (Map.Entry<UUID, Map<UUID, RemoteMember>> g : remoteByGroup.entrySet()) {
+            for (RemoteMember m : g.getValue().values()) {
+                Long seenAt = lastSeenAt.get(m.backend());
+                if (seenAt == null || now - seenAt > BACKEND_TIMEOUT_MS) {
+                    dead.add(m.backend());
                 }
             }
         }
-        for (UUID[] pair : toRemove) {
-            Map<UUID, RemoteMember> g = remoteByGroup.get(pair[0]);
-            if (g == null) continue;
-            RemoteMember removed = g.remove(pair[1]);
-            if (g.isEmpty()) remoteByGroup.remove(pair[0]);
-            if (removed != null) {
-                final UUID groupId = pair[0];
-                Bukkit.getScheduler().runTask(plugin,
-                        () -> removeMemberFromLocalListeners(groupId, removed));
+        if (dead.isEmpty()) return;
+
+        for (String backend : dead) {
+            logger.info("Roster sweep: backend '" + backend
+                    + "' hasn't pinged in " + (BACKEND_TIMEOUT_MS / 1000)
+                    + "s — dropping its members from local GUI");
+            List<UUID[]> toRemove = new ArrayList<>();
+            for (Map.Entry<UUID, Map<UUID, RemoteMember>> g : remoteByGroup.entrySet()) {
+                for (Map.Entry<UUID, RemoteMember> m : g.getValue().entrySet()) {
+                    if (backend.equals(m.getValue().backend())) {
+                        toRemove.add(new UUID[]{g.getKey(), m.getKey()});
+                    }
+                }
             }
+            for (UUID[] pair : toRemove) {
+                Map<UUID, RemoteMember> g = remoteByGroup.get(pair[0]);
+                if (g == null) continue;
+                RemoteMember removed = g.remove(pair[1]);
+                if (g.isEmpty()) remoteByGroup.remove(pair[0]);
+                if (removed != null) {
+                    final UUID groupId = pair[0];
+                    Bukkit.getScheduler().runTask(plugin,
+                            () -> removeMemberFromLocalListeners(groupId, removed));
+                }
+            }
+            lastSeenAt.remove(backend);
         }
     }
 
@@ -148,18 +175,6 @@ class RosterTracker {
         for (RemoteMember m : members.values()) {
             sendMemberTo(joiner, groupId, m);
         }
-    }
-
-    /* ----------------------- Heartbeat (we publish ours every 30s) --- */
-
-    String buildOurHeartbeat() {
-        List<UUID[]> pairs = new ArrayList<>();
-        for (UUID groupId : crossServerGroupIds) {
-            for (UUID playerId : membership.getLocalMembers(groupId)) {
-                pairs.add(new UUID[]{groupId, playerId});
-            }
-        }
-        return VoiceMessages.encodeRosterHeartbeat(thisBackend, pairs);
     }
 
     /* ----------------------- Internals ----------------------- */
@@ -196,7 +211,7 @@ class RosterTracker {
             }
         }
         remoteByGroup.clear();
-        lastHeartbeatAt.clear();
+        lastSeenAt.clear();
     }
 
     record RemoteMember(UUID uuid, String name, ProfileCodec.Snapshot profile, String backend) {

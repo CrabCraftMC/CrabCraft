@@ -2,9 +2,7 @@ package crabcraft.net.crabUtilities.voicechat;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -28,7 +26,7 @@ final class VoiceMessages {
 
     static final String OP_ROSTER_JOIN = "ROSTER_JOIN";
     static final String OP_ROSTER_LEAVE = "ROSTER_LEAVE";
-    static final String OP_ROSTER_HEARTBEAT = "ROSTER_HEARTBEAT";
+    static final String OP_BACKEND_ALIVE = "BACKEND_ALIVE";
 
     private VoiceMessages() {}
 
@@ -133,36 +131,17 @@ final class VoiceMessages {
     record RosterLeave(UUID groupId, UUID playerId, String backend) {}
 
     /**
-     * {@code ROSTER_HEARTBEAT<NUL>backend<NUL>group:player[,group:player...]}
-     * Used to reconcile after a backend crash — receivers drop entries
-     * from {@code backend} that aren't in the heartbeat list.
+     * {@code BACKEND_ALIVE<NUL>backend} — small periodic ping so other
+     * backends know we're still up. After 90s without a ping from a
+     * backend, receivers drop all roster entries from that backend.
      */
-    static String encodeRosterHeartbeat(String backend, List<UUID[]> groupPlayerPairs) {
-        StringBuilder pairs = new StringBuilder();
-        for (int i = 0; i < groupPlayerPairs.size(); i++) {
-            if (i > 0) pairs.append(',');
-            UUID[] pair = groupPlayerPairs.get(i);
-            pairs.append(pair[0]).append(':').append(pair[1]);
-        }
-        return String.join(SEP, OP_ROSTER_HEARTBEAT, backend, pairs.toString());
+    static String encodeBackendAlive(String backend) {
+        return String.join(SEP, OP_BACKEND_ALIVE, backend);
     }
 
-    static RosterHeartbeat decodeRosterHeartbeat(String message) {
+    static String decodeBackendAlive(String message) {
         String[] parts = message.split(SEP, -1);
-        if (parts.length < 3) return null;
-        String backend = parts[1];
-        List<UUID[]> pairs = new ArrayList<>();
-        if (!parts[2].isEmpty()) {
-            for (String pair : parts[2].split(",")) {
-                String[] gp = pair.split(":", 2);
-                if (gp.length != 2) continue;
-                try {
-                    pairs.add(new UUID[]{UUID.fromString(gp[0]), UUID.fromString(gp[1])});
-                } catch (IllegalArgumentException ignored) {}
-            }
-        }
-        return new RosterHeartbeat(backend, pairs);
+        if (parts.length < 2) return null;
+        return parts[1];
     }
-
-    record RosterHeartbeat(String backend, List<UUID[]> groupPlayerPairs) {}
 }
