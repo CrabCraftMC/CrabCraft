@@ -53,6 +53,7 @@ public class CrabUtilitiesVelocity {
     private NicknameCache nicknameCache;
     private PendingJoinManager pendingJoinManager;
     private DiscordWebhook discordWebhook;
+    private DiscordWebhook staffChatDiscordWebhook;
     private StatsPushSubscriber statsPushSubscriber;
     private PostgresStatsWriter pgWriter;
     private AwardEvaluator awardEvaluator;
@@ -82,6 +83,7 @@ public class CrabUtilitiesVelocity {
         this.nicknameCache = new NicknameCache();
         this.pendingJoinManager = new PendingJoinManager();
         this.discordWebhook = new DiscordWebhook(config.getDiscordWebhookUrl(), logger);
+        this.staffChatDiscordWebhook = new DiscordWebhook(config.getStaffChatDiscordWebhookUrl(), logger);
 
         server.getChannelRegistrar().register(MinecraftChannelIdentifier.from("crabutilities:nicknames"));
         server.getEventManager().register(this, new NicknameListener(this));
@@ -119,7 +121,8 @@ public class CrabUtilitiesVelocity {
         this.redisStaffChat = new RedisStaffChat(this, config);
         this.redisStaffChat.start();
 
-        this.staffChatManager = new StaffChatManager(this, redisStaffChat);
+        this.staffChatManager = new StaffChatManager(this, redisStaffChat,
+                staffChatDiscordWebhook, config.getStaffChatDiscordAvatarUrl());
 
         this.updateService = new UpdateService(this);
         if (config.isUpdateEnabled()) {
@@ -195,8 +198,10 @@ public class CrabUtilitiesVelocity {
         this.redisStaffChat = new RedisStaffChat(this, config);
         this.redisStaffChat.start();
 
-        this.staffChatManager = new StaffChatManager(this, redisStaffChat);
         this.discordWebhook = new DiscordWebhook(config.getDiscordWebhookUrl(), logger);
+        this.staffChatDiscordWebhook = new DiscordWebhook(config.getStaffChatDiscordWebhookUrl(), logger);
+        this.staffChatManager = new StaffChatManager(this, redisStaffChat,
+                staffChatDiscordWebhook, config.getStaffChatDiscordAvatarUrl());
 
         if (updateService != null) {
             updateService.shutdown();

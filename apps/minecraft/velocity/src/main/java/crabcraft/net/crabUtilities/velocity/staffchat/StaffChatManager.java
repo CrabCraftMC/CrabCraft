@@ -2,6 +2,8 @@ package crabcraft.net.crabUtilities.velocity.staffchat;
 
 import com.velocitypowered.api.proxy.Player;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
+import crabcraft.net.crabUtilities.velocity.DiscordWebhook;
+import crabcraft.net.crabUtilities.velocity.NicknameCache;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -24,11 +26,16 @@ public class StaffChatManager {
 
     private final CrabUtilitiesVelocity plugin;
     private final RedisStaffChat redis;
+    private final DiscordWebhook discordWebhook;
+    private final String discordAvatarUrlTemplate;
     private final Set<UUID> disabledPlayers = ConcurrentHashMap.newKeySet();
 
-    public StaffChatManager(CrabUtilitiesVelocity plugin, RedisStaffChat redis) {
+    public StaffChatManager(CrabUtilitiesVelocity plugin, RedisStaffChat redis,
+                            DiscordWebhook discordWebhook, String discordAvatarUrlTemplate) {
         this.plugin = plugin;
         this.redis = redis;
+        this.discordWebhook = discordWebhook;
+        this.discordAvatarUrlTemplate = discordAvatarUrlTemplate;
     }
 
     public boolean hasPermission(Player player) {
@@ -49,7 +56,22 @@ public class StaffChatManager {
     }
 
     public void sendMessage(String senderName, String message) {
+        sendMessage(senderName, null, message);
+    }
+
+    public void sendMessage(String senderName, UUID senderUuid, String message) {
         redis.publish(senderName, message);
+        sendToDiscord(senderName, senderUuid, message);
+    }
+
+    private void sendToDiscord(String senderName, UUID senderUuid, String message) {
+        if (discordWebhook == null) return;
+        String plainName = NicknameCache.stripColors(senderName);
+        String avatarUrl = null;
+        if (senderUuid != null && discordAvatarUrlTemplate != null && !discordAvatarUrlTemplate.isEmpty()) {
+            avatarUrl = discordAvatarUrlTemplate.replace("{uuid}", senderUuid.toString());
+        }
+        discordWebhook.send(message, plainName, avatarUrl);
     }
 
     public void displayMessage(String senderName, String message) {

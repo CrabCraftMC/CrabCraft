@@ -29,7 +29,12 @@ public class NicknameCache {
     public String getPlainNickname(UUID uuid) {
         String raw = nicknames.get(uuid);
         if (raw == null) return null;
-        return COLOR_PATTERN.matcher(raw).replaceAll("");
+        return stripColors(raw);
+    }
+
+    public static String stripColors(String text) {
+        if (text == null) return null;
+        return COLOR_PATTERN.matcher(text).replaceAll("");
     }
 
     public void remove(UUID uuid) {
