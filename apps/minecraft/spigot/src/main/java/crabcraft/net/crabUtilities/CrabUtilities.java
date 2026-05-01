@@ -55,6 +55,11 @@ public final class CrabUtilities extends JavaPlugin {
         NicknameSync nicknameSync = new NicknameSync(this);
         getServer().getMessenger().registerIncomingPluginChannel(this, "crabutilities:nicknames", nicknameSync);
 
+        // SVC plugin-message channels — required to inject fake PlayerStatePackets
+        // for cross-server group GUI roster.
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "voicechat:state");
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "voicechat:remove_state");
+
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PackJoinListener(this), this);
