@@ -21,7 +21,8 @@ public class StaffChatCommand {
 
                             String senderName;
                             if (source instanceof Player player) {
-                                senderName = player.getUsername();
+                                String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
+                                senderName = raw != null ? raw : player.getUsername();
                             } else {
                                 senderName = "Console";
                             }

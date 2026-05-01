@@ -31,6 +31,8 @@ public class StaffChatListener {
         if (staffMessage.isEmpty()) return;
 
         event.setResult(PlayerChatEvent.ChatResult.denied());
-        manager.sendMessage(player.getUsername(), staffMessage);
+        String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
+        String senderName = raw != null ? raw : player.getUsername();
+        manager.sendMessage(senderName, staffMessage);
     }
 }

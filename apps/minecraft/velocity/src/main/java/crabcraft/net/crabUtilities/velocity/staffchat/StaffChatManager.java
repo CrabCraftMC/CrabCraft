@@ -5,6 +5,8 @@ import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.util.Set;
 import java.util.UUID;
@@ -14,6 +16,11 @@ public class StaffChatManager {
 
     private static final String PERMISSION = "crabutilities.staffchat";
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
+            .character('§')
+            .hexCharacter('#')
+            .hexColors()
+            .build();
 
     private final CrabUtilitiesVelocity plugin;
     private final RedisStaffChat redis;
@@ -47,8 +54,9 @@ public class StaffChatManager {
 
     public void displayMessage(String senderName, String message) {
         String format = plugin.getRedisStaffChat().getConfig().getStaffChatFormat();
+        Component senderComponent = LEGACY_SERIALIZER.deserialize(senderName.replace('&', '§'));
         Component component = MINI_MESSAGE.deserialize(format,
-                Placeholder.unparsed("sender", senderName),
+                Placeholder.component("sender", senderComponent),
                 Placeholder.unparsed("message", message)
         );
 
@@ -58,7 +66,8 @@ public class StaffChatManager {
             }
         }
 
-        plugin.getLogger().info("[StaffChat] {}: {}", senderName, message);
+        String plainSender = PlainTextComponentSerializer.plainText().serialize(senderComponent);
+        plugin.getLogger().info("[StaffChat] {}: {}", plainSender, message);
     }
 
     public String getPermission() {
