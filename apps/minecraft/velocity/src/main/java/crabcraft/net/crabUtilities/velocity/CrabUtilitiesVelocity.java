@@ -20,6 +20,9 @@ import crabcraft.net.crabUtilities.velocity.advancements.AdvancementQueryService
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementRegistry;
 import crabcraft.net.crabUtilities.velocity.awards.AwardSeeder;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
+import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
+import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
+import crabcraft.net.crabUtilities.velocity.messaging.ReplyCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatListener;
@@ -49,6 +52,7 @@ public class CrabUtilitiesVelocity {
 
     private RedisStaffChat redisStaffChat;
     private StaffChatManager staffChatManager;
+    private MessageManager messageManager;
     private WebServer webServer;
     private NicknameCache nicknameCache;
     private PendingJoinManager pendingJoinManager;
@@ -124,6 +128,8 @@ public class CrabUtilitiesVelocity {
         this.staffChatManager = new StaffChatManager(this, redisStaffChat,
                 staffChatDiscordWebhook, config.getStaffChatDiscordAvatarUrl());
 
+        this.messageManager = new MessageManager(this);
+
         this.updateService = new UpdateService(this);
         if (config.isUpdateEnabled()) {
             updateService.start();
@@ -131,6 +137,8 @@ public class CrabUtilitiesVelocity {
 
         StaffChatCommand.register(this);
         StaffChatToggleCommand.register(this);
+        MsgCommand.register(this);
+        ReplyCommand.register(this);
         ReloadCommand.register(this);
 
         server.getEventManager().register(this, new StaffChatListener(this));
@@ -218,6 +226,7 @@ public class CrabUtilitiesVelocity {
     public Logger getLogger() { return logger; }
     public Path getDataDirectory() { return dataDirectory; }
     public StaffChatManager getStaffChatManager() { return staffChatManager; }
+    public MessageManager getMessageManager() { return messageManager; }
     public RedisStaffChat getRedisStaffChat() { return redisStaffChat; }
     public NicknameCache getNicknameCache() { return nicknameCache; }
     public PendingJoinManager getPendingJoinManager() { return pendingJoinManager; }

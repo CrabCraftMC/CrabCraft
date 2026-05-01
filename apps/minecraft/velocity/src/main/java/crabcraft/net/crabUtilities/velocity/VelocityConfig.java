@@ -16,6 +16,16 @@ public class VelocityConfig {
 
     private static final String DEFAULT_FORMAT =
             "<dark_gray>[<aqua>SC</aqua>]</dark_gray> <gray><sender></gray> <dark_gray>></dark_gray> <white><message></white>";
+    private static final String DEFAULT_MSG_OUTGOING =
+            "<gold>(to <target>) <white><message>";
+    private static final String DEFAULT_MSG_INCOMING =
+            "<gold>(from <sender>) <white><message>";
+    private static final String DEFAULT_MSG_PLAYER_NOT_FOUND =
+            "<red>Player not found or not online.";
+    private static final String DEFAULT_MSG_NO_REPLY_TARGET =
+            "<red>You have no one to reply to.";
+    private static final String DEFAULT_MSG_SELF =
+            "<red>You can't message yourself.";
 
     private final String redisHost;
     private final int redisPort;
@@ -24,6 +34,11 @@ public class VelocityConfig {
     private final String staffChatFormat;
     private final String staffChatDiscordWebhookUrl;
     private final String staffChatDiscordAvatarUrl;
+    private final String msgOutgoingFormat;
+    private final String msgIncomingFormat;
+    private final String msgPlayerNotFound;
+    private final String msgNoReplyTarget;
+    private final String msgSelfError;
     private final int apiPort;
     private final List<String> ignoredServers;
     private final String firstJoinFormat;
@@ -44,7 +59,9 @@ public class VelocityConfig {
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
                            String redisChannel, String staffChatFormat,
                            String staffChatDiscordWebhookUrl, String staffChatDiscordAvatarUrl,
-                           int apiPort,
+                           String msgOutgoingFormat, String msgIncomingFormat,
+                           String msgPlayerNotFound, String msgNoReplyTarget,
+                           String msgSelfError, int apiPort,
                            List<String> ignoredServers, String firstJoinFormat,
                            String discordWebhookUrl, String discordJoinFormat,
                            String discordLeaveFormat, String discordSwapFormat,
@@ -60,6 +77,11 @@ public class VelocityConfig {
         this.staffChatFormat = staffChatFormat;
         this.staffChatDiscordWebhookUrl = staffChatDiscordWebhookUrl;
         this.staffChatDiscordAvatarUrl = staffChatDiscordAvatarUrl;
+        this.msgOutgoingFormat = msgOutgoingFormat;
+        this.msgIncomingFormat = msgIncomingFormat;
+        this.msgPlayerNotFound = msgPlayerNotFound;
+        this.msgNoReplyTarget = msgNoReplyTarget;
+        this.msgSelfError = msgSelfError;
         this.apiPort = apiPort;
         this.ignoredServers = ignoredServers;
         this.firstJoinFormat = firstJoinFormat;
@@ -121,6 +143,13 @@ public class VelocityConfig {
             String staffChatDiscordAvatarUrl = staffChatDiscord.node("avatar-url")
                     .getString("https://mc-heads.net/head/{uuid}");
 
+            ConfigurationNode msgNode = root.node("private-messages");
+            String msgOutgoing = msgNode.node("outgoing-format").getString(DEFAULT_MSG_OUTGOING);
+            String msgIncoming = msgNode.node("incoming-format").getString(DEFAULT_MSG_INCOMING);
+            String msgNotFound = msgNode.node("player-not-found").getString(DEFAULT_MSG_PLAYER_NOT_FOUND);
+            String msgNoReply = msgNode.node("no-reply-target").getString(DEFAULT_MSG_NO_REPLY_TARGET);
+            String msgSelf = msgNode.node("self-error").getString(DEFAULT_MSG_SELF);
+
             int apiPort = root.node("api", "port").getInt(8080);
 
             List<String> ignoredServers = new ArrayList<>();
@@ -154,7 +183,8 @@ public class VelocityConfig {
             String updateToken = update.node("github-token").getString("");
 
             return new VelocityConfig(host, port, password, channel, format,
-                    staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl, apiPort,
+                    staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
+                    msgOutgoing, msgIncoming, msgNotFound, msgNoReply, msgSelf, apiPort,
                     ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
@@ -162,7 +192,9 @@ public class VelocityConfig {
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT,
-                    "", "https://mc-heads.net/head/{uuid}", 8080,
+                    "", "https://mc-heads.net/head/{uuid}",
+                    DEFAULT_MSG_OUTGOING, DEFAULT_MSG_INCOMING, DEFAULT_MSG_PLAYER_NOT_FOUND,
+                    DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF, 8080,
                     List.of(), "<yellow><name> joined the game for the first time</yellow>",
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
@@ -178,6 +210,11 @@ public class VelocityConfig {
     public String getStaffChatFormat() { return staffChatFormat; }
     public String getStaffChatDiscordWebhookUrl() { return staffChatDiscordWebhookUrl; }
     public String getStaffChatDiscordAvatarUrl() { return staffChatDiscordAvatarUrl; }
+    public String getMsgOutgoingFormat() { return msgOutgoingFormat; }
+    public String getMsgIncomingFormat() { return msgIncomingFormat; }
+    public String getMsgPlayerNotFound() { return msgPlayerNotFound; }
+    public String getMsgNoReplyTarget() { return msgNoReplyTarget; }
+    public String getMsgSelfError() { return msgSelfError; }
     public int getApiPort() { return apiPort; }
     public List<String> getIgnoredServers() { return ignoredServers; }
     public String getFirstJoinFormat() { return firstJoinFormat; }
