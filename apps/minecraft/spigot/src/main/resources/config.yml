@@ -34,13 +34,16 @@ auto-update:
   github-token: ""
 
 # Simple Voice Chat cross-server bridge.
-# Mirrors voice groups across all backend servers and forwards opus
-# frames over Redis so players on different backends can talk in the
-# same group. Requires Redis (uses the same connection as stats-push).
+# Creates a fixed set of persistent open voice groups with deterministic
+# UUIDs on every backend, then forwards opus frames between backends
+# over Redis pub/sub so members on different backends can hear each
+# other in the same group. User-created GUI groups remain local to
+# whichever backend they were created on.
 voicechat:
   cross-server:
     # Toggle the whole bridge. If false, voice still works locally on
-    # each backend (native SVC behaviour) but groups don't sync.
+    # each backend (native SVC behaviour) but the persistent groups
+    # below stay per-backend.
     enabled: true
     # Velocity-side server name for THIS backend. Must match the name
     # configured in velocity.toml's [servers] section. Used so the
@@ -49,9 +52,10 @@ voicechat:
     # when a player switches servers while talking.
     this-backend: ""
     # Persistent open groups created automatically with deterministic
-    # UUIDs so all backends have the same group IDs and they appear
-    # in every player's GUI list.
+    # UUIDs so all backends have the same group IDs. The "(cross server)"
+    # suffix in the name signals to players that the group spans
+    # backends — anything they create themselves stays local.
     persistent-groups:
-      - "Global #1"
-      - "Global #2"
-      - "Global #3"
+      - "Global #1 (cross server)"
+      - "Global #2 (cross server)"
+      - "Global #3 (cross server)"

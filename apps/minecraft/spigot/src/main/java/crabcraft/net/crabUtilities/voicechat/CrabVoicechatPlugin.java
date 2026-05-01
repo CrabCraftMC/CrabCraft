@@ -5,18 +5,17 @@ import de.maxhenkel.voicechat.api.Group;
 import de.maxhenkel.voicechat.api.VoicechatApi;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
-import de.maxhenkel.voicechat.api.events.CreateGroupEvent;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
 import de.maxhenkel.voicechat.api.events.JoinGroupEvent;
 import de.maxhenkel.voicechat.api.events.LeaveGroupEvent;
 import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
 import de.maxhenkel.voicechat.api.events.PlayerDisconnectedEvent;
-import de.maxhenkel.voicechat.api.events.RemoveGroupEvent;
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -32,9 +31,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private final List<String> persistentGroupNames;
 
     private RedisVoiceBus bus;
-    private GroupMirror groupMirror;
     private MembershipTracker membership;
     private AudioRelay audioRelay;
+    private Set<UUID> crossServerGroupIds = Set.of();
 
     public CrabVoicechatPlugin(CrabUtilities plugin) {
         this.plugin = plugin;
@@ -43,7 +42,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.thisBackend = plugin.getConfig().getString("voicechat.cross-server.this-backend", "");
         List<String> configured = plugin.getConfig().getStringList("voicechat.cross-server.persistent-groups");
         this.persistentGroupNames = configured.isEmpty()
-                ? List.of("Global #1", "Global #2", "Global #3")
+                ? List.of("Global #1 (cross server)", "Global #2 (cross server)", "Global #3 (cross server)")
                 : configured;
     }
 
@@ -61,8 +60,6 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     public void registerEvents(EventRegistration reg) {
         reg.registerEvent(VoicechatServerStartedEvent.class, this::onServerStarted);
         if (!crossServerEnabled) return;
-        reg.registerEvent(CreateGroupEvent.class, this::onCreateGroup);
-        reg.registerEvent(RemoveGroupEvent.class, this::onRemoveGroup);
         reg.registerEvent(JoinGroupEvent.class, this::onJoinGroup);
         reg.registerEvent(LeaveGroupEvent.class, this::onLeaveGroup);
         reg.registerEvent(MicrophonePacketEvent.class, this::onMicrophonePacket);
@@ -72,12 +69,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private void onServerStarted(VoicechatServerStartedEvent event) {
         VoicechatServerApi api = event.getVoicechat();
 
-        // Create persistent open groups with deterministic UUIDs FIRST,
-        // before any cross-server publishing is wired up. Every backend
-        // creates the same UUIDs so the groups appear in every player's
-        // GUI list without needing Redis sync.
+        Set<UUID> ids = new HashSet<>();
         for (String name : persistentGroupNames) {
             UUID id = deterministicGroupId(name);
+            ids.add(id);
             Group group = api.groupBuilder()
                     .setId(id)
                     .setName(name)
@@ -86,9 +81,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                     .build();
             logger.info("Created persistent voice chat group '" + name + "' (" + group.getId() + ")");
         }
+        this.crossServerGroupIds = Set.copyOf(ids);
 
-        // Now start the bridge — only user-created GUI groups go through
-        // the registry from this point on.
         if (!crossServerEnabled) return;
         if (thisBackend == null || thisBackend.isEmpty()) {
             logger.warning("voicechat.cross-server.enabled=true but this-backend is empty in config — "
@@ -101,99 +95,28 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     private void startBridge(VoicechatServerApi api) {
         this.bus = new RedisVoiceBus(plugin);
-        this.membership = new MembershipTracker(bus, thisBackend);
-        this.groupMirror = new GroupMirror(bus, thisBackend, logger);
-        this.audioRelay = new AudioRelay(plugin, bus, membership, thisBackend, logger);
-
-        groupMirror.setApi(api);
+        this.membership = new MembershipTracker();
+        this.audioRelay = new AudioRelay(plugin, bus, membership, crossServerGroupIds,
+                thisBackend, logger);
         audioRelay.setApi(api);
 
-        // When local members of a group change, we may need to subscribe
-        // or unsubscribe from that group's audio channel.
-        membership.setOnGroupChanged(this::syncAudioSubscription);
-
-        boolean ok = bus.start(this::handleLifecycle, audioRelay::onAudioFrame);
+        boolean ok = bus.start(audioRelay::onAudioFrame);
         if (!ok) {
             logger.warning("Voice bridge Redis connection failed — cross-server voice DISABLED");
             this.bus = null;
             return;
         }
 
-        // Pull the current group registry so we know about any groups
-        // that were created by other backends while we were offline.
-        Map<String, String> registry = bus.fetchGroupsRegistry();
-        for (Map.Entry<String, String> entry : registry.entrySet()) {
-            try {
-                handleLifecycle(entry.getValue());
-            } catch (Exception ignored) {
-                // best-effort
-            }
+        // Subscribe to every cross-server group's audio channel up front.
+        // The set is small and fixed, so always-on is simpler than
+        // tracking local membership to subscribe on demand.
+        for (UUID id : crossServerGroupIds) {
+            bus.subscribeAudio(id);
         }
 
         audioRelay.start();
-        logger.info("Cross-server voice bridge started (backend='" + thisBackend + "', " +
-                registry.size() + " mirrored groups)");
-    }
-
-    private void handleLifecycle(String message) {
-        if (message == null) return;
-        String[] parts = message.split(VoiceMessages.SEP, -1);
-        if (parts.length == 0) return;
-        switch (parts[0]) {
-            case VoiceMessages.OP_GROUP_CREATE -> {
-                if (parts.length < 6) return;
-                UUID id = parseUuid(parts[1]);
-                if (id == null) return;
-                String name = parts[2];
-                String password = parts[3].isEmpty() ? null : parts[3];
-                Group.Type type = VoiceMessages.typeFromString(parts[4]);
-                if (groupMirror != null) groupMirror.applyCreate(id, name, password, type);
-            }
-            case VoiceMessages.OP_GROUP_REMOVE -> {
-                if (parts.length < 3) return;
-                UUID id = parseUuid(parts[1]);
-                if (id == null) return;
-                if (groupMirror != null) groupMirror.applyRemove(id);
-            }
-            case VoiceMessages.OP_MEMBER_JOIN -> {
-                if (parts.length < 4) return;
-                UUID gid = parseUuid(parts[1]);
-                UUID pid = parseUuid(parts[2]);
-                if (gid == null || pid == null) return;
-                if (membership != null) membership.applyMemberJoin(gid, pid, parts[3]);
-            }
-            case VoiceMessages.OP_MEMBER_LEAVE -> {
-                if (parts.length < 4) return;
-                UUID gid = parseUuid(parts[1]);
-                UUID pid = parseUuid(parts[2]);
-                if (gid == null || pid == null) return;
-                if (membership != null) membership.applyMemberLeave(gid, pid);
-            }
-            case VoiceMessages.OP_SPEAKER_LEFT -> {
-                if (parts.length < 3) return;
-                UUID pid = parseUuid(parts[1]);
-                if (pid == null) return;
-                if (audioRelay != null) audioRelay.invalidateSpeaker(pid);
-            }
-            default -> {}
-        }
-    }
-
-    private void syncAudioSubscription(UUID groupId) {
-        if (bus == null || membership == null) return;
-        if (membership.getLocalMembers(groupId).isEmpty()) {
-            bus.unsubscribeAudio(groupId);
-        } else {
-            bus.subscribeAudio(groupId);
-        }
-    }
-
-    private void onCreateGroup(CreateGroupEvent event) {
-        if (groupMirror != null) groupMirror.onCreateGroupEvent(event);
-    }
-
-    private void onRemoveGroup(RemoveGroupEvent event) {
-        if (groupMirror != null) groupMirror.onRemoveGroupEvent(event);
+        logger.info("Cross-server voice bridge started (backend='" + thisBackend + "', "
+                + crossServerGroupIds.size() + " groups)");
     }
 
     private void onJoinGroup(JoinGroupEvent event) {
@@ -221,13 +144,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     /**
      * Stable UUID derived from the group name so all backends produce
-     * the same UUID for "Global #1" without needing to coordinate.
+     * the same UUID without needing to coordinate.
      */
     static UUID deterministicGroupId(String name) {
         return UUID.nameUUIDFromBytes(("crabcraft:svc:global:" + name).getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static UUID parseUuid(String s) {
-        try { return UUID.fromString(s); } catch (Exception e) { return null; }
     }
 }

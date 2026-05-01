@@ -10,46 +10,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 /**
- * Tracks which players (across all backends) are in which group, by
- * applying delta messages from Redis. Local membership changes are
- * published as {@code MEMBER_JOIN}/{@code MEMBER_LEAVE} so other
- * backends can do the same.
+ * Tracks LOCAL group membership on this backend. AudioRelay uses
+ * {@link #getLocalMembers} to populate the targets of an inbound
+ * cross-server audio channel.
  *
- * <p>The receiving backend uses this map to compute the target set of
- * a {@link de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel}
- * so cross-server audio reaches the right local players.
+ * <p>No cross-backend pub/sub: each backend independently observes its
+ * own SVC events (this is enough because the only consumer is the local
+ * audio-fanout, which only needs local players).
  */
 class MembershipTracker {
 
-    private final RedisVoiceBus bus;
-    private final String thisBackend;
-
-    /** groupId -> (playerId -> backendName) across all backends, including this one. */
-    private final Map<UUID, Map<UUID, String>> groupMembers = new ConcurrentHashMap<>();
-
-    /** Hook the receiving side can use to react to membership changes (e.g. recompute audio targets). */
-    private Consumer<UUID> onGroupChanged = id -> {};
-
-    MembershipTracker(RedisVoiceBus bus, String thisBackend) {
-        this.bus = bus;
-        this.thisBackend = thisBackend;
-    }
-
-    void setOnGroupChanged(Consumer<UUID> hook) {
-        this.onGroupChanged = hook;
-    }
+    /** groupId -> local player UUIDs in that group. */
+    private final Map<UUID, Set<UUID>> groupMembers = new ConcurrentHashMap<>();
 
     void onJoinGroupEvent(JoinGroupEvent event) {
         Group group = event.getGroup();
         VoicechatConnection conn = event.getConnection();
         if (group == null || conn == null) return;
-        UUID groupId = group.getId();
-        UUID playerId = conn.getPlayer().getUuid();
-        recordJoin(groupId, playerId, thisBackend);
-        bus.publishLifecycle(VoiceMessages.encodeMemberJoin(groupId, playerId, thisBackend));
+        groupMembers
+                .computeIfAbsent(group.getId(), k -> ConcurrentHashMap.newKeySet())
+                .add(conn.getPlayer().getUuid());
     }
 
     void onLeaveGroupEvent(LeaveGroupEvent event) {
@@ -57,58 +39,25 @@ class MembershipTracker {
         if (conn == null) return;
         Group group = conn.getGroup();
         if (group == null) return;
-        UUID groupId = group.getId();
-        UUID playerId = conn.getPlayer().getUuid();
-        recordLeave(groupId, playerId);
-        bus.publishLifecycle(VoiceMessages.encodeMemberLeave(groupId, playerId, thisBackend));
+        removeLocal(group.getId(), conn.getPlayer().getUuid());
     }
 
     void onPlayerDisconnect(PlayerDisconnectedEvent event) {
         UUID playerId = event.getPlayerUuid();
         for (UUID groupId : Set.copyOf(groupMembers.keySet())) {
-            Map<UUID, String> members = groupMembers.get(groupId);
-            if (members != null && members.containsKey(playerId)) {
-                recordLeave(groupId, playerId);
-                bus.publishLifecycle(VoiceMessages.encodeMemberLeave(groupId, playerId, thisBackend));
-            }
+            removeLocal(groupId, playerId);
         }
-        bus.publishLifecycle(VoiceMessages.encodeSpeakerLeft(playerId, thisBackend));
     }
 
-    void applyMemberJoin(UUID groupId, UUID playerId, String backend) {
-        recordJoin(groupId, playerId, backend);
+    private void removeLocal(UUID groupId, UUID playerId) {
+        Set<UUID> members = groupMembers.get(groupId);
+        if (members == null) return;
+        members.remove(playerId);
+        if (members.isEmpty()) groupMembers.remove(groupId);
     }
 
-    void applyMemberLeave(UUID groupId, UUID playerId) {
-        recordLeave(groupId, playerId);
-    }
-
-    private void recordJoin(UUID groupId, UUID playerId, String backend) {
-        groupMembers
-                .computeIfAbsent(groupId, k -> new ConcurrentHashMap<>())
-                .put(playerId, backend);
-        onGroupChanged.accept(groupId);
-    }
-
-    private void recordLeave(UUID groupId, UUID playerId) {
-        Map<UUID, String> members = groupMembers.get(groupId);
-        if (members != null) {
-            members.remove(playerId);
-            if (members.isEmpty()) {
-                groupMembers.remove(groupId);
-            }
-        }
-        onGroupChanged.accept(groupId);
-    }
-
-    /** Members of a group on THIS backend only — used to build StaticAudioChannel targets. */
     Set<UUID> getLocalMembers(UUID groupId) {
-        Map<UUID, String> members = groupMembers.get(groupId);
-        if (members == null) return Set.of();
-        Set<UUID> local = new java.util.HashSet<>();
-        for (Map.Entry<UUID, String> e : members.entrySet()) {
-            if (thisBackend.equals(e.getValue())) local.add(e.getKey());
-        }
-        return local;
+        Set<UUID> members = groupMembers.get(groupId);
+        return members == null ? Set.of() : Set.copyOf(members);
     }
 }

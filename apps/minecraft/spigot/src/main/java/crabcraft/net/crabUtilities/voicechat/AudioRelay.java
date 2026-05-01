@@ -17,13 +17,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
- * Cross-server audio relay.
+ * Cross-server audio relay for the fixed set of "global" persistent
+ * voice groups. User-created GUI groups stay local on whichever
+ * backend they were created on.
  *
- * <p>Outbound: when a player on this backend speaks and is in a group
- * that has remote members, publish the opus frame on Redis under
- * {@link VoiceMessages#audioChannel}. We never cancel the SVC event so
- * native local-server group routing continues to deliver audio to local
- * group members through SVC's normal path.
+ * <p>Outbound: when a local speaker's group is on the cross-server
+ * whitelist, publish the opus frame on Redis under
+ * {@link VoiceMessages#audioChannel}. SVC's own routing continues to
+ * deliver audio to local group members in parallel — we never cancel
+ * the event.
  *
  * <p>Inbound: an opus frame received from another backend is pushed
  * into a {@link StaticAudioChannel} keyed by the speaker's UUID, with
@@ -43,6 +45,7 @@ class AudioRelay {
     private final CrabUtilities plugin;
     private final RedisVoiceBus bus;
     private final MembershipTracker membership;
+    private final Set<UUID> crossServerGroupIds;
     private final String thisBackend;
     private final Logger logger;
 
@@ -54,10 +57,11 @@ class AudioRelay {
     private BukkitTask evictionTask;
 
     AudioRelay(CrabUtilities plugin, RedisVoiceBus bus, MembershipTracker membership,
-               String thisBackend, Logger logger) {
+               Set<UUID> crossServerGroupIds, String thisBackend, Logger logger) {
         this.plugin = plugin;
         this.bus = bus;
         this.membership = membership;
+        this.crossServerGroupIds = crossServerGroupIds;
         this.thisBackend = thisBackend;
         this.logger = logger;
     }
@@ -83,9 +87,10 @@ class AudioRelay {
     }
 
     /**
-     * Outbound: forward a local speaker's opus frame to other backends if
-     * they have group members. Always returns false from the perspective
-     * of cancelling — we never block SVC's native processing.
+     * Outbound: forward a local speaker's opus frame to other backends.
+     * Only the fixed cross-server group whitelist gets bridged — user-
+     * created GUI groups stay local. We never cancel the SVC event so
+     * native local-server group routing keeps working unchanged.
      */
     void onMicrophonePacketEvent(MicrophonePacketEvent event) {
         VoicechatConnection conn = event.getSenderConnection();
@@ -93,6 +98,7 @@ class AudioRelay {
         var group = conn.getGroup();
         if (group == null) return;
         UUID groupId = group.getId();
+        if (!crossServerGroupIds.contains(groupId)) return;
 
         MicrophonePacket packet = event.getPacket();
         if (packet == null) return;
@@ -100,11 +106,6 @@ class AudioRelay {
         if (opus == null || opus.length == 0) return;
 
         UUID speakerId = conn.getPlayer().getUuid();
-        // Always publish — we can't skip on "no remote members" because a
-        // backend that just came online won't yet know about pre-existing
-        // remote members, and would silently drop their audio. Subscribers
-        // that have no local listeners simply won't subscribe to this
-        // group's audio channel, so wasted Redis bandwidth is bounded.
         byte[] frame = VoiceMessages.encodeAudioFrame(thisBackend, speakerId,
                 packet.isWhispering(), opus);
         bus.publishAudio(groupId, frame);

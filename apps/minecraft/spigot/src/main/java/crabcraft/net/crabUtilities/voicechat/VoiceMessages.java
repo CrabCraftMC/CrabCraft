@@ -1,7 +1,5 @@
 package crabcraft.net.crabUtilities.voicechat;
 
-import de.maxhenkel.voicechat.api.Group;
-
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -9,23 +7,11 @@ import java.util.UUID;
 /**
  * Wire format for the Redis voice bus.
  *
- * <p>Lifecycle messages on {@code crabcraft:svc:groups} are NUL-separated
- * UTF-8 strings, the first field being the opcode. Audio frames on
- * {@code crabcraft:svc:audio:<uuid>} are length-prefixed binary because
- * the opus payload is not text.
+ * <p>Audio frames on {@code crabcraft:svc:audio:&lt;uuid&gt;} are
+ * length-prefixed binary because the opus payload is not text.
  */
 final class VoiceMessages {
 
-    static final String SEP = "\0";
-
-    static final String OP_GROUP_CREATE = "GROUP_CREATE";
-    static final String OP_GROUP_REMOVE = "GROUP_REMOVE";
-    static final String OP_MEMBER_JOIN = "MEMBER_JOIN";
-    static final String OP_MEMBER_LEAVE = "MEMBER_LEAVE";
-    static final String OP_SPEAKER_LEFT = "SPEAKER_LEFT";
-
-    static final String LIFECYCLE_CHANNEL = "crabcraft:svc:groups";
-    static final String GROUPS_REGISTRY_KEY = "crabcraft:svc:groups:registry";
     static final String AUDIO_CHANNEL_PREFIX = "crabcraft:svc:audio:";
     static final String PLAYER_HOME_KEY_PREFIX = "crabcraft:svc:player-home:";
 
@@ -37,45 +23,6 @@ final class VoiceMessages {
 
     static String playerHomeKey(UUID playerId) {
         return PLAYER_HOME_KEY_PREFIX + playerId;
-    }
-
-    static String typeToString(Group.Type type) {
-        if (type == Group.Type.OPEN) return "OPEN";
-        if (type == Group.Type.ISOLATED) return "ISOLATED";
-        return "NORMAL";
-    }
-
-    static Group.Type typeFromString(String s) {
-        if ("OPEN".equals(s)) return Group.Type.OPEN;
-        if ("ISOLATED".equals(s)) return Group.Type.ISOLATED;
-        return Group.Type.NORMAL;
-    }
-
-    static String encodeGroupCreate(UUID id, String name, String password,
-                                    Group.Type type, String originator) {
-        return String.join(SEP,
-                OP_GROUP_CREATE,
-                id.toString(),
-                name == null ? "" : name,
-                password == null ? "" : password,
-                typeToString(type),
-                originator);
-    }
-
-    static String encodeGroupRemove(UUID id, String originator) {
-        return String.join(SEP, OP_GROUP_REMOVE, id.toString(), originator);
-    }
-
-    static String encodeMemberJoin(UUID groupId, UUID playerId, String backend) {
-        return String.join(SEP, OP_MEMBER_JOIN, groupId.toString(), playerId.toString(), backend);
-    }
-
-    static String encodeMemberLeave(UUID groupId, UUID playerId, String backend) {
-        return String.join(SEP, OP_MEMBER_LEAVE, groupId.toString(), playerId.toString(), backend);
-    }
-
-    static String encodeSpeakerLeft(UUID playerId, String backend) {
-        return String.join(SEP, OP_SPEAKER_LEFT, playerId.toString(), backend);
     }
 
     /**
