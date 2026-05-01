@@ -54,5 +54,8 @@ public class NicknameListener {
         UUID uuid = event.getPlayer().getUniqueId();
         plugin.getPendingJoinManager().remove(uuid);
         plugin.getNicknameCache().remove(uuid);
+        if (plugin.getMessageManager() != null) {
+            plugin.getMessageManager().clearReplyTargets(uuid);
+        }
     }
 }

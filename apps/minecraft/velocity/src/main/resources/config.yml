@@ -17,6 +17,16 @@ staff-chat:
     webhook-url: ""
     avatar-url: "https://mc-heads.net/head/{uuid}"
 
+private-messages:
+  # MiniMessage format shown to the sender. Placeholders: <target>, <message>
+  outgoing-format: "<gold>(to <target>) <white><message>"
+  # MiniMessage format shown to the recipient. Placeholders: <sender>, <message>
+  incoming-format: "<gold>(from <sender>) <white><message>"
+  # Error messages (MiniMessage)
+  player-not-found: "<red>Player not found or not online."
+  no-reply-target: "<red>You have no one to reply to."
+  self-error: "<red>You can't message yourself."
+
 join-leave-messages:
   # Servers that should NOT trigger join/leave/swap messages
   ignored-servers: []
