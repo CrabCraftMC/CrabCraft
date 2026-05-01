@@ -88,7 +88,7 @@ public class PlayerLocationTracker {
         try (Jedis jedis = jedisPool.getResource()) {
             jedis.set(key, backend, SetParams.setParams().ex(ttlSeconds));
         } catch (Exception e) {
-            plugin.getLogger().fine("Failed to write player home: " + e.getMessage());
+            plugin.getLogger().debug("Failed to write player home: " + e.getMessage());
         }
     }
 
