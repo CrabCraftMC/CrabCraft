@@ -11,6 +11,9 @@ import de.maxhenkel.voicechat.api.events.LeaveGroupEvent;
 import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
 import de.maxhenkel.voicechat.api.events.PlayerDisconnectedEvent;
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
@@ -33,6 +36,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private RedisVoiceBus bus;
     private MembershipTracker membership;
     private AudioRelay audioRelay;
+    private RosterTracker roster;
+    private SvcPacketSender svcPackets;
+    private SkinSyncer skinSyncer;
+    private BukkitTask heartbeatTask;
     private Set<UUID> crossServerGroupIds = Set.of();
 
     public CrabVoicechatPlugin(CrabUtilities plugin) {
@@ -42,7 +49,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.thisBackend = plugin.getConfig().getString("voicechat.cross-server.this-backend", "");
         List<String> configured = plugin.getConfig().getStringList("voicechat.cross-server.persistent-groups");
         this.persistentGroupNames = configured.isEmpty()
-                ? List.of("Global #1 (cross server)", "Global #2 (cross server)", "Global #3 (cross server)")
+                ? List.of("Global #1", "Global #2", "Global #3")
                 : configured;
     }
 
@@ -99,32 +106,69 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.audioRelay = new AudioRelay(plugin, bus, membership, crossServerGroupIds,
                 thisBackend, logger);
         audioRelay.setApi(api);
+        this.svcPackets = new SvcPacketSender(plugin);
+        this.skinSyncer = new SkinSyncer(plugin);
+        this.roster = new RosterTracker(plugin, membership, svcPackets, skinSyncer,
+                crossServerGroupIds, thisBackend, logger);
 
-        boolean ok = bus.start(audioRelay::onAudioFrame);
+        boolean ok = bus.start(audioRelay::onAudioFrame, roster::onLifecycleMessage);
         if (!ok) {
             logger.warning("Voice bridge Redis connection failed — cross-server voice DISABLED");
             this.bus = null;
             return;
         }
 
-        // Subscribe to every cross-server group's audio channel up front.
-        // The set is small and fixed, so always-on is simpler than
-        // tracking local membership to subscribe on demand.
         for (UUID id : crossServerGroupIds) {
             bus.subscribeAudio(id);
         }
 
         audioRelay.start();
+
+        // Heartbeat: every 30s broadcast our current local roster so other
+        // backends can reconcile and drop stale entries from us if we crash.
+        heartbeatTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
+                () -> bus.publishRoster(roster.buildOurHeartbeat()),
+                20L * 30L, 20L * 30L);
+
         logger.info("Cross-server voice bridge started (backend='" + thisBackend + "', "
-                + crossServerGroupIds.size() + " groups)");
+                + crossServerGroupIds.size() + " groups, skins="
+                + (skinSyncer.isAvailable() ? "real" : "default") + ")");
     }
 
     private void onJoinGroup(JoinGroupEvent event) {
-        if (membership != null) membership.onJoinGroupEvent(event);
+        if (membership == null) return;
+        Group group = event.getGroup();
+        if (group == null || event.getConnection() == null) return;
+
+        membership.onJoinGroupEvent(event);
+
+        if (!crossServerGroupIds.contains(group.getId())) return;
+
+        UUID playerId = event.getConnection().getPlayer().getUuid();
+        Player bukkitPlayer = Bukkit.getPlayer(playerId);
+        if (bukkitPlayer == null) return;
+
+        // 1) Tell other backends we have a new local member of this group.
+        ProfileCodec.Snapshot snapshot = ProfileCodec.capture(bukkitPlayer);
+        bus.publishRoster(VoiceMessages.encodeRosterJoin(group.getId(), playerId,
+                thisBackend, ProfileCodec.encode(snapshot)));
+
+        // 2) Catch the new joiner up with the existing remote roster on
+        //    the next tick (event currently runs on a non-main thread).
+        Bukkit.getScheduler().runTask(plugin,
+                () -> roster.catchUpNewLocalJoiner(group.getId(), bukkitPlayer));
     }
 
     private void onLeaveGroup(LeaveGroupEvent event) {
-        if (membership != null) membership.onLeaveGroupEvent(event);
+        if (membership == null) return;
+        Group group = event.getGroup();
+        if (group != null && event.getConnection() != null
+                && crossServerGroupIds.contains(group.getId())) {
+            UUID playerId = event.getConnection().getPlayer().getUuid();
+            bus.publishRoster(VoiceMessages.encodeRosterLeave(
+                    group.getId(), playerId, thisBackend));
+        }
+        membership.onLeaveGroupEvent(event);
     }
 
     private void onMicrophonePacket(MicrophonePacketEvent event) {
@@ -132,12 +176,33 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     }
 
     private void onPlayerDisconnect(PlayerDisconnectedEvent event) {
+        UUID playerId = event.getPlayerUuid();
+        if (membership != null && bus != null) {
+            for (UUID groupId : membership.getLocalGroupsOf(playerId)) {
+                if (!crossServerGroupIds.contains(groupId)) continue;
+                bus.publishRoster(VoiceMessages.encodeRosterLeave(
+                        groupId, playerId, thisBackend));
+            }
+        }
         if (membership != null) membership.onPlayerDisconnect(event);
         if (audioRelay != null) audioRelay.onPlayerDisconnect(event);
     }
 
     /** Public hook so {@link CrabUtilities#onDisable()} can release resources. */
     public void shutdown() {
+        if (heartbeatTask != null) {
+            try { heartbeatTask.cancel(); } catch (Exception ignored) {}
+        }
+        // Tell other backends our local players are leaving (best-effort).
+        if (bus != null && membership != null) {
+            for (UUID groupId : crossServerGroupIds) {
+                for (UUID localId : membership.getLocalMembers(groupId)) {
+                    bus.publishRoster(VoiceMessages.encodeRosterLeave(
+                            groupId, localId, thisBackend));
+                }
+            }
+        }
+        if (roster != null) roster.shutdown();
         if (audioRelay != null) audioRelay.shutdown();
         if (bus != null) bus.shutdown();
     }

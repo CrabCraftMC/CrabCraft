@@ -52,10 +52,9 @@ voicechat:
     # when a player switches servers while talking.
     this-backend: ""
     # Persistent open groups created automatically with deterministic
-    # UUIDs so all backends have the same group IDs. The "(cross server)"
-    # suffix in the name signals to players that the group spans
-    # backends — anything they create themselves stays local.
+    # UUIDs so all backends have the same group IDs. Cross-server audio
+    # is forwarded for any group whose name appears here.
     persistent-groups:
-      - "Global #1 (cross server)"
-      - "Global #2 (cross server)"
-      - "Global #3 (cross server)"
+      - "Global #1"
+      - "Global #2"
+      - "Global #3"

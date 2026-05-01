@@ -60,4 +60,13 @@ class MembershipTracker {
         Set<UUID> members = groupMembers.get(groupId);
         return members == null ? Set.of() : Set.copyOf(members);
     }
+
+    /** All groups the player is currently in on this backend. */
+    Set<UUID> getLocalGroupsOf(UUID playerId) {
+        Set<UUID> result = new java.util.HashSet<>();
+        for (Map.Entry<UUID, Set<UUID>> entry : groupMembers.entrySet()) {
+            if (entry.getValue().contains(playerId)) result.add(entry.getKey());
+        }
+        return result;
+    }
 }

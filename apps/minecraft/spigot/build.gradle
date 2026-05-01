@@ -24,6 +24,10 @@ repositories {
         name = "henkelmax.public"
         url = uri("https://maven.maxhenkel.de/repository/public")
     }
+    maven {
+        name = "codemc-releases"
+        url = uri("https://repo.codemc.io/repository/maven-releases/")
+    }
 }
 
 dependencies {
@@ -33,6 +37,7 @@ dependencies {
     compileOnly("net.kyori:adventure-text-serializer-legacy:4.17.0")
     compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.13")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.7.0")
     implementation("redis.clients:jedis:5.1.0")
 }
 
