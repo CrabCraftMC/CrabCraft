@@ -9,6 +9,8 @@ import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import java.util.UUID;
+
 public class StaffChatCommand {
 
     public static void register(CrabUtilitiesVelocity plugin) {
@@ -20,14 +22,17 @@ public class StaffChatCommand {
                             String message = ctx.getArgument("message", String.class);
 
                             String senderName;
+                            UUID senderUuid;
                             if (source instanceof Player player) {
                                 String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
                                 senderName = raw != null ? raw : player.getUsername();
+                                senderUuid = player.getUniqueId();
                             } else {
                                 senderName = "Console";
+                                senderUuid = null;
                             }
 
-                            plugin.getStaffChatManager().sendMessage(senderName, message);
+                            plugin.getStaffChatManager().sendMessage(senderName, senderUuid, message);
                             return 1;
                         })
                 )

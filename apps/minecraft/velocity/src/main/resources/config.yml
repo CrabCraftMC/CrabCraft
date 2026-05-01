@@ -10,6 +10,12 @@ api:
 staff-chat:
   # MiniMessage format. Placeholders: <sender>, <message>
   format: "<dark_gray>[<aqua>SC</aqua>]</dark_gray> <gray><sender></gray> <dark_gray>></dark_gray> <white><message></white>"
+  # Discord relay for staff chat. Leave webhook-url empty to disable.
+  # The webhook posts as the sender's nickname with their head as the avatar.
+  # avatar-url placeholder: {uuid}
+  discord:
+    webhook-url: ""
+    avatar-url: "https://mc-heads.net/head/{uuid}"
 
 join-leave-messages:
   # Servers that should NOT trigger join/leave/swap messages

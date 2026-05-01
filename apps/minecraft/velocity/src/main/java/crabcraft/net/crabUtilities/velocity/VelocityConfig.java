@@ -22,6 +22,8 @@ public class VelocityConfig {
     private final String redisPassword;
     private final String redisChannel;
     private final String staffChatFormat;
+    private final String staffChatDiscordWebhookUrl;
+    private final String staffChatDiscordAvatarUrl;
     private final int apiPort;
     private final List<String> ignoredServers;
     private final String firstJoinFormat;
@@ -40,7 +42,9 @@ public class VelocityConfig {
     private final String updateGithubToken;
 
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
-                           String redisChannel, String staffChatFormat, int apiPort,
+                           String redisChannel, String staffChatFormat,
+                           String staffChatDiscordWebhookUrl, String staffChatDiscordAvatarUrl,
+                           int apiPort,
                            List<String> ignoredServers, String firstJoinFormat,
                            String discordWebhookUrl, String discordJoinFormat,
                            String discordLeaveFormat, String discordSwapFormat,
@@ -54,6 +58,8 @@ public class VelocityConfig {
         this.redisPassword = redisPassword;
         this.redisChannel = redisChannel;
         this.staffChatFormat = staffChatFormat;
+        this.staffChatDiscordWebhookUrl = staffChatDiscordWebhookUrl;
+        this.staffChatDiscordAvatarUrl = staffChatDiscordAvatarUrl;
         this.apiPort = apiPort;
         this.ignoredServers = ignoredServers;
         this.firstJoinFormat = firstJoinFormat;
@@ -110,6 +116,10 @@ public class VelocityConfig {
             String channel = redis.node("channel").getString("crabutilities:staffchat");
 
             String format = root.node("staff-chat", "format").getString(DEFAULT_FORMAT);
+            ConfigurationNode staffChatDiscord = root.node("staff-chat", "discord");
+            String staffChatDiscordWebhookUrl = staffChatDiscord.node("webhook-url").getString("");
+            String staffChatDiscordAvatarUrl = staffChatDiscord.node("avatar-url")
+                    .getString("https://mc-heads.net/head/{uuid}");
 
             int apiPort = root.node("api", "port").getInt(8080);
 
@@ -143,14 +153,16 @@ public class VelocityConfig {
             String updateRepo = update.node("github-repo").getString("CrabCraftMC/CrabCraft");
             String updateToken = update.node("github-token").getString("");
 
-            return new VelocityConfig(host, port, password, channel, format, apiPort,
+            return new VelocityConfig(host, port, password, channel, format,
+                    staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl, apiPort,
                     ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
                     updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken);
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
-            return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT, 8080,
+            return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT,
+                    "", "https://mc-heads.net/head/{uuid}", 8080,
                     List.of(), "<yellow><name> joined the game for the first time</yellow>",
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
@@ -164,6 +176,8 @@ public class VelocityConfig {
     public String getRedisPassword() { return redisPassword; }
     public String getRedisChannel() { return redisChannel; }
     public String getStaffChatFormat() { return staffChatFormat; }
+    public String getStaffChatDiscordWebhookUrl() { return staffChatDiscordWebhookUrl; }
+    public String getStaffChatDiscordAvatarUrl() { return staffChatDiscordAvatarUrl; }
     public int getApiPort() { return apiPort; }
     public List<String> getIgnoredServers() { return ignoredServers; }
     public String getFirstJoinFormat() { return firstJoinFormat; }

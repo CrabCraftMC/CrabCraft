@@ -20,14 +20,26 @@ public class DiscordWebhook {
     }
 
     public void send(String message) {
+        send(message, null, null);
+    }
+
+    public void send(String message, String username, String avatarUrl) {
         if (webhookUrl == null || webhookUrl.isEmpty()) return;
 
-        String json = "{\"content\":" + escapeJson(message) + ",\"allowed_mentions\":{\"parse\":[]}}";
+        StringBuilder json = new StringBuilder();
+        json.append("{\"content\":").append(escapeJson(message));
+        if (username != null && !username.isEmpty()) {
+            json.append(",\"username\":").append(escapeJson(username));
+        }
+        if (avatarUrl != null && !avatarUrl.isEmpty()) {
+            json.append(",\"avatar_url\":").append(escapeJson(avatarUrl));
+        }
+        json.append(",\"allowed_mentions\":{\"parse\":[]}}");
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(webhookUrl))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .POST(HttpRequest.BodyPublishers.ofString(json.toString()))
                 .build();
 
         httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
