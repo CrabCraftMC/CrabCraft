@@ -67,15 +67,6 @@ class AudioRelay {
      *  for log-spam control. Cleared on first matching frame. */
     private final Set<UUID> originMismatchLogged = ConcurrentHashMap.newKeySet();
 
-    /** Sender-side: speakers whose first MicrophonePacketEvent we've logged. */
-    private final Set<UUID> micFiredLogged = ConcurrentHashMap.newKeySet();
-
-    /** Sender-side: speakers we've logged a "group is null" drop for. */
-    private final Set<UUID> groupNullLogged = ConcurrentHashMap.newKeySet();
-
-    /** Sender-side: speakers we've successfully published at least one frame for. */
-    private final Set<UUID> publishLogged = ConcurrentHashMap.newKeySet();
-
     private BukkitTask evictionTask;
 
     AudioRelay(CrabUtilities plugin, RedisVoiceBus bus, MembershipTracker membership,
@@ -117,26 +108,8 @@ class AudioRelay {
     void onMicrophonePacketEvent(MicrophonePacketEvent event) {
         VoicechatConnection conn = event.getSenderConnection();
         if (conn == null) return;
-        UUID speakerId = conn.getPlayer().getUuid();
-
-        if (micFiredLogged.add(speakerId)) {
-            logger.info("MicrophonePacketEvent fired by " + speakerId
-                    + " (backend='" + thisBackend + "')");
-        }
-
         var group = conn.getGroup();
-        if (group == null) {
-            if (groupNullLogged.add(speakerId)) {
-                logger.info("Dropping mic packet from " + speakerId
-                        + ": connection.getGroup() is null. Player is not in any "
-                        + "voice group from SVC's view (or PlayerState snapshot is "
-                        + "stale post-server-hop)");
-            }
-            return;
-        }
-        // Re-arm the group-null logger so a subsequent leave/rejoin re-logs.
-        groupNullLogged.remove(speakerId);
-
+        if (group == null) return;
         UUID groupId = group.getId();
         if (!crossServerGroupIds.contains(groupId)) return;
 
@@ -145,14 +118,10 @@ class AudioRelay {
         byte[] opus = packet.getOpusEncodedData();
         if (opus == null || opus.length == 0) return;
 
+        UUID speakerId = conn.getPlayer().getUuid();
         byte[] frame = VoiceMessages.encodeAudioFrame(thisBackend, speakerId,
                 packet.isWhispering(), opus);
-        bus.publishAudio(groupId, speakerId, frame);
-
-        if (publishLogged.add(speakerId)) {
-            logger.info("Publishing audio frames from " + speakerId
-                    + " on backend '" + thisBackend + "' to group " + groupId);
-        }
+        bus.publishAudio(groupId, frame);
     }
 
     /**
@@ -242,9 +211,6 @@ class AudioRelay {
         firstRelayLogged.remove(speakerId);
         nullChannelLogged.remove(speakerId);
         originMismatchLogged.remove(speakerId);
-        micFiredLogged.remove(speakerId);
-        groupNullLogged.remove(speakerId);
-        publishLogged.remove(speakerId);
     }
 
     void onPlayerDisconnect(PlayerDisconnectedEvent event) {

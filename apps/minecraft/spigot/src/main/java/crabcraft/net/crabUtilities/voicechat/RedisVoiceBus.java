@@ -122,20 +122,13 @@ class RedisVoiceBus {
         return sub;
     }
 
-    /** Speakers we've already warned about a publish failure for (first-time-only). */
-    private final java.util.Set<UUID> publishFailureLogged = ConcurrentHashMap.newKeySet();
-
-    void publishAudio(UUID groupId, UUID speakerId, byte[] frame) {
+    void publishAudio(UUID groupId, byte[] frame) {
         if (jedisPool == null) return;
         audioPublishExecutor.execute(() -> {
             try (Jedis jedis = jedisPool.getResource()) {
                 jedis.publish(VoiceMessages.audioChannel(groupId).getBytes(StandardCharsets.UTF_8), frame);
-                publishFailureLogged.remove(speakerId);
             } catch (Exception e) {
-                if (publishFailureLogged.add(speakerId)) {
-                    plugin.getLogger().warning("Voice audio publish failed for speaker "
-                            + speakerId + " in group " + groupId + ": " + e.getMessage());
-                }
+                plugin.getLogger().fine("Voice audio publish failed: " + e.getMessage());
             }
         });
     }
