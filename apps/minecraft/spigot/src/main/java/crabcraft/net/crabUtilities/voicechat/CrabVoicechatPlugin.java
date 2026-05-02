@@ -3,12 +3,14 @@ package crabcraft.net.crabUtilities.voicechat;
 import crabcraft.net.crabUtilities.CrabUtilities;
 import de.maxhenkel.voicechat.api.Group;
 import de.maxhenkel.voicechat.api.VoicechatApi;
+import de.maxhenkel.voicechat.api.VoicechatConnection;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
 import de.maxhenkel.voicechat.api.events.JoinGroupEvent;
 import de.maxhenkel.voicechat.api.events.LeaveGroupEvent;
 import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
+import de.maxhenkel.voicechat.api.events.PlayerConnectedEvent;
 import de.maxhenkel.voicechat.api.events.PlayerDisconnectedEvent;
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
 import org.bukkit.Bukkit;
@@ -26,6 +28,11 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     public static final String PLUGIN_ID = "crabutilities";
 
+    /** TTL on the {@code crabcraft:svc:player-group:&lt;uuid&gt;} key. Slightly
+     *  longer than 3x the rebroadcast interval so a routine server hop
+     *  doesn't expire before the player reconnects. */
+    private static final long PLAYER_GROUP_TTL_SECONDS = 90L;
+
     private final CrabUtilities plugin;
     private final Logger logger;
 
@@ -33,13 +40,14 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private final String thisBackend;
     private final List<String> persistentGroupNames;
 
+    private VoicechatServerApi api;
     private RedisVoiceBus bus;
     private MembershipTracker membership;
     private AudioRelay audioRelay;
     private RosterTracker roster;
     private SvcPacketSender svcPackets;
-    private SkinSyncer skinSyncer;
-    private BukkitTask heartbeatTask;
+    private BukkitTask rosterRebroadcastTask;
+    private BukkitTask sweepTask;
     private Set<UUID> crossServerGroupIds = Set.of();
 
     public CrabVoicechatPlugin(CrabUtilities plugin) {
@@ -67,6 +75,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     public void registerEvents(EventRegistration reg) {
         reg.registerEvent(VoicechatServerStartedEvent.class, this::onServerStarted);
         if (!crossServerEnabled) return;
+        reg.registerEvent(PlayerConnectedEvent.class, this::onPlayerConnected);
         reg.registerEvent(JoinGroupEvent.class, this::onJoinGroup);
         reg.registerEvent(LeaveGroupEvent.class, this::onLeaveGroup);
         reg.registerEvent(MicrophonePacketEvent.class, this::onMicrophonePacket);
@@ -74,7 +83,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     }
 
     private void onServerStarted(VoicechatServerStartedEvent event) {
-        VoicechatServerApi api = event.getVoicechat();
+        this.api = event.getVoicechat();
 
         Set<UUID> ids = new HashSet<>();
         for (String name : persistentGroupNames) {
@@ -97,18 +106,17 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                     + "Velocity server name)");
             return;
         }
-        startBridge(api);
+        startBridge();
     }
 
-    private void startBridge(VoicechatServerApi api) {
+    private void startBridge() {
         this.bus = new RedisVoiceBus(plugin);
         this.membership = new MembershipTracker();
         this.audioRelay = new AudioRelay(plugin, bus, membership, crossServerGroupIds,
                 thisBackend, logger);
         audioRelay.setApi(api);
         this.svcPackets = new SvcPacketSender(plugin);
-        this.skinSyncer = new SkinSyncer(plugin);
-        this.roster = new RosterTracker(plugin, membership, svcPackets, skinSyncer,
+        this.roster = new RosterTracker(plugin, membership, svcPackets,
                 crossServerGroupIds, thisBackend, logger);
 
         boolean ok = bus.start(audioRelay::onAudioFrame, roster::onLifecycleMessage);
@@ -124,15 +132,75 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
         audioRelay.start();
 
-        // Heartbeat: every 30s broadcast our current local roster so other
-        // backends can reconcile and drop stale entries from us if we crash.
-        heartbeatTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
-                () -> bus.publishRoster(roster.buildOurHeartbeat()),
+        // Re-broadcast the local roster every 30 s. Each entry's
+        // lastSeenAt timestamp is bumped on every receive — a missing
+        // re-broadcast for 90 s causes the receiver to sweep the entry
+        // out of its local GUI. This catches both the cold-start case
+        // (a backend that came online late learns about existing members
+        // within 30 s) and the ghost case (a backend that crashed has
+        // its members swept within 90 s).
+        rosterRebroadcastTask = Bukkit.getScheduler().runTaskTimer(plugin,
+                this::rebroadcastLocalRoster,
                 20L * 30L, 20L * 30L);
 
+        sweepTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
+                () -> roster.sweepStaleEntries(),
+                20L * 60L, 20L * 30L);
+
         logger.info("Cross-server voice bridge started (backend='" + thisBackend + "', "
-                + crossServerGroupIds.size() + " groups, skins="
-                + (skinSyncer.isAvailable() ? "real" : "default") + ")");
+                + crossServerGroupIds.size() + " groups; relying on tab-list sync for skins)");
+    }
+
+    /** Re-publish a {@code ROSTER_JOIN} for every local member of every cross-server group. */
+    private void rebroadcastLocalRoster() {
+        if (bus == null || membership == null) return;
+        for (UUID groupId : crossServerGroupIds) {
+            for (UUID localId : membership.getLocalMembers(groupId)) {
+                Player p = Bukkit.getPlayer(localId);
+                if (p == null || !p.isOnline()) continue;
+                bus.publishRoster(VoiceMessages.encodeRosterJoin(
+                        groupId, localId, p.getName(), thisBackend));
+                // Refresh the auto-rejoin TTL so a player who stays in
+                // a group keeps their persistence record alive.
+                bus.writePlayerGroup(localId, groupId, PLAYER_GROUP_TTL_SECONDS);
+            }
+        }
+    }
+
+    /**
+     * Auto-rejoin: when a player's voice connection is established (which
+     * happens on first SVC connect AND after every server hop), check
+     * Redis for their last-known group. If found and we have it locally,
+     * put them back in it.
+     */
+    private void onPlayerConnected(PlayerConnectedEvent event) {
+        if (api == null || bus == null) return;
+        VoicechatConnection conn = event.getConnection();
+        if (conn == null) return;
+        UUID playerId = conn.getPlayer().getUuid();
+
+        // Read Redis on a worker thread; the actual setGroup call must
+        // run on the SVC server thread (the API is thread-safe, but we
+        // route through the connection which expects normal scheduling).
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            String groupIdStr = bus.fetchPlayerGroup(playerId);
+            if (groupIdStr == null) return;
+            UUID groupId;
+            try { groupId = UUID.fromString(groupIdStr); } catch (Exception e) { return; }
+            if (!crossServerGroupIds.contains(groupId)) return;
+
+            Group group = api.getGroup(groupId);
+            if (group == null) return;
+
+            // setGroup fires JoinGroupEvent which our onJoinGroup
+            // handles (records local membership, publishes ROSTER_JOIN).
+            try {
+                conn.setGroup(group);
+                logger.info("Auto-rejoined " + playerId + " to group '" + group.getName() + "'");
+            } catch (Exception e) {
+                logger.warning("Auto-rejoin failed for " + playerId + ": " + e.getMessage());
+            }
+        });
     }
 
     private void onJoinGroup(JoinGroupEvent event) {
@@ -145,18 +213,22 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (!crossServerGroupIds.contains(group.getId())) return;
 
         UUID playerId = event.getConnection().getPlayer().getUuid();
-        Player bukkitPlayer = Bukkit.getPlayer(playerId);
-        if (bukkitPlayer == null) return;
+        UUID groupId = group.getId();
 
-        // 1) Tell other backends we have a new local member of this group.
-        ProfileCodec.Snapshot snapshot = ProfileCodec.capture(bukkitPlayer);
-        bus.publishRoster(VoiceMessages.encodeRosterJoin(group.getId(), playerId,
-                thisBackend, ProfileCodec.encode(snapshot)));
+        // Hop to the main thread: Bukkit player lookup + name access
+        // is safer there than on SVC's network thread.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Player bukkitPlayer = Bukkit.getPlayer(playerId);
+            if (bukkitPlayer == null) return;
 
-        // 2) Catch the new joiner up with the existing remote roster on
-        //    the next tick (event currently runs on a non-main thread).
-        Bukkit.getScheduler().runTask(plugin,
-                () -> roster.catchUpNewLocalJoiner(group.getId(), bukkitPlayer));
+            String name = bukkitPlayer.getName();
+            bus.publishRoster(VoiceMessages.encodeRosterJoin(
+                    groupId, playerId, name, thisBackend));
+            bus.writePlayerGroup(playerId, groupId, PLAYER_GROUP_TTL_SECONDS);
+            logger.info("Roster published: " + name + " joined " + groupId);
+
+            roster.catchUpNewLocalJoiner(groupId, bukkitPlayer);
+        });
     }
 
     private void onLeaveGroup(LeaveGroupEvent event) {
@@ -167,6 +239,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             UUID playerId = event.getConnection().getPlayer().getUuid();
             bus.publishRoster(VoiceMessages.encodeRosterLeave(
                     group.getId(), playerId, thisBackend));
+            // Explicit leave clears the auto-rejoin record so the player
+            // doesn't get put back into the group on their next server hop.
+            bus.deletePlayerGroup(playerId);
         }
         membership.onLeaveGroupEvent(event);
     }
@@ -183,6 +258,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                 bus.publishRoster(VoiceMessages.encodeRosterLeave(
                         groupId, playerId, thisBackend));
             }
+            // Leave the player-group key in place — disconnects from a
+            // server hop should auto-rejoin on the new backend. The TTL
+            // (90 s) handles real long-disconnects so a player who logs
+            // off for hours doesn't get auto-rejoined when they return.
         }
         if (membership != null) membership.onPlayerDisconnect(event);
         if (audioRelay != null) audioRelay.onPlayerDisconnect(event);
@@ -190,8 +269,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     /** Public hook so {@link CrabUtilities#onDisable()} can release resources. */
     public void shutdown() {
-        if (heartbeatTask != null) {
-            try { heartbeatTask.cancel(); } catch (Exception ignored) {}
+        for (BukkitTask task : new BukkitTask[]{rosterRebroadcastTask, sweepTask}) {
+            if (task != null) {
+                try { task.cancel(); } catch (Exception ignored) {}
+            }
         }
         // Tell other backends our local players are leaving (best-effort).
         if (bus != null && membership != null) {

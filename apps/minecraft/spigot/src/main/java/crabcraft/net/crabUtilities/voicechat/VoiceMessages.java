@@ -2,9 +2,6 @@ package crabcraft.net.crabUtilities.voicechat;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -14,21 +11,22 @@ import java.util.UUID;
  * length-prefixed binary because the opus payload is not text.
  *
  * <p>Roster lifecycle messages on {@code crabcraft:svc:roster} are
- * NUL-separated UTF-8 strings, the first field being the opcode. Any
- * field that might itself contain NUL (the profile snapshot) is
- * base64-encoded before being placed in the outer envelope.
+ * NUL-separated UTF-8 strings, the first field being the opcode. We
+ * carry no profile data — cross-server group members rely on the
+ * existing tab-list sync to populate the receiving client's
+ * {@code playerInfoMap}, which is what SVC reads from for skins.
  */
 final class VoiceMessages {
 
     static final String AUDIO_CHANNEL_PREFIX = "crabcraft:svc:audio:";
     static final String PLAYER_HOME_KEY_PREFIX = "crabcraft:svc:player-home:";
+    static final String PLAYER_GROUP_KEY_PREFIX = "crabcraft:svc:player-group:";
     static final String ROSTER_CHANNEL = "crabcraft:svc:roster";
 
     static final String SEP = "\0";
 
     static final String OP_ROSTER_JOIN = "ROSTER_JOIN";
     static final String OP_ROSTER_LEAVE = "ROSTER_LEAVE";
-    static final String OP_ROSTER_HEARTBEAT = "ROSTER_HEARTBEAT";
 
     private VoiceMessages() {}
 
@@ -38,6 +36,10 @@ final class VoiceMessages {
 
     static String playerHomeKey(UUID playerId) {
         return PLAYER_HOME_KEY_PREFIX + playerId;
+    }
+
+    static String playerGroupKey(UUID playerId) {
+        return PLAYER_GROUP_KEY_PREFIX + playerId;
     }
 
     /* ----------------------- Audio ----------------------- */
@@ -86,33 +88,25 @@ final class VoiceMessages {
     /* ----------------------- Roster lifecycle ----------------------- */
 
     /**
-     * {@code ROSTER_JOIN<NUL>group<NUL>player<NUL>backend<NUL>profileBase64}
-     * The profile is itself NUL-separated internally so we base64-encode it
-     * before stuffing into the outer NUL-separated envelope.
+     * {@code ROSTER_JOIN<NUL>group<NUL>player<NUL>name<NUL>backend}
      */
-    static String encodeRosterJoin(UUID groupId, UUID playerId, String backend,
-                                   String encodedProfile) {
-        String profileBase64 = Base64.getEncoder().encodeToString(
-                encodedProfile.getBytes(StandardCharsets.UTF_8));
+    static String encodeRosterJoin(UUID groupId, UUID playerId, String name, String backend) {
         return String.join(SEP, OP_ROSTER_JOIN, groupId.toString(),
-                playerId.toString(), backend, profileBase64);
+                playerId.toString(), name == null ? "" : name, backend);
     }
 
     static RosterJoin decodeRosterJoin(String message) {
         String[] parts = message.split(SEP, -1);
         if (parts.length < 5) return null;
         try {
-            UUID groupId = UUID.fromString(parts[1]);
-            UUID playerId = UUID.fromString(parts[2]);
-            byte[] profileBytes = Base64.getDecoder().decode(parts[4]);
-            String encodedProfile = new String(profileBytes, StandardCharsets.UTF_8);
-            return new RosterJoin(groupId, playerId, parts[3], encodedProfile);
+            return new RosterJoin(UUID.fromString(parts[1]),
+                    UUID.fromString(parts[2]), parts[3], parts[4]);
         } catch (IllegalArgumentException e) {
             return null;
         }
     }
 
-    record RosterJoin(UUID groupId, UUID playerId, String backend, String encodedProfile) {}
+    record RosterJoin(UUID groupId, UUID playerId, String name, String backend) {}
 
     static String encodeRosterLeave(UUID groupId, UUID playerId, String backend) {
         return String.join(SEP, OP_ROSTER_LEAVE, groupId.toString(),
@@ -131,38 +125,4 @@ final class VoiceMessages {
     }
 
     record RosterLeave(UUID groupId, UUID playerId, String backend) {}
-
-    /**
-     * {@code ROSTER_HEARTBEAT<NUL>backend<NUL>group:player[,group:player...]}
-     * Used to reconcile after a backend crash — receivers drop entries
-     * from {@code backend} that aren't in the heartbeat list.
-     */
-    static String encodeRosterHeartbeat(String backend, List<UUID[]> groupPlayerPairs) {
-        StringBuilder pairs = new StringBuilder();
-        for (int i = 0; i < groupPlayerPairs.size(); i++) {
-            if (i > 0) pairs.append(',');
-            UUID[] pair = groupPlayerPairs.get(i);
-            pairs.append(pair[0]).append(':').append(pair[1]);
-        }
-        return String.join(SEP, OP_ROSTER_HEARTBEAT, backend, pairs.toString());
-    }
-
-    static RosterHeartbeat decodeRosterHeartbeat(String message) {
-        String[] parts = message.split(SEP, -1);
-        if (parts.length < 3) return null;
-        String backend = parts[1];
-        List<UUID[]> pairs = new ArrayList<>();
-        if (!parts[2].isEmpty()) {
-            for (String pair : parts[2].split(",")) {
-                String[] gp = pair.split(":", 2);
-                if (gp.length != 2) continue;
-                try {
-                    pairs.add(new UUID[]{UUID.fromString(gp[0]), UUID.fromString(gp[1])});
-                } catch (IllegalArgumentException ignored) {}
-            }
-        }
-        return new RosterHeartbeat(backend, pairs);
-    }
-
-    record RosterHeartbeat(String backend, List<UUID[]> groupPlayerPairs) {}
 }
