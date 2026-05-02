@@ -116,7 +116,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                 thisBackend, logger);
         audioRelay.setApi(api);
         this.svcPackets = new SvcPacketSender(plugin);
-        this.roster = new RosterTracker(plugin, membership, svcPackets,
+        this.roster = new RosterTracker(plugin, svcPackets,
                 crossServerGroupIds, thisBackend, logger);
 
         boolean ok = bus.start(audioRelay::onAudioFrame, roster::onLifecycleMessage);
@@ -168,16 +168,30 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     }
 
     /**
-     * Auto-rejoin: when a player's voice connection is established (which
-     * happens on first SVC connect AND after every server hop), check
-     * Redis for their last-known group. If found and we have it locally,
-     * put them back in it.
+     * On voice connect (first SVC connect AND every server hop):
+     * <ol>
+     *   <li>Send the full current cross-server roster so the join-group
+     *       GUI shows other backends' members <em>before</em> the player
+     *       joins any group.</li>
+     *   <li>Auto-rejoin their last group via Redis if known.</li>
+     * </ol>
      */
     private void onPlayerConnected(PlayerConnectedEvent event) {
         if (api == null || bus == null) return;
         VoicechatConnection conn = event.getConnection();
         if (conn == null) return;
         UUID playerId = conn.getPlayer().getUuid();
+
+        // Catch-up roster on the main thread — purely local sends, no
+        // Redis read. Doing it eagerly (not waiting on the auto-rejoin
+        // Redis round-trip) means the GUI is correct as soon as the
+        // player's voice connection comes up.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Player p = Bukkit.getPlayer(playerId);
+            if (p != null && p.isOnline()) {
+                roster.catchUpNewLocalConnection(p);
+            }
+        });
 
         // Read Redis on a worker thread; the actual setGroup call must
         // run on the SVC server thread (the API is thread-safe, but we
