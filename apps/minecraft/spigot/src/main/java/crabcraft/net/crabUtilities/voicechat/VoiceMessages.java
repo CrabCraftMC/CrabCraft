@@ -2,7 +2,6 @@ package crabcraft.net.crabUtilities.voicechat;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.UUID;
 
 /**
@@ -12,21 +11,22 @@ import java.util.UUID;
  * length-prefixed binary because the opus payload is not text.
  *
  * <p>Roster lifecycle messages on {@code crabcraft:svc:roster} are
- * NUL-separated UTF-8 strings, the first field being the opcode. Any
- * field that might itself contain NUL (the profile snapshot) is
- * base64-encoded before being placed in the outer envelope.
+ * NUL-separated UTF-8 strings, the first field being the opcode. We
+ * carry no profile data — cross-server group members rely on the
+ * existing tab-list sync to populate the receiving client's
+ * {@code playerInfoMap}, which is what SVC reads from for skins.
  */
 final class VoiceMessages {
 
     static final String AUDIO_CHANNEL_PREFIX = "crabcraft:svc:audio:";
     static final String PLAYER_HOME_KEY_PREFIX = "crabcraft:svc:player-home:";
+    static final String PLAYER_GROUP_KEY_PREFIX = "crabcraft:svc:player-group:";
     static final String ROSTER_CHANNEL = "crabcraft:svc:roster";
 
     static final String SEP = "\0";
 
     static final String OP_ROSTER_JOIN = "ROSTER_JOIN";
     static final String OP_ROSTER_LEAVE = "ROSTER_LEAVE";
-    static final String OP_BACKEND_ALIVE = "BACKEND_ALIVE";
 
     private VoiceMessages() {}
 
@@ -36,6 +36,10 @@ final class VoiceMessages {
 
     static String playerHomeKey(UUID playerId) {
         return PLAYER_HOME_KEY_PREFIX + playerId;
+    }
+
+    static String playerGroupKey(UUID playerId) {
+        return PLAYER_GROUP_KEY_PREFIX + playerId;
     }
 
     /* ----------------------- Audio ----------------------- */
@@ -84,33 +88,25 @@ final class VoiceMessages {
     /* ----------------------- Roster lifecycle ----------------------- */
 
     /**
-     * {@code ROSTER_JOIN<NUL>group<NUL>player<NUL>backend<NUL>profileBase64}
-     * The profile is itself NUL-separated internally so we base64-encode it
-     * before stuffing into the outer NUL-separated envelope.
+     * {@code ROSTER_JOIN<NUL>group<NUL>player<NUL>name<NUL>backend}
      */
-    static String encodeRosterJoin(UUID groupId, UUID playerId, String backend,
-                                   String encodedProfile) {
-        String profileBase64 = Base64.getEncoder().encodeToString(
-                encodedProfile.getBytes(StandardCharsets.UTF_8));
+    static String encodeRosterJoin(UUID groupId, UUID playerId, String name, String backend) {
         return String.join(SEP, OP_ROSTER_JOIN, groupId.toString(),
-                playerId.toString(), backend, profileBase64);
+                playerId.toString(), name == null ? "" : name, backend);
     }
 
     static RosterJoin decodeRosterJoin(String message) {
         String[] parts = message.split(SEP, -1);
         if (parts.length < 5) return null;
         try {
-            UUID groupId = UUID.fromString(parts[1]);
-            UUID playerId = UUID.fromString(parts[2]);
-            byte[] profileBytes = Base64.getDecoder().decode(parts[4]);
-            String encodedProfile = new String(profileBytes, StandardCharsets.UTF_8);
-            return new RosterJoin(groupId, playerId, parts[3], encodedProfile);
+            return new RosterJoin(UUID.fromString(parts[1]),
+                    UUID.fromString(parts[2]), parts[3], parts[4]);
         } catch (IllegalArgumentException e) {
             return null;
         }
     }
 
-    record RosterJoin(UUID groupId, UUID playerId, String backend, String encodedProfile) {}
+    record RosterJoin(UUID groupId, UUID playerId, String name, String backend) {}
 
     static String encodeRosterLeave(UUID groupId, UUID playerId, String backend) {
         return String.join(SEP, OP_ROSTER_LEAVE, groupId.toString(),
@@ -129,19 +125,4 @@ final class VoiceMessages {
     }
 
     record RosterLeave(UUID groupId, UUID playerId, String backend) {}
-
-    /**
-     * {@code BACKEND_ALIVE<NUL>backend} — small periodic ping so other
-     * backends know we're still up. After 90s without a ping from a
-     * backend, receivers drop all roster entries from that backend.
-     */
-    static String encodeBackendAlive(String backend) {
-        return String.join(SEP, OP_BACKEND_ALIVE, backend);
-    }
-
-    static String decodeBackendAlive(String message) {
-        String[] parts = message.split(SEP, -1);
-        if (parts.length < 2) return null;
-        return parts[1];
-    }
 }

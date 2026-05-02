@@ -154,6 +154,39 @@ class RedisVoiceBus {
         }
     }
 
+    /**
+     * Returns the group UUID the player was in (across any backend),
+     * or null if no record / expired. Used for auto-rejoin on server hop.
+     */
+    String fetchPlayerGroup(UUID playerId) {
+        if (jedisPool == null) return null;
+        try (Jedis jedis = jedisPool.getResource()) {
+            return jedis.get(VoiceMessages.playerGroupKey(playerId));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    void writePlayerGroup(UUID playerId, UUID groupId, long ttlSeconds) {
+        if (jedisPool == null) return;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try (Jedis jedis = jedisPool.getResource()) {
+                jedis.setex(VoiceMessages.playerGroupKey(playerId), ttlSeconds, groupId.toString());
+            } catch (Exception e) {
+                plugin.getLogger().fine("writePlayerGroup failed: " + e.getMessage());
+            }
+        });
+    }
+
+    void deletePlayerGroup(UUID playerId) {
+        if (jedisPool == null) return;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try (Jedis jedis = jedisPool.getResource()) {
+                jedis.del(VoiceMessages.playerGroupKey(playerId));
+            } catch (Exception ignored) {}
+        });
+    }
+
     void shutdown() {
         if (rosterPubSub != null) {
             try { rosterPubSub.unsubscribe(); } catch (Exception ignored) {}

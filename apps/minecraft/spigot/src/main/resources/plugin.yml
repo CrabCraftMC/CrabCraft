@@ -7,7 +7,6 @@ website: https://www.crabcraft.net
 softdepend:
   - Essentials
   - voicechat
-  - packetevents
 commands:
   pack:
     description: Enable or disable the server resource pack for yourself.
