@@ -36,7 +36,6 @@ class RosterTracker {
     static final long ENTRY_TIMEOUT_MS = 90_000L;
 
     private final CrabUtilities plugin;
-    private final MembershipTracker membership;
     private final SvcPacketSender svcPackets;
     private final Set<UUID> crossServerGroupIds;
     private final String thisBackend;
@@ -45,11 +44,10 @@ class RosterTracker {
     /** groupId -> playerId -> remote member metadata. */
     private final Map<UUID, Map<UUID, RemoteMember>> remoteByGroup = new ConcurrentHashMap<>();
 
-    RosterTracker(CrabUtilities plugin, MembershipTracker membership,
-                  SvcPacketSender svcPackets, Set<UUID> crossServerGroupIds,
+    RosterTracker(CrabUtilities plugin, SvcPacketSender svcPackets,
+                  Set<UUID> crossServerGroupIds,
                   String thisBackend, Logger logger) {
         this.plugin = plugin;
-        this.membership = membership;
         this.svcPackets = svcPackets;
         this.crossServerGroupIds = crossServerGroupIds;
         this.thisBackend = thisBackend;
@@ -155,7 +153,10 @@ class RosterTracker {
 
     /**
      * When a local player joins a global group, send them the existing
-     * remote roster so the GUI is correct immediately.
+     * remote roster so the GUI is correct immediately. (Mostly redundant
+     * now that {@link #pushMemberToLocalListeners} broadcasts to every
+     * online player, but kept for tight in-group handoff with no
+     * scheduler-tick race.)
      */
     void catchUpNewLocalJoiner(UUID groupId, Player joiner) {
         Map<UUID, RemoteMember> members = remoteByGroup.get(groupId);
@@ -165,23 +166,35 @@ class RosterTracker {
         }
     }
 
-    /* ----------------------- Internals ----------------------- */
-
-    private void pushMemberToLocalListeners(UUID groupId, RemoteMember member) {
-        for (UUID localId : membership.getLocalMembers(groupId)) {
-            Player p = Bukkit.getPlayer(localId);
-            if (p != null && p.isOnline()) {
-                sendMemberTo(p, groupId, member);
+    /**
+     * When a local player's voice connection comes up, send them the
+     * full current cross-server roster across every group. This is what
+     * makes the join-group GUI show cross-server members BEFORE the
+     * player has joined any group.
+     */
+    void catchUpNewLocalConnection(Player joiner) {
+        for (Map.Entry<UUID, Map<UUID, RemoteMember>> entry : remoteByGroup.entrySet()) {
+            for (RemoteMember m : entry.getValue().values()) {
+                sendMemberTo(joiner, entry.getKey(), m);
             }
         }
     }
 
+    /* ----------------------- Internals ----------------------- */
+
+    private void pushMemberToLocalListeners(UUID groupId, RemoteMember member) {
+        // Broadcast to every online player on this backend, not just
+        // group members — otherwise a player who hasn't yet joined any
+        // cross-server group has no PlayerState entries for cross-
+        // server members and the join-group GUI shows them as empty.
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            sendMemberTo(p, groupId, member);
+        }
+    }
+
     private void removeMemberFromLocalListeners(UUID groupId, RemoteMember member) {
-        for (UUID localId : membership.getLocalMembers(groupId)) {
-            Player p = Bukkit.getPlayer(localId);
-            if (p != null && p.isOnline()) {
-                svcPackets.sendRemove(p, member.uuid());
-            }
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            svcPackets.sendRemove(p, member.uuid());
         }
     }
 
