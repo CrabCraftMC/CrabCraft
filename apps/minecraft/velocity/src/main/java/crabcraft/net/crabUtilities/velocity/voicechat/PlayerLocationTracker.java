@@ -80,7 +80,14 @@ public class PlayerLocationTracker {
     public void onDisconnect(DisconnectEvent event) {
         if (jedisPool == null) return;
         UUID playerId = event.getPlayer().getUniqueId();
-        plugin.getServer().getScheduler().buildTask(plugin, () -> deleteHome(playerId)).schedule();
+        // DisconnectEvent only fires when the player leaves the proxy
+        // entirely (NOT on backend hop), so this is the right place to
+        // clear the auto-rejoin record. Server hops keep the
+        // player-group key intact via the 90s TTL.
+        plugin.getServer().getScheduler().buildTask(plugin, () -> {
+            deleteHome(playerId);
+            deletePlayerGroup(playerId);
+        }).schedule();
     }
 
     private void writeHome(UUID playerId, String backend) {
@@ -94,6 +101,13 @@ public class PlayerLocationTracker {
 
     private void deleteHome(UUID playerId) {
         String key = "crabcraft:svc:player-home:" + playerId;
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.del(key);
+        } catch (Exception ignored) {}
+    }
+
+    private void deletePlayerGroup(UUID playerId) {
+        String key = "crabcraft:svc:player-group:" + playerId;
         try (Jedis jedis = jedisPool.getResource()) {
             jedis.del(key);
         } catch (Exception ignored) {}
