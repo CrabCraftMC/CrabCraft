@@ -27,3 +27,9 @@ export const TWITCH_POLL_MS = 60 * 1000;
 
 /** Interval between TikTok live status polls (2 minutes). */
 export const TIKTOK_POLL_MS = 2 * 60 * 1000;
+
+/** Delay before auto-deleting a closed ticket thread (24 hours). */
+export const TICKET_DELETE_DELAY_MS = 24 * 60 * 60 * 1000;
+
+/** Interval between scans for expired closed tickets (15 minutes). */
+export const TICKET_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;

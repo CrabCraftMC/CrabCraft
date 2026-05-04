@@ -17,7 +17,12 @@ import {
   fetchLeaderboardData,
   buildLeaderboardComponents,
 } from "../utils/leaderboard.js";
-import { LEADERBOARD_REFRESH_MS, APPLICATION_REMINDER_DELAY_MS, APPLICATION_REMINDER_CHECK_MS } from "../utils/constants.js";
+import {
+  LEADERBOARD_REFRESH_MS,
+  APPLICATION_REMINDER_DELAY_MS,
+  APPLICATION_REMINDER_CHECK_MS,
+  TICKET_CLEANUP_INTERVAL_MS,
+} from "../utils/constants.js";
 import { syncLeaderboardEmojis } from "../utils/playerEmoji.js";
 import * as appDb from "../utils/appDb.js";
 import { primaryContainer } from "../utils/embeds.js";
@@ -150,6 +155,35 @@ export default class ReadyEvent extends Event {
     // Run once on startup, then every 30 minutes
     await scanApplicationReminders();
     setInterval(scanApplicationReminders, APPLICATION_REMINDER_CHECK_MS);
+
+    // Ticket cleanup — delete closed-ticket threads past their delete window
+    const cleanupExpiredTickets = async () => {
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const expired = await appDb.getExpiredClosedTickets(now);
+        for (const ticket of expired) {
+          try {
+            const thread = await client.channels
+              .fetch(ticket.thread_id)
+              .catch(() => null);
+            if (thread && thread.isThread()) {
+              await thread.delete(`Ticket #${ticket.id} expired`).catch(() => null);
+            }
+          } catch (e) {
+            logger.error(`Ticket cleanup: failed to delete thread for #${ticket.id}:`, e);
+          }
+          try {
+            await appDb.deleteTicketRow(ticket.id);
+          } catch (e) {
+            logger.error(`Ticket cleanup: failed to delete row for #${ticket.id}:`, e);
+          }
+        }
+      } catch (e) {
+        logger.error("Ticket cleanup scan failed:", e);
+      }
+    };
+    await cleanupExpiredTickets();
+    setInterval(cleanupExpiredTickets, TICKET_CLEANUP_INTERVAL_MS);
 
     // Wiki recent changes poller
     await initWikiPoller(client);

@@ -1,6 +1,16 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, lte } from "drizzle-orm";
 import { db } from "../client";
-import { players, applications, streamChannels, playerAlts } from "../schema";
+import {
+  players,
+  applications,
+  streamChannels,
+  playerAlts,
+  tickets,
+  type TicketCategory,
+  type TicketStatus,
+} from "../schema";
+
+export type { TicketCategory, TicketStatus } from "../schema";
 
 export interface UpsertUserData {
   discordId: string;
@@ -351,4 +361,194 @@ export async function isAltUuidTaken(minecraftUuid: string): Promise<boolean> {
     .where(eq(playerAlts.minecraft_uuid, minecraftUuid))
     .limit(1);
   return rows.length > 0;
+}
+
+// ── Tickets ────────────────────────────────────────────────────
+
+/** Max simultaneous open tickets per category per user. */
+export const MAX_OPEN_TICKETS_PER_CATEGORY = 1;
+
+const ACTIVE_TICKET_STATUSES = ["open", "claimed"] as const satisfies readonly TicketStatus[];
+
+export interface CreateTicketData {
+  threadId: string;
+  parentChannelId: string;
+  guildId: string;
+  openerDiscordId: string;
+  openerDiscordUsername: string;
+  openerMinecraftUuid?: string | null;
+  openerMinecraftUsername?: string | null;
+  category: TicketCategory;
+  subject?: string | null;
+  intake: Record<string, unknown>;
+}
+
+export type Ticket = typeof tickets.$inferSelect;
+
+export async function createTicket(data: CreateTicketData): Promise<Ticket> {
+  const [row] = await db
+    .insert(tickets)
+    .values({
+      thread_id: data.threadId,
+      parent_channel_id: data.parentChannelId,
+      guild_id: data.guildId,
+      opener_discord_id: data.openerDiscordId,
+      opener_discord_username: data.openerDiscordUsername,
+      opener_minecraft_uuid: data.openerMinecraftUuid ?? null,
+      opener_minecraft_username: data.openerMinecraftUsername ?? null,
+      category: data.category,
+      subject: data.subject ?? null,
+      intake: data.intake,
+    })
+    .returning();
+  return row;
+}
+
+export async function getTicketByThreadId(
+  threadId: string,
+): Promise<Ticket | null> {
+  const [row] = await db
+    .select()
+    .from(tickets)
+    .where(eq(tickets.thread_id, threadId))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getTicketById(id: number): Promise<Ticket | null> {
+  const [row] = await db
+    .select()
+    .from(tickets)
+    .where(eq(tickets.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function countOpenTicketsForUserAndCategory(
+  discordId: string,
+  category: TicketCategory,
+): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`COUNT(*)::INTEGER` })
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.opener_discord_id, discordId),
+        eq(tickets.category, category),
+        inArray(tickets.status, ACTIVE_TICKET_STATUSES as unknown as TicketStatus[]),
+      ),
+    );
+  return rows[0]?.count ?? 0;
+}
+
+export async function claimTicket(
+  ticketId: number,
+  moderatorDiscordId: string,
+): Promise<Ticket | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const [row] = await db
+    .update(tickets)
+    .set({
+      status: "claimed",
+      claimed_by_discord_id: moderatorDiscordId,
+      claimed_at: now,
+      updated_at: now,
+    })
+    .where(
+      and(
+        eq(tickets.id, ticketId),
+        inArray(tickets.status, ACTIVE_TICKET_STATUSES as unknown as TicketStatus[]),
+      ),
+    )
+    .returning();
+  return row ?? null;
+}
+
+export async function closeTicket(
+  ticketId: number,
+  closedByDiscordId: string,
+  reason: string | null,
+  deleteAfter: number,
+): Promise<Ticket | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const [row] = await db
+    .update(tickets)
+    .set({
+      status: "closed",
+      closed_by_discord_id: closedByDiscordId,
+      closed_at: now,
+      close_reason: reason,
+      delete_after: deleteAfter,
+      updated_at: now,
+    })
+    .where(eq(tickets.id, ticketId))
+    .returning();
+  return row ?? null;
+}
+
+export async function reopenTicket(ticketId: number): Promise<Ticket | null> {
+  const now = Math.floor(Date.now() / 1000);
+  // Restore to "claimed" if it was previously claimed, otherwise "open".
+  const [row] = await db
+    .update(tickets)
+    .set({
+      status: sql`CASE WHEN ${tickets.claimed_by_discord_id} IS NOT NULL THEN 'claimed'::ticket_status ELSE 'open'::ticket_status END`,
+      closed_by_discord_id: null,
+      closed_at: null,
+      close_reason: null,
+      delete_after: null,
+      updated_at: now,
+    })
+    .where(eq(tickets.id, ticketId))
+    .returning();
+  return row ?? null;
+}
+
+export async function getExpiredClosedTickets(now: number): Promise<Ticket[]> {
+  return db
+    .select()
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.status, "closed"),
+        lte(tickets.delete_after, now),
+      ),
+    );
+}
+
+export async function deleteTicketRow(ticketId: number): Promise<void> {
+  await db.delete(tickets).where(eq(tickets.id, ticketId));
+}
+
+export async function listOpenTicketsForUser(
+  discordId: string,
+): Promise<Ticket[]> {
+  return db
+    .select()
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.opener_discord_id, discordId),
+        inArray(tickets.status, ACTIVE_TICKET_STATUSES as unknown as TicketStatus[]),
+      ),
+    )
+    .orderBy(desc(tickets.created_at));
+}
+
+/** Minimal player lookup used to populate the ticket header card. */
+export async function getPlayerLink(
+  discordId: string,
+): Promise<{
+  minecraft_username: string | null;
+  minecraft_uuid: string | null;
+} | null> {
+  const [row] = await db
+    .select({
+      minecraft_username: players.minecraft_username,
+      minecraft_uuid: players.minecraft_uuid,
+    })
+    .from(players)
+    .where(eq(players.discord_id, discordId))
+    .limit(1);
+  return row ?? null;
 }

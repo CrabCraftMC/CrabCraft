@@ -281,3 +281,66 @@ export const playerAlts = pgTable(
     index("palt_discord_idx").on(table.discord_id),
   ],
 );
+
+// ── tickets ────────────────────────────────────────────────────
+export const ticketCategoryEnum = pgEnum("ticket_category", [
+  "general",
+  "grief",
+  "appeal",
+]);
+
+export type TicketCategory = (typeof ticketCategoryEnum.enumValues)[number];
+
+export const ticketStatusEnum = pgEnum("ticket_status", [
+  "open",
+  "claimed",
+  "closed",
+]);
+
+export type TicketStatus = (typeof ticketStatusEnum.enumValues)[number];
+
+// Tickets opened via the Discord ticket embed. One row per ticket
+// thread; lifecycle is open → (optionally claimed) → closed → deleted.
+// `intake` holds the category-specific modal fields submitted by the
+// opener so staff have full context without scrolling the transcript.
+export const tickets = pgTable(
+  "tickets",
+  {
+    id: serial("id").primaryKey(),
+    thread_id: text("thread_id").notNull().unique(),
+    parent_channel_id: text("parent_channel_id").notNull(),
+    guild_id: text("guild_id").notNull(),
+
+    opener_discord_id: text("opener_discord_id").notNull(),
+    opener_discord_username: text("opener_discord_username").notNull(),
+    opener_minecraft_uuid: text("opener_minecraft_uuid"),
+    opener_minecraft_username: text("opener_minecraft_username"),
+
+    category: ticketCategoryEnum("category").notNull(),
+    status: ticketStatusEnum("status").notNull().default("open"),
+
+    subject: text("subject"),
+    intake: jsonb("intake"),
+
+    claimed_by_discord_id: text("claimed_by_discord_id"),
+    claimed_at: integer("claimed_at"),
+
+    closed_by_discord_id: text("closed_by_discord_id"),
+    closed_at: integer("closed_at"),
+    close_reason: text("close_reason"),
+    // Unix seconds; closed threads are deleted at this point unless reopened.
+    delete_after: integer("delete_after"),
+
+    created_at: integer("created_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+    updated_at: integer("updated_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    index("tickets_opener_idx").on(table.opener_discord_id, table.status),
+    index("tickets_status_idx").on(table.status),
+    index("tickets_delete_after_idx").on(table.delete_after),
+  ],
+);

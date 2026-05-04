@@ -3,6 +3,7 @@ const REQUIRED_KEYS = [
   "MEMBER_ROLE_ID", "MOD_ROLE_ID", "APPLICATION_CATEGORY_ID", "LOG_CHANNEL_ID",
   "DISCORD_DATABASE_URL",
   "DATABASE_URL",
+  "TICKET_PARENT_CHANNEL_ID",
 ] as const;
 
 const missing = REQUIRED_KEYS.filter((k) => !process.env[k]);
@@ -19,6 +20,8 @@ interface IConfig {
 
   LEADERBOARD_CHANNEL_ID: string;
   WIKI_CHANNEL_ID: string;
+
+  TICKET_PARENT_CHANNEL_ID: string;
 
   DISCORD_DATABASE_URL: string;
   DATABASE_URL: string;

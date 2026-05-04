@@ -1,0 +1,457 @@
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ContainerBuilder,
+  ModalBuilder,
+  SectionBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ThumbnailBuilder,
+  resolveColor,
+} from "discord.js";
+import mysql from "./database.js";
+import logger from "./logger.js";
+import * as appDb from "./appDb.js";
+import type { TicketCategory, Ticket } from "./appDb.js";
+
+// ── Category metadata ──────────────────────────────────────────────
+
+export interface CategoryMeta {
+  category: TicketCategory;
+  label: string;
+  emoji: string;
+  /** Short prefix used in thread channel names. */
+  prefix: string;
+  /** Discord button style on the trigger embed. */
+  buttonStyle: ButtonStyle;
+  /** Container accent colour name (resolveColor). */
+  accent: "Blurple" | "Red" | "Yellow";
+  modalTitle: string;
+  fields: TicketField[];
+  /** Heading shown at the top of the ticket thread once opened. */
+  headerTitle: string;
+}
+
+export interface TicketField {
+  /** Modal customId for the input. */
+  id: string;
+  /** Label shown in the modal. */
+  label: string;
+  /** Field name shown in the ticket header in the thread. */
+  display: string;
+  style: TextInputStyle;
+  required: boolean;
+  placeholder?: string;
+  maxLength?: number;
+}
+
+export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
+  general: {
+    category: "general",
+    label: "General Question",
+    emoji: "❓",
+    prefix: "gq",
+    buttonStyle: ButtonStyle.Primary,
+    accent: "Blurple",
+    modalTitle: "General Question",
+    headerTitle: "General Question",
+    fields: [
+      {
+        id: "subject",
+        label: "Subject",
+        display: "Subject",
+        style: TextInputStyle.Short,
+        required: true,
+        placeholder: "Short summary of your question",
+        maxLength: 100,
+      },
+      {
+        id: "description",
+        label: "What can we help you with?",
+        display: "Description",
+        style: TextInputStyle.Paragraph,
+        required: true,
+        placeholder: "Provide as much detail as possible…",
+        maxLength: 1500,
+      },
+    ],
+  },
+  grief: {
+    category: "grief",
+    label: "Report Griefing / Stealing",
+    emoji: "⚠️",
+    prefix: "rg",
+    buttonStyle: ButtonStyle.Danger,
+    accent: "Red",
+    modalTitle: "Report Griefing / Stealing",
+    headerTitle: "Griefing / Stealing Report",
+    fields: [
+      {
+        id: "offender",
+        label: "Offender's Minecraft username",
+        display: "Offender",
+        style: TextInputStyle.Short,
+        required: true,
+        placeholder: "Steve",
+        maxLength: 32,
+      },
+      {
+        id: "location",
+        label: "Location / coordinates",
+        display: "Location",
+        style: TextInputStyle.Short,
+        required: false,
+        placeholder: "e.g. Overworld 1234 64 -512 (or a base name)",
+        maxLength: 100,
+      },
+      {
+        id: "when",
+        label: "When did it happen?",
+        display: "When",
+        style: TextInputStyle.Short,
+        required: false,
+        placeholder: "e.g. Today around 8pm UTC",
+        maxLength: 100,
+      },
+      {
+        id: "description",
+        label: "What happened?",
+        display: "Description",
+        style: TextInputStyle.Paragraph,
+        required: true,
+        placeholder: "Describe what was griefed/stolen and any context…",
+        maxLength: 1500,
+      },
+      {
+        id: "evidence",
+        label: "Evidence (links to screenshots/clips)",
+        display: "Evidence",
+        style: TextInputStyle.Paragraph,
+        required: false,
+        placeholder: "Imgur, YouTube, etc. You can also upload in the ticket.",
+        maxLength: 1000,
+      },
+    ],
+  },
+  appeal: {
+    category: "appeal",
+    label: "Punishment Appeal",
+    emoji: "📜",
+    prefix: "pa",
+    buttonStyle: ButtonStyle.Secondary,
+    accent: "Yellow",
+    modalTitle: "Punishment Appeal",
+    headerTitle: "Punishment Appeal",
+    fields: [
+      {
+        id: "mc_username",
+        label: "Banned Minecraft username",
+        display: "Minecraft Username",
+        style: TextInputStyle.Short,
+        required: true,
+        placeholder: "Your in-game username",
+        maxLength: 32,
+      },
+      {
+        id: "ban_reason",
+        label: "Reason given for the punishment",
+        display: "Reason Given",
+        style: TextInputStyle.Short,
+        required: true,
+        placeholder: "What you were told when banned/muted",
+        maxLength: 200,
+      },
+      {
+        id: "ban_date",
+        label: "When were you punished?",
+        display: "When",
+        style: TextInputStyle.Short,
+        required: false,
+        placeholder: "Approximate date/time",
+        maxLength: 100,
+      },
+      {
+        id: "appeal",
+        label: "Why should we unban you?",
+        display: "Appeal",
+        style: TextInputStyle.Paragraph,
+        required: true,
+        placeholder: "Explain in detail. Be honest — staff will check logs.",
+        maxLength: 1500,
+      },
+    ],
+  },
+};
+
+export function getCategoryMeta(category: string): CategoryMeta | null {
+  return TICKET_CATEGORIES[category as TicketCategory] ?? null;
+}
+
+// ── Player info helper ────────────────────────────────────────────
+
+export interface PlayerInfo {
+  discordId: string;
+  discordTag: string;
+  minecraftUsername: string | null;
+  minecraftUuid: string | null;
+  isWhitelisted: boolean;
+  skinUrl: string | null;
+}
+
+/** Pull minimal player context for a ticket header. Never throws. */
+export async function getPlayerInfo(
+  discordId: string,
+  discordTag: string,
+): Promise<PlayerInfo> {
+  let minecraftUsername: string | null = null;
+  let minecraftUuid: string | null = null;
+  let isWhitelisted = false;
+
+  try {
+    const link = await appDb.getPlayerLink(discordId);
+    if (link) {
+      minecraftUsername = link.minecraft_username;
+      minecraftUuid = link.minecraft_uuid;
+    }
+  } catch (e) {
+    logger.error("Ticket: failed to load player row:", e);
+  }
+
+  try {
+    const rows = await mysql.query(
+      "SELECT uuid FROM discordsrv_accounts WHERE discord = ? LIMIT 1",
+      [discordId],
+    );
+    if (rows.length > 0) {
+      isWhitelisted = true;
+      if (!minecraftUuid && rows[0].uuid) minecraftUuid = rows[0].uuid;
+    }
+  } catch (e) {
+    logger.error("Ticket: failed to check whitelist status:", e);
+  }
+
+  return {
+    discordId,
+    discordTag,
+    minecraftUsername,
+    minecraftUuid,
+    isWhitelisted,
+    skinUrl: minecraftUuid
+      ? `https://api.mineatar.io/body/full/${minecraftUuid}?scale=8`
+      : null,
+  };
+}
+
+// ── Builders ──────────────────────────────────────────────────────
+
+/** The public-facing trigger embed posted by /ticket-embed. */
+export function buildTriggerEmbed(): ContainerBuilder {
+  const lines = [
+    "## <:Crab:1397355651822256299> Open a Support Ticket",
+    "Need help? Pick the option that best describes your issue and a private thread will be opened with the staff team.",
+    "",
+    "**<:Crab:1397355651822256299> Categories**",
+    `${TICKET_CATEGORIES.general.emoji} **General Question** — ask about the server, voice chat, or anything else.`,
+    `${TICKET_CATEGORIES.grief.emoji} **Report Griefing / Stealing** — report a player who griefed or stole from you.`,
+    `${TICKET_CATEGORIES.appeal.emoji} **Punishment Appeal** — appeal a ban, mute, or warning.`,
+    "",
+    "-# Tickets are private. Only you and staff can see them.",
+  ];
+  return new ContainerBuilder()
+    .setAccentColor(resolveColor("Blurple"))
+    .addTextDisplayComponents((td) => td.setContent(lines.join("\n")));
+}
+
+/** Action row of category buttons for the trigger embed. */
+export function buildTriggerButtons(): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    ...Object.values(TICKET_CATEGORIES).map((meta) =>
+      new ButtonBuilder()
+        .setCustomId(`ticket_open:${meta.category}`)
+        .setLabel(meta.label)
+        .setEmoji(meta.emoji)
+        .setStyle(meta.buttonStyle),
+    ),
+  );
+}
+
+/** The intake modal shown when a user clicks a category button. */
+export function buildIntakeModal(meta: CategoryMeta): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(`ticket_modal:${meta.category}`)
+    .setTitle(meta.modalTitle);
+
+  for (const field of meta.fields) {
+    const input = new TextInputBuilder()
+      .setCustomId(field.id)
+      .setLabel(field.label)
+      .setStyle(field.style)
+      .setRequired(field.required);
+    if (field.placeholder) input.setPlaceholder(field.placeholder);
+    if (field.maxLength) input.setMaxLength(field.maxLength);
+    modal.addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(input),
+    );
+  }
+
+  return modal;
+}
+
+/**
+ * The header container posted in the thread when a ticket opens.
+ * Shows player info + the intake answers so staff have context.
+ */
+export function buildTicketHeader(
+  ticket: Ticket,
+  meta: CategoryMeta,
+  player: PlayerInfo,
+  intake: Record<string, string>,
+): ContainerBuilder {
+  const ticketLine = `**Ticket:** \`#${String(ticket.id).padStart(4, "0")}\``;
+  const openerLine = `**Opened by:** <@${player.discordId}> (\`${player.discordTag}\`)`;
+  const mcLine = player.minecraftUsername
+    ? `**Minecraft:** \`${player.minecraftUsername}\``
+    : "**Minecraft:** _not linked_";
+  const whitelistLine = `**Whitelist:** ${player.isWhitelisted ? "✅ Verified" : "❌ Not whitelisted"}`;
+  const playerCard = [
+    `## ${meta.emoji} ${meta.headerTitle}`,
+    ticketLine,
+    openerLine,
+    mcLine,
+    whitelistLine,
+  ].join("\n");
+
+  // Build the intake summary from the modal fields, keeping submission order.
+  const intakeLines: string[] = [];
+  for (const field of meta.fields) {
+    const value = intake[field.id];
+    if (!value) continue;
+    intakeLines.push(`**${field.display}**\n${value}`);
+  }
+
+  const container = new ContainerBuilder().setAccentColor(
+    resolveColor(meta.accent),
+  );
+
+  if (player.skinUrl) {
+    container.addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents((td) => td.setContent(playerCard))
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(player.skinUrl),
+        ),
+    );
+  } else {
+    container.addTextDisplayComponents((td) => td.setContent(playerCard));
+  }
+
+  if (intakeLines.length > 0) {
+    container.addTextDisplayComponents((td) =>
+      td.setContent(intakeLines.join("\n\n")),
+    );
+  }
+
+  return container;
+}
+
+/** Action row for staff: Claim + Close. */
+export function buildStaffButtons(
+  ticketId: number,
+  options: { claimedBy?: string | null } = {},
+): ActionRowBuilder<ButtonBuilder> {
+  const claimButton = new ButtonBuilder()
+    .setCustomId(`ticket_claim:${ticketId}`)
+    .setLabel(options.claimedBy ? "Claimed" : "Claim")
+    .setEmoji("🙋")
+    .setStyle(ButtonStyle.Primary)
+    .setDisabled(Boolean(options.claimedBy));
+
+  const closeButton = new ButtonBuilder()
+    .setCustomId(`ticket_close:${ticketId}`)
+    .setLabel("Close Ticket")
+    .setEmoji("🔒")
+    .setStyle(ButtonStyle.Danger);
+
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    claimButton,
+    closeButton,
+  );
+}
+
+/** Modal asking the closer for an optional reason. */
+export function buildCloseModal(ticketId: number): ModalBuilder {
+  return new ModalBuilder()
+    .setCustomId(`ticket_close_modal:${ticketId}`)
+    .setTitle("Close Ticket")
+    .addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("reason")
+          .setLabel("Reason (optional)")
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(false)
+          .setMaxLength(500)
+          .setPlaceholder("Resolved, no response, abandoned, etc."),
+      ),
+    );
+}
+
+/** Container shown in-thread once a ticket is closed. */
+export function buildClosedNotice(
+  closedByMention: string,
+  reason: string | null,
+  deleteAtEpochSeconds: number,
+): ContainerBuilder {
+  const reasonBlock = reason && reason.trim().length > 0
+    ? `\n**Reason**\n\`\`\`${reason}\`\`\``
+    : "";
+  return new ContainerBuilder()
+    .setAccentColor(resolveColor("DarkButNotBlack"))
+    .addTextDisplayComponents((td) =>
+      td.setContent(
+        `## 🔒 Ticket Closed\nClosed by ${closedByMention}.${reasonBlock}\n-# This thread will be deleted <t:${deleteAtEpochSeconds}:R>. Reopen below if needed.`,
+      ),
+    );
+}
+
+/** Reopen button shown alongside the closed notice. */
+export function buildReopenButton(
+  ticketId: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket_reopen:${ticketId}`)
+      .setLabel("Reopen Ticket")
+      .setEmoji("🔓")
+      .setStyle(ButtonStyle.Success),
+  );
+}
+
+/** Container shown in-thread when a ticket is reopened. */
+export function buildReopenedNotice(reopenedByMention: string): ContainerBuilder {
+  return new ContainerBuilder()
+    .setAccentColor(resolveColor("Green"))
+    .addTextDisplayComponents((td) =>
+      td.setContent(
+        `## 🔓 Ticket Reopened\nReopened by ${reopenedByMention}. Staff will be back with you shortly.`,
+      ),
+    );
+}
+
+/**
+ * Build a thread name like `steve-grief` (max 100 chars per Discord).
+ * Discord auto-lowercases thread names; we still strip invalid characters
+ * so usernames with dots/spaces don't break.
+ */
+export function buildThreadName(
+  username: string,
+  meta: CategoryMeta,
+): string {
+  const safe = username
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "user";
+  return `${safe}-${meta.category}`;
+}
