@@ -113,6 +113,7 @@ export default class MessageReactionAddEvent extends Event {
       await starboard.send({
         components: [container, linkRow],
         flags: MessageFlags.IsComponentsV2,
+        allowedMentions: { parse: [] },
       });
     } catch (error) {
       starredMessages.delete(message.id);
