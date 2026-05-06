@@ -1,0 +1,14 @@
+{
+  "roles": {
+    "member": "",
+    "mod": "",
+    "live": ""
+  },
+  "channels": {
+    "applicationCategory": "",
+    "log": "",
+    "leaderboard": "",
+    "wiki": "",
+    "starboard": ""
+  }
+}
