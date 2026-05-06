@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../client";
-import { players, applications, streamChannels, playerAlts } from "../schema";
+import { players, applications, streamChannels, playerAlts, starboardPosts } from "../schema";
 
 export interface UpsertUserData {
   discordId: string;
@@ -351,4 +351,72 @@ export async function isAltUuidTaken(minecraftUuid: string): Promise<boolean> {
     .where(eq(playerAlts.minecraft_uuid, minecraftUuid))
     .limit(1);
   return rows.length > 0;
+}
+
+// ── Starboard ──────────────────────────────────────────────────
+
+export interface StarboardPost {
+  message_id: string;
+  channel_id: string;
+  author_id: string;
+  starboard_message_id: string | null;
+  posted_at: number;
+}
+
+export async function hasStarboardPost(messageId: string): Promise<boolean> {
+  const rows = await db
+    .select({ message_id: starboardPosts.message_id })
+    .from(starboardPosts)
+    .where(eq(starboardPosts.message_id, messageId))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * Atomically claims a message for starboard reposting. Returns `true`
+ * if this caller won the race and should send the starboard message,
+ * `false` if another caller already claimed it.
+ */
+export async function claimStarboardPost(data: {
+  messageId: string;
+  channelId: string;
+  authorId: string;
+}): Promise<boolean> {
+  const inserted = await db
+    .insert(starboardPosts)
+    .values({
+      message_id: data.messageId,
+      channel_id: data.channelId,
+      author_id: data.authorId,
+    })
+    .onConflictDoNothing()
+    .returning({ message_id: starboardPosts.message_id });
+  return inserted.length > 0;
+}
+
+export async function setStarboardMessageId(
+  messageId: string,
+  starboardMessageId: string,
+): Promise<void> {
+  await db
+    .update(starboardPosts)
+    .set({ starboard_message_id: starboardMessageId })
+    .where(eq(starboardPosts.message_id, messageId));
+}
+
+export async function deleteStarboardPost(messageId: string): Promise<void> {
+  await db
+    .delete(starboardPosts)
+    .where(eq(starboardPosts.message_id, messageId));
+}
+
+export async function getStarboardPostsByAuthor(
+  authorId: string,
+): Promise<StarboardPost[]> {
+  const rows = await db
+    .select()
+    .from(starboardPosts)
+    .where(eq(starboardPosts.author_id, authorId))
+    .orderBy(desc(starboardPosts.posted_at));
+  return rows as StarboardPost[];
 }

@@ -3,6 +3,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ChannelType,
   ContainerBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
@@ -16,10 +17,16 @@ import {
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { STARBOARD_THRESHOLD } from "../utils/constants.js";
+import {
+  claimStarboardPost,
+  deleteStarboardPost,
+  hasStarboardPost,
+  setStarboardMessageId,
+} from "../utils/appDb.js";
 
-// Track messages we've already reposted this session to avoid duplicates
-// when more reactions arrive after the threshold has been hit.
-const starredMessages = new Set<string>();
+// Fast-path cache populated from the DB. Source of truth is
+// `starboard_posts` so dedupe survives bot restarts.
+const starredCache = new Set<string>();
 
 export default class MessageReactionAddEvent extends Event {
   constructor() {
@@ -44,7 +51,12 @@ export default class MessageReactionAddEvent extends Event {
     const message = reaction.message;
     if (!message.author || message.author.bot) return;
     if (message.channelId === config.STARBOARD_CHANNEL_ID) return;
-    if (starredMessages.has(message.id)) return;
+    if (message.channel?.type !== ChannelType.GuildText) return;
+    if (starredCache.has(message.id)) return;
+    if (await hasStarboardPost(message.id)) {
+      starredCache.add(message.id);
+      return;
+    }
 
     // Aggregate distinct reactors across every reaction on the message,
     // excluding bots and the message author.
@@ -63,15 +75,25 @@ export default class MessageReactionAddEvent extends Event {
     }
 
     if (uniqueReactors.size < STARBOARD_THRESHOLD) return;
-    if (starredMessages.has(message.id)) return;
-    starredMessages.add(message.id);
+
+    const claimed = await claimStarboardPost({
+      messageId: message.id,
+      channelId: message.channelId,
+      authorId: message.author.id,
+    });
+    if (!claimed) {
+      starredCache.add(message.id);
+      return;
+    }
+    starredCache.add(message.id);
 
     const starboard = (await message.client.channels
       .fetch(config.STARBOARD_CHANNEL_ID)
       .catch(() => null)) as TextChannel | null;
 
     if (!starboard?.isTextBased()) {
-      starredMessages.delete(message.id);
+      starredCache.delete(message.id);
+      await deleteStarboardPost(message.id).catch(() => null);
       logger.warn("Starboard channel not found or not text-based");
       return;
     }
@@ -110,13 +132,17 @@ export default class MessageReactionAddEvent extends Event {
     );
 
     try {
-      await starboard.send({
+      const sent = await starboard.send({
         components: [container, linkRow],
         flags: MessageFlags.IsComponentsV2,
         allowedMentions: { parse: [] },
       });
+      await setStarboardMessageId(message.id, sent.id).catch((e) =>
+        logger.error("Failed to record starboard message id:", e),
+      );
     } catch (error) {
-      starredMessages.delete(message.id);
+      starredCache.delete(message.id);
+      await deleteStarboardPost(message.id).catch(() => null);
       logger.error("Failed to send starboard message:", error);
     }
   }
