@@ -63,7 +63,7 @@ interface ComponentOpts {
 
 function buildStarboardComponents(opts: ComponentOpts) {
   const headerLines = [
-    `### ⭐ ${opts.count} · Starred Message`,
+    `### <:star:1423390709448314880> ${opts.count} · Starred Message`,
     `**From:** <@${opts.authorId}>`,
     `**Channel:** <#${opts.channelId}>`,
   ];
