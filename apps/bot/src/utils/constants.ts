@@ -30,3 +30,6 @@ export const TIKTOK_POLL_MS = 2 * 60 * 1000;
 
 /** Number of unique non-author reactors required to repost a message to the starboard. */
 export const STARBOARD_THRESHOLD = 5;
+
+/** How long to wait after the last reaction change before editing the starboard repost (30s). */
+export const STARBOARD_UPDATE_DEBOUNCE_MS = 30 * 1000;

@@ -1,7 +1,6 @@
 import Event from "../structures/Event.js";
 import {
   ChannelType,
-  type Message,
   type MessageReaction,
   type PartialMessageReaction,
   type PartialUser,
@@ -9,17 +8,11 @@ import {
 } from "discord.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
-import { STARBOARD_THRESHOLD } from "../utils/constants.js";
-import {
-  countUniqueReactors,
-  isStarred,
-  postToStarboard,
-  scheduleStarboardUpdate,
-} from "../utils/starboard.js";
+import { isStarred, scheduleStarboardUpdate } from "../utils/starboard.js";
 
-export default class MessageReactionAddEvent extends Event {
+export default class MessageReactionRemoveEvent extends Event {
   constructor() {
-    super("MessageReactionAdd", "messageReactionAdd", false);
+    super("MessageReactionRemove", "messageReactionRemove", false);
   }
 
   async execute(
@@ -33,21 +26,15 @@ export default class MessageReactionAddEvent extends Event {
       if (reaction.partial) await reaction.fetch();
       if (reaction.message.partial) await reaction.message.fetch();
     } catch (error) {
-      logger.error("Failed to fetch reaction/message:", error);
+      logger.error("Failed to fetch reaction/message on remove:", error);
       return;
     }
 
     const message = reaction.message;
-    if (!message.author || message.author.bot) return;
     if (message.channelId === config.STARBOARD_CHANNEL_ID) return;
     if (message.channel?.type !== ChannelType.GuildText) return;
+    if (!(await isStarred(message.id))) return;
 
-    if (await isStarred(message.id)) {
-      scheduleStarboardUpdate(message);
-      return;
-    }
-
-    if ((await countUniqueReactors(message)) < STARBOARD_THRESHOLD) return;
-    await postToStarboard(message as Message);
+    scheduleStarboardUpdate(message);
   }
 }

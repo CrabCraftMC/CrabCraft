@@ -372,6 +372,17 @@ export async function hasStarboardPost(messageId: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+export async function getStarboardPost(
+  messageId: string,
+): Promise<StarboardPost | null> {
+  const [row] = await db
+    .select()
+    .from(starboardPosts)
+    .where(eq(starboardPosts.message_id, messageId))
+    .limit(1);
+  return (row as StarboardPost | undefined) ?? null;
+}
+
 /**
  * Atomically claims a message for starboard reposting. Returns `true`
  * if this caller won the race and should send the starboard message,
