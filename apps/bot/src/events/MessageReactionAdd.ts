@@ -12,6 +12,7 @@ import logger from "../utils/logger.js";
 import { STARBOARD_THRESHOLD } from "../utils/constants.js";
 import {
   countUniqueReactors,
+  isStarEmoji,
   isStarred,
   postToStarboard,
   scheduleStarboardUpdate,
@@ -28,6 +29,7 @@ export default class MessageReactionAddEvent extends Event {
   ) {
     if (!config.STARBOARD_CHANNEL_ID) return;
     if (user.bot) return;
+    if (!isStarEmoji(reaction.emoji)) return;
 
     try {
       if (reaction.partial) await reaction.fetch();

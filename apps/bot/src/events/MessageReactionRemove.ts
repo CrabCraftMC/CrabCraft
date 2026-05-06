@@ -8,7 +8,7 @@ import {
 } from "discord.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
-import { isStarred, scheduleStarboardUpdate } from "../utils/starboard.js";
+import { isStarEmoji, isStarred, scheduleStarboardUpdate } from "../utils/starboard.js";
 
 export default class MessageReactionRemoveEvent extends Event {
   constructor() {
@@ -21,6 +21,7 @@ export default class MessageReactionRemoveEvent extends Event {
   ) {
     if (!config.STARBOARD_CHANNEL_ID) return;
     if (user.bot) return;
+    if (!isStarEmoji(reaction.emoji)) return;
 
     try {
       if (reaction.partial) await reaction.fetch();
