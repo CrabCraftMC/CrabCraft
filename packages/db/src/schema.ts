@@ -260,6 +260,26 @@ export const mcLoginHistory = pgTable("mc_login_history", {
     .$defaultFn(() => Math.floor(Date.now() / 1000)),
 });
 
+// ── starboard_posts ────────────────────────────────────────────
+// Every Discord message reposted to the starboard. Used to dedupe
+// across bot restarts and to power per-user starboard queries
+// ("show me all of @user's starred posts").
+export const starboardPosts = pgTable(
+  "starboard_posts",
+  {
+    message_id: text("message_id").primaryKey(),
+    channel_id: text("channel_id").notNull(),
+    author_id: text("author_id").notNull(),
+    starboard_message_id: text("starboard_message_id"),
+    posted_at: integer("posted_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    index("starboard_author_idx").on(table.author_id),
+  ],
+);
+
 // ── player_alts ────────────────────────────────────────────────
 // Alt Minecraft accounts linked by whitelisted players via the
 // Discord bot. Velocity checks this table on each proxy join to
