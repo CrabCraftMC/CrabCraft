@@ -11,7 +11,7 @@ export default class Event {
     this.once = once;
   }
 
-  async execute(_: any) {
+  async execute(..._args: any[]) {
     throw new Error("Method not implemented.");
   }
 
