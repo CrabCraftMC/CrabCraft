@@ -19,6 +19,7 @@ interface IConfig {
 
   LEADERBOARD_CHANNEL_ID: string;
   WIKI_CHANNEL_ID: string;
+  STARBOARD_CHANNEL_ID: string;
 
   DISCORD_DATABASE_URL: string;
   DATABASE_URL: string;
