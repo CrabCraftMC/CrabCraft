@@ -24,6 +24,15 @@ import {
 const pendingUpdates = new Map<string, NodeJS.Timeout>();
 const starredCache = new Set<string>();
 
+const STAR_EMOJI_IDS = new Set(["1423390709448314880"]);
+const STAR_EMOJI_NAMES = new Set(["⭐"]);
+
+export function isStarEmoji(emoji: { id: string | null; name: string | null }): boolean {
+  if (emoji.id) return STAR_EMOJI_IDS.has(emoji.id);
+  if (emoji.name) return STAR_EMOJI_NAMES.has(emoji.name);
+  return false;
+}
+
 export async function isStarred(messageId: string): Promise<boolean> {
   if (starredCache.has(messageId)) return true;
   if (await hasStarboardPost(messageId)) {
@@ -38,6 +47,7 @@ export async function countUniqueReactors(
 ): Promise<number> {
   const reactors = new Set<string>();
   for (const r of message.reactions.cache.values()) {
+    if (!isStarEmoji(r.emoji)) continue;
     try {
       const users = await r.users.fetch();
       for (const u of users.values()) {
