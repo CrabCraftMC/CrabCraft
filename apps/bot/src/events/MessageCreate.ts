@@ -25,32 +25,47 @@ export default class MessageCreateEvent extends Event {
     if (!config.COUNTING_CHANNEL_ID) return;
     if (message.channelId !== config.COUNTING_CHANNEL_ID) return;
 
+    const tag = `[counting] ${message.author.username} (${message.id})`;
+
     await withQueue(message.channelId, async () => {
       try {
         const state = await getCountingState(message.channelId);
         const currentCount = state?.current_count ?? 0;
+        const expected = currentCount + 1;
 
         if (state?.last_user_id === message.author.id) {
+          logger.info(`${tag}: back-to-back from same user, deleting`);
           await message.delete().catch(() => null);
           return;
         }
 
         let number = await parseNumberFromMessage(message);
+        let parsedFrom = number !== null ? "first-pass" : "miss";
 
-        // Tenor/Giphy embeds often aren't attached at messageCreate time —
-        // Discord scrapes the URL asynchronously. If the first parse missed
-        // and the content has a URL, wait briefly and refetch.
         if (
           number === null &&
           message.attachments.size === 0 &&
           /https?:\/\//.test(message.content ?? "")
         ) {
+          logger.info(`${tag}: no number on first pass, waiting 2s for embed`);
           await new Promise((r) => setTimeout(r, 2000));
           const refreshed = await message.fetch().catch(() => null);
-          if (refreshed) number = await parseNumberFromMessage(refreshed);
+          if (refreshed) {
+            number = await parseNumberFromMessage(refreshed);
+            parsedFrom = number !== null ? "after-refetch" : "miss-after-refetch";
+          }
         }
 
-        if (number === null || number !== currentCount + 1) {
+        if (number === null) {
+          logger.info(`${tag}: no number found (${parsedFrom}), deleting`);
+          await message.delete().catch(() => null);
+          return;
+        }
+
+        if (number !== expected) {
+          logger.info(
+            `${tag}: parsed ${number} (${parsedFrom}) but expected ${expected}, deleting`,
+          );
           await message.delete().catch(() => null);
           return;
         }
@@ -61,10 +76,14 @@ export default class MessageCreateEvent extends Event {
           message.author.id,
         );
         if (!advanced) {
+          logger.warn(`${tag}: lost race for ${expected}, deleting`);
           await message.delete().catch(() => null);
+          return;
         }
+
+        logger.info(`${tag}: accepted ${expected} (${parsedFrom})`);
       } catch (error) {
-        logger.error("Counting handler failed:", error);
+        logger.error(`${tag}: handler crashed:`, error);
       }
     });
   }

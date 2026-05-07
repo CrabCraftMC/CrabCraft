@@ -59,6 +59,7 @@ export async function extractNumberFromImage(
 
   const data = (await res.json().catch(() => null)) as ChatCompletionResponse | null;
   const reply = data?.choices?.[0]?.message?.content?.trim() ?? "";
+  logger.info(`[openai] vision reply for ${imageUrl}: ${JSON.stringify(reply)}`);
   if (!reply || reply.toLowerCase() === "none") return null;
 
   const match = reply.match(/-?\d+/);
