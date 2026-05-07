@@ -3,6 +3,8 @@ package crabcraft.net.crabUtilities.velocity.messaging;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -56,6 +58,7 @@ public class MessageManager {
 
         source.sendMessage(outgoing);
         target.sendMessage(incoming);
+        playIncomingSound(target);
 
         replyTargets.put(senderId, target.getUniqueId());
         replyTargets.put(target.getUniqueId(), senderId);
@@ -65,6 +68,18 @@ public class MessageManager {
         String plainSender = PlainTextComponentSerializer.plainText().serialize(senderComponent);
         String plainTarget = PlainTextComponentSerializer.plainText().serialize(targetComponent);
         plugin.getLogger().info("[MSG] {} -> {}: {}", plainSender, plainTarget, message);
+    }
+
+    private void playIncomingSound(Player target) {
+        if (!plugin.getConfig().isMsgIncomingSoundEnabled()) return;
+        Key soundKey = Key.key(plugin.getConfig().getMsgIncomingSoundKey());
+        Sound sound = Sound.sound(
+                soundKey,
+                Sound.Source.MASTER,
+                plugin.getConfig().getMsgIncomingSoundVolume(),
+                plugin.getConfig().getMsgIncomingSoundPitch()
+        );
+        target.playSound(sound);
     }
 
     private void broadcastToSpies(Component senderComponent, Component targetComponent,
