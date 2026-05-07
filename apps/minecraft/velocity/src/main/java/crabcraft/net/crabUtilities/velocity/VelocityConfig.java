@@ -42,6 +42,10 @@ public class VelocityConfig {
     private final String msgPlayerNotFound;
     private final String msgNoReplyTarget;
     private final String msgSelfError;
+    private final boolean msgIncomingSoundEnabled;
+    private final String msgIncomingSoundKey;
+    private final float msgIncomingSoundVolume;
+    private final float msgIncomingSoundPitch;
     private final int apiPort;
     private final List<String> ignoredServers;
     private final String firstJoinFormat;
@@ -67,7 +71,10 @@ public class VelocityConfig {
                            String msgOutgoingFormat, String msgIncomingFormat,
                            String msgSpyFormat,
                            String msgPlayerNotFound, String msgNoReplyTarget,
-                           String msgSelfError, int apiPort,
+                           String msgSelfError,
+                           boolean msgIncomingSoundEnabled, String msgIncomingSoundKey,
+                           float msgIncomingSoundVolume, float msgIncomingSoundPitch,
+                           int apiPort,
                            List<String> ignoredServers, String firstJoinFormat,
                            String discordWebhookUrl, String discordJoinFormat,
                            String discordLeaveFormat, String discordSwapFormat,
@@ -91,6 +98,10 @@ public class VelocityConfig {
         this.msgPlayerNotFound = msgPlayerNotFound;
         this.msgNoReplyTarget = msgNoReplyTarget;
         this.msgSelfError = msgSelfError;
+        this.msgIncomingSoundEnabled = msgIncomingSoundEnabled;
+        this.msgIncomingSoundKey = msgIncomingSoundKey;
+        this.msgIncomingSoundVolume = msgIncomingSoundVolume;
+        this.msgIncomingSoundPitch = msgIncomingSoundPitch;
         this.apiPort = apiPort;
         this.ignoredServers = ignoredServers;
         this.firstJoinFormat = firstJoinFormat;
@@ -162,6 +173,12 @@ public class VelocityConfig {
             String msgNoReply = msgNode.node("no-reply-target").getString(DEFAULT_MSG_NO_REPLY_TARGET);
             String msgSelf = msgNode.node("self-error").getString(DEFAULT_MSG_SELF);
 
+            ConfigurationNode incomingSound = msgNode.node("incoming-sound");
+            boolean soundEnabled = incomingSound.node("enabled").getBoolean(true);
+            String soundKey = incomingSound.node("sound").getString("minecraft:entity.experience_orb.pickup");
+            float soundVolume = (float) incomingSound.node("volume").getDouble(1.0);
+            float soundPitch = (float) incomingSound.node("pitch").getDouble(1.0);
+
             int apiPort = root.node("api", "port").getInt(8080);
 
             List<String> ignoredServers = new ArrayList<>();
@@ -200,7 +217,8 @@ public class VelocityConfig {
 
             return new VelocityConfig(host, port, password, channel, format,
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
-                    msgOutgoing, msgIncoming, msgSpy, msgNotFound, msgNoReply, msgSelf, apiPort,
+                    msgOutgoing, msgIncoming, msgSpy, msgNotFound, msgNoReply, msgSelf,
+                    soundEnabled, soundKey, soundVolume, soundPitch, apiPort,
                     ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
@@ -211,7 +229,8 @@ public class VelocityConfig {
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT,
                     "", "https://mc-heads.net/head/{uuid}",
                     DEFAULT_MSG_OUTGOING, DEFAULT_MSG_INCOMING, DEFAULT_MSG_SPY,
-                    DEFAULT_MSG_PLAYER_NOT_FOUND, DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF, 8080,
+                    DEFAULT_MSG_PLAYER_NOT_FOUND, DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF,
+                    true, "minecraft:entity.experience_orb.pickup", 1.0f, 1.0f, 8080,
                     List.of(), "<yellow><name> joined the game for the first time</yellow>",
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
@@ -234,6 +253,10 @@ public class VelocityConfig {
     public String getMsgPlayerNotFound() { return msgPlayerNotFound; }
     public String getMsgNoReplyTarget() { return msgNoReplyTarget; }
     public String getMsgSelfError() { return msgSelfError; }
+    public boolean isMsgIncomingSoundEnabled() { return msgIncomingSoundEnabled; }
+    public String getMsgIncomingSoundKey() { return msgIncomingSoundKey; }
+    public float getMsgIncomingSoundVolume() { return msgIncomingSoundVolume; }
+    public float getMsgIncomingSoundPitch() { return msgIncomingSoundPitch; }
     public int getApiPort() { return apiPort; }
     public List<String> getIgnoredServers() { return ignoredServers; }
     public String getFirstJoinFormat() { return firstJoinFormat; }
