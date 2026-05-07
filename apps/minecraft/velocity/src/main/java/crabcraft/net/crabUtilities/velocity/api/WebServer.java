@@ -391,7 +391,8 @@ public class WebServer {
         return httpServer != null;
     }
 
-    private boolean isRateLimited(String ip) {
+    private boolean isRateLimited(HttpExchange exchange) {
+        String ip = ClientIpResolver.resolve(exchange);
         long now = System.currentTimeMillis();
         long[] window = rateLimits.computeIfAbsent(ip, k -> new long[]{0, now});
         synchronized (window) {
@@ -499,7 +500,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -511,7 +512,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -532,7 +533,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -555,7 +556,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -577,7 +578,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -602,7 +603,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -671,7 +672,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -718,7 +719,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
