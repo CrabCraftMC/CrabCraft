@@ -463,7 +463,7 @@ export async function tryAdvanceCount(
   userId: string,
 ): Promise<boolean> {
   const now = Math.floor(Date.now() / 1000);
-  const result = await db
+  const updated = await db
     .update(countingState)
     .set({
       current_count: expectedCurrent + 1,
@@ -476,8 +476,9 @@ export async function tryAdvanceCount(
         eq(countingState.current_count, expectedCurrent),
         sql`(${countingState.last_user_id} IS NULL OR ${countingState.last_user_id} <> ${userId})`,
       ),
-    );
-  return ((result as any).rowCount ?? 0) > 0;
+    )
+    .returning({ channel_id: countingState.channel_id });
+  return updated.length > 0;
 }
 
 /** Mod-only seed/override. Upserts the counting state row. */
