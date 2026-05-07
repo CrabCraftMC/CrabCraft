@@ -35,7 +35,21 @@ export default class MessageCreateEvent extends Event {
           return;
         }
 
-        const number = await parseNumberFromMessage(message);
+        let number = await parseNumberFromMessage(message);
+
+        // Tenor/Giphy embeds often aren't attached at messageCreate time —
+        // Discord scrapes the URL asynchronously. If the first parse missed
+        // and the content has a URL, wait briefly and refetch.
+        if (
+          number === null &&
+          message.attachments.size === 0 &&
+          /https?:\/\//.test(message.content ?? "")
+        ) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const refreshed = await message.fetch().catch(() => null);
+          if (refreshed) number = await parseNumberFromMessage(refreshed);
+        }
+
         if (number === null || number !== currentCount + 1) {
           await message.delete().catch(() => null);
           return;
