@@ -260,6 +260,39 @@ export const mcLoginHistory = pgTable("mc_login_history", {
     .$defaultFn(() => Math.floor(Date.now() / 1000)),
 });
 
+// ── starboard_posts ────────────────────────────────────────────
+// Every Discord message reposted to the starboard. Used to dedupe
+// across bot restarts and to power per-user starboard queries
+// ("show me all of @user's starred posts").
+export const starboardPosts = pgTable(
+  "starboard_posts",
+  {
+    message_id: text("message_id").primaryKey(),
+    channel_id: text("channel_id").notNull(),
+    author_id: text("author_id").notNull(),
+    starboard_message_id: text("starboard_message_id"),
+    posted_at: integer("posted_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    index("starboard_author_idx").on(table.author_id),
+  ],
+);
+
+// ── counting_state ─────────────────────────────────────────────
+// Per-channel current count for the counting channel feature.
+// Single row per channel; the bot only reads/updates the row whose
+// channel_id matches the configured counting channel.
+export const countingState = pgTable("counting_state", {
+  channel_id: text("channel_id").primaryKey(),
+  current_count: integer("current_count").notNull().default(0),
+  last_user_id: text("last_user_id"),
+  updated_at: integer("updated_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
 // ── player_alts ────────────────────────────────────────────────
 // Alt Minecraft accounts linked by whitelisted players via the
 // Discord bot. Velocity checks this table on each proxy join to
@@ -293,22 +326,22 @@ export type TicketCategory = (typeof ticketCategoryEnum.enumValues)[number];
 
 export const ticketStatusEnum = pgEnum("ticket_status", [
   "open",
-  "claimed",
   "closed",
 ]);
 
 export type TicketStatus = (typeof ticketStatusEnum.enumValues)[number];
 
-// Tickets opened via the Discord ticket embed. One row per ticket
-// thread; lifecycle is open → (optionally claimed) → closed → deleted.
+// Tickets opened via the Discord ticket embed. Each ticket is a
+// dedicated text channel under the configured ticket category;
+// lifecycle is open → closed → deleted (after grace window).
 // `intake` holds the category-specific modal fields submitted by the
 // opener so staff have full context without scrolling the transcript.
 export const tickets = pgTable(
   "tickets",
   {
     id: serial("id").primaryKey(),
-    thread_id: text("thread_id").notNull().unique(),
-    parent_channel_id: text("parent_channel_id").notNull(),
+    channel_id: text("channel_id").notNull().unique(),
+    parent_category_id: text("parent_category_id").notNull(),
     guild_id: text("guild_id").notNull(),
 
     opener_discord_id: text("opener_discord_id").notNull(),
@@ -322,13 +355,9 @@ export const tickets = pgTable(
     subject: text("subject"),
     intake: jsonb("intake"),
 
-    claimed_by_discord_id: text("claimed_by_discord_id"),
-    claimed_at: integer("claimed_at"),
-
     closed_by_discord_id: text("closed_by_discord_id"),
     closed_at: integer("closed_at"),
-    close_reason: text("close_reason"),
-    // Unix seconds; closed threads are deleted at this point unless reopened.
+    // Unix seconds; closed channels are deleted at this point unless reopened.
     delete_after: integer("delete_after"),
 
     created_at: integer("created_at")

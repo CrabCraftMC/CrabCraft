@@ -355,62 +355,43 @@ export function buildTicketHeader(
   return container;
 }
 
-/** Action row for staff: Claim + Close. */
+/** Action row for staff: just Close. */
 export function buildStaffButtons(
   ticketId: number,
-  options: { claimedBy?: string | null } = {},
 ): ActionRowBuilder<ButtonBuilder> {
-  const claimButton = new ButtonBuilder()
-    .setCustomId(`ticket_claim:${ticketId}`)
-    .setLabel(options.claimedBy ? "Claimed" : "Claim")
-    .setEmoji("🙋")
-    .setStyle(ButtonStyle.Primary)
-    .setDisabled(Boolean(options.claimedBy));
-
-  const closeButton = new ButtonBuilder()
-    .setCustomId(`ticket_close:${ticketId}`)
-    .setLabel("Close Ticket")
-    .setEmoji("🔒")
-    .setStyle(ButtonStyle.Danger);
-
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    claimButton,
-    closeButton,
+    new ButtonBuilder()
+      .setCustomId(`ticket_close:${ticketId}`)
+      .setLabel("Close Ticket")
+      .setEmoji("🔒")
+      .setStyle(ButtonStyle.Danger),
   );
 }
 
-/** Modal asking the closer for an optional reason. */
-export function buildCloseModal(ticketId: number): ModalBuilder {
-  return new ModalBuilder()
-    .setCustomId(`ticket_close_modal:${ticketId}`)
-    .setTitle("Close Ticket")
-    .addComponents(
-      new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId("reason")
-          .setLabel("Reason (optional)")
-          .setStyle(TextInputStyle.Paragraph)
-          .setRequired(false)
-          .setMaxLength(500)
-          .setPlaceholder("Resolved, no response, abandoned, etc."),
-      ),
-    );
+/** Same Close button, disabled — used to grey the row after close. */
+export function buildDisabledStaffButtons(
+  ticketId: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket_close:${ticketId}`)
+      .setLabel("Close Ticket")
+      .setEmoji("🔒")
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(true),
+  );
 }
 
-/** Container shown in-thread once a ticket is closed. */
+/** Container shown once a ticket is closed; references the delete countdown. */
 export function buildClosedNotice(
   closedByMention: string,
-  reason: string | null,
   deleteAtEpochSeconds: number,
 ): ContainerBuilder {
-  const reasonBlock = reason && reason.trim().length > 0
-    ? `\n**Reason**\n\`\`\`${reason}\`\`\``
-    : "";
   return new ContainerBuilder()
     .setAccentColor(resolveColor("DarkButNotBlack"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `## 🔒 Ticket Closed\nClosed by ${closedByMention}.${reasonBlock}\n-# This thread will be deleted <t:${deleteAtEpochSeconds}:R>. Reopen below if needed.`,
+        `## 🔒 Ticket Closed\nClosed by ${closedByMention}.\n-# This channel will be deleted <t:${deleteAtEpochSeconds}:R>. Mods can reopen below to restore opener access.`,
       ),
     );
 }
@@ -428,23 +409,36 @@ export function buildReopenButton(
   );
 }
 
-/** Container shown in-thread when a ticket is reopened. */
+/** Same Reopen button, disabled — used to grey the row after reopen. */
+export function buildDisabledReopenButton(
+  ticketId: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket_reopen:${ticketId}`)
+      .setLabel("Reopen Ticket")
+      .setEmoji("🔓")
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(true),
+  );
+}
+
+/** Container shown when a ticket is reopened. */
 export function buildReopenedNotice(reopenedByMention: string): ContainerBuilder {
   return new ContainerBuilder()
     .setAccentColor(resolveColor("Green"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `## 🔓 Ticket Reopened\nReopened by ${reopenedByMention}. Staff will be back with you shortly.`,
+        `## 🔓 Ticket Reopened\nReopened by ${reopenedByMention}. The opener has been restored to the channel.`,
       ),
     );
 }
 
 /**
- * Build a thread name like `steve-grief` (max 100 chars per Discord).
- * Discord auto-lowercases thread names; we still strip invalid characters
- * so usernames with dots/spaces don't break.
+ * Build a channel name like `steve-grief`. Discord allows up to 100 chars
+ * for channel names; usernames are sanitised to letters/numbers/dash/underscore.
  */
-export function buildThreadName(
+export function buildChannelName(
   username: string,
   meta: CategoryMeta,
 ): string {

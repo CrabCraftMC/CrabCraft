@@ -156,21 +156,21 @@ export default class ReadyEvent extends Event {
     await scanApplicationReminders();
     setInterval(scanApplicationReminders, APPLICATION_REMINDER_CHECK_MS);
 
-    // Ticket cleanup — delete closed-ticket threads past their delete window
+    // Ticket cleanup — delete closed-ticket channels past their delete window
     const cleanupExpiredTickets = async () => {
       try {
         const now = Math.floor(Date.now() / 1000);
         const expired = await appDb.getExpiredClosedTickets(now);
         for (const ticket of expired) {
           try {
-            const thread = await client.channels
-              .fetch(ticket.thread_id)
+            const channel = await client.channels
+              .fetch(ticket.channel_id)
               .catch(() => null);
-            if (thread && thread.isThread()) {
-              await thread.delete(`Ticket #${ticket.id} expired`).catch(() => null);
+            if (channel) {
+              await channel.delete(`Ticket #${ticket.id} expired`).catch(() => null);
             }
           } catch (e) {
-            logger.error(`Ticket cleanup: failed to delete thread for #${ticket.id}:`, e);
+            logger.error(`Ticket cleanup: failed to delete channel for #${ticket.id}:`, e);
           }
           try {
             await appDb.deleteTicketRow(ticket.id);

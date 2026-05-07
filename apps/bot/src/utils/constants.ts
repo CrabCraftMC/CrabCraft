@@ -28,8 +28,14 @@ export const TWITCH_POLL_MS = 60 * 1000;
 /** Interval between TikTok live status polls (2 minutes). */
 export const TIKTOK_POLL_MS = 2 * 60 * 1000;
 
-/** Delay before auto-deleting a closed ticket thread (24 hours). */
+/** Delay before auto-deleting a closed ticket channel (24 hours). */
 export const TICKET_DELETE_DELAY_MS = 24 * 60 * 60 * 1000;
 
 /** Interval between scans for expired closed tickets (15 minutes). */
 export const TICKET_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+
+/** Number of unique non-author reactors required to repost a message to the starboard. */
+export const STARBOARD_THRESHOLD = 5;
+
+/** How long to wait after the last reaction change before editing the starboard repost (30s). */
+export const STARBOARD_UPDATE_DEBOUNCE_MS = 30 * 1000;

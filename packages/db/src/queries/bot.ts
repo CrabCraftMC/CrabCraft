@@ -1,13 +1,14 @@
-import { eq, and, desc, sql, inArray, lte } from "drizzle-orm";
+import { eq, and, desc, sql, lte } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
   applications,
   streamChannels,
   playerAlts,
+  starboardPosts,
+  countingState,
   tickets,
   type TicketCategory,
-  type TicketStatus,
 } from "../schema";
 
 export type { TicketCategory, TicketStatus } from "../schema";
@@ -363,16 +364,167 @@ export async function isAltUuidTaken(minecraftUuid: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+// ── Starboard ──────────────────────────────────────────────────
+
+export interface StarboardPost {
+  message_id: string;
+  channel_id: string;
+  author_id: string;
+  starboard_message_id: string | null;
+  posted_at: number;
+}
+
+export async function hasStarboardPost(messageId: string): Promise<boolean> {
+  const rows = await db
+    .select({ message_id: starboardPosts.message_id })
+    .from(starboardPosts)
+    .where(eq(starboardPosts.message_id, messageId))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function getStarboardPost(
+  messageId: string,
+): Promise<StarboardPost | null> {
+  const [row] = await db
+    .select()
+    .from(starboardPosts)
+    .where(eq(starboardPosts.message_id, messageId))
+    .limit(1);
+  return (row as StarboardPost | undefined) ?? null;
+}
+
+/**
+ * Atomically claims a message for starboard reposting. Returns `true`
+ * if this caller won the race and should send the starboard message,
+ * `false` if another caller already claimed it.
+ */
+export async function claimStarboardPost(data: {
+  messageId: string;
+  channelId: string;
+  authorId: string;
+}): Promise<boolean> {
+  const inserted = await db
+    .insert(starboardPosts)
+    .values({
+      message_id: data.messageId,
+      channel_id: data.channelId,
+      author_id: data.authorId,
+    })
+    .onConflictDoNothing()
+    .returning({ message_id: starboardPosts.message_id });
+  return inserted.length > 0;
+}
+
+export async function setStarboardMessageId(
+  messageId: string,
+  starboardMessageId: string,
+): Promise<void> {
+  await db
+    .update(starboardPosts)
+    .set({ starboard_message_id: starboardMessageId })
+    .where(eq(starboardPosts.message_id, messageId));
+}
+
+export async function deleteStarboardPost(messageId: string): Promise<void> {
+  await db
+    .delete(starboardPosts)
+    .where(eq(starboardPosts.message_id, messageId));
+}
+
+export async function getStarboardPostsByAuthor(
+  authorId: string,
+): Promise<StarboardPost[]> {
+  const rows = await db
+    .select()
+    .from(starboardPosts)
+    .where(eq(starboardPosts.author_id, authorId))
+    .orderBy(desc(starboardPosts.posted_at));
+  return rows as StarboardPost[];
+}
+
+// ── Counting ───────────────────────────────────────────────────
+
+export interface CountingState {
+  channel_id: string;
+  current_count: number;
+  last_user_id: string | null;
+  updated_at: number;
+}
+
+export async function getCountingState(
+  channelId: string,
+): Promise<CountingState | null> {
+  const [row] = await db
+    .select()
+    .from(countingState)
+    .where(eq(countingState.channel_id, channelId))
+    .limit(1);
+  return (row as CountingState | undefined) ?? null;
+}
+
+/**
+ * Atomically advances the count by 1 only when the row's
+ * `current_count` still equals `expectedCurrent` AND the last
+ * counter wasn't this user. Returns true if the row was updated.
+ */
+export async function tryAdvanceCount(
+  channelId: string,
+  expectedCurrent: number,
+  userId: string,
+): Promise<boolean> {
+  const now = Math.floor(Date.now() / 1000);
+  const updated = await db
+    .update(countingState)
+    .set({
+      current_count: expectedCurrent + 1,
+      last_user_id: userId,
+      updated_at: now,
+    })
+    .where(
+      and(
+        eq(countingState.channel_id, channelId),
+        eq(countingState.current_count, expectedCurrent),
+        sql`(${countingState.last_user_id} IS NULL OR ${countingState.last_user_id} <> ${userId})`,
+      ),
+    )
+    .returning({ channel_id: countingState.channel_id });
+  return updated.length > 0;
+}
+
+/** Mod-only seed/override. Upserts the counting state row. */
+export async function setCountingState(
+  channelId: string,
+  count: number,
+  lastUserId: string | null = null,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .insert(countingState)
+    .values({
+      channel_id: channelId,
+      current_count: count,
+      last_user_id: lastUserId,
+      updated_at: now,
+    })
+    .onConflictDoUpdate({
+      target: countingState.channel_id,
+      set: {
+        current_count: count,
+        last_user_id: lastUserId,
+        updated_at: now,
+      },
+    });
+}
+
 // ── Tickets ────────────────────────────────────────────────────
 
 /** Max simultaneous open tickets per category per user. */
 export const MAX_OPEN_TICKETS_PER_CATEGORY = 1;
 
-const ACTIVE_TICKET_STATUSES = ["open", "claimed"] as const satisfies readonly TicketStatus[];
-
 export interface CreateTicketData {
-  threadId: string;
-  parentChannelId: string;
+  channelId: string;
+  parentCategoryId: string;
   guildId: string;
   openerDiscordId: string;
   openerDiscordUsername: string;
@@ -389,8 +541,8 @@ export async function createTicket(data: CreateTicketData): Promise<Ticket> {
   const [row] = await db
     .insert(tickets)
     .values({
-      thread_id: data.threadId,
-      parent_channel_id: data.parentChannelId,
+      channel_id: data.channelId,
+      parent_category_id: data.parentCategoryId,
       guild_id: data.guildId,
       opener_discord_id: data.openerDiscordId,
       opener_discord_username: data.openerDiscordUsername,
@@ -404,13 +556,13 @@ export async function createTicket(data: CreateTicketData): Promise<Ticket> {
   return row;
 }
 
-export async function getTicketByThreadId(
-  threadId: string,
+export async function getTicketByChannelId(
+  channelId: string,
 ): Promise<Ticket | null> {
   const [row] = await db
     .select()
     .from(tickets)
-    .where(eq(tickets.thread_id, threadId))
+    .where(eq(tickets.channel_id, channelId))
     .limit(1);
   return row ?? null;
 }
@@ -435,39 +587,15 @@ export async function countOpenTicketsForUserAndCategory(
       and(
         eq(tickets.opener_discord_id, discordId),
         eq(tickets.category, category),
-        inArray(tickets.status, ACTIVE_TICKET_STATUSES as unknown as TicketStatus[]),
+        eq(tickets.status, "open"),
       ),
     );
   return rows[0]?.count ?? 0;
 }
 
-export async function claimTicket(
-  ticketId: number,
-  moderatorDiscordId: string,
-): Promise<Ticket | null> {
-  const now = Math.floor(Date.now() / 1000);
-  const [row] = await db
-    .update(tickets)
-    .set({
-      status: "claimed",
-      claimed_by_discord_id: moderatorDiscordId,
-      claimed_at: now,
-      updated_at: now,
-    })
-    .where(
-      and(
-        eq(tickets.id, ticketId),
-        inArray(tickets.status, ACTIVE_TICKET_STATUSES as unknown as TicketStatus[]),
-      ),
-    )
-    .returning();
-  return row ?? null;
-}
-
 export async function closeTicket(
   ticketId: number,
   closedByDiscordId: string,
-  reason: string | null,
   deleteAfter: number,
 ): Promise<Ticket | null> {
   const now = Math.floor(Date.now() / 1000);
@@ -477,7 +605,6 @@ export async function closeTicket(
       status: "closed",
       closed_by_discord_id: closedByDiscordId,
       closed_at: now,
-      close_reason: reason,
       delete_after: deleteAfter,
       updated_at: now,
     })
@@ -488,14 +615,12 @@ export async function closeTicket(
 
 export async function reopenTicket(ticketId: number): Promise<Ticket | null> {
   const now = Math.floor(Date.now() / 1000);
-  // Restore to "claimed" if it was previously claimed, otherwise "open".
   const [row] = await db
     .update(tickets)
     .set({
-      status: sql`CASE WHEN ${tickets.claimed_by_discord_id} IS NOT NULL THEN 'claimed'::ticket_status ELSE 'open'::ticket_status END`,
+      status: "open",
       closed_by_discord_id: null,
       closed_at: null,
-      close_reason: null,
       delete_after: null,
       updated_at: now,
     })
@@ -529,7 +654,7 @@ export async function listOpenTicketsForUser(
     .where(
       and(
         eq(tickets.opener_discord_id, discordId),
-        inArray(tickets.status, ACTIVE_TICKET_STATUSES as unknown as TicketStatus[]),
+        eq(tickets.status, "open"),
       ),
     )
     .orderBy(desc(tickets.created_at));

@@ -41,6 +41,13 @@ private-messages:
   player-not-found: "<red>Player not found or not online."
   no-reply-target: "<red>You have no one to reply to."
   self-error: "<red>You can't message yourself."
+  # Sound played to the recipient when they receive a DM. Set enabled to false to disable.
+  # `sound` is a Minecraft sound key. `volume` and `pitch` accept floats.
+  incoming-sound:
+    enabled: true
+    sound: "minecraft:entity.experience_orb.pickup"
+    volume: 1.0
+    pitch: 1.0
 
 join-leave-messages:
   # Servers that should NOT trigger join/leave/swap messages

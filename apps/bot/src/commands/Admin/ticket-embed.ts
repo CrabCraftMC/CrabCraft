@@ -1,6 +1,5 @@
 import SlashCommand from "../../structures/SlashCommand.js";
 import { errorContainer, primaryContainer } from "../../utils/embeds.js";
-import config from "../../utils/config.js";
 import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
 import {
   type ChatInputCommandInteraction,
@@ -30,18 +29,6 @@ export default class TicketEmbedCommand extends SlashCommand {
     if (!channel || channel.type !== ChannelType.GuildText) {
       await interaction.reply({
         components: [errorContainer("**Error!** This command must be run in a text channel.")],
-        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-      });
-      return;
-    }
-
-    if (channel.id !== config.TICKET_PARENT_CHANNEL_ID) {
-      await interaction.reply({
-        components: [
-          errorContainer(
-            `**Wrong channel.** Run this in <#${config.TICKET_PARENT_CHANNEL_ID}> so threads spawn from the same place.`,
-          ),
-        ],
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
       });
       return;

@@ -13,13 +13,13 @@ import {
   type GuildMember,
   type ModalSubmitInteraction,
   type TextChannel,
-  type ThreadChannel,
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
   ChannelType,
   ComponentType,
   ContainerBuilder,
+  PermissionFlagsBits,
   SectionBuilder,
   ThumbnailBuilder,
   MessageFlags,
@@ -29,13 +29,11 @@ import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
 import { storeRetry, getRetry } from "../utils/retryStore.js";
 import { resolveUsername } from "../utils/mojang.js";
-import { CHANNEL_DELETE_DELAY_MS, TICKET_DELETE_DELAY_MS } from "../utils/constants.js";
+import { CHANNEL_DELETE_DELAY_MS } from "../utils/constants.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
 import {
-  buildClosedNotice,
-  buildReopenButton,
+  buildChannelName,
   buildStaffButtons,
-  buildThreadName,
   buildTicketHeader,
   getCategoryMeta,
   getPlayerInfo,
@@ -448,48 +446,67 @@ export default class ModalInteractionEvent extends Event {
           ? intake.subject
           : null;
 
-      // Resolve the parent channel; threads must be created on a TextChannel.
-      const parentChannel = await interaction.guild?.channels
-        .fetch(config.TICKET_PARENT_CHANNEL_ID)
+      // Resolve the ticket category. Each ticket is its own text channel
+      // created beneath this category.
+      const parentCategory = await interaction.guild?.channels
+        .fetch(config.TICKET_CATEGORY_ID)
         .catch(() => null);
-      if (!parentChannel || parentChannel.type !== ChannelType.GuildText) {
+      if (!parentCategory || parentCategory.type !== ChannelType.GuildCategory) {
         await interaction.editReply({
           components: [
             errorContainer(
-              "**Configuration error.** The ticket parent channel could not be found. Please contact an administrator.",
+              "**Configuration error.** The ticket category could not be found. Please contact an administrator.",
             ),
           ],
         });
         return;
       }
 
-      // Create the private thread.
-      let thread: ThreadChannel;
+      // Create the dedicated text channel for this ticket. Permission overwrites
+      // hide the channel from @everyone, grant the opener access, and grant
+      // the moderator role full access.
+      let ticketChannel: TextChannel;
       try {
-        thread = await (parentChannel as TextChannel).threads.create({
-          name: buildThreadName(interaction.user.username, meta),
-          type: ChannelType.PrivateThread,
-          autoArchiveDuration: 1440,
-          invitable: false,
+        ticketChannel = (await interaction.guild!.channels.create({
+          name: buildChannelName(interaction.user.username, meta),
+          type: ChannelType.GuildText,
+          parent: parentCategory.id,
+          topic: `Ticket opened by ${interaction.user.tag} — category: ${meta.category}`,
           reason: `Ticket opened by ${interaction.user.tag} (${meta.category})`,
-        });
+          permissionOverwrites: [
+            {
+              id: interaction.guild!.roles.everyone,
+              deny: [PermissionFlagsBits.ViewChannel],
+            },
+            {
+              id: interaction.user.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+              ],
+            },
+            {
+              id: config.MOD_ROLE_ID,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageMessages,
+              ],
+            },
+          ],
+        })) as TextChannel;
       } catch (e) {
-        logger.error("Ticket: failed to create thread:", e);
+        logger.error("Ticket: failed to create channel:", e);
         await interaction.editReply({
           components: [
             errorContainer(
-              "**Error!** Failed to create the ticket thread. Please try again, or contact a moderator directly.",
+              "**Error!** Failed to create the ticket channel. Please try again, or contact a moderator directly.",
             ),
           ],
         });
         return;
-      }
-
-      // Add the opener to the private thread.
-      try {
-        await thread.members.add(interaction.user.id);
-      } catch (e) {
-        logger.error("Ticket: failed to add opener to thread:", e);
       }
 
       // Pull player context first so we can persist the MC link on the ticket row.
@@ -498,8 +515,8 @@ export default class ModalInteractionEvent extends Event {
       let ticket;
       try {
         ticket = await appDb.createTicket({
-          threadId: thread.id,
-          parentChannelId: parentChannel.id,
+          channelId: ticketChannel.id,
+          parentCategoryId: parentCategory.id,
           guildId: interaction.guildId!,
           openerDiscordId: interaction.user.id,
           openerDiscordUsername: interaction.user.username,
@@ -511,7 +528,7 @@ export default class ModalInteractionEvent extends Event {
         });
       } catch (e) {
         logger.error("Ticket: failed to persist ticket:", e);
-        await thread.delete("Ticket persistence failed").catch(() => null);
+        await ticketChannel.delete("Ticket persistence failed").catch(() => null);
         await interaction.editReply({
           components: [
             errorContainer(
@@ -523,8 +540,8 @@ export default class ModalInteractionEvent extends Event {
       }
 
       try {
-        await thread.send({ content: `<@${interaction.user.id}>` });
-        await thread.send({
+        await ticketChannel.send({ content: `<@${interaction.user.id}> <@&${config.MOD_ROLE_ID}>` });
+        await ticketChannel.send({
           components: [
             buildTicketHeader(ticket, meta, player, intake),
             buildStaffButtons(ticket.id),
@@ -538,114 +555,10 @@ export default class ModalInteractionEvent extends Event {
       await interaction.editReply({
         components: [
           primaryContainer(
-            `### ${meta.emoji} Ticket Opened\nYour **${meta.label}** ticket is ready in <#${thread.id}>.`,
+            `### ${meta.emoji} Ticket Opened\nYour **${meta.label}** ticket is ready in <#${ticketChannel.id}>.`,
           ),
         ],
       });
-      return;
-    }
-
-    // ── Ticket Close Modal ───────────────────────────────────────────
-    if (interaction.customId.startsWith("ticket_close_modal:")) {
-      const ticketId = Number(interaction.customId.split(":")[1]);
-      if (!Number.isFinite(ticketId)) return;
-
-      const ticket = await appDb.getTicketById(ticketId);
-      if (!ticket || ticket.status === "closed") {
-        await interaction.reply({
-          components: [errorContainer("This ticket is no longer open.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-      if (ticket.thread_id !== interaction.channelId) {
-        await interaction.reply({
-          components: [errorContainer("This action is not for this thread.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      const member = interaction.member as GuildMember | null;
-      const isMod = member?.roles.cache.has(config.MOD_ROLE_ID) ?? false;
-      const isOpener = ticket.opener_discord_id === interaction.user.id;
-      if (!isMod && !isOpener) {
-        await interaction.reply({
-          components: [errorContainer("**Missing permissions** — only the opener or staff can close.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      const reasonRaw = interaction.fields.getTextInputValue("reason") ?? "";
-      const reason = reasonRaw.trim().length > 0 ? reasonRaw.trim() : null;
-      const deleteAtMs = Date.now() + TICKET_DELETE_DELAY_MS;
-      const deleteAtSeconds = Math.floor(deleteAtMs / 1000);
-
-      try {
-        await appDb.closeTicket(
-          ticket.id,
-          interaction.user.id,
-          reason,
-          deleteAtSeconds,
-        );
-      } catch (e) {
-        logger.error("Ticket: close DB update failed:", e);
-        await interaction.reply({
-          components: [errorContainer("Failed to close. Please try again.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      const thread = interaction.channel as ThreadChannel | null;
-
-      // Acknowledge the modal first so the user sees a response.
-      await interaction.reply({
-        components: [primaryContainer("Closing ticket and saving transcript…")],
-        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-      });
-
-      // Send the closed notice in-thread before locking, so the reopen button works.
-      if (thread?.isThread()) {
-        try {
-          await thread.send({
-            components: [
-              buildClosedNotice(`<@${interaction.user.id}>`, reason, deleteAtSeconds),
-              buildReopenButton(ticket.id),
-            ],
-            flags: MessageFlags.IsComponentsV2,
-          });
-        } catch (e) {
-          logger.error("Ticket: failed to send closed notice:", e);
-        }
-      }
-
-      // Save transcript to log channel.
-      try {
-        const logChannel = await interaction.guild?.channels
-          .fetch(config.LOG_CHANNEL_ID)
-          .catch(() => null) as TextChannel | null;
-        if (logChannel && thread?.isThread()) {
-          await saveTranscriptToLog(
-            thread as unknown as TextChannel,
-            logChannel,
-            `ticket #${ticket.id} closed by ${interaction.user.tag}`,
-          ).catch(() => null);
-        }
-      } catch (e) {
-        logger.error("Ticket: transcript failed:", e);
-      }
-
-      // Lock + archive the thread; reopen will unarchive automatically.
-      if (thread?.isThread()) {
-        try {
-          await thread.setLocked(true).catch(() => null);
-          await thread.setArchived(true).catch(() => null);
-        } catch (e) {
-          logger.error("Ticket: failed to archive/lock:", e);
-        }
-      }
       return;
     }
 
