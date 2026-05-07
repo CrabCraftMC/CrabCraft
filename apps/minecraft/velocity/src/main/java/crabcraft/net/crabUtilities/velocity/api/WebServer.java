@@ -17,6 +17,9 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public class WebServer {
@@ -378,6 +381,7 @@ public class WebServer {
     private final CrabUtilitiesVelocity plugin;
     private final int port;
     private HttpServer httpServer;
+    private ScheduledExecutorService cloudflareIpRefresher;
 
     // [count, windowStartMs] per IP
     private final ConcurrentHashMap<String, long[]> rateLimits = new ConcurrentHashMap<>();
@@ -391,7 +395,8 @@ public class WebServer {
         return httpServer != null;
     }
 
-    private boolean isRateLimited(String ip) {
+    private boolean isRateLimited(HttpExchange exchange) {
+        String ip = ClientIpResolver.resolve(exchange);
         long now = System.currentTimeMillis();
         long[] window = rateLimits.computeIfAbsent(ip, k -> new long[]{0, now});
         synchronized (window) {
@@ -499,7 +504,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -511,7 +516,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -532,7 +537,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -555,7 +560,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -577,7 +582,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -602,7 +607,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -671,7 +676,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -718,7 +723,7 @@ public class WebServer {
                     sendError(exchange, 405, "method not allowed");
                     return;
                 }
-                if (isRateLimited(exchange.getRemoteAddress().getHostString())) {
+                if (isRateLimited(exchange)) {
                     sendError(exchange, 429, "rate limit exceeded");
                     return;
                 }
@@ -739,6 +744,16 @@ public class WebServer {
 
             httpServer.start();
             plugin.getLogger().info("Web API started on port {}", port);
+
+            cloudflareIpRefresher = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "crabutilities-cf-ip-refresher");
+                t.setDaemon(true);
+                return t;
+            });
+            cloudflareIpRefresher.scheduleWithFixedDelay(
+                    () -> ClientIpResolver.refreshCloudflareRanges(plugin.getLogger()),
+                    0L, 24L, TimeUnit.HOURS);
+
             return true;
         } catch (IOException e) {
             plugin.getLogger().error("Failed to start Web API on port {}", port, e);
@@ -747,6 +762,10 @@ public class WebServer {
     }
 
     public void stop() {
+        if (cloudflareIpRefresher != null) {
+            cloudflareIpRefresher.shutdownNow();
+            cloudflareIpRefresher = null;
+        }
         if (httpServer != null) {
             httpServer.stop(0);
             httpServer = null;
