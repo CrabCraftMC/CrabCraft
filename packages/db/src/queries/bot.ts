@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "../client";
-import { players, applications, streamChannels, playerAlts, starboardPosts } from "../schema";
+import { players, applications, streamChannels, playerAlts, starboardPosts, countingState } from "../schema";
 
 export interface UpsertUserData {
   discordId: string;
@@ -430,4 +430,77 @@ export async function getStarboardPostsByAuthor(
     .where(eq(starboardPosts.author_id, authorId))
     .orderBy(desc(starboardPosts.posted_at));
   return rows as StarboardPost[];
+}
+
+// ── Counting ───────────────────────────────────────────────────
+
+export interface CountingState {
+  channel_id: string;
+  current_count: number;
+  last_user_id: string | null;
+  updated_at: number;
+}
+
+export async function getCountingState(
+  channelId: string,
+): Promise<CountingState | null> {
+  const [row] = await db
+    .select()
+    .from(countingState)
+    .where(eq(countingState.channel_id, channelId))
+    .limit(1);
+  return (row as CountingState | undefined) ?? null;
+}
+
+/**
+ * Atomically advances the count by 1 only when the row's
+ * `current_count` still equals `expectedCurrent` AND the last
+ * counter wasn't this user. Returns true if the row was updated.
+ */
+export async function tryAdvanceCount(
+  channelId: string,
+  expectedCurrent: number,
+  userId: string,
+): Promise<boolean> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db
+    .update(countingState)
+    .set({
+      current_count: expectedCurrent + 1,
+      last_user_id: userId,
+      updated_at: now,
+    })
+    .where(
+      and(
+        eq(countingState.channel_id, channelId),
+        eq(countingState.current_count, expectedCurrent),
+        sql`(${countingState.last_user_id} IS NULL OR ${countingState.last_user_id} <> ${userId})`,
+      ),
+    );
+  return ((result as any).rowCount ?? 0) > 0;
+}
+
+/** Mod-only seed/override. Upserts the counting state row. */
+export async function setCountingState(
+  channelId: string,
+  count: number,
+  lastUserId: string | null = null,
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .insert(countingState)
+    .values({
+      channel_id: channelId,
+      current_count: count,
+      last_user_id: lastUserId,
+      updated_at: now,
+    })
+    .onConflictDoUpdate({
+      target: countingState.channel_id,
+      set: {
+        current_count: count,
+        last_user_id: lastUserId,
+        updated_at: now,
+      },
+    });
 }

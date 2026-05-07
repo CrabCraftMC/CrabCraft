@@ -280,6 +280,19 @@ export const starboardPosts = pgTable(
   ],
 );
 
+// ── counting_state ─────────────────────────────────────────────
+// Per-channel current count for the counting channel feature.
+// Single row per channel; the bot only reads/updates the row whose
+// channel_id matches the configured counting channel.
+export const countingState = pgTable("counting_state", {
+  channel_id: text("channel_id").primaryKey(),
+  current_count: integer("current_count").notNull().default(0),
+  last_user_id: text("last_user_id"),
+  updated_at: integer("updated_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
 // ── player_alts ────────────────────────────────────────────────
 // Alt Minecraft accounts linked by whitelisted players via the
 // Discord bot. Velocity checks this table on each proxy join to

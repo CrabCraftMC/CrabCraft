@@ -17,6 +17,7 @@ interface IdConfig {
     leaderboard?: string;
     wiki?: string;
     starboard?: string;
+    counting?: string;
   };
 }
 
@@ -63,6 +64,7 @@ interface IConfig {
   YOUTUBE_API_KEY: string;
   TWITCH_CLIENT_ID: string;
   TWITCH_CLIENT_SECRET: string;
+  OPENAI_API_KEY: string;
 
   // Discord IDs (config.json)
   MEMBER_ROLE_ID: string;
@@ -73,6 +75,7 @@ interface IConfig {
   LEADERBOARD_CHANNEL_ID: string;
   WIKI_CHANNEL_ID: string;
   STARBOARD_CHANNEL_ID: string;
+  COUNTING_CHANNEL_ID: string;
 }
 
 const config: IConfig = {
@@ -82,6 +85,7 @@ const config: IConfig = {
   YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY ?? "",
   TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID ?? "",
   TWITCH_CLIENT_SECRET: process.env.TWITCH_CLIENT_SECRET ?? "",
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
 
   MEMBER_ROLE_ID: ids.roles.member,
   MOD_ROLE_ID: ids.roles.mod,
@@ -91,6 +95,7 @@ const config: IConfig = {
   LEADERBOARD_CHANNEL_ID: ids.channels.leaderboard ?? "",
   WIKI_CHANNEL_ID: ids.channels.wiki ?? "",
   STARBOARD_CHANNEL_ID: ids.channels.starboard ?? "",
+  COUNTING_CHANNEL_ID: ids.channels.counting ?? "",
 };
 
 export default config;
