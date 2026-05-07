@@ -233,18 +233,27 @@ class AudioRelay {
     private void syncTargets(ChannelEntry entry, Set<UUID> wantedPlayerIds) {
         Set<UUID> have = entry.currentTargets;
         if (have.equals(wantedPlayerIds)) return;
+        Set<UUID> added = new java.util.HashSet<>();
         try {
             entry.channel.clearTargets();
             for (UUID id : wantedPlayerIds) {
                 VoicechatConnection conn = api.getConnectionOf(id);
-                if (conn != null) {
-                    entry.channel.addTarget(conn);
-                }
+                if (conn == null) continue;
+                entry.channel.addTarget(conn);
+                added.add(id);
             }
         } catch (Exception e) {
-            logger.fine(() -> "Failed to sync audio targets: " + e.getMessage());
+            logger.warning("Failed to sync audio targets: " + e.getMessage());
         }
-        entry.currentTargets = Set.copyOf(wantedPlayerIds);
+        // Track only the targets actually added. If api.getConnectionOf
+        // returned null for a wanted listener (transient — happens during
+        // the brief SVC bookkeeping window around a peer's hop), leaving
+        // them out here means have != wantedPlayerIds on the next frame
+        // and we'll retry. Caching wantedPlayerIds verbatim made the
+        // failure permanent: every subsequent frame short-circuited at
+        // the equals() check above and the channel sat with no targets
+        // until the 60s idle-eviction recreated it.
+        entry.currentTargets = Set.copyOf(added);
     }
 
     private boolean isAuthoritativeOrigin(UUID speakerId, String claimedBackend) {
