@@ -2,18 +2,34 @@ package crabcraft.net.crabUtilities.velocity.api;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
+import org.slf4j.Logger;
 
+import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 final class ClientIpResolver {
 
-    // Cloudflare's published edge ranges plus loopback. Refresh from
-    // https://www.cloudflare.com/ips/ if Cloudflare ever publishes new ranges.
-    private static final List<Cidr> TRUSTED_PROXIES = List.of(
+    private static final String CLOUDFLARE_V4_URL = "https://www.cloudflare.com/ips-v4";
+    private static final String CLOUDFLARE_V6_URL = "https://www.cloudflare.com/ips-v6";
+
+    private static final List<Cidr> LOOPBACK = List.of(
             Cidr.of("127.0.0.0/8"),
-            Cidr.of("::1/128"),
+            Cidr.of("::1/128")
+    );
+
+    // Bundled last-known-good Cloudflare ranges. Used until the first
+    // successful refresh from cloudflare.com so the rate limiter never
+    // falls back to "trust nothing" if the fetch fails on startup.
+    // Source: https://www.cloudflare.com/ips/
+    private static final List<Cidr> CLOUDFLARE_FALLBACK = List.of(
             Cidr.of("173.245.48.0/20"),
             Cidr.of("103.21.244.0/22"),
             Cidr.of("103.22.200.0/22"),
@@ -38,6 +54,8 @@ final class ClientIpResolver {
             Cidr.of("2c0f:f248::/32")
     );
 
+    private static volatile List<Cidr> cloudflareRanges = CLOUDFLARE_FALLBACK;
+
     private ClientIpResolver() {}
 
     static String resolve(HttpExchange exchange) {
@@ -56,6 +74,52 @@ final class ClientIpResolver {
         return remote;
     }
 
+    static void refreshCloudflareRanges(Logger logger) {
+        try {
+            List<Cidr> v4 = fetchCidrs(CLOUDFLARE_V4_URL);
+            List<Cidr> v6 = fetchCidrs(CLOUDFLARE_V6_URL);
+            if (v4.isEmpty() && v6.isEmpty()) {
+                logger.warn("Cloudflare IP fetch returned no ranges; keeping previous list");
+                return;
+            }
+            List<Cidr> merged = new ArrayList<>(v4.size() + v6.size());
+            merged.addAll(v4);
+            merged.addAll(v6);
+            cloudflareRanges = List.copyOf(merged);
+            logger.info("Refreshed Cloudflare IP ranges: {} v4, {} v6", v4.size(), v6.size());
+        } catch (Exception e) {
+            logger.warn("Failed to refresh Cloudflare IP ranges, keeping previous list: {}",
+                    e.getMessage());
+        }
+    }
+
+    private static List<Cidr> fetchCidrs(String url) throws IOException, InterruptedException {
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .header("User-Agent", "CrabUtilities-Velocity")
+                .GET()
+                .build();
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() != 200) {
+            throw new IOException("HTTP " + resp.statusCode() + " from " + url);
+        }
+        List<Cidr> out = new ArrayList<>();
+        for (String line : resp.body().split("\\R")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+            try {
+                out.add(Cidr.of(trimmed));
+            } catch (IllegalArgumentException ignored) {
+                // skip non-CIDR lines defensively
+            }
+        }
+        return out;
+    }
+
     private static boolean isTrustedProxy(String ip) {
         InetAddress addr;
         try {
@@ -63,7 +127,10 @@ final class ClientIpResolver {
         } catch (UnknownHostException e) {
             return false;
         }
-        for (Cidr cidr : TRUSTED_PROXIES) {
+        for (Cidr cidr : LOOPBACK) {
+            if (cidr.contains(addr)) return true;
+        }
+        for (Cidr cidr : cloudflareRanges) {
             if (cidr.contains(addr)) return true;
         }
         return false;
