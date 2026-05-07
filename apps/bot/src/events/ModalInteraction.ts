@@ -16,8 +16,10 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
+  ChannelType,
   ComponentType,
   ContainerBuilder,
+  PermissionFlagsBits,
   SectionBuilder,
   ThumbnailBuilder,
   MessageFlags,
@@ -29,6 +31,13 @@ import { storeRetry, getRetry } from "../utils/retryStore.js";
 import { resolveUsername } from "../utils/mojang.js";
 import { CHANNEL_DELETE_DELAY_MS } from "../utils/constants.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
+import {
+  buildChannelName,
+  buildStaffButtons,
+  buildTicketHeader,
+  getCategoryMeta,
+  getPlayerInfo,
+} from "../utils/ticket.js";
 
 const ACCEPTED_VALUES = [
   "y",
@@ -382,6 +391,173 @@ export default class ModalInteractionEvent extends Event {
       await interaction.reply({
         components: [primaryContainer("Your application has been updated.")],
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // ── Ticket Intake Modal ──────────────────────────────────────────
+    if (interaction.customId.startsWith("ticket_modal:")) {
+      const category = interaction.customId.split(":")[1];
+      const meta = getCategoryMeta(category);
+      if (!meta) {
+        await interaction.reply({
+          components: [errorContainer("Unknown ticket category.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      // Re-check the rate limit (the user might have opened another since clicking).
+      try {
+        const openCount = await appDb.countOpenTicketsForUserAndCategory(
+          interaction.user.id,
+          meta.category,
+        );
+        if (openCount >= appDb.MAX_OPEN_TICKETS_PER_CATEGORY) {
+          await interaction.reply({
+            components: [
+              errorContainer(
+                `**You already have an open ${meta.label} ticket.** Please use your existing ticket or close it first.`,
+              ),
+            ],
+            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          });
+          return;
+        }
+      } catch (e) {
+        logger.error("Ticket: rate-limit re-check failed:", e);
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      // Collect intake field values.
+      const intake: Record<string, string> = {};
+      for (const field of meta.fields) {
+        try {
+          const value = interaction.fields.getTextInputValue(field.id);
+          if (value && value.trim().length > 0) intake[field.id] = value.trim();
+        } catch {
+          // Field missing — skip.
+        }
+      }
+
+      const subject =
+        meta.category === "general" && intake.subject
+          ? intake.subject
+          : null;
+
+      // Resolve the ticket category. Each ticket is its own text channel
+      // created beneath this category.
+      const parentCategory = await interaction.guild?.channels
+        .fetch(config.TICKET_CATEGORY_ID)
+        .catch(() => null);
+      if (!parentCategory || parentCategory.type !== ChannelType.GuildCategory) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "**Configuration error.** The ticket category could not be found. Please contact an administrator.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      // Create the dedicated text channel for this ticket. Permission overwrites
+      // hide the channel from @everyone, grant the opener access, and grant
+      // the moderator role full access.
+      let ticketChannel: TextChannel;
+      try {
+        ticketChannel = (await interaction.guild!.channels.create({
+          name: buildChannelName(interaction.user.username, meta),
+          type: ChannelType.GuildText,
+          parent: parentCategory.id,
+          topic: `Ticket opened by ${interaction.user.tag} — category: ${meta.category}`,
+          reason: `Ticket opened by ${interaction.user.tag} (${meta.category})`,
+          permissionOverwrites: [
+            {
+              id: interaction.guild!.roles.everyone,
+              deny: [PermissionFlagsBits.ViewChannel],
+            },
+            {
+              id: interaction.user.id,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+              ],
+            },
+            {
+              id: config.MOD_ROLE_ID,
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageMessages,
+              ],
+            },
+          ],
+        })) as TextChannel;
+      } catch (e) {
+        logger.error("Ticket: failed to create channel:", e);
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "**Error!** Failed to create the ticket channel. Please try again, or contact a moderator directly.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      // Pull player context first so we can persist the MC link on the ticket row.
+      const player = await getPlayerInfo(interaction.user.id, interaction.user.tag);
+
+      let ticket;
+      try {
+        ticket = await appDb.createTicket({
+          channelId: ticketChannel.id,
+          parentCategoryId: parentCategory.id,
+          guildId: interaction.guildId!,
+          openerDiscordId: interaction.user.id,
+          openerDiscordUsername: interaction.user.username,
+          openerMinecraftUuid: player.minecraftUuid,
+          openerMinecraftUsername: player.minecraftUsername,
+          category: meta.category,
+          subject,
+          intake,
+        });
+      } catch (e) {
+        logger.error("Ticket: failed to persist ticket:", e);
+        await ticketChannel.delete("Ticket persistence failed").catch(() => null);
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "**Error!** Failed to save your ticket. Please try again in a moment.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      try {
+        await ticketChannel.send({ content: `<@${interaction.user.id}> <@&${config.MOD_ROLE_ID}>` });
+        await ticketChannel.send({
+          components: [
+            buildTicketHeader(ticket, meta, player, intake),
+            buildStaffButtons(ticket.id),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } catch (e) {
+        logger.error("Ticket: failed to send opening message:", e);
+      }
+
+      await interaction.editReply({
+        components: [
+          primaryContainer(
+            `### ${meta.emoji} Ticket Opened\nYour **${meta.label}** ticket is ready in <#${ticketChannel.id}>.`,
+          ),
+        ],
       });
       return;
     }

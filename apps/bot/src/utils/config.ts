@@ -18,6 +18,7 @@ interface IdConfig {
     wiki?: string;
     starboard?: string;
     counting?: string;
+    ticketCategory: string;
   };
 }
 
@@ -48,6 +49,7 @@ const REQUIRED_IDS: Array<[string, string | undefined]> = [
   ["roles.mod", ids.roles?.mod],
   ["channels.applicationCategory", ids.channels?.applicationCategory],
   ["channels.log", ids.channels?.log],
+  ["channels.ticketCategory", ids.channels?.ticketCategory],
 ];
 const missingIds = REQUIRED_IDS.filter(([, v]) => !v).map(([k]) => k);
 if (missingIds.length > 0) {
@@ -76,6 +78,7 @@ interface IConfig {
   WIKI_CHANNEL_ID: string;
   STARBOARD_CHANNEL_ID: string;
   COUNTING_CHANNEL_ID: string;
+  TICKET_CATEGORY_ID: string;
 }
 
 const config: IConfig = {
@@ -96,6 +99,7 @@ const config: IConfig = {
   WIKI_CHANNEL_ID: ids.channels.wiki ?? "",
   STARBOARD_CHANNEL_ID: ids.channels.starboard ?? "",
   COUNTING_CHANNEL_ID: ids.channels.counting ?? "",
+  TICKET_CATEGORY_ID: ids.channels.ticketCategory,
 };
 
 export default config;

@@ -1,6 +1,17 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, lte } from "drizzle-orm";
 import { db } from "../client";
-import { players, applications, streamChannels, playerAlts, starboardPosts, countingState } from "../schema";
+import {
+  players,
+  applications,
+  streamChannels,
+  playerAlts,
+  starboardPosts,
+  countingState,
+  tickets,
+  type TicketCategory,
+} from "../schema";
+
+export type { TicketCategory, TicketStatus } from "../schema";
 
 export interface UpsertUserData {
   discordId: string;
@@ -504,4 +515,165 @@ export async function setCountingState(
         updated_at: now,
       },
     });
+}
+
+// ── Tickets ────────────────────────────────────────────────────
+
+/** Max simultaneous open tickets per category per user. */
+export const MAX_OPEN_TICKETS_PER_CATEGORY = 1;
+
+export interface CreateTicketData {
+  channelId: string;
+  parentCategoryId: string;
+  guildId: string;
+  openerDiscordId: string;
+  openerDiscordUsername: string;
+  openerMinecraftUuid?: string | null;
+  openerMinecraftUsername?: string | null;
+  category: TicketCategory;
+  subject?: string | null;
+  intake: Record<string, unknown>;
+}
+
+export type Ticket = typeof tickets.$inferSelect;
+
+export async function createTicket(data: CreateTicketData): Promise<Ticket> {
+  const [row] = await db
+    .insert(tickets)
+    .values({
+      channel_id: data.channelId,
+      parent_category_id: data.parentCategoryId,
+      guild_id: data.guildId,
+      opener_discord_id: data.openerDiscordId,
+      opener_discord_username: data.openerDiscordUsername,
+      opener_minecraft_uuid: data.openerMinecraftUuid ?? null,
+      opener_minecraft_username: data.openerMinecraftUsername ?? null,
+      category: data.category,
+      subject: data.subject ?? null,
+      intake: data.intake,
+    })
+    .returning();
+  return row;
+}
+
+export async function getTicketByChannelId(
+  channelId: string,
+): Promise<Ticket | null> {
+  const [row] = await db
+    .select()
+    .from(tickets)
+    .where(eq(tickets.channel_id, channelId))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getTicketById(id: number): Promise<Ticket | null> {
+  const [row] = await db
+    .select()
+    .from(tickets)
+    .where(eq(tickets.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function countOpenTicketsForUserAndCategory(
+  discordId: string,
+  category: TicketCategory,
+): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`COUNT(*)::INTEGER` })
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.opener_discord_id, discordId),
+        eq(tickets.category, category),
+        eq(tickets.status, "open"),
+      ),
+    );
+  return rows[0]?.count ?? 0;
+}
+
+export async function closeTicket(
+  ticketId: number,
+  closedByDiscordId: string,
+  deleteAfter: number,
+): Promise<Ticket | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const [row] = await db
+    .update(tickets)
+    .set({
+      status: "closed",
+      closed_by_discord_id: closedByDiscordId,
+      closed_at: now,
+      delete_after: deleteAfter,
+      updated_at: now,
+    })
+    .where(eq(tickets.id, ticketId))
+    .returning();
+  return row ?? null;
+}
+
+export async function reopenTicket(ticketId: number): Promise<Ticket | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const [row] = await db
+    .update(tickets)
+    .set({
+      status: "open",
+      closed_by_discord_id: null,
+      closed_at: null,
+      delete_after: null,
+      updated_at: now,
+    })
+    .where(eq(tickets.id, ticketId))
+    .returning();
+  return row ?? null;
+}
+
+export async function getExpiredClosedTickets(now: number): Promise<Ticket[]> {
+  return db
+    .select()
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.status, "closed"),
+        lte(tickets.delete_after, now),
+      ),
+    );
+}
+
+export async function deleteTicketRow(ticketId: number): Promise<void> {
+  await db.delete(tickets).where(eq(tickets.id, ticketId));
+}
+
+export async function listOpenTicketsForUser(
+  discordId: string,
+): Promise<Ticket[]> {
+  return db
+    .select()
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.opener_discord_id, discordId),
+        eq(tickets.status, "open"),
+      ),
+    )
+    .orderBy(desc(tickets.created_at));
+}
+
+/** Minimal player lookup used to populate the ticket header card. */
+export async function getPlayerLink(
+  discordId: string,
+): Promise<{
+  minecraft_username: string | null;
+  minecraft_uuid: string | null;
+} | null> {
+  const [row] = await db
+    .select({
+      minecraft_username: players.minecraft_username,
+      minecraft_uuid: players.minecraft_uuid,
+    })
+    .from(players)
+    .where(eq(players.discord_id, discordId))
+    .limit(1);
+  return row ?? null;
 }

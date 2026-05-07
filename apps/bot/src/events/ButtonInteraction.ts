@@ -18,8 +18,18 @@ import logger from "../utils/logger.js";
 import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
 import { resolveUsername } from "../utils/mojang.js";
-import { CHANNEL_DELETE_DELAY_MS } from "../utils/constants.js";
+import { CHANNEL_DELETE_DELAY_MS, TICKET_DELETE_DELAY_MS } from "../utils/constants.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
+import {
+  buildClosedNotice,
+  buildDisabledReopenButton,
+  buildDisabledStaffButtons,
+  buildIntakeModal,
+  buildReopenButton,
+  buildReopenedNotice,
+  buildStaffButtons,
+  getCategoryMeta,
+} from "../utils/ticket.js";
 
 export default class ButtonInteractionEvent extends Event {
   constructor() {
@@ -434,6 +444,242 @@ export default class ButtonInteractionEvent extends Event {
       denyModal.addComponents(actionRow);
 
       await interaction.showModal(denyModal);
+    }
+
+    // ── Tickets ──────────────────────────────────────────────────
+
+    // Open: show intake modal for the chosen category
+    if (interaction.customId.startsWith("ticket_open:")) {
+      const category = interaction.customId.split(":")[1];
+      const meta = getCategoryMeta(category);
+      if (!meta) {
+        await interaction.reply({
+          components: [errorContainer("Unknown ticket category.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      try {
+        const openCount = await appDb.countOpenTicketsForUserAndCategory(
+          interaction.user.id,
+          meta.category,
+        );
+        if (openCount >= appDb.MAX_OPEN_TICKETS_PER_CATEGORY) {
+          await interaction.reply({
+            components: [
+              errorContainer(
+                `**You already have an open ${meta.label} ticket.** Please use your existing ticket or close it before opening a new one.`,
+              ),
+            ],
+            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          });
+          return;
+        }
+      } catch (e) {
+        logger.error("Ticket: rate-limit check failed:", e);
+      }
+
+      await interaction.showModal(buildIntakeModal(meta));
+      return;
+    }
+
+    // Close: end the ticket immediately, save transcript, schedule deletion
+    if (interaction.customId.startsWith("ticket_close:")) {
+      const ticketId = Number(interaction.customId.split(":")[1]);
+      if (!Number.isFinite(ticketId)) return;
+
+      const ticket = await appDb.getTicketById(ticketId);
+      if (!ticket) {
+        await interaction.reply({
+          components: [errorContainer("Ticket not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (ticket.channel_id !== interaction.channelId) {
+        await interaction.reply({
+          components: [errorContainer("This button is not for this channel.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (ticket.status === "closed") {
+        await interaction.reply({
+          components: [errorContainer("This ticket is already closed.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const member = interaction.member as GuildMember | null;
+      const isMod = member?.roles.cache.has(config.MOD_ROLE_ID) ?? false;
+      const isOpener = ticket.opener_discord_id === interaction.user.id;
+      if (!isMod && !isOpener) {
+        await interaction.reply({
+          components: [errorContainer("**Missing permissions** — only the opener or staff can close.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const deleteAtSeconds = Math.floor((Date.now() + TICKET_DELETE_DELAY_MS) / 1000);
+
+      try {
+        await appDb.closeTicket(ticket.id, interaction.user.id, deleteAtSeconds);
+      } catch (e) {
+        logger.error("Ticket: close DB update failed:", e);
+        await interaction.reply({
+          components: [errorContainer("Failed to close. Please try again.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const ticketChannel = interaction.channel as TextChannel | null;
+
+      // Disable the Close button on the staff row that was just clicked.
+      try {
+        const otherComponents = interaction.message.components.filter(
+          (row) => row.type !== ComponentType.ActionRow,
+        );
+        await interaction.message.edit({
+          components: [...otherComponents, buildDisabledStaffButtons(ticket.id)],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } catch (e) {
+        logger.error("Ticket: failed to disable staff buttons:", e);
+      }
+
+      // Save HTML transcript to the log channel.
+      try {
+        const logChannel = await interaction.guild?.channels
+          .fetch(config.LOG_CHANNEL_ID)
+          .catch(() => null) as TextChannel | null;
+        if (logChannel && ticketChannel) {
+          await saveTranscriptToLog(
+            ticketChannel,
+            logChannel,
+            `ticket #${ticket.id} closed by ${interaction.user.tag}`,
+          ).catch(() => null);
+        }
+      } catch (e) {
+        logger.error("Ticket: transcript failed:", e);
+      }
+
+      // Revoke the opener's per-channel ViewChannel grant so the channel
+      // disappears from their sidebar. Mods retain access via MOD_ROLE_ID.
+      if (ticketChannel) {
+        try {
+          await ticketChannel.permissionOverwrites.delete(
+            ticket.opener_discord_id,
+            "Ticket closed",
+          );
+        } catch (e) {
+          logger.error("Ticket: failed to revoke opener access:", e);
+        }
+      }
+
+      // Post the closed panel + Re-open button at the bottom.
+      if (ticketChannel) {
+        try {
+          await ticketChannel.send({
+            components: [
+              buildClosedNotice(`<@${interaction.user.id}>`, deleteAtSeconds),
+              buildReopenButton(ticket.id),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+        } catch (e) {
+          logger.error("Ticket: failed to send closed notice:", e);
+        }
+      }
+
+      await interaction.editReply({
+        components: [primaryContainer("Ticket closed. Transcript saved to logs.")],
+      });
+      return;
+    }
+
+    // Reopen: mods only. Restores opener access, cancels the delete schedule.
+    if (interaction.customId.startsWith("ticket_reopen:")) {
+      const ticketId = Number(interaction.customId.split(":")[1]);
+      if (!Number.isFinite(ticketId)) return;
+
+      const member = interaction.member as GuildMember | null;
+      if (!member?.roles.cache.has(config.MOD_ROLE_ID)) {
+        await interaction.reply({
+          components: [errorContainer("**Missing permissions** — only staff can reopen tickets.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const ticket = await appDb.getTicketById(ticketId);
+      if (!ticket) {
+        await interaction.reply({
+          components: [errorContainer("Ticket not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (ticket.status !== "closed") {
+        await interaction.reply({
+          components: [errorContainer("This ticket isn't closed.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      try {
+        await appDb.reopenTicket(ticket.id);
+      } catch (e) {
+        logger.error("Ticket: reopen failed:", e);
+        await interaction.reply({
+          components: [errorContainer("Failed to reopen. Please try again.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const ticketChannel = interaction.channel as TextChannel | null;
+
+      // Restore the opener's per-channel ViewChannel grant.
+      if (ticketChannel) {
+        try {
+          await ticketChannel.permissionOverwrites.create(ticket.opener_discord_id, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true,
+          });
+        } catch (e) {
+          logger.error("Ticket: failed to restore opener access:", e);
+        }
+      }
+
+      // Disable the Re-open button on the closed notice that was just clicked.
+      try {
+        const otherComponents = interaction.message.components.filter(
+          (row) => row.type !== ComponentType.ActionRow,
+        );
+        await interaction.message.edit({
+          components: [...otherComponents, buildDisabledReopenButton(ticket.id)],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } catch (e) {
+        logger.error("Ticket: failed to disable reopen button:", e);
+      }
+
+      await interaction.reply({
+        components: [
+          buildReopenedNotice(`<@${interaction.user.id}>`),
+          buildStaffButtons(ticket.id),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
     }
 
     // Edit application button
