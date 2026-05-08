@@ -79,7 +79,8 @@ public class WebServer {
             + "{\"name\":\"Server\",\"description\":\"Proxy server status, backend servers, and online player information. These endpoints return live data from the running proxy.\"},"
             + "{\"name\":\"Players\",\"description\":\"Player-specific data including online status, award scores, and advancement progress. Use a Minecraft UUID to look up a specific player.\"},"
             + "{\"name\":\"Awards\",\"description\":\"Awards are competitive stat-tracking categories (e.g. distance walked, mobs killed, items crafted). Each award has a leaderboard. Players earn gold, silver, and bronze medals for placing in the top 3. The crown leaderboard ranks players by their total medal points.\"},"
-            + "{\"name\":\"Advancements\",\"description\":\"Minecraft advancements (achievements) tracked per player per season. The leaderboard ranks players by how many advancements they have completed.\"}"
+            + "{\"name\":\"Advancements\",\"description\":\"Minecraft advancements (achievements) tracked per player per season. The leaderboard ranks players by how many advancements they have completed.\"},"
+            + "{\"name\":\"Streaks\",\"description\":\"All-time login streaks. A streak counts consecutive play windows: a player's streak increments on join when the gap since their previous login is between 12h (same-session floor) and the configured buffer (default 36h). Outside that window the streak resets to 1.\"}"
             + "],"
             + "\"servers\":[{\"url\":\"https://api.crabcraft.net\"}],"
             + "\"paths\":{"
@@ -353,6 +354,66 @@ public class WebServer {
             + "\"offset\":{\"type\":\"integer\"},\"limit\":{\"type\":\"integer\"}"
             + "}}}}},"
             + "\"404\":{\"description\":\"No season is currently active\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            // ── Streaks ──
+            + "\"/players/{uuid}/streak\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Streaks\"],"
+            + "\"summary\":\"Player login streak\","
+            + "\"description\":\"Returns the all-time login streak for a player. The streak is `active` while `now <= expires_at`; once it lapses the response shows `current_streak: 0` (and the player's prior run is preserved as `pending_streak` until their next login resets it). `longest_streak` records the player's all-time best.\","
+            + "\"operationId\":\"getPlayerStreak\","
+            + "\"parameters\":["
+            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Streak data retrieved\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"uuid\":{\"type\":\"string\",\"format\":\"uuid\"},"
+            + "\"current_streak\":{\"type\":\"integer\",\"description\":\"Live streak. 0 if the streak has lapsed since last login.\"},"
+            + "\"pending_streak\":{\"type\":\"integer\",\"description\":\"Streak value before the active/lapsed check. Equals current_streak when active.\"},"
+            + "\"longest_streak\":{\"type\":\"integer\"},"
+            + "\"last_login_at\":{\"type\":\"integer\",\"description\":\"Unix seconds\"},"
+            + "\"streak_started_at\":{\"type\":\"integer\",\"description\":\"Unix seconds when the current run began\"},"
+            + "\"expires_at\":{\"type\":\"integer\",\"description\":\"Unix seconds; streak lapses if the player does not log in by this time\"},"
+            + "\"active\":{\"type\":\"boolean\"},"
+            + "\"buffer_hours\":{\"type\":\"integer\"}"
+            + "}}}}},"
+            + "\"400\":{\"description\":\"UUID format is invalid\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"Player has no streak data yet\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"503\":{\"description\":\"Streak service is unavailable\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/streaks/leaderboard\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Streaks\"],"
+            + "\"summary\":\"Login streak leaderboard\","
+            + "\"description\":\"Returns players ranked by their current or longest login streak. Use `metric=longest` for the all-time best leaderboard; the default ranks by current streak. Each entry includes the player's UUID, username, current and longest streaks, and whether their streak is still active. Supports pagination with limit and offset.\","
+            + "\"operationId\":\"getStreakLeaderboard\","
+            + "\"parameters\":["
+            + "{\"name\":\"metric\",\"in\":\"query\",\"schema\":{\"type\":\"string\",\"enum\":[\"current\",\"longest\"],\"default\":\"current\"},\"description\":\"Which streak to rank by\"},"
+            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
+            + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Paginated streak leaderboard\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"metric\":{\"type\":\"string\",\"enum\":[\"current\",\"longest\"]},"
+            + "\"buffer_hours\":{\"type\":\"integer\"},"
+            + "\"leaderboard\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
+            + "\"rank\":{\"type\":\"integer\"},\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"current_streak\":{\"type\":\"integer\"},\"pending_streak\":{\"type\":\"integer\"},\"longest_streak\":{\"type\":\"integer\"},"
+            + "\"last_login_at\":{\"type\":\"integer\"},\"streak_started_at\":{\"type\":\"integer\"},\"active\":{\"type\":\"boolean\"}"
+            + "}}},"
+            + "\"total\":{\"type\":\"integer\"},\"offset\":{\"type\":\"integer\"},\"limit\":{\"type\":\"integer\"}"
+            + "}}}}},"
+            + "\"503\":{\"description\":\"Streak service is unavailable\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
             + "}"
@@ -658,6 +719,27 @@ public class WebServer {
                     return;
                 }
 
+                // /players/{uuid}/streak
+                if (sub.endsWith("/streak")) {
+                    String uuid = sub.substring(0, sub.length() - "/streak".length());
+                    if (!UUID_PATTERN.matcher(uuid).matches()) {
+                        sendError(exchange, 400, "invalid uuid format");
+                        return;
+                    }
+                    var streakService = plugin.getLoginStreakService();
+                    if (streakService == null) {
+                        sendError(exchange, 503, "streak service unavailable");
+                        return;
+                    }
+                    var result = streakService.getPlayerStreakJson(uuid);
+                    if (result == null) {
+                        sendError(exchange, 404, "no streak data for player");
+                        return;
+                    }
+                    sendJson(exchange, GSON.toJson(result));
+                    return;
+                }
+
                 // /players/{name} — online player lookup
                 if (!USERNAME.matcher(sub).matches()) {
                     sendError(exchange, 400, "invalid username");
@@ -716,6 +798,29 @@ public class WebServer {
                     return;
                 }
                 sendJson(exchange, GSON.toJson(result));
+            });
+
+            httpServer.createContext("/streaks/leaderboard", exchange -> {
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange)) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+                var streakService = plugin.getLoginStreakService();
+                if (streakService == null) {
+                    sendError(exchange, 503, "streak service unavailable");
+                    return;
+                }
+                var params = parseQuery(exchange.getRequestURI());
+                int limit = 100;
+                int offset = 0;
+                try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
+                try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
+                boolean longest = "longest".equalsIgnoreCase(params.get("metric"));
+                sendJson(exchange, GSON.toJson(streakService.getLeaderboard(limit, offset, longest)));
             });
 
             httpServer.createContext("/advancements/leaderboard", exchange -> {

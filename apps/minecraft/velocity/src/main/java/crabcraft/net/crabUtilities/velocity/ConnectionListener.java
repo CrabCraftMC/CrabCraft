@@ -197,6 +197,15 @@ public class ConnectionListener {
             plugin.getPgWriter().upsertPlayer(playerUuid, playerName, plain, raw);
             plugin.getPgWriter().upsertAltUsername(playerUuid, playerName);
             plugin.getPgWriter().recordMcLogin(playerUuid);
+
+            var streakService = plugin.getLoginStreakService();
+            var streakPublisher = plugin.getLoginStreakPublisher();
+            if (streakService != null) {
+                var snapshot = streakService.recordLogin(playerUuid);
+                if (snapshot != null && streakPublisher != null) {
+                    streakPublisher.publish(playerUuid, snapshot, streakService.getBufferHours());
+                }
+            }
         });
     }
 
