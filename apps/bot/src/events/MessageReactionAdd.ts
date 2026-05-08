@@ -11,8 +11,8 @@ import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { STARBOARD_THRESHOLD } from "../utils/constants.js";
 import {
-  countUniqueReactors,
-  isStarEmoji,
+  findTriggeringEmoji,
+  isAllowedEmoji,
   isStarred,
   postToStarboard,
   scheduleStarboardUpdate,
@@ -29,7 +29,7 @@ export default class MessageReactionAddEvent extends Event {
   ) {
     if (!config.STARBOARD_CHANNEL_ID) return;
     if (user.bot) return;
-    if (!isStarEmoji(reaction.emoji)) return;
+    if (!isAllowedEmoji(reaction.emoji, reaction.message.guild)) return;
 
     try {
       if (reaction.partial) await reaction.fetch();
@@ -49,7 +49,8 @@ export default class MessageReactionAddEvent extends Event {
       return;
     }
 
-    if ((await countUniqueReactors(message)) < STARBOARD_THRESHOLD) return;
-    await postToStarboard(message as Message);
+    const trigger = await findTriggeringEmoji(message, STARBOARD_THRESHOLD);
+    if (!trigger) return;
+    await postToStarboard(message as Message, trigger.emoji, trigger.count);
   }
 }

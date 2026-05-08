@@ -6,6 +6,8 @@ import {
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
   MessageFlags,
+  StickerFormatType,
+  type Guild,
   type Message,
   type PartialMessage,
   type TextChannel,
@@ -24,13 +26,43 @@ import {
 const pendingUpdates = new Map<string, NodeJS.Timeout>();
 const starredCache = new Set<string>();
 
-const STAR_EMOJI_IDS = new Set(["1423390709448314880"]);
-const STAR_EMOJI_NAMES = new Set(["⭐"]);
+// Fallback shown on the legacy starboard rows that predate per-emoji tracking.
+const LEGACY_DISPLAY_EMOJI = "<:star:1423390709448314880>";
 
-export function isStarEmoji(emoji: { id: string | null; name: string | null }): boolean {
-  if (emoji.id) return STAR_EMOJI_IDS.has(emoji.id);
-  if (emoji.name) return STAR_EMOJI_NAMES.has(emoji.name);
-  return false;
+export interface TriggerEmoji {
+  id: string | null;
+  name: string | null;
+  animated: boolean;
+}
+
+/**
+ * Allow a reaction emoji only if it's a native unicode emoji or a custom
+ * emoji that belongs to this guild. Foreign custom emojis (from other
+ * servers the user has Nitro for) are rejected.
+ */
+export function isAllowedEmoji(
+  emoji: { id: string | null; name: string | null },
+  guild: Guild | null,
+): boolean {
+  if (!emoji.id) return emoji.name !== null;
+  if (!guild) return false;
+  return guild.emojis.cache.has(emoji.id);
+}
+
+export function formatEmojiDisplay(emoji: TriggerEmoji): string {
+  if (!emoji.id) return emoji.name ?? LEGACY_DISPLAY_EMOJI;
+  if (!emoji.name) return LEGACY_DISPLAY_EMOJI;
+  return emoji.animated
+    ? `<a:${emoji.name}:${emoji.id}>`
+    : `<:${emoji.name}:${emoji.id}>`;
+}
+
+function emojiMatches(
+  a: { id: string | null; name: string | null },
+  b: { id: string | null; name: string | null },
+): boolean {
+  if (a.id || b.id) return a.id === b.id;
+  return a.name === b.name;
 }
 
 export async function isStarred(messageId: string): Promise<boolean> {
@@ -42,12 +74,50 @@ export async function isStarred(messageId: string): Promise<boolean> {
   return false;
 }
 
-export async function countUniqueReactors(
+/**
+ * Find the first emoji on the message that has reached `threshold` unique
+ * non-author reactors. Foreign custom emojis are ignored.
+ */
+export async function findTriggeringEmoji(
   message: Message | PartialMessage,
+  threshold: number,
+): Promise<{ emoji: TriggerEmoji; count: number } | null> {
+  const guild = message.guild;
+  for (const r of message.reactions.cache.values()) {
+    if (!isAllowedEmoji(r.emoji, guild)) continue;
+    const reactors = new Set<string>();
+    try {
+      const users = await r.users.fetch();
+      for (const u of users.values()) {
+        if (u.bot) continue;
+        if (u.id === message.author?.id) continue;
+        reactors.add(u.id);
+      }
+    } catch (error) {
+      logger.error("Failed to fetch reaction users:", error);
+      continue;
+    }
+    if (reactors.size >= threshold) {
+      return {
+        emoji: {
+          id: r.emoji.id,
+          name: r.emoji.name,
+          animated: r.emoji.animated ?? false,
+        },
+        count: reactors.size,
+      };
+    }
+  }
+  return null;
+}
+
+async function countReactorsForEmoji(
+  message: Message | PartialMessage,
+  emoji: TriggerEmoji,
 ): Promise<number> {
   const reactors = new Set<string>();
   for (const r of message.reactions.cache.values()) {
-    if (!isStarEmoji(r.emoji)) continue;
+    if (!emojiMatches(r.emoji, emoji)) continue;
     try {
       const users = await r.users.fetch();
       for (const u of users.values()) {
@@ -69,11 +139,12 @@ interface ComponentOpts {
   content: string;
   imageUrl?: string;
   count: number;
+  emojiDisplay: string;
 }
 
 function buildStarboardComponents(opts: ComponentOpts) {
   const headerLines = [
-    `### <:star:1423390709448314880> ${opts.count} · Starred Message`,
+    `### ${opts.emojiDisplay} ${opts.count} · Starred Message`,
     `**From:** <@${opts.authorId}>`,
     `**Channel:** <#${opts.channelId}>`,
   ];
@@ -103,21 +174,54 @@ function buildStarboardComponents(opts: ComponentOpts) {
   return { container, row };
 }
 
-function findImageAttachment(message: Message): string | undefined {
+interface MessageMedia {
+  imageUrl?: string;
+  contentSuffix?: string;
+}
+
+function extractMessageMedia(message: Message): MessageMedia {
   const att = message.attachments.find((a) => {
     if (a.contentType?.startsWith("image/")) return true;
     return /\.(png|jpe?g|gif|webp)$/i.test(a.url);
   });
-  return att?.url;
+  if (att) return { imageUrl: att.url };
+
+  // Lottie stickers have no static URL Discord embeds can render; fall back
+  // to a text note. PNG/APNG/GIF stickers expose a usable CDN URL via Sticker#url.
+  const renderable = message.stickers.find(
+    (s) => s.format !== StickerFormatType.Lottie,
+  );
+  if (renderable) return { imageUrl: renderable.url };
+
+  const lottie = message.stickers.first();
+  if (lottie) return { contentSuffix: `*[Sticker: ${lottie.name}]*` };
+
+  return {};
 }
 
-export async function postToStarboard(message: Message): Promise<void> {
+function applyMediaToContent(
+  content: string,
+  suffix: string | undefined,
+): string {
+  const trimmed = content.trim();
+  if (!suffix) return trimmed;
+  return trimmed.length ? `${trimmed}\n\n${suffix}` : suffix;
+}
+
+export async function postToStarboard(
+  message: Message,
+  triggerEmoji: TriggerEmoji,
+  count: number,
+): Promise<void> {
   if (!message.author) return;
 
   const claimed = await claimStarboardPost({
     messageId: message.id,
     channelId: message.channelId,
     authorId: message.author.id,
+    triggerEmojiId: triggerEmoji.id,
+    triggerEmojiName: triggerEmoji.name,
+    triggerEmojiAnimated: triggerEmoji.animated,
   });
   if (!claimed) {
     starredCache.add(message.id);
@@ -136,13 +240,15 @@ export async function postToStarboard(message: Message): Promise<void> {
     return;
   }
 
+  const media = extractMessageMedia(message);
   const { container, row } = buildStarboardComponents({
     authorId: message.author.id,
     channelId: message.channelId,
     messageUrl: message.url,
-    content: message.content ?? "",
-    imageUrl: findImageAttachment(message),
-    count: STARBOARD_THRESHOLD,
+    content: applyMediaToContent(message.content ?? "", media.contentSuffix),
+    imageUrl: media.imageUrl,
+    count,
+    emojiDisplay: formatEmojiDisplay(triggerEmoji),
   });
 
   try {
@@ -190,7 +296,17 @@ async function runStarboardUpdate(
   }
   if (!full.author) return;
 
-  const count = await countUniqueReactors(full);
+  const triggerEmoji: TriggerEmoji = {
+    id: post.trigger_emoji_id,
+    name: post.trigger_emoji_name,
+    animated: post.trigger_emoji_animated,
+  };
+  // Legacy rows have no recorded emoji; fall back to the original star.
+  const hasRecordedEmoji =
+    post.trigger_emoji_id !== null || post.trigger_emoji_name !== null;
+  const count = hasRecordedEmoji
+    ? await countReactorsForEmoji(full, triggerEmoji)
+    : 0;
 
   const starboard = (await full.client.channels
     .fetch(config.STARBOARD_CHANNEL_ID)
@@ -206,13 +322,15 @@ async function runStarboardUpdate(
     return;
   }
 
+  const media = extractMessageMedia(full);
   const { container, row } = buildStarboardComponents({
     authorId: full.author.id,
     channelId: full.channelId,
     messageUrl: full.url,
-    content: full.content ?? "",
-    imageUrl: findImageAttachment(full),
+    content: applyMediaToContent(full.content ?? "", media.contentSuffix),
+    imageUrl: media.imageUrl,
     count,
+    emojiDisplay: formatEmojiDisplay(triggerEmoji),
   });
 
   try {

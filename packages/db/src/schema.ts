@@ -299,6 +299,14 @@ export const starboardPosts = pgTable(
     channel_id: text("channel_id").notNull(),
     author_id: text("author_id").notNull(),
     starboard_message_id: text("starboard_message_id"),
+    // Emoji that crossed the threshold and should be displayed on the
+    // starboard repost. `trigger_emoji_id` is null for native unicode
+    // emojis; for guild custom emojis it holds the Discord emoji ID.
+    trigger_emoji_id: text("trigger_emoji_id"),
+    trigger_emoji_name: text("trigger_emoji_name"),
+    trigger_emoji_animated: boolean("trigger_emoji_animated")
+      .notNull()
+      .default(false),
     posted_at: integer("posted_at")
       .notNull()
       .$defaultFn(() => Math.floor(Date.now() / 1000)),
