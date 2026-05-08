@@ -35,7 +35,7 @@ export const TICKET_DELETE_DELAY_MS = 24 * 60 * 60 * 1000;
 export const TICKET_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 
 /** Number of unique non-author reactors required to repost a message to the starboard. */
-export const STARBOARD_THRESHOLD = 5;
+export const STARBOARD_THRESHOLD = 7;
 
 /** How long to wait after the last reaction change before editing the starboard repost (30s). */
 export const STARBOARD_UPDATE_DEBOUNCE_MS = 30 * 1000;
