@@ -31,6 +31,7 @@ import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatListener;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
 import crabcraft.net.crabUtilities.velocity.db.AltQueryService;
+import crabcraft.net.crabUtilities.velocity.db.LoginStreakService;
 import crabcraft.net.crabUtilities.velocity.update.UpdateService;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -72,6 +73,8 @@ public class CrabUtilitiesVelocity {
     private VelocityConfig config;
     private UpdateService updateService;
     private AltQueryService altQueryService;
+    private LoginStreakService loginStreakService;
+    private LoginStreakPublisher loginStreakPublisher;
     private LuckPerms luckPerms;
 
     @Inject
@@ -110,6 +113,10 @@ public class CrabUtilitiesVelocity {
         this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger, advancementRegistry);
 
         this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
+
+        this.loginStreakService = new LoginStreakService(
+                pgWriter.getDataSource(), logger, config.getLoginStreakBufferHours());
+        this.loginStreakPublisher = new LoginStreakPublisher(this, config);
 
         try {
             this.luckPerms = LuckPermsProvider.get();
@@ -172,6 +179,9 @@ public class CrabUtilitiesVelocity {
         if (playerLocationTracker != null) {
             playerLocationTracker.shutdown();
         }
+        if (loginStreakPublisher != null) {
+            loginStreakPublisher.shutdown();
+        }
         if (pgWriter != null) {
             pgWriter.close();
         }
@@ -201,6 +211,17 @@ public class CrabUtilitiesVelocity {
         this.advancementRegistry = new AdvancementRegistry(logger);
         this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger, advancementRegistry);
         this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
+
+        if (loginStreakService != null) {
+            this.loginStreakService.setBufferHours(config.getLoginStreakBufferHours());
+        } else {
+            this.loginStreakService = new LoginStreakService(
+                    pgWriter.getDataSource(), logger, config.getLoginStreakBufferHours());
+        }
+        if (loginStreakPublisher != null) {
+            loginStreakPublisher.shutdown();
+        }
+        this.loginStreakPublisher = new LoginStreakPublisher(this, config);
 
         if (statsPushSubscriber != null) {
             statsPushSubscriber.shutdown();
@@ -265,5 +286,7 @@ public class CrabUtilitiesVelocity {
     public VelocityConfig getConfig() { return config; }
     public UpdateService getUpdateService() { return updateService; }
     public AltQueryService getAltQueryService() { return altQueryService; }
+    public LoginStreakService getLoginStreakService() { return loginStreakService; }
+    public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
     public LuckPerms getLuckPerms() { return luckPerms; }
 }

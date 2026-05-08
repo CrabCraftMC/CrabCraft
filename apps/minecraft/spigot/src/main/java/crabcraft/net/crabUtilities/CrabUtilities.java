@@ -17,6 +17,8 @@ public final class CrabUtilities extends JavaPlugin {
     private StatsPushTask statsPushTask;
     private UpdateService updateService;
     private CrabVoicechatPlugin voicechatPlugin;
+    private LoginStreakCache loginStreakCache;
+    private LoginStreakExpansion loginStreakExpansion;
 
     @Override
     public void onEnable() {
@@ -85,6 +87,29 @@ public final class CrabUtilities extends JavaPlugin {
         this.statsPushTask = new StatsPushTask(this);
         statsPushTask.start();
 
+        // Login streaks: read-only mirror of the Velocity-owned data,
+        // populated via Redis. Soft dependency on PlaceholderAPI — if
+        // it's not loaded, the cache still runs (other features could
+        // consume it) but the placeholder expansion is skipped.
+        this.loginStreakCache = new LoginStreakCache(this);
+        loginStreakCache.start();
+        Bukkit.getPluginManager().registerEvents(loginStreakCache, this);
+
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            try {
+                this.loginStreakExpansion = new LoginStreakExpansion(this, loginStreakCache);
+                if (loginStreakExpansion.register()) {
+                    getLogger().info("Registered PlaceholderAPI expansion 'crabutilities'");
+                } else {
+                    getLogger().warning("PlaceholderAPI expansion registration returned false");
+                }
+            } catch (NoClassDefFoundError e) {
+                getLogger().warning("PlaceholderAPI present but classes not visible: " + e.getMessage());
+            }
+        } else {
+            getLogger().info("PlaceholderAPI not detected — streak placeholders disabled.");
+        }
+
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
         // Soft dependency — skipped silently if the SVC plugin isn't installed.
@@ -125,6 +150,12 @@ public final class CrabUtilities extends JavaPlugin {
         if (voicechatPlugin != null) {
             voicechatPlugin.shutdown();
             getServer().getServicesManager().unregister(voicechatPlugin);
+        }
+        if (loginStreakExpansion != null) {
+            try { loginStreakExpansion.unregister(); } catch (Throwable ignored) {}
+        }
+        if (loginStreakCache != null) {
+            loginStreakCache.shutdown();
         }
     }
 }

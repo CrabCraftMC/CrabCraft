@@ -260,6 +260,34 @@ export const mcLoginHistory = pgTable("mc_login_history", {
     .$defaultFn(() => Math.floor(Date.now() / 1000)),
 });
 
+// ── player_login_streaks ───────────────────────────────────────
+// All-time login streaks per Minecraft account. Updated by the
+// Velocity proxy on every join: the streak increments when the
+// gap since the previous login is between the "same session"
+// floor (12h) and the configurable buffer ceiling (default 36h).
+// Outside that window it resets to 1.
+export const playerLoginStreaks = pgTable(
+  "player_login_streaks",
+  {
+    minecraft_uuid: text("minecraft_uuid").primaryKey(),
+    current_streak: integer("current_streak").notNull().default(0),
+    longest_streak: integer("longest_streak").notNull().default(0),
+    last_login_at: integer("last_login_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+    streak_started_at: integer("streak_started_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+    updated_at: integer("updated_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    index("pls_current_streak_idx").on(table.current_streak),
+    index("pls_longest_streak_idx").on(table.longest_streak),
+  ],
+);
+
 // ── starboard_posts ────────────────────────────────────────────
 // Every Discord message reposted to the starboard. Used to dedupe
 // across bot restarts and to power per-user starboard queries
