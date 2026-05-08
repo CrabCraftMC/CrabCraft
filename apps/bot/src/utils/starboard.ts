@@ -6,6 +6,7 @@ import {
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
   MessageFlags,
+  StickerFormatType,
   type Guild,
   type Message,
   type PartialMessage,
@@ -173,12 +174,38 @@ function buildStarboardComponents(opts: ComponentOpts) {
   return { container, row };
 }
 
-function findImageAttachment(message: Message): string | undefined {
+interface MessageMedia {
+  imageUrl?: string;
+  contentSuffix?: string;
+}
+
+function extractMessageMedia(message: Message): MessageMedia {
   const att = message.attachments.find((a) => {
     if (a.contentType?.startsWith("image/")) return true;
     return /\.(png|jpe?g|gif|webp)$/i.test(a.url);
   });
-  return att?.url;
+  if (att) return { imageUrl: att.url };
+
+  // Lottie stickers have no static URL Discord embeds can render; fall back
+  // to a text note. PNG/APNG/GIF stickers expose a usable CDN URL via Sticker#url.
+  const renderable = message.stickers.find(
+    (s) => s.format !== StickerFormatType.Lottie,
+  );
+  if (renderable) return { imageUrl: renderable.url };
+
+  const lottie = message.stickers.first();
+  if (lottie) return { contentSuffix: `*[Sticker: ${lottie.name}]*` };
+
+  return {};
+}
+
+function applyMediaToContent(
+  content: string,
+  suffix: string | undefined,
+): string {
+  const trimmed = content.trim();
+  if (!suffix) return trimmed;
+  return trimmed.length ? `${trimmed}\n\n${suffix}` : suffix;
 }
 
 export async function postToStarboard(
@@ -213,12 +240,13 @@ export async function postToStarboard(
     return;
   }
 
+  const media = extractMessageMedia(message);
   const { container, row } = buildStarboardComponents({
     authorId: message.author.id,
     channelId: message.channelId,
     messageUrl: message.url,
-    content: message.content ?? "",
-    imageUrl: findImageAttachment(message),
+    content: applyMediaToContent(message.content ?? "", media.contentSuffix),
+    imageUrl: media.imageUrl,
     count,
     emojiDisplay: formatEmojiDisplay(triggerEmoji),
   });
@@ -294,12 +322,13 @@ async function runStarboardUpdate(
     return;
   }
 
+  const media = extractMessageMedia(full);
   const { container, row } = buildStarboardComponents({
     authorId: full.author.id,
     channelId: full.channelId,
     messageUrl: full.url,
-    content: full.content ?? "",
-    imageUrl: findImageAttachment(full),
+    content: applyMediaToContent(full.content ?? "", media.contentSuffix),
+    imageUrl: media.imageUrl,
     count,
     emojiDisplay: formatEmojiDisplay(triggerEmoji),
   });
