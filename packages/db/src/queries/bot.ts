@@ -371,6 +371,9 @@ export interface StarboardPost {
   channel_id: string;
   author_id: string;
   starboard_message_id: string | null;
+  trigger_emoji_id: string | null;
+  trigger_emoji_name: string | null;
+  trigger_emoji_animated: boolean;
   posted_at: number;
 }
 
@@ -403,6 +406,9 @@ export async function claimStarboardPost(data: {
   messageId: string;
   channelId: string;
   authorId: string;
+  triggerEmojiId: string | null;
+  triggerEmojiName: string | null;
+  triggerEmojiAnimated: boolean;
 }): Promise<boolean> {
   const inserted = await db
     .insert(starboardPosts)
@@ -410,6 +416,9 @@ export async function claimStarboardPost(data: {
       message_id: data.messageId,
       channel_id: data.channelId,
       author_id: data.authorId,
+      trigger_emoji_id: data.triggerEmojiId,
+      trigger_emoji_name: data.triggerEmojiName,
+      trigger_emoji_animated: data.triggerEmojiAnimated,
     })
     .onConflictDoNothing()
     .returning({ message_id: starboardPosts.message_id });
