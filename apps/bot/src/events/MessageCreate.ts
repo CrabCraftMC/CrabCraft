@@ -3,17 +3,8 @@ import { type Message } from "discord.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { parseNumberFromMessage } from "../utils/counting.js";
+import { withCountingQueue } from "../utils/countingQueue.js";
 import { getCountingState, tryAdvanceCount } from "../utils/appDb.js";
-
-const queues = new Map<string, Promise<void>>();
-
-function withQueue(key: string, fn: () => Promise<void>): Promise<void> {
-  const next = (queues.get(key) ?? Promise.resolve())
-    .catch(() => undefined)
-    .then(fn);
-  queues.set(key, next);
-  return next;
-}
 
 export default class MessageCreateEvent extends Event {
   constructor() {
@@ -27,7 +18,7 @@ export default class MessageCreateEvent extends Event {
 
     const tag = `[counting] ${message.author.username} (${message.id})`;
 
-    await withQueue(message.channelId, async () => {
+    await withCountingQueue(message.channelId, async () => {
       try {
         const state = await getCountingState(message.channelId);
         const currentCount = state?.current_count ?? 0;
