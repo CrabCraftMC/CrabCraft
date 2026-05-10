@@ -25,6 +25,8 @@ Thumbs.db
 apps/minecraft/build/
 apps/minecraft/spigot/build/
 apps/minecraft/velocity/build/
+apps/minecraft/neoforge/build/
+apps/minecraft/neoforge/run/
 apps/minecraft/jars/
 
 # Logs

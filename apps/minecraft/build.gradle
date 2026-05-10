@@ -9,20 +9,28 @@ subprojects {
     // version sourced from apps/minecraft/gradle.properties; override in CI with -Pversion=<tag>
     version = rootProject.version
 
-    def targetJavaVersion = 21
-    java {
-        def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-        sourceCompatibility = javaVersion
-        targetCompatibility = javaVersion
-        if (JavaVersion.current() < javaVersion) {
-            toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    // The neoforge subproject targets Java 17 (Minecraft 1.20.1 runtime)
+    // and configures its own toolchain. Skip the Java 21 defaults for it.
+    if (project.name != 'neoforge') {
+        def targetJavaVersion = 21
+        java {
+            def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+            sourceCompatibility = javaVersion
+            targetCompatibility = javaVersion
+            if (JavaVersion.current() < javaVersion) {
+                toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+            }
         }
-    }
 
-    tasks.withType(JavaCompile).configureEach {
-        options.encoding = 'UTF-8'
-        if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-            options.release.set(targetJavaVersion)
+        tasks.withType(JavaCompile).configureEach {
+            options.encoding = 'UTF-8'
+            if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+                options.release.set(targetJavaVersion)
+            }
+        }
+    } else {
+        tasks.withType(JavaCompile).configureEach {
+            options.encoding = 'UTF-8'
         }
     }
 
@@ -35,6 +43,11 @@ tasks.register('collectJars', Copy) {
     destinationDir = file("${rootDir}/jars")
     from(project(':spigot').tasks.named('shadowJar'))
     from(project(':velocity').tasks.named('shadowJar'))
+
+    // ForgeGradle's reobfShadowJar rewrites the shadowJar output in place.
+    // Depend on it directly so collectJars sees the reobfuscated jar.
+    dependsOn(':neoforge:reobfShadowJar')
+    from(project(':neoforge').tasks.named('shadowJar'))
 }
 
 tasks.register('build') {

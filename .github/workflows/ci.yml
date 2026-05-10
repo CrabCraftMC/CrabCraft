@@ -118,7 +118,12 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: "21"
+          # Java 21 for spigot/velocity, Java 17 for the NeoForge 1.20.1
+          # subproject (which targets 1.20.1's Java 17 runtime). Gradle
+          # toolchains pick the right one per subproject.
+          java-version: |
+            17
+            21
           distribution: "temurin"
 
       - uses: gradle/actions/setup-gradle@v4
@@ -160,6 +165,12 @@ jobs:
         with:
           name: CrabUtilities-Velocity
           path: apps/minecraft/velocity/build/libs/CrabUtilities-Velocity*.jar
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrabUtilities-NeoForge
+          path: apps/minecraft/neoforge/build/libs/CrabUtilities-NeoForge*.jar
           retention-days: 30
 
       - uses: actions/upload-artifact@v4
@@ -230,7 +241,12 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: "21"
+          # Java 21 for spigot/velocity, Java 17 for the NeoForge 1.20.1
+          # subproject (which targets 1.20.1's Java 17 runtime). Gradle
+          # toolchains pick the right one per subproject.
+          java-version: |
+            17
+            21
           distribution: "temurin"
 
       - uses: gradle/actions/setup-gradle@v4
@@ -259,6 +275,7 @@ jobs:
             artifacts/crabcraft-bot/*.tar.gz
             apps/minecraft/spigot/build/libs/CrabUtilities*.jar
             apps/minecraft/velocity/build/libs/CrabUtilities-Velocity*.jar
+            apps/minecraft/neoforge/build/libs/CrabUtilities-NeoForge*.jar
             apps/minecraft/jars/SHA256SUMS.txt
           generate_release_notes: true
 
@@ -274,7 +291,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: "{crabcraft-bot,CrabUtilities-Spigot,CrabUtilities-Velocity,CrabUtilities-Checksums}"
+          pattern: "{crabcraft-bot,CrabUtilities-Spigot,CrabUtilities-Velocity,CrabUtilities-NeoForge,CrabUtilities-Checksums}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -283,5 +300,6 @@ jobs:
             artifacts/crabcraft-bot/*.tar.gz
             artifacts/CrabUtilities-Spigot/*.jar
             artifacts/CrabUtilities-Velocity/*.jar
+            artifacts/CrabUtilities-NeoForge/*.jar
             artifacts/CrabUtilities-Checksums/SHA256SUMS.txt
           generate_release_notes: true
