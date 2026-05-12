@@ -1,20 +1,37 @@
 /**
- * Download block textures from Mojang's bedrock-samples repo into public/textures/blocks.
+ * Download block textures from Mojang's bedrock-samples repo into public/textures/blocks,
+ * AND the Wrapped story-flow texture set into public/minecraft.
+ *
  * Only downloads textures that are missing locally, so re-runs are fast.
  *
  * Usage: bun run scripts/download-textures.ts
  */
 
-import { readFileSync, mkdirSync, existsSync, writeFileSync } from "fs";
+import { readFileSync, mkdirSync, existsSync, writeFileSync, copyFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import sharp from "sharp";
+import { REQUIRED_MC_TEXTURES, POPULAR_TOP_BLOCKS } from "../src/lib/minecraftTextures";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const TEXTURE_BASE =
   "https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/textures/blocks";
+
+const MC_TEXTURE_BASE =
+  "https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/textures";
+
+const EXTERNAL_MC_ROOT = resolve(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "_external",
+  "crabcraft-wrapped-main",
+  "public",
+  "minecraft"
+);
 
 interface Block {
   id: string;
@@ -129,6 +146,82 @@ async function main() {
 
   console.log(
     `\n\nDone! ${downloaded} downloaded, ${skipped} already existed, ${failed} failed.`
+  );
+
+  await downloadWrappedTextures();
+}
+
+/**
+ * Download textures needed by the Wrapped story flow into public/minecraft/.
+ * Prefers copying from _external/crabcraft-wrapped-main/public/minecraft/ when
+ * the reference repo is available locally; otherwise fetches from Mojang's
+ * bedrock-samples. Animated item strips (clock_16.png, compass_16.png) are
+ * cropped to their first 16×16 frame via sharp.
+ */
+async function downloadWrappedTextures() {
+  const outRoot = resolve(__dirname, "..", "public", "minecraft");
+  const paths = [
+    ...REQUIRED_MC_TEXTURES,
+    ...POPULAR_TOP_BLOCKS.flatMap((b) => [`block/${b}.png`]),
+  ];
+
+  let downloaded = 0;
+  let skipped = 0;
+  let copied = 0;
+  let failed = 0;
+
+  console.log(`\nChecking ${paths.length} story textures...`);
+
+  for (const path of paths) {
+    const outPath = resolve(outRoot, path);
+    if (existsSync(outPath)) {
+      skipped++;
+      continue;
+    }
+    mkdirSync(dirname(outPath), { recursive: true });
+
+    // 1. Try to copy from the reference repo if present.
+    const externalPath = resolve(EXTERNAL_MC_ROOT, path);
+    if (existsSync(externalPath)) {
+      try {
+        copyFileSync(externalPath, outPath);
+        copied++;
+        continue;
+      } catch {
+        // fall through to fetch
+      }
+    }
+
+    // 2. Fetch from Mojang. Item textures suffixed _16 are anim strips that
+    //    need cropping; the source filename drops the suffix.
+    const isCropped = /_16\.png$/.test(path);
+    const fetchPath = isCropped ? path.replace(/_16\.png$/, ".png") : path;
+    const url = `${MC_TEXTURE_BASE}/${fetchPath}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn(`  FAILED: ${path} (${res.status})`);
+        failed++;
+        continue;
+      }
+      let buffer: Buffer = Buffer.from(await res.arrayBuffer());
+      if (isCropped) {
+        // Crop to the first 16×16 frame of the animation strip.
+        buffer = await sharp(buffer)
+          .extract({ left: 0, top: 0, width: 16, height: 16 })
+          .png()
+          .toBuffer();
+      }
+      writeFileSync(outPath, buffer);
+      downloaded++;
+    } catch {
+      console.warn(`  FAILED: ${path}`);
+      failed++;
+    }
+  }
+
+  console.log(
+    `  Story textures: ${downloaded} downloaded, ${copied} copied from reference, ${skipped} already existed, ${failed} failed.`
   );
 }
 

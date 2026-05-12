@@ -41,6 +41,10 @@ apps/minecraft/jars/
 # Misc
 leaderboard_state.json
 public/textures/
+apps/web/public/minecraft/
+
+# Reference repos (not part of the app)
+_external/
 
 # Vercel
 .vercel/
