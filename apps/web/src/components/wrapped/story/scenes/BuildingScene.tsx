@@ -8,6 +8,7 @@ import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useHaptics } from "../hooks/useHaptics";
 import DigitRoller from "../primitives/DigitRoller";
 import McIdTexture from "@/components/wrapped/shared/McIdTexture";
+import Squircle from "@/components/Squircle";
 import type { WrappedData } from "@/lib/wrappedTypes";
 import { getBuildingJoke } from "../jokes/buildingJokes";
 
@@ -47,8 +48,12 @@ export default function BuildingScene({ data }: { data: WrappedData }) {
         );
         return;
       }
-      // Tower stacks bottom-up with squeeze + per-brick haptic
-      const bricks = gsap.utils.toArray<HTMLElement>(".build-brick");
+      // Tower stacks bottom-up with squeeze + per-brick haptic. Filter out
+      // hidden bricks (the tower is display:none on mobile) so we don't fire
+      // a dozen haptics for invisible elements.
+      const bricks = gsap.utils
+        .toArray<HTMLElement>(".build-brick")
+        .filter((b) => b.offsetParent !== null);
       bricks.forEach((b, i) => {
         gsap.fromTo(
           b,
@@ -89,8 +94,9 @@ export default function BuildingScene({ data }: { data: WrappedData }) {
   return (
     <SceneShell id="building" title="Building & Crafting" ref={ref}>
       <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto_1fr]">
-        {/* Tower */}
-        <div className="flex flex-col-reverse items-center gap-1.5">
+        {/* Decorative brick tower — hidden on mobile where it pushes the rest
+            of the scene below the fold. */}
+        <div className="hidden flex-col-reverse items-center gap-1.5 lg:flex">
           {TOWER_BRICKS.map((b, i) => (
             <img
               key={i}
@@ -108,27 +114,30 @@ export default function BuildingScene({ data }: { data: WrappedData }) {
           ))}
         </div>
 
-        <div className="hidden h-1 w-32 bg-white/10 lg:block" />
+        <div
+          aria-hidden
+          className="hidden h-40 w-px bg-gradient-to-b from-transparent via-white/15 to-transparent lg:block"
+        />
 
         <div className="text-center lg:text-left">
-          <p className="build-eyebrow font-mc text-xs uppercase tracking-[0.5em] text-white/60">
+          <p className="build-eyebrow text-xs uppercase tracking-[0.5em] dark:text-white/60 text-stone-600">
             You crafted & built
           </p>
 
           <div className="mt-6 space-y-4">
             <div className="build-stats">
-              <p className="font-mc text-5xl font-bold text-sky-200 sm:text-7xl">
+              <p className="font-mc text-5xl font-bold dark:text-sky-200 text-sky-700 sm:text-7xl">
                 <DigitRoller value={total_items_crafted} duration={1.5} delay={1.8} />
               </p>
-              <p className="mt-1 text-xs uppercase tracking-widest text-white/60">
+              <p className="mt-1 text-xs uppercase tracking-widest dark:text-white/60 text-stone-600">
                 Items crafted
               </p>
             </div>
             <div className="build-stats">
-              <p className="font-mc text-4xl font-bold text-indigo-200 sm:text-6xl">
+              <p className="font-mc text-4xl font-bold dark:text-indigo-200 text-indigo-700 sm:text-6xl">
                 <DigitRoller value={total_blocks_placed} duration={1.5} delay={2.0} />
               </p>
-              <p className="mt-1 text-xs uppercase tracking-widest text-white/60">
+              <p className="mt-1 text-xs uppercase tracking-widest dark:text-white/60 text-stone-600">
                 Blocks placed
               </p>
             </div>
@@ -136,37 +145,37 @@ export default function BuildingScene({ data }: { data: WrappedData }) {
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             {top_item_crafted && (
-              <div className="build-top flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
+              <Squircle cornerRadius={16} className="build-top flex items-center gap-3 dark:bg-white/10 bg-black/10 p-3 backdrop-blur-sm">
                 <McIdTexture id={top_item_crafted.id} size={36} />
                 <div className="min-w-0 text-left">
-                  <p className="text-[10px] uppercase tracking-widest text-white/60">
+                  <p className="text-[10px] uppercase tracking-widest dark:text-white/60 text-stone-600">
                     Most crafted
                   </p>
-                  <p className="truncate font-mc text-sm capitalize text-white">
+                  <p className="truncate text-sm capitalize dark:text-stone-100 text-stone-800">
                     {formatId(top_item_crafted.id)}
                   </p>
                 </div>
-              </div>
+              </Squircle>
             )}
             {top_item_used && (
-              <div className="build-top flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
+              <Squircle cornerRadius={16} className="build-top flex items-center gap-3 dark:bg-white/10 bg-black/10 p-3 backdrop-blur-sm">
                 <McIdTexture id={top_item_used.id} size={36} />
                 <div className="min-w-0 text-left">
-                  <p className="text-[10px] uppercase tracking-widest text-white/60">
+                  <p className="text-[10px] uppercase tracking-widest dark:text-white/60 text-stone-600">
                     Most used
                   </p>
-                  <p className="truncate font-mc text-sm capitalize text-white">
+                  <p className="truncate text-sm capitalize dark:text-stone-100 text-stone-800">
                     {formatId(top_item_used.id)}
                   </p>
                 </div>
-              </div>
+              </Squircle>
             )}
           </div>
 
-          <p className="build-meta mt-6 text-sm text-white/60">
-            Ranked <span className="font-mc font-bold text-white">#{rank}</span> for crafting
+          <p className="build-meta mt-6 text-sm dark:text-white/60 text-stone-600">
+            Ranked <span className="font-mc font-bold dark:text-stone-100 text-stone-800">#{rank}</span> for crafting
           </p>
-          <p className="build-joke mt-4 text-balance text-base italic text-white/70 sm:text-lg">
+          <p className="build-joke mt-4 text-balance text-base italic dark:text-white/70 text-stone-600 sm:text-lg">
             {getBuildingJoke(total_items_crafted, total_blocks_placed)}
           </p>
         </div>

@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useIsDark } from "../hooks/useIsDark";
 import SkinReveal3D from "../primitives/SkinReveal3D";
 import FloatingParticles from "../primitives/FloatingParticles";
 import SplitHeading from "../primitives/SplitHeading";
@@ -13,26 +14,19 @@ import type { WrappedData } from "@/lib/wrappedTypes";
 export default function IntroScene({ data }: { data: WrappedData }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
+  const isDark = useIsDark();
 
   useGSAP(
     () => {
       if (reduced) {
         gsap.set(
-          ".intro-eyebrow, .intro-season-pill, .intro-skin, .intro-fog, .intro-chroma",
+          ".intro-eyebrow, .intro-season-pill, .intro-skin",
           { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }
         );
-        gsap.set(".intro-fog", { opacity: 0 });
         return;
       }
 
-      // Background fog plane peels back
-      gsap.fromTo(
-        ".intro-fog",
-        { opacity: 0.9, scale: 1.4 },
-        { opacity: 0, scale: 1, duration: 1.6, ease: "expo.out" }
-      );
-
-      // 3D skin viewer rises through the fog
+      // 3D skin viewer rises in
       gsap.from(".intro-skin", {
         y: 240,
         opacity: 0,
@@ -51,19 +45,6 @@ export default function IntroScene({ data }: { data: WrappedData }) {
         ease: "power3.out",
         delay: 0.65,
       });
-
-      // Chromatic aberration sweep on the title
-      gsap.fromTo(
-        ".intro-chroma",
-        { opacity: 0.8, x: 0 },
-        {
-          opacity: 0,
-          x: 8,
-          duration: 0.55,
-          ease: "power2.out",
-          delay: 1.05,
-        }
-      );
 
       // Season pill bursts in
       gsap.from(".intro-season-pill", {
@@ -106,7 +87,7 @@ export default function IntroScene({ data }: { data: WrappedData }) {
         {Array.from({ length: 36 }, (_, i) => (
           <span
             key={i}
-            className="intro-star absolute block rounded-full bg-white"
+            className="intro-star absolute block rounded-full dark:bg-white bg-stone-700"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -119,17 +100,10 @@ export default function IntroScene({ data }: { data: WrappedData }) {
         ))}
       </div>
 
-      {/* Soft fog plane that peels back */}
-      <div
-        aria-hidden
-        className="intro-fog pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(ellipse at center, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.85) 70%)",
-        }}
+      <FloatingParticles
+        count={20}
+        color={isDark ? "rgba(255, 200, 150, 0.7)" : "rgba(200, 100, 30, 0.55)"}
       />
-
-      <FloatingParticles count={20} color="rgba(255, 200, 150, 0.7)" />
 
       <div className="relative flex flex-col items-center gap-6 sm:gap-10">
         <div className="intro-skin">
@@ -142,28 +116,14 @@ export default function IntroScene({ data }: { data: WrappedData }) {
         </div>
 
         <div className="text-center">
-          <p className="intro-eyebrow font-mc text-xs uppercase tracking-[0.5em] text-white/70 sm:text-sm">
+          <p className="intro-eyebrow text-xs uppercase tracking-[0.5em] dark:text-white/70 text-stone-600 sm:text-sm">
             CrabCraft Wrapped
           </p>
           <div className="relative mt-3 inline-block">
-            <span
-              aria-hidden
-              className="intro-chroma pointer-events-none absolute inset-0 font-mc text-5xl font-bold leading-none text-cyan-400 sm:text-7xl lg:text-8xl"
-              style={{ mixBlendMode: "screen", transform: "translateX(-3px)" }}
-            >
-              {data.playerName}
-            </span>
-            <span
-              aria-hidden
-              className="intro-chroma pointer-events-none absolute inset-0 font-mc text-5xl font-bold leading-none text-rose-500 sm:text-7xl lg:text-8xl"
-              style={{ mixBlendMode: "screen", transform: "translateX(3px)" }}
-            >
-              {data.playerName}
-            </span>
             <SplitHeading
               text={data.playerName}
               as="h1"
-              className="relative font-mc text-5xl font-bold leading-none text-orange-300 sm:text-7xl lg:text-8xl"
+              className="relative text-5xl font-bold leading-none dark:text-orange-300 text-orange-700 sm:text-7xl lg:text-8xl"
               fromY={-220}
               fromRotateX={-85}
               ease="crab-smash"
@@ -172,9 +132,9 @@ export default function IntroScene({ data }: { data: WrappedData }) {
               delay={0.85}
             />
           </div>
-          <div className="intro-season-pill mt-6 inline-flex items-center justify-center rounded-full border border-orange-400/30 bg-orange-500/10 px-4 py-1.5 font-mc text-xs uppercase tracking-widest text-orange-200 backdrop-blur-sm">
+          <p className="intro-season-pill mt-4 text-xs uppercase tracking-[0.4em] dark:text-orange-200/80 text-orange-700/80">
             Season {data.season}
-          </div>
+          </p>
         </div>
       </div>
     </SceneShell>

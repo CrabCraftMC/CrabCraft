@@ -20,9 +20,9 @@ const SceneShell = forwardRef<HTMLElement, Props>(function SceneShell(
       role="region"
       aria-roledescription="slide"
       aria-label={title}
-      className="relative z-10 flex min-h-screen w-full items-center justify-center px-4 py-24 sm:px-8"
+      className="relative z-10 flex h-full w-full items-center justify-center px-4 py-12 sm:px-8 md:py-16"
     >
-      <div className="w-full max-w-5xl text-white">{children}</div>
+      <div className="w-full max-w-5xl dark:text-stone-100 text-stone-800">{children}</div>
     </section>
   );
 });

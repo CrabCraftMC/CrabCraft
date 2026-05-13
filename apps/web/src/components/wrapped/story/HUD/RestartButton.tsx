@@ -11,7 +11,7 @@ export default function RestartButton({ onRestart }: Props) {
     <button
       type="button"
       onClick={onRestart}
-      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/70 backdrop-blur-sm transition-colors hover:bg-white/15 hover:text-white"
+      className="inline-flex items-center gap-1.5 rounded-full border dark:border-white/10 border-black/10 dark:bg-white/5 bg-black/5 px-3 py-1.5 text-xs font-bold dark:text-white/70 text-stone-600 backdrop-blur-sm transition-colors dark:hover:bg-white/15 hover:bg-black/10 dark:hover:text-stone-100 hover:text-stone-900"
       aria-label="Restart story from beginning"
       title="Restart (R)"
     >

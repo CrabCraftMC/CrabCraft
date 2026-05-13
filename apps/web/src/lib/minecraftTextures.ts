@@ -18,12 +18,13 @@ export const REQUIRED_MC_TEXTURES = [
   // Combat extras
   "item/bone.png",
   // Distance transport
-  "item/leather_boots.png",
+  "item/iron_boots.png",
   "item/oak_boat.png",
   "item/elytra.png",
   "item/saddle.png",
   "item/heart_of_the_sea.png",
   "mob_effect/speed.png",
+  "mob_effect/dolphins_grace.png",
   // Mining rain pool
   "block/stone.png",
   "block/dirt.png",

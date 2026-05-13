@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "bun run scripts/download-textures.ts",
     "prebuild": "bun run scripts/download-textures.ts",
     "build": "next build",
     "start": "next start",

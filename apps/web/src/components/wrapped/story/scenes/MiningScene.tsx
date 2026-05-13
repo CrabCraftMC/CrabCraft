@@ -7,6 +7,7 @@ import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import DigitRoller from "../primitives/DigitRoller";
 import McIdTexture from "@/components/wrapped/shared/McIdTexture";
+import Squircle from "@/components/Squircle";
 import { useHaptics } from "../hooks/useHaptics";
 import type { WrappedData } from "@/lib/wrappedTypes";
 import { getMiningJoke } from "../jokes/miningJokes";
@@ -122,40 +123,40 @@ export default function MiningScene({ data }: { data: WrappedData }) {
       </div>
 
       <div className="text-center">
-        <p className="mining-eyebrow font-mc text-xs uppercase tracking-[0.5em] text-white/60">
+        <p className="mining-eyebrow text-xs uppercase tracking-[0.5em] dark:text-white/60 text-stone-600">
           You mined
         </p>
-        <p className="mt-6 font-mc text-6xl font-bold text-emerald-200 sm:text-8xl lg:text-9xl">
+        <p className="mt-6 font-mc text-6xl font-bold dark:text-emerald-200 text-emerald-700 sm:text-8xl lg:text-9xl">
           <span className="mining-number inline-block">
             <DigitRoller value={total} duration={1.6} delay={1.4} />
           </span>
-          <span className="mining-unit ml-3 inline-block text-3xl text-white/70 sm:text-4xl">
+          <span className="mining-unit ml-3 inline-block text-3xl dark:text-white/70 text-stone-600 sm:text-4xl">
             blocks
           </span>
         </p>
 
         {top && (
-          <div className="mining-top mx-auto mt-10 inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 backdrop-blur-sm">
+          <Squircle cornerRadius={20} className="mining-top mx-auto mt-10 inline-flex items-center gap-4 dark:bg-white/10 bg-black/10 px-6 py-4 backdrop-blur-sm">
             <McIdTexture id={top.id} size={48} />
             <div className="text-left">
-              <p className="text-xs uppercase tracking-widest text-white/60">
+              <p className="text-xs uppercase tracking-widest dark:text-white/60 text-stone-600">
                 Favourite block
               </p>
-              <p className="font-mc text-xl font-bold capitalize text-white">
+              <p className="text-xl font-semibold capitalize dark:text-stone-100 text-stone-800">
                 {formatId(top.id)}
               </p>
-              <p className="font-mc text-sm text-white/70">
+              <p className="font-mc text-sm dark:text-white/70 text-stone-600">
                 {top.count.toLocaleString()}× mined
               </p>
             </div>
-          </div>
+          </Squircle>
         )}
 
-        <p className="mining-meta mt-6 text-sm text-white/60">
-          Ranked <span className="font-mc font-bold text-white">#{rank}</span> of {data.totalPlayers}
+        <p className="mining-meta mt-6 text-sm dark:text-white/60 text-stone-600">
+          Ranked <span className="font-mc font-bold dark:text-stone-100 text-stone-800">#{rank}</span> of {data.totalPlayers}
         </p>
 
-        <p className="mining-joke mt-6 text-balance text-base italic text-white/70 sm:text-lg">
+        <p className="mining-joke mt-6 text-balance text-base italic dark:text-white/70 text-stone-600 sm:text-lg">
           {getMiningJoke(total)}
         </p>
       </div>

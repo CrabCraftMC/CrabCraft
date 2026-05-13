@@ -7,10 +7,9 @@ import { TOTAL_SCENES } from "../data/sceneOrder";
 interface Options {
   controller: StoryController;
   onExit?: () => void;
-  onOpenDashboard?: () => void;
 }
 
-export function useKeyboardNav({ controller, onExit, onOpenDashboard }: Options) {
+export function useKeyboardNav({ controller, onExit }: Options) {
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement | null)?.tagName;
@@ -38,11 +37,6 @@ export function useKeyboardNav({ controller, onExit, onOpenDashboard }: Options)
           e.preventDefault();
           controller.jumpTo(0);
           break;
-        case "d":
-        case "D":
-          e.preventDefault();
-          onOpenDashboard?.();
-          break;
         case "Escape":
           e.preventDefault();
           onExit?.();
@@ -51,7 +45,7 @@ export function useKeyboardNav({ controller, onExit, onOpenDashboard }: Options)
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [controller, onExit, onOpenDashboard]);
+  }, [controller, onExit]);
 }
 
 export interface DragHandlers {

@@ -17,12 +17,12 @@ interface Mode {
 }
 
 const MODES: Mode[] = [
-  { key: "walk_distance_m", label: "Walked", texture: "/minecraft/item/leather_boots.png", color: "bg-emerald-400" },
+  { key: "walk_distance_m", label: "Walked", texture: "/minecraft/item/iron_boots.png", color: "bg-emerald-400" },
   { key: "sprint_distance_m", label: "Sprinted", texture: "/minecraft/mob_effect/speed.png", color: "bg-amber-400" },
   { key: "boat_distance_m", label: "By boat", texture: "/minecraft/item/oak_boat.png", color: "bg-orange-400" },
   { key: "elytra_distance_m", label: "Elytra", texture: "/minecraft/item/elytra.png", color: "bg-fuchsia-400" },
   { key: "horse_distance_m", label: "On horse", texture: "/minecraft/item/saddle.png", color: "bg-yellow-400" },
-  { key: "swim_distance_m", label: "Swam", texture: "/minecraft/item/heart_of_the_sea.png", color: "bg-cyan-400" },
+  { key: "swim_distance_m", label: "Swam", texture: "/minecraft/mob_effect/dolphins_grace.png", color: "bg-cyan-400" },
 ];
 
 function planetaryComparison(km: number): string | null {
@@ -85,19 +85,19 @@ export default function DistanceScene({ data }: { data: WrappedData }) {
   return (
     <SceneShell id="distance" title="Distance" ref={ref}>
       <div className="text-center">
-        <p className="dist-eyebrow font-mc text-xs uppercase tracking-[0.5em] text-white/60">
+        <p className="dist-eyebrow text-xs uppercase tracking-[0.5em] dark:text-white/60 text-stone-600">
           You traveled
         </p>
-        <p className="mt-6 font-mc text-6xl font-bold text-orange-200 sm:text-8xl lg:text-9xl">
+        <p className="mt-6 font-mc text-6xl font-bold dark:text-orange-200 text-orange-700 sm:text-8xl lg:text-9xl">
           <span className="dist-number inline-block">
             <DigitRoller value={Math.round(km)} duration={1.5} delay={0.5} />
           </span>
-          <span className="dist-unit ml-3 inline-block text-3xl text-white/70 sm:text-4xl">
+          <span className="dist-unit ml-3 inline-block text-3xl dark:text-white/70 text-stone-600 sm:text-4xl">
             km
           </span>
         </p>
         {comparison && (
-          <p className="dist-compare mt-3 text-base text-orange-300/90 sm:text-lg">
+          <p className="dist-compare mt-3 text-base dark:text-orange-300/90 text-orange-700/90 sm:text-lg">
             {comparison}
           </p>
         )}
@@ -111,16 +111,16 @@ export default function DistanceScene({ data }: { data: WrappedData }) {
                 <img
                   src={m.texture}
                   alt=""
-                  width={20}
-                  height={20}
+                  width={32}
+                  height={32}
                   className="pixelated shrink-0"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-baseline justify-between text-xs">
-                    <span className="text-white/70">{m.label}</span>
-                    <span className="tabular-nums text-white/80">{kmMode} km</span>
+                    <span className="dark:text-white/70 text-stone-600">{m.label}</span>
+                    <span className="tabular-nums dark:text-white/80 text-stone-700">{kmMode} km</span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-1.5 overflow-hidden rounded-full dark:bg-white/10 bg-black/10">
                     <div
                       className={`dist-bar-fill h-full origin-left rounded-full ${m.color}`}
                       style={{ width: `${pct}%`, transform: "scaleX(0)" }}
@@ -132,11 +132,11 @@ export default function DistanceScene({ data }: { data: WrappedData }) {
           })}
         </div>
 
-        <p className="dist-meta mt-6 text-sm text-white/60">
-          Ranked <span className="font-mc font-bold text-white">#{rank}</span> of {data.totalPlayers}
+        <p className="dist-meta mt-6 text-sm dark:text-white/60 text-stone-600">
+          Ranked <span className="font-mc font-bold dark:text-stone-100 text-stone-800">#{rank}</span> of {data.totalPlayers}
         </p>
 
-        <p className="dist-joke mt-6 text-balance text-base italic text-white/70 sm:text-lg">
+        <p className="dist-joke mt-6 text-balance text-base italic dark:text-white/70 text-stone-600 sm:text-lg">
           {getDistanceJoke(km)}
         </p>
       </div>

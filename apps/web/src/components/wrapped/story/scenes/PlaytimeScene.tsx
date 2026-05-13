@@ -65,7 +65,7 @@ export default function PlaytimeScene({ data }: { data: WrappedData }) {
   return (
     <SceneShell id="playtime" title="Play Time" ref={ref}>
       <div className="text-center">
-        <p className="pt-eyebrow font-mc text-xs uppercase tracking-[0.5em] text-white/60">
+        <p className="pt-eyebrow text-xs uppercase tracking-[0.5em] dark:text-white/60 text-stone-600">
           You spent
         </p>
 
@@ -84,36 +84,36 @@ export default function PlaytimeScene({ data }: { data: WrappedData }) {
           </div>
           <ShockwaveRing delay={1.2} size={120} maxScale={3.2} color="rgba(251, 191, 36, 0.6)" />
           <ShockwaveRing delay={1.35} size={120} maxScale={3.6} color="rgba(251, 146, 60, 0.5)" />
-          <p className="pt-number relative z-10 font-mc text-6xl font-bold text-amber-200 sm:text-8xl lg:text-9xl">
+          <p className="pt-number relative z-10 font-mc text-6xl font-bold dark:text-amber-200 text-amber-700 sm:text-8xl lg:text-9xl">
             <DigitRoller value={hours} duration={1.5} delay={0.6} />
-            <span className="pt-unit ml-3 inline-block text-3xl font-bold text-white/70 sm:text-4xl">
+            <span className="pt-unit ml-3 inline-block text-3xl font-bold dark:text-white/70 text-stone-600 sm:text-4xl">
               hours
             </span>
           </p>
         </div>
 
         <div className="pt-bar mx-auto mt-10 max-w-md">
-          <div className="relative h-3 overflow-hidden rounded-full bg-white/10">
+          <div className="relative h-3 overflow-hidden rounded-full dark:bg-white/10 bg-black/10">
             <div
               className="pt-bar-fill absolute inset-y-0 left-0 origin-left rounded-full bg-gradient-to-r from-amber-300 to-orange-400"
               style={{ width: "100%", transform: "scaleX(0)" }}
             />
             <div
               aria-hidden
-              className="absolute inset-y-0 left-1/2 w-px bg-white/40"
+              className="absolute inset-y-0 left-1/2 w-px dark:bg-white/40 bg-stone-700/40"
               title="Server average"
             />
           </div>
-          <p className="pt-meta mt-2 text-xs text-white/60">
-            <span className="font-bold text-white">{ratio}×</span> the server average
+          <p className="pt-meta mt-2 text-xs dark:text-white/60 text-stone-600">
+            <span className="font-bold dark:text-stone-100 text-stone-800">{ratio}×</span> the server average
           </p>
         </div>
 
-        <p className="pt-meta mt-6 text-sm text-white/60">
-          Ranked <span className="font-mc font-bold text-white">#{rank}</span> of {data.totalPlayers}
+        <p className="pt-meta mt-6 text-sm dark:text-white/60 text-stone-600">
+          Ranked <span className="font-mc font-bold dark:text-stone-100 text-stone-800">#{rank}</span> of {data.totalPlayers}
         </p>
 
-        <p className="pt-joke mt-8 text-balance text-base italic text-white/70 sm:text-lg">
+        <p className="pt-joke mt-8 text-balance text-base italic dark:text-white/70 text-stone-600 sm:text-lg">
           {getPlaytimeJoke(hours)}
         </p>
       </div>

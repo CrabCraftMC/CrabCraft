@@ -20,7 +20,13 @@ const TEXTURE_BASE =
   "https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/textures/blocks";
 
 const MC_TEXTURE_BASE =
-  "https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/textures";
+  "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures";
+
+// Java edition occasionally lacks the exact filename the Wrapped manifest asks
+// for and we want a sensible visual substitute.
+const JAVA_PATH_OVERRIDES: Record<string, string> = {
+  "block/ancient_debris.png": "block/ancient_debris_side.png",
+};
 
 const EXTERNAL_MC_ROOT = resolve(
   __dirname,
@@ -53,6 +59,7 @@ const BIOME_TINTS: Record<string, string> = {
   leaves_birch_opaque: "#80A755",
   mangrove_leaves_opaque: "#71A047",
 };
+
 
 function srgbToLinear(c: number): number {
   const s = c / 255;
@@ -192,10 +199,10 @@ async function downloadWrappedTextures() {
       }
     }
 
-    // 2. Fetch from Mojang. Item textures suffixed _16 are anim strips that
-    //    need cropping; the source filename drops the suffix.
-    const isCropped = /_16\.png$/.test(path);
-    const fetchPath = isCropped ? path.replace(/_16\.png$/, ".png") : path;
+    // 2. Fetch from the Java-edition asset CDN. Animated items like clock /
+    //    compass ship as per-frame PNGs (clock_00.png … clock_63.png), so the
+    //    manifest's `clock_16.png` is a literal upstream filename — no crop.
+    const fetchPath = JAVA_PATH_OVERRIDES[path] ?? path;
     const url = `${MC_TEXTURE_BASE}/${fetchPath}`;
     try {
       const res = await fetch(url);
@@ -204,14 +211,7 @@ async function downloadWrappedTextures() {
         failed++;
         continue;
       }
-      let buffer: Buffer = Buffer.from(await res.arrayBuffer());
-      if (isCropped) {
-        // Crop to the first 16×16 frame of the animation strip.
-        buffer = await sharp(buffer)
-          .extract({ left: 0, top: 0, width: 16, height: 16 })
-          .png()
-          .toBuffer();
-      }
+      const buffer = Buffer.from(await res.arrayBuffer());
       writeFileSync(outPath, buffer);
       downloaded++;
     } catch {

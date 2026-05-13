@@ -2,7 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import { SLIDE_WAVE_COLORS } from "../data/sceneOrder";
+import { SLIDE_WAVE_COLORS, SLIDE_WAVE_COLORS_LIGHT } from "../data/sceneOrder";
+import { useIsDark } from "../hooks/useIsDark";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 const DitherBackground = dynamic(() => import("./DitherBackground"), {
   ssr: false,
@@ -21,8 +23,11 @@ interface Props {
  * a `THREE.Color` and watches for tuple equality changes).
  */
 export default function StoryBackground({ slide, reduced = false }: Props) {
+  const isDark = useIsDark();
+  const isMobile = useIsMobile();
+  const palette = isDark ? SLIDE_WAVE_COLORS : SLIDE_WAVE_COLORS_LIGHT;
   const [waveColor, setWaveColor] = useState<[number, number, number]>(
-    SLIDE_WAVE_COLORS[slide] ?? [1, 0.5, 0.3]
+    palette[slide] ?? [1, 0.5, 0.3]
   );
   const fromRef = useRef<[number, number, number]>(waveColor);
   const toRef = useRef<[number, number, number]>(waveColor);
@@ -30,7 +35,7 @@ export default function StoryBackground({ slide, reduced = false }: Props) {
   const durationRef = useRef<number>(reduced ? 200 : 1200);
 
   useEffect(() => {
-    const target = SLIDE_WAVE_COLORS[slide] ?? [1, 0.5, 0.3];
+    const target = palette[slide] ?? [1, 0.5, 0.3];
     fromRef.current = [...waveColor] as [number, number, number];
     toRef.current = target;
     startRef.current = performance.now();
@@ -54,17 +59,19 @@ export default function StoryBackground({ slide, reduced = false }: Props) {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slide, reduced]);
+  }, [slide, reduced, isDark]);
 
   return (
     <div aria-hidden className="absolute inset-0">
       <DitherBackground
         waveColor={waveColor}
+        baseColor={isDark ? [0, 0, 0] : [1, 1, 1]}
+        overlay={isDark ? "dark" : "light"}
         waveSpeed={reduced ? 0 : 0.04}
         waveFrequency={3}
         waveAmplitude={0.32}
-        colorNum={5.6}
-        pixelSize={2}
+        colorNum={isMobile ? 4 : 5.6}
+        pixelSize={isMobile ? 3 : 2}
         disableAnimation={reduced}
         enableMouseInteraction={!reduced}
         mouseRadius={0.3}

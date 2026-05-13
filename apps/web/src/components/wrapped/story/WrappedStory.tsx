@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { useStoryController } from "./hooks/useStoryController";
 import { useKeyboardNav } from "./hooks/useStoryGestures";
 import { useHaptics } from "./hooks/useHaptics";
@@ -20,9 +21,15 @@ import {
 } from "./data/sceneOrder";
 import type { WrappedData } from "@/lib/wrappedTypes";
 
+const SCENE_TRANSITION_VARIANTS = {
+  enter: (direction: number) => ({ x: `${direction * 100}%`, opacity: 0 }),
+  center: { x: "0%", opacity: 1 },
+  exit: (direction: number) => ({ x: `${-direction * 100}%`, opacity: 0 }),
+};
+
 const SceneSkeleton = () => (
   <div className="relative z-10 flex min-h-screen w-full items-center justify-center">
-    <span className="font-mc text-xs uppercase tracking-widest text-white/30">
+    <span className="text-xs uppercase tracking-widest dark:text-white/30 text-stone-400">
       Loading...
     </span>
   </div>
@@ -84,8 +91,6 @@ export default function WrappedStory({ data }: { data: WrappedData }) {
   useKeyboardNav({
     controller,
     onExit: () => router.push("/wrapped"),
-    onOpenDashboard: () =>
-      window.open(`/wrapped/${data.season}/dashboard`, "_blank"),
   });
 
   useEffect(() => {
@@ -110,27 +115,46 @@ export default function WrappedStory({ data }: { data: WrappedData }) {
 
   return (
     <div
-      className="fixed inset-0 z-40 overflow-hidden bg-[#0c0a09] text-white"
+      className="fixed inset-x-0 top-20 bottom-4 z-40 px-4 md:top-28 md:bottom-6 lg:px-8"
       style={cursor ? { cursor: `url(${cursor}) 8 8, auto` } : undefined}
     >
-      <StoryBackground slide={controller.current} reduced={reduced} />
+      <div className="container relative mx-auto h-full overflow-hidden rounded-3xl bg-stone-50 text-stone-800 ring-1 ring-black/10 dark:bg-[#1a1614] dark:text-stone-100 dark:ring-white/10">
+        <StoryBackground slide={controller.current} reduced={reduced} />
 
-      <StoryHUD controller={controller} season={data.season} />
+        <StoryHUD controller={controller} />
 
-      <NavZones controller={controller} />
+        <NavZones controller={controller} />
 
-      <main key={controller.current} className="relative h-full w-full overflow-y-auto">
-        <CurrentScene data={data} />
-      </main>
+        <main className="relative h-full w-full overflow-hidden">
+          <AnimatePresence mode="popLayout" custom={controller.direction} initial={false}>
+            <motion.div
+              key={controller.current}
+              custom={controller.direction}
+              variants={SCENE_TRANSITION_VARIANTS}
+              initial={reduced ? false : "enter"}
+              animate="center"
+              exit={reduced ? undefined : "exit"}
+              transition={
+                reduced
+                  ? { duration: 0 }
+                  : { x: { type: "tween", duration: 0.45, ease: [0.32, 0.72, 0.24, 1] }, opacity: { duration: 0.25 } }
+              }
+              className="absolute inset-0"
+            >
+              <CurrentScene data={data} />
+            </motion.div>
+          </AnimatePresence>
+        </main>
 
-      <LiveRegion message={announcement} />
+        <LiveRegion message={announcement} />
 
-      {/* Hint chip on first slide only, fades after interaction */}
-      {controller.current === 0 && !reduced && (
-        <p className="pointer-events-none absolute bottom-8 left-1/2 z-40 -translate-x-1/2 animate-pulse text-center font-mc text-[10px] uppercase tracking-[0.3em] text-white/40">
-          Tap right · Arrow keys · Swipe
-        </p>
-      )}
+        {/* Hint chip on first slide only, fades after interaction */}
+        {controller.current === 0 && !reduced && (
+          <p className="pointer-events-none absolute bottom-8 left-1/2 z-40 -translate-x-1/2 animate-pulse text-center text-[10px] uppercase tracking-[0.3em] dark:text-white/40 text-stone-500">
+            Tap right · Arrow keys · Swipe
+          </p>
+        )}
+      </div>
     </div>
   );
 }

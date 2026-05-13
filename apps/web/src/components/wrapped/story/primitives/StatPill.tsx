@@ -1,3 +1,5 @@
+import Squircle from "@/components/Squircle";
+
 interface Props {
   label: string;
   value: string;
@@ -7,19 +9,18 @@ interface Props {
 
 export default function StatPill({ label, value, highlight, className }: Props) {
   return (
-    <div
-      className={`rounded-2xl border ${
-        highlight
-          ? "border-orange-400/40 bg-orange-500/10"
-          : "border-white/10 bg-white/5"
+    <Squircle
+      cornerRadius={16}
+      className={`${
+        highlight ? "bg-orange-500/20" : "dark:bg-white/10 bg-black/10"
       } p-4 backdrop-blur-sm ${className ?? ""}`}
     >
-      <p className="font-mc text-xl font-bold tabular-nums text-white sm:text-2xl">
+      <p className="font-mc text-xl font-bold tabular-nums dark:text-stone-100 text-stone-800 sm:text-2xl">
         {value}
       </p>
-      <p className="mt-1 text-[10px] uppercase tracking-widest text-white/60">
+      <p className="mt-1 text-[10px] uppercase tracking-widest dark:text-white/60 text-stone-600">
         {label}
       </p>
-    </div>
+    </Squircle>
   );
 }

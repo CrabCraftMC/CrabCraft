@@ -39,17 +39,33 @@ export const SLIDE_COLORS: Array<[string, string, string]> = [
 ];
 
 // RGB triplets (0..1) consumed by the dither shader's `waveColor` uniform.
-// Roughly correspond to each slide's primary OKLCH tint.
+// Desaturated ~50% toward neutral so the shader's bright peaks stay muted
+// against the dark card chrome — closer to "tinted dust" than vivid candy.
 export const SLIDE_WAVE_COLORS: Array<[number, number, number]> = [
-  [1.0, 0.55, 0.45], // intro - warm coral
-  [1.0, 0.78, 0.3], // playtime - amber
-  [1.0, 0.6, 0.3], // distance - orange
-  [0.3, 0.85, 0.5], // mining - emerald
-  [1.0, 0.3, 0.4], // combat - crimson
-  [0.4, 0.65, 1.0], // building - sky
-  [0.75, 0.55, 1.0], // fun facts - violet
-  [1.0, 0.85, 0.3], // rankings - gold
-  [1.0, 0.6, 0.4], // summary - coral-gold
+  [0.83, 0.61, 0.56], // intro - warm coral
+  [0.85, 0.74, 0.5], // playtime - amber
+  [0.82, 0.62, 0.47], // distance - orange
+  [0.43, 0.7, 0.53], // mining - emerald
+  [0.78, 0.43, 0.48], // combat - crimson
+  [0.54, 0.67, 0.84], // building - sky
+  [0.76, 0.66, 0.88], // fun facts - violet
+  [0.86, 0.78, 0.51], // rankings - gold
+  [0.83, 0.63, 0.53], // summary - coral-gold
+];
+
+// Same hues, much darker variants — used when the shader mixes from white
+// instead of black (light mode), so the noise peaks read as definite tinted
+// shadows against the cream chrome rather than disappearing.
+export const SLIDE_WAVE_COLORS_LIGHT: Array<[number, number, number]> = [
+  [0.42, 0.31, 0.28], // intro - warm coral
+  [0.43, 0.37, 0.25], // playtime - amber
+  [0.41, 0.31, 0.24], // distance - orange
+  [0.22, 0.35, 0.27], // mining - emerald
+  [0.39, 0.22, 0.24], // combat - crimson
+  [0.27, 0.34, 0.42], // building - sky
+  [0.38, 0.33, 0.44], // fun facts - violet
+  [0.43, 0.39, 0.26], // rankings - gold
+  [0.42, 0.32, 0.27], // summary - coral-gold
 ];
 
 // Per-slide cursor texture (Minecraft item PNG). Falls back to default on

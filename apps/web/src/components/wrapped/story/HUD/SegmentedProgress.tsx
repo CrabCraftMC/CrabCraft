@@ -48,7 +48,7 @@ export default function SegmentedProgress({ current, total }: Props) {
       {Array.from({ length: total }, (_, i) => (
         <div
           key={i}
-          className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/15"
+          className="relative h-1 flex-1 overflow-hidden rounded-full dark:bg-white/15 bg-black/10"
         >
           <span
             className="sp-fill absolute inset-0 origin-left rounded-full bg-gradient-to-r from-orange-400 to-orange-500"

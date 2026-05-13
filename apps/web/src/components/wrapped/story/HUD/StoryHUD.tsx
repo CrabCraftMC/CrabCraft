@@ -6,16 +6,14 @@ import { TOTAL_SCENES } from "../data/sceneOrder";
 import type { StoryController } from "../hooks/useStoryController";
 import SegmentedProgress from "./SegmentedProgress";
 import SlideCounter from "./SlideCounter";
-import DashboardButton from "./DashboardButton";
 import SkipButton from "./SkipButton";
 import RestartButton from "./RestartButton";
 
 interface Props {
   controller: StoryController;
-  season: string;
 }
 
-export default function StoryHUD({ controller, season }: Props) {
+export default function StoryHUD({ controller }: Props) {
   const isLast = controller.current === TOTAL_SCENES - 1;
 
   return (
@@ -26,7 +24,7 @@ export default function StoryHUD({ controller, season }: Props) {
       <div className="pointer-events-auto mx-auto flex max-w-6xl items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
         <Link
           href="/wrapped"
-          className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-white/70 backdrop-blur-sm transition-colors hover:bg-white/15 hover:text-white"
+          className="flex items-center gap-1 rounded-full border dark:border-white/10 border-black/10 dark:bg-white/5 bg-black/5 px-2.5 py-1.5 text-xs font-bold dark:text-white/70 text-stone-600 backdrop-blur-sm transition-colors dark:hover:bg-white/15 hover:bg-black/10 dark:hover:text-stone-100 hover:text-stone-900"
           aria-label="Back to season selector"
           title="Back to seasons (Esc)"
         >
@@ -38,14 +36,11 @@ export default function StoryHUD({ controller, season }: Props) {
 
         <SlideCounter current={controller.current} total={TOTAL_SCENES} />
 
-        <div className="flex items-center gap-1.5">
-          {isLast ? (
-            <RestartButton onRestart={() => controller.jumpTo(0)} />
-          ) : (
-            <SkipButton onSkip={() => controller.jumpTo(TOTAL_SCENES - 1)} />
-          )}
-          <DashboardButton season={season} />
-        </div>
+        {isLast ? (
+          <RestartButton onRestart={() => controller.jumpTo(0)} />
+        ) : (
+          <SkipButton onSkip={() => controller.jumpTo(TOTAL_SCENES - 1)} />
+        )}
       </div>
     </header>
   );

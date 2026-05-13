@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getSeasons, getMinecraftUuid, getPlayerSeasons } from "@/lib/queries";
 import Squircle from "@/components/Squircle";
+import SeasonTileImage from "@/components/wrapped/SeasonTileImage";
 
 export const metadata: Metadata = {
   title: "Wrapped",
@@ -18,7 +18,12 @@ export default async function WrappedPage() {
   let playerSeasonIds: Set<string> = new Set();
 
   try {
-    seasons = await getSeasons();
+    // Hide ongoing seasons — their stats aren't final yet. Then reverse so
+    // the most recent completed season lands in sizePattern[0]'s showcase
+    // tile (top on mobile, big tile on desktop).
+    seasons = (await getSeasons())
+      .filter((s: { is_current?: boolean }) => !s.is_current)
+      .reverse();
 
     if (user) {
       const mcUuid = await getMinecraftUuid(user.discordId);
@@ -27,8 +32,9 @@ export default async function WrappedPage() {
         playerSeasonIds = new Set(playerSeasons.map((s: any) => s.id));
       }
     }
-  } catch (e) {
-    console.error("Failed to fetch seasons:", e);
+  } catch {
+    // Empty seasons[] falls through to the "No seasons available" empty
+    // state below — no need to log here.
   }
 
   const sizePattern = [
@@ -38,6 +44,7 @@ export default async function WrappedPage() {
     "min-h-[200px]",
     "sm:col-span-2 lg:col-span-1 min-h-[200px]",
     "lg:col-span-2 min-h-[200px]",
+    "min-h-[200px]",
   ];
 
   return (
@@ -83,11 +90,9 @@ export default async function WrappedPage() {
               const content = (
                 <>
                   <div className="absolute inset-0 bg-gradient-to-br from-[#F97316] to-[#FB923C]">
-                    <Image
+                    <SeasonTileImage
                       src={`/wrapped/${season.id}.webp`}
                       alt={season.name}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className={`object-cover ${season.id === "5" ? "object-right" : "object-center"}`}
                     />
                   </div>
