@@ -113,7 +113,7 @@ export default async function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){document.documentElement.classList.add('no-trans');var s=localStorage.getItem('theme');if(s==='dark'||(s===null&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}requestAnimationFrame(function(){requestAnimationFrame(function(){document.documentElement.classList.remove('no-trans')})})})()`,
+            __html: `(function(){document.documentElement.classList.add('no-trans');var s=localStorage.getItem('theme');if(s==='dark'||(s===null&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}requestAnimationFrame(function(){requestAnimationFrame(function(){document.documentElement.classList.remove('no-trans')})})})();(function(){var w=console.warn;console.warn=function(){var m=arguments[0];if(typeof m==='string'&&m.indexOf('THREE.Clock: This module has been deprecated')===0)return;return w.apply(console,arguments)}})()`,
           }}
         />
         <script

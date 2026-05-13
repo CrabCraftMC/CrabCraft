@@ -6,7 +6,6 @@ import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useIsDark } from "../hooks/useIsDark";
-import SkinReveal3D from "../primitives/SkinReveal3D";
 import FloatingParticles from "../primitives/FloatingParticles";
 import SplitHeading from "../primitives/SplitHeading";
 import type { WrappedData } from "@/lib/wrappedTypes";
@@ -107,11 +106,13 @@ export default function IntroScene({ data }: { data: WrappedData }) {
 
       <div className="relative flex flex-col items-center gap-6 sm:gap-10">
         <div className="intro-skin">
-          <SkinReveal3D
-            uuid={data.playerUuid}
-            playerName={data.playerName}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://starlightskins.lunareclipse.studio/render/walking/${data.playerName}/full`}
+            alt=""
             width={240}
             height={320}
+            className="pixelated h-auto w-[240px] object-contain"
           />
         </div>
 

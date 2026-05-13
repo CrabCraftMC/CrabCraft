@@ -35,7 +35,6 @@
     "react-dom": "^19.2.4",
     "react-icons": "^5.5.0",
     "sharp": "^0.34.5",
-    "skin3d": "^0.1.3",
     "tailwind-merge": "^3.4.0",
     "three": "^0.183.1",
     "web-haptics": "^0.0.6"
