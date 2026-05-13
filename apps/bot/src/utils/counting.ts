@@ -1,7 +1,16 @@
 import { type Message, type PartialMessage } from "discord.js";
 import { extractNumberFromImage } from "./openai.js";
 
-const MATH_SCOPE: Record<string, number | ((...args: number[]) => number)> = {
+type MathFn = (...args: number[]) => number;
+
+const MATH_CONSTANTS: Record<string, number> = {
+  PI: Math.PI,
+  TAU: Math.PI * 2,
+  E: Math.E,
+  PHI: (1 + Math.sqrt(5)) / 2,
+};
+
+const MATH_FUNCTIONS: Record<string, MathFn> = {
   sqrt: Math.sqrt,
   cbrt: Math.cbrt,
   abs: Math.abs,
@@ -15,14 +24,254 @@ const MATH_SCOPE: Record<string, number | ((...args: number[]) => number)> = {
   log2: Math.log2,
   log10: Math.log10,
   exp: Math.exp,
-  PI: Math.PI,
-  TAU: Math.PI * 2,
-  E: Math.E,
-  PHI: (1 + Math.sqrt(5)) / 2,
 };
-const ALLOWED_IDENTIFIERS = new Set(Object.keys(MATH_SCOPE));
+
 const MAX_EXPR_LENGTH = 200;
 const INTEGER_TOLERANCE = 1e-9;
+
+type Token =
+  | { type: "num"; value: number }
+  | { type: "id"; value: string }
+  | { type: "op"; value: "+" | "-" | "*" | "/" | "**" }
+  | { type: "lparen" }
+  | { type: "rparen" }
+  | { type: "comma" };
+
+function isDigit(c: string): boolean {
+  return c >= "0" && c <= "9";
+}
+
+function isIdStart(c: string): boolean {
+  return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c === "_";
+}
+
+function isIdCont(c: string): boolean {
+  return isIdStart(c) || isDigit(c);
+}
+
+function tokenize(input: string): Token[] | null {
+  const tokens: Token[] = [];
+  let i = 0;
+  while (i < input.length) {
+    const c = input[i];
+    if (c === " " || c === "\t" || c === "\n" || c === "\r") {
+      i++;
+      continue;
+    }
+    if (isDigit(c) || (c === "." && isDigit(input[i + 1] ?? ""))) {
+      let j = i;
+      while (j < input.length && isDigit(input[j])) j++;
+      if (input[j] === ".") {
+        j++;
+        while (j < input.length && isDigit(input[j])) j++;
+      }
+      const value = parseFloat(input.slice(i, j));
+      if (!Number.isFinite(value)) return null;
+      tokens.push({ type: "num", value });
+      i = j;
+      continue;
+    }
+    if (isIdStart(c)) {
+      let j = i;
+      while (j < input.length && isIdCont(input[j])) j++;
+      tokens.push({ type: "id", value: input.slice(i, j) });
+      i = j;
+      continue;
+    }
+    if (c === "*" && input[i + 1] === "*") {
+      tokens.push({ type: "op", value: "**" });
+      i += 2;
+      continue;
+    }
+    if (c === "+" || c === "-" || c === "*" || c === "/") {
+      tokens.push({ type: "op", value: c });
+      i++;
+      continue;
+    }
+    if (c === "(") {
+      tokens.push({ type: "lparen" });
+      i++;
+      continue;
+    }
+    if (c === ")") {
+      tokens.push({ type: "rparen" });
+      i++;
+      continue;
+    }
+    if (c === ",") {
+      tokens.push({ type: "comma" });
+      i++;
+      continue;
+    }
+    return null;
+  }
+  return tokens;
+}
+
+type Node =
+  | { type: "num"; value: number }
+  | { type: "const"; name: string }
+  | { type: "call"; name: string; args: Node[] }
+  | { type: "unary"; op: "+" | "-"; arg: Node }
+  | { type: "binary"; op: "+" | "-" | "*" | "/"; left: Node; right: Node }
+  | { type: "pow"; base: Node; exp: Node };
+
+class Parser {
+  private pos = 0;
+  constructor(private tokens: Token[]) {}
+
+  private peek(): Token | undefined {
+    return this.tokens[this.pos];
+  }
+
+  private consume(): Token | undefined {
+    return this.tokens[this.pos++];
+  }
+
+  parse(): Node | null {
+    const expr = this.parseAdditive();
+    if (!expr) return null;
+    if (this.peek()) return null;
+    return expr;
+  }
+
+  private parseAdditive(): Node | null {
+    let left = this.parseMultiplicative();
+    if (!left) return null;
+    for (;;) {
+      const t = this.peek();
+      if (t?.type !== "op" || (t.value !== "+" && t.value !== "-")) break;
+      this.consume();
+      const right = this.parseMultiplicative();
+      if (!right) return null;
+      left = { type: "binary", op: t.value, left, right };
+    }
+    return left;
+  }
+
+  private parseMultiplicative(): Node | null {
+    let left = this.parseUnary();
+    if (!left) return null;
+    for (;;) {
+      const t = this.peek();
+      if (t?.type !== "op" || (t.value !== "*" && t.value !== "/")) break;
+      this.consume();
+      const right = this.parseUnary();
+      if (!right) return null;
+      left = { type: "binary", op: t.value, left, right };
+    }
+    return left;
+  }
+
+  private parseUnary(): Node | null {
+    const t = this.peek();
+    if (t?.type === "op" && (t.value === "+" || t.value === "-")) {
+      this.consume();
+      const arg = this.parseUnary();
+      if (!arg) return null;
+      return { type: "unary", op: t.value, arg };
+    }
+    return this.parsePower();
+  }
+
+  private parsePower(): Node | null {
+    const base = this.parsePrimary();
+    if (!base) return null;
+    const t = this.peek();
+    if (t?.type === "op" && t.value === "**") {
+      this.consume();
+      const exp = this.parseUnary();
+      if (!exp) return null;
+      return { type: "pow", base, exp };
+    }
+    return base;
+  }
+
+  private parsePrimary(): Node | null {
+    const t = this.consume();
+    if (!t) return null;
+    if (t.type === "num") return { type: "num", value: t.value };
+    if (t.type === "id") {
+      if (this.peek()?.type === "lparen") {
+        this.consume();
+        const args: Node[] = [];
+        if (this.peek()?.type !== "rparen") {
+          const first = this.parseAdditive();
+          if (!first) return null;
+          args.push(first);
+          while (this.peek()?.type === "comma") {
+            this.consume();
+            const arg = this.parseAdditive();
+            if (!arg) return null;
+            args.push(arg);
+          }
+        }
+        if (this.consume()?.type !== "rparen") return null;
+        return { type: "call", name: t.value, args };
+      }
+      return { type: "const", name: t.value };
+    }
+    if (t.type === "lparen") {
+      const expr = this.parseAdditive();
+      if (!expr) return null;
+      if (this.consume()?.type !== "rparen") return null;
+      return expr;
+    }
+    return null;
+  }
+}
+
+function evaluate(node: Node): number | null {
+  switch (node.type) {
+    case "num":
+      return node.value;
+    case "const": {
+      const v = MATH_CONSTANTS[node.name];
+      return v === undefined ? null : v;
+    }
+    case "call": {
+      const fn = MATH_FUNCTIONS[node.name];
+      if (!fn) return null;
+      const args: number[] = [];
+      for (const a of node.args) {
+        const v = evaluate(a);
+        if (v === null) return null;
+        args.push(v);
+      }
+      const r = fn(...args);
+      return typeof r === "number" ? r : null;
+    }
+    case "unary": {
+      const v = evaluate(node.arg);
+      if (v === null) return null;
+      return node.op === "-" ? -v : v;
+    }
+    case "binary": {
+      const a = evaluate(node.left);
+      if (a === null) return null;
+      const b = evaluate(node.right);
+      if (b === null) return null;
+      switch (node.op) {
+        case "+":
+          return a + b;
+        case "-":
+          return a - b;
+        case "*":
+          return a * b;
+        case "/":
+          return a / b;
+      }
+    }
+    // eslint-disable-next-line no-fallthrough
+    case "pow": {
+      const base = evaluate(node.base);
+      if (base === null) return null;
+      const exp = evaluate(node.exp);
+      if (exp === null) return null;
+      return Math.pow(base, exp);
+    }
+  }
+}
 
 export function parseNumberFromText(content: string): number | null {
   const trimmed = content.trim();
@@ -54,7 +303,7 @@ function parseMathExpression(text: string): number | null {
 }
 
 function tryEvalMath(raw: string): number | null {
-  const expr = raw
+  const normalized = raw
     .replace(/π/g, "PI")
     .replace(/τ/g, "TAU")
     .replace(/φ/g, "PHI")
@@ -66,26 +315,17 @@ function tryEvalMath(raw: string): number | null {
     .replace(/(?<![A-Za-z_])[xX](?![A-Za-z_])/g, "*")
     .replace(/\^/g, "**");
 
-  if (!/[+\-*/]/.test(expr) && !/[A-Za-z]/.test(expr)) return null;
+  if (!/[+\-*/]/.test(normalized) && !/[A-Za-z]/.test(normalized)) return null;
 
-  const identifiers = expr.match(/[A-Za-z_][A-Za-z_0-9]*/g) ?? [];
-  for (const id of identifiers) {
-    if (!ALLOWED_IDENTIFIERS.has(id)) return null;
-  }
+  const tokens = tokenize(normalized);
+  if (!tokens || tokens.length === 0) return null;
 
-  if (!/^[\d+\-*/().,\s_A-Za-z]+$/.test(expr)) return null;
+  const ast = new Parser(tokens).parse();
+  if (!ast) return null;
 
-  const names = Object.keys(MATH_SCOPE);
-  const values = Object.values(MATH_SCOPE);
-  let result: unknown;
-  try {
-    const fn = new Function(...names, `"use strict"; return (${expr});`);
-    result = fn(...values);
-  } catch {
-    return null;
-  }
+  const result = evaluate(ast);
+  if (result === null || !Number.isFinite(result)) return null;
 
-  if (typeof result !== "number" || !Number.isFinite(result)) return null;
   const rounded = Math.round(result);
   if (Math.abs(result - rounded) > INTEGER_TOLERANCE) return null;
   if (rounded < 0 || rounded > Number.MAX_SAFE_INTEGER) return null;
