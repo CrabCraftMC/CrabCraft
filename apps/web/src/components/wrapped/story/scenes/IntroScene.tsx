@@ -108,11 +108,11 @@ export default function IntroScene({ data }: { data: WrappedData }) {
         <div className="intro-skin">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`https://starlightskins.lunareclipse.studio/render/walking/${data.playerName}/full`}
+            src={`https://mc-api.io/render/full/${data.playerUuid}`}
             alt=""
-            width={240}
-            height={320}
-            className="pixelated h-auto w-[240px] object-contain"
+            width={480}
+            height={640}
+            className="h-auto w-[240px] object-contain"
           />
         </div>
 

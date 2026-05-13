@@ -104,7 +104,7 @@ export default function WrappedStory({ data }: { data: WrappedData }) {
     // Preload the player skin used by the Intro/Summary scenes.
     if (controller.current === 0 || controller.current === 7) {
       return [
-        `https://starlightskins.lunareclipse.studio/render/walking/${data.playerName}/full`,
+        `https://mc-api.io/render/full/${data.playerUuid}`,
       ];
     }
     return [];
