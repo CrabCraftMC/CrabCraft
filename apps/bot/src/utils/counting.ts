@@ -3,14 +3,14 @@ import { extractNumberFromImage } from "./openai.js";
 
 type MathFn = (...args: number[]) => number;
 
-const MATH_CONSTANTS: Record<string, number> = {
+const MATH_CONSTANTS: Readonly<Record<string, number>> = Object.freeze({
   PI: Math.PI,
   TAU: Math.PI * 2,
   E: Math.E,
   PHI: (1 + Math.sqrt(5)) / 2,
-};
+});
 
-const MATH_FUNCTIONS: Record<string, MathFn> = {
+const MATH_FUNCTIONS: Readonly<Record<string, MathFn>> = Object.freeze({
   sqrt: Math.sqrt,
   cbrt: Math.cbrt,
   abs: Math.abs,
@@ -24,7 +24,7 @@ const MATH_FUNCTIONS: Record<string, MathFn> = {
   log2: Math.log2,
   log10: Math.log10,
   exp: Math.exp,
-};
+});
 
 const MAX_EXPR_LENGTH = 200;
 const INTEGER_TOLERANCE = 1e-9;
@@ -226,12 +226,14 @@ function evaluate(node: Node): number | null {
     case "num":
       return node.value;
     case "const": {
+      if (!Object.hasOwn(MATH_CONSTANTS, node.name)) return null;
       const v = MATH_CONSTANTS[node.name];
-      return v === undefined ? null : v;
+      return Number.isFinite(v) ? v : null;
     }
     case "call": {
+      if (!Object.hasOwn(MATH_FUNCTIONS, node.name)) return null;
       const fn = MATH_FUNCTIONS[node.name];
-      if (!fn) return null;
+      if (typeof fn !== "function") return null;
       const args: number[] = [];
       for (const a of node.args) {
         const v = evaluate(a);
