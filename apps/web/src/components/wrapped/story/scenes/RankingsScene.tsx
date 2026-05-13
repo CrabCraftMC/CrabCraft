@@ -73,7 +73,13 @@ export default function RankingsScene({ data }: { data: WrappedData }) {
             duration: 0.9,
             ease: "expo.out",
             stagger: 0.18,
-            onStart: () => haptics.heavy(),
+            onStart: () => {
+              // One heavy thump per plinth as each rank rises into view.
+              const count = document.querySelectorAll(".rk-plinth").length;
+              for (let i = 0; i < count; i++) {
+                gsap.delayedCall(i * 0.18, () => haptics.heavy());
+              }
+            },
           },
           "+=0.1"
         )
@@ -89,7 +95,14 @@ export default function RankingsScene({ data }: { data: WrappedData }) {
         gsap.fromTo(
           ".rk-holo-sweep",
           { opacity: 0, x: "-100%" },
-          { opacity: 1, x: "100%", duration: 1.5, ease: "power2.inOut", delay: 1.6 }
+          {
+            opacity: 1,
+            x: "100%",
+            duration: 1.5,
+            ease: "power2.inOut",
+            delay: 1.6,
+            onStart: () => haptics.medium(),
+          }
         );
       }
     },

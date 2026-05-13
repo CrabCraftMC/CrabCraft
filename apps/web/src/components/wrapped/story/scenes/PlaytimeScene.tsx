@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useHaptics } from "../hooks/useHaptics";
 import DigitRoller from "../primitives/DigitRoller";
 import ShockwaveRing from "../primitives/ShockwaveRing";
 import type { WrappedData } from "@/lib/wrappedTypes";
@@ -13,6 +14,7 @@ import { getPlaytimeJoke } from "../jokes/playtimeJokes";
 export default function PlaytimeScene({ data }: { data: WrappedData }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
+  const haptics = useHaptics();
 
   const hours = Math.floor(data.stats.play_time_seconds / 3600);
   const avgHours = Math.max(1, Math.round(data.averages.avg_play_time / 3600));
@@ -35,7 +37,14 @@ export default function PlaytimeScene({ data }: { data: WrappedData }) {
       tl.from(".pt-eyebrow", { opacity: 0, y: 18, duration: 0.5 })
         .from(
           ".pt-clock",
-          { rotation: -180, scale: 0, opacity: 0, duration: 1.1, ease: "back.out(1.7)" },
+          {
+            rotation: -180,
+            scale: 0,
+            opacity: 0,
+            duration: 1.1,
+            ease: "back.out(1.7)",
+            onStart: () => haptics.light(),
+          },
           "-=0.2"
         )
         .from(
@@ -53,11 +62,20 @@ export default function PlaytimeScene({ data }: { data: WrappedData }) {
         .fromTo(
           ".pt-bar-fill",
           { scaleX: 0 },
-          { scaleX: ratioBarPct / 100, duration: 0.9, ease: "back.out(1.6)" },
+          {
+            scaleX: ratioBarPct / 100,
+            duration: 0.9,
+            ease: "back.out(1.6)",
+            onStart: () => haptics.light(),
+          },
           "<"
         )
         .from(".pt-meta", { opacity: 0, y: 12, duration: 0.4, stagger: 0.07 }, "-=0.2")
         .from(".pt-joke", { opacity: 0, y: 14, filter: "blur(8px)", duration: 0.5 }, "-=0.1");
+
+      // Pair the two shockwave rings (delays 1.2 / 1.35 in the JSX) with thumps.
+      gsap.delayedCall(1.2, () => haptics.medium());
+      gsap.delayedCall(1.35, () => haptics.light());
     },
     { scope: ref, dependencies: [reduced, ratioBarPct] }
   );

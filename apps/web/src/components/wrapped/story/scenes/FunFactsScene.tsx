@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useHaptics } from "../hooks/useHaptics";
 import DigitRoller from "../primitives/DigitRoller";
 import Squircle from "@/components/Squircle";
 import type { WrappedData } from "@/lib/wrappedTypes";
@@ -29,6 +30,7 @@ const FACTS: Fact[] = [
 export default function FunFactsScene({ data }: { data: WrappedData }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
+  const haptics = useHaptics();
 
   useGSAP(
     () => {
@@ -58,6 +60,13 @@ export default function FunFactsScene({ data }: { data: WrappedData }) {
           ease: "back.out(1.6)",
           stagger: { each: 0.08, from: "random" },
           delay: 0.3,
+          onStart: () => {
+            // One tick per card, paced to the visual stagger.
+            const count = document.querySelectorAll(".ff-card").length;
+            for (let i = 0; i < count; i++) {
+              gsap.delayedCall(i * 0.08, () => haptics.tick());
+            }
+          },
         }
       );
       gsap.from(".ff-joke", {
@@ -95,7 +104,7 @@ export default function FunFactsScene({ data }: { data: WrappedData }) {
                   style={{ display: "inline-block" }}
                 />
                 <p className="font-mc text-2xl font-bold tabular-nums dark:text-stone-100 text-stone-800 sm:text-3xl">
-                  <DigitRoller value={value} duration={1.2} delay={1.0} />
+                  <DigitRoller value={value} duration={1.2} delay={1.0} haptic={false} />
                 </p>
                 <p className="mt-1 text-[10px] uppercase tracking-widest dark:text-white/60 text-stone-600">
                   {f.label}

@@ -65,10 +65,13 @@ export default function MiningScene({ data }: { data: WrappedData }) {
         ease: "bounce.out",
         stagger: { each: 0.025, from: "random" },
         delay: 0.15,
-        onUpdate() {
-          // Fire a light tick for the first dozen impacts so it feels tactile.
-        },
       });
+      // Tactile thumps as the rain lands — staggered, capped so it doesn't
+      // overpower the counter ratchet that follows.
+      const impactCount = Math.min(8, blocks.length);
+      for (let i = 0; i < impactCount; i++) {
+        gsap.delayedCall(0.15 + 1.1 + i * 0.08, () => haptics.tick());
+      }
       // Fade rain to ambient after landing
       gsap.to(blocks, {
         opacity: 0.18,
@@ -86,7 +89,6 @@ export default function MiningScene({ data }: { data: WrappedData }) {
             scale: 0.6,
             duration: 0.7,
             ease: "back.out(2)",
-            onStart: () => haptics.medium(),
           },
           "-=0.2"
         )

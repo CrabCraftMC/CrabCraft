@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useHaptics } from "../hooks/useHaptics";
 import DigitRoller from "../primitives/DigitRoller";
 import type { WrappedData } from "@/lib/wrappedTypes";
 import { getDistanceJoke } from "../jokes/distanceJokes";
@@ -37,6 +38,7 @@ function planetaryComparison(km: number): string | null {
 export default function DistanceScene({ data }: { data: WrappedData }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
+  const haptics = useHaptics();
   const km = data.stats.total_distance_m / 1000;
   const rank = data.ranks.total_distance_m;
   const comparison = planetaryComparison(km);
@@ -60,14 +62,26 @@ export default function DistanceScene({ data }: { data: WrappedData }) {
       tl.from(".dist-eyebrow", { opacity: 0, y: 18, duration: 0.5 })
         .from(
           ".dist-number",
-          { opacity: 0, scale: 0.7, duration: 0.6, ease: "back.out(2)" },
+          {
+            opacity: 0,
+            scale: 0.7,
+            duration: 0.6,
+            ease: "back.out(2)",
+            onStart: () => haptics.light(),
+          },
           "-=0.2"
         )
         .from(".dist-unit", { opacity: 0, x: 16, duration: 0.4 }, "-=0.2")
         .from(".dist-compare", { opacity: 0, y: 12, duration: 0.4 }, "-=0.05")
         .from(
           ".dist-row",
-          { opacity: 0, x: -40, duration: 0.45, ease: "back.out(1.4)", stagger: 0.07 },
+          {
+            opacity: 0,
+            x: -40,
+            duration: 0.45,
+            ease: "back.out(1.4)",
+            stagger: 0.07,
+          },
           "+=0.1"
         )
         .fromTo(
