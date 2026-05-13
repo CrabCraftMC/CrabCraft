@@ -8,7 +8,7 @@ import {
 import logger from "./logger.js";
 import rankEmojis from "../data/rankEmojis.json" with { type: "json" };
 
-const API_URL = "https://api.crabcraft.net/awards/crowns?limit=100";
+const API_URL = "https://api.crabcraft.net/awards/crowns?limit=100&season=6";
 
 export interface PlayerStats {
   uuid: string;
@@ -96,7 +96,7 @@ export function buildLeaderboardComponents(data: LeaderboardData, emojis?: Map<s
   const viewStatsButton = new ButtonBuilder()
     .setLabel("View Full Stats")
     .setStyle(ButtonStyle.Link)
-    .setURL("https://www.crabcraft.net/leaderboard");
+    .setURL("https://www.crabcraft.net/leaderboard?season=6");
 
   const statsContainer = new ContainerBuilder().addTextDisplayComponents((td) =>
     td.setContent(statsText),
