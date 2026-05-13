@@ -1,20 +1,43 @@
 /**
- * Download block textures from Mojang's bedrock-samples repo into public/textures/blocks.
+ * Download block textures from Mojang's bedrock-samples repo into public/textures/blocks,
+ * AND the Wrapped story-flow texture set into public/minecraft.
+ *
  * Only downloads textures that are missing locally, so re-runs are fast.
  *
  * Usage: bun run scripts/download-textures.ts
  */
 
-import { readFileSync, mkdirSync, existsSync, writeFileSync } from "fs";
+import { readFileSync, mkdirSync, existsSync, writeFileSync, copyFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import sharp from "sharp";
+import { REQUIRED_MC_TEXTURES, POPULAR_TOP_BLOCKS } from "../src/lib/minecraftTextures";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const TEXTURE_BASE =
   "https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/textures/blocks";
+
+const MC_TEXTURE_BASE =
+  "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures";
+
+// Java edition occasionally lacks the exact filename the Wrapped manifest asks
+// for and we want a sensible visual substitute.
+const JAVA_PATH_OVERRIDES: Record<string, string> = {
+  "block/ancient_debris.png": "block/ancient_debris_side.png",
+};
+
+const EXTERNAL_MC_ROOT = resolve(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "_external",
+  "crabcraft-wrapped-main",
+  "public",
+  "minecraft"
+);
 
 interface Block {
   id: string;
@@ -36,6 +59,7 @@ const BIOME_TINTS: Record<string, string> = {
   leaves_birch_opaque: "#80A755",
   mangrove_leaves_opaque: "#71A047",
 };
+
 
 function srgbToLinear(c: number): number {
   const s = c / 255;
@@ -129,6 +153,75 @@ async function main() {
 
   console.log(
     `\n\nDone! ${downloaded} downloaded, ${skipped} already existed, ${failed} failed.`
+  );
+
+  await downloadWrappedTextures();
+}
+
+/**
+ * Download textures needed by the Wrapped story flow into public/minecraft/.
+ * Prefers copying from _external/crabcraft-wrapped-main/public/minecraft/ when
+ * the reference repo is available locally; otherwise fetches from Mojang's
+ * bedrock-samples. Animated item strips (clock_16.png, compass_16.png) are
+ * cropped to their first 16×16 frame via sharp.
+ */
+async function downloadWrappedTextures() {
+  const outRoot = resolve(__dirname, "..", "public", "minecraft");
+  const paths = [
+    ...REQUIRED_MC_TEXTURES,
+    ...POPULAR_TOP_BLOCKS.flatMap((b) => [`block/${b}.png`]),
+  ];
+
+  let downloaded = 0;
+  let skipped = 0;
+  let copied = 0;
+  let failed = 0;
+
+  console.log(`\nChecking ${paths.length} story textures...`);
+
+  for (const path of paths) {
+    const outPath = resolve(outRoot, path);
+    if (existsSync(outPath)) {
+      skipped++;
+      continue;
+    }
+    mkdirSync(dirname(outPath), { recursive: true });
+
+    // 1. Try to copy from the reference repo if present.
+    const externalPath = resolve(EXTERNAL_MC_ROOT, path);
+    if (existsSync(externalPath)) {
+      try {
+        copyFileSync(externalPath, outPath);
+        copied++;
+        continue;
+      } catch {
+        // fall through to fetch
+      }
+    }
+
+    // 2. Fetch from the Java-edition asset CDN. Animated items like clock /
+    //    compass ship as per-frame PNGs (clock_00.png … clock_63.png), so the
+    //    manifest's `clock_16.png` is a literal upstream filename — no crop.
+    const fetchPath = JAVA_PATH_OVERRIDES[path] ?? path;
+    const url = `${MC_TEXTURE_BASE}/${fetchPath}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn(`  FAILED: ${path} (${res.status})`);
+        failed++;
+        continue;
+      }
+      const buffer = Buffer.from(await res.arrayBuffer());
+      writeFileSync(outPath, buffer);
+      downloaded++;
+    } catch {
+      console.warn(`  FAILED: ${path}`);
+      failed++;
+    }
+  }
+
+  console.log(
+    `  Story textures: ${downloaded} downloaded, ${copied} copied from reference, ${skipped} already existed, ${failed} failed.`
   );
 }
 

@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(import.meta.dirname, "../../"),
   experimental: {
-    optimizePackageImports: ["react-icons"],
+    optimizePackageImports: ["react-icons", "gsap", "@gsap/react", "lucide-react"],
   },
   async redirects() {
     return [

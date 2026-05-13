@@ -216,6 +216,13 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                     </Link>
                 )}
                 <Link
+                    href="/wrapped"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                >
+                    <Gift className="w-4 h-4" />
+                    Wrapped
+                </Link>
+                <Link
                     href="/settings"
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
                 >
