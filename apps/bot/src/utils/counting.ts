@@ -1,5 +1,55 @@
 import { type Message, type PartialMessage } from "discord.js";
-import { extractNumberFromImage } from "./openai.js";
+import { extractNumberFromImage, transcribeAudio } from "./openai.js";
+
+const VOICE_MAX_DURATION_SECONDS = 10;
+
+const SPOKEN_SMALL: Readonly<Record<string, number>> = Object.freeze({
+  zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+  twenty: 20, thirty: 30, forty: 40, fifty: 50,
+  sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+});
+const SPOKEN_MULT: Readonly<Record<string, number>> = Object.freeze({
+  hundred: 100,
+  thousand: 1000,
+  million: 1_000_000,
+  billion: 1_000_000_000,
+});
+
+function parseSpokenNumber(text: string): number | null {
+  const words = text
+    .toLowerCase()
+    .replace(/[^a-z\s\-]/g, " ")
+    .split(/[\s\-]+/)
+    .filter((w) => w && w !== "and");
+  if (words.length === 0) return null;
+
+  for (const w of words) {
+    if (!Object.hasOwn(SPOKEN_SMALL, w) && !Object.hasOwn(SPOKEN_MULT, w)) {
+      return null;
+    }
+  }
+
+  let total = 0;
+  let current = 0;
+  for (const w of words) {
+    if (Object.hasOwn(SPOKEN_SMALL, w)) {
+      current += SPOKEN_SMALL[w];
+    } else {
+      const m = SPOKEN_MULT[w];
+      if (m === 100) {
+        current = Math.max(current, 1) * 100;
+      } else {
+        total += Math.max(current, 1) * m;
+        current = 0;
+      }
+    }
+  }
+  total += current;
+  return total > 0 || words[0] === "zero" ? total : null;
+}
 
 type Complex = { re: number; im: number };
 type MathFn = (...args: Complex[]) => Complex;
@@ -447,11 +497,36 @@ function findImageUrl(message: Message | PartialMessage): string | null {
   return null;
 }
 
+function findVoiceUrl(message: Message | PartialMessage): string | null {
+  const att = message.attachments?.find((a) => {
+    if (!a.contentType?.startsWith("audio/")) return false;
+    const duration = (a as { duration?: number }).duration;
+    if (typeof duration !== "number" || !Number.isFinite(duration)) return false;
+    return duration > 0 && duration <= VOICE_MAX_DURATION_SECONDS;
+  });
+  return att?.url ?? null;
+}
+
+async function parseNumberFromVoice(
+  message: Message | PartialMessage,
+): Promise<number | null> {
+  const url = findVoiceUrl(message);
+  if (!url) return null;
+  const transcript = await transcribeAudio(url);
+  if (!transcript) return null;
+  const direct = parseNumberFromText(transcript);
+  if (direct !== null) return direct;
+  return parseSpokenNumber(transcript);
+}
+
 export async function parseNumberFromMessage(
   message: Message | PartialMessage,
 ): Promise<number | null> {
   const text = parseNumberFromText(message.content ?? "");
   if (text !== null) return text;
+
+  const voice = await parseNumberFromVoice(message);
+  if (voice !== null) return voice;
 
   const url = findImageUrl(message);
   if (!url) return null;

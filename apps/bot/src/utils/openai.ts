@@ -1,7 +1,8 @@
 import config from "./config.js";
 import logger from "./logger.js";
 
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_TRANSCRIBE_URL = "https://api.openai.com/v1/audio/transcriptions";
 
 interface ChatCompletionResponse {
   choices?: Array<{ message?: { content?: string } }>;
@@ -20,7 +21,7 @@ export async function extractNumberFromImage(
 
   let res: Response;
   try {
-    res = await fetch(OPENAI_URL, {
+    res = await fetch(OPENAI_CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -66,4 +67,57 @@ export async function extractNumberFromImage(
   if (!match) return null;
   const n = parseInt(match[0], 10);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Downloads an audio file and sends it to Whisper. Returns the trimmed
+ * transcript, or null if no key, download/API failure, or empty reply.
+ * Caller is responsible for enforcing any duration cap before invoking.
+ */
+export async function transcribeAudio(
+  audioUrl: string,
+  promptHint?: string,
+): Promise<string | null> {
+  if (!config.OPENAI_API_KEY) return null;
+
+  let audioRes: Response;
+  try {
+    audioRes = await fetch(audioUrl);
+  } catch (error) {
+    logger.error("Audio download failed:", error);
+    return null;
+  }
+  if (!audioRes.ok) {
+    logger.error(`Audio download returned ${audioRes.status}`);
+    return null;
+  }
+  const audioBlob = await audioRes.blob();
+
+  const form = new FormData();
+  form.append("file", audioBlob, "voice.ogg");
+  form.append("model", "whisper-1");
+  form.append("response_format", "text");
+  if (promptHint) form.append("prompt", promptHint);
+
+  let res: Response;
+  try {
+    res = await fetch(OPENAI_TRANSCRIBE_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.OPENAI_API_KEY}` },
+      body: form,
+    });
+  } catch (error) {
+    logger.error("Whisper request failed:", error);
+    return null;
+  }
+  if (!res.ok) {
+    logger.error(
+      `Whisper returned ${res.status}: ${await res.text().catch(() => "")}`,
+    );
+    return null;
+  }
+
+  const transcript = (await res.text().catch(() => "")).trim();
+  logger.info(`[openai] whisper transcript for ${audioUrl}: ${JSON.stringify(transcript)}`);
+  return transcript || null;
 }
