@@ -4,10 +4,37 @@ import { extractNumberFromImage } from "./openai.js";
 export function parseNumberFromText(content: string): number | null {
   const trimmed = content.trim();
   if (!trimmed) return null;
-  const match = trimmed.match(/^(\d+)(?:$|[\s!?.,])/);
-  if (!match) return null;
-  const n = parseInt(match[1], 10);
+
+  const math = parseMathExpression(trimmed);
+  if (math !== null) return math;
+
+  const numMatch = trimmed.match(/^(\d+)(?:$|[\s!?.,])/);
+  if (!numMatch) return null;
+  const n = parseInt(numMatch[1], 10);
   return Number.isFinite(n) ? n : null;
+}
+
+function parseMathExpression(text: string): number | null {
+  const exprMatch = text.match(/^[\d+\-*/xX()\s]+/);
+  if (!exprMatch) return null;
+
+  const raw = exprMatch[0].trimEnd();
+  if (!raw) return null;
+  if (!/[+\-*/xX]/.test(raw)) return null;
+
+  const expr = raw.replace(/[xX]/g, "*");
+  if (!/^[\d+\-*/()\s]+$/.test(expr)) return null;
+
+  let result: unknown;
+  try {
+    result = new Function(`"use strict"; return (${expr});`)();
+  } catch {
+    return null;
+  }
+
+  if (typeof result !== "number" || !Number.isFinite(result)) return null;
+  if (!Number.isInteger(result) || result < 0) return null;
+  return result;
 }
 
 function findImageUrl(message: Message | PartialMessage): string | null {
