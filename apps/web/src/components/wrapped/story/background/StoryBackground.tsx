@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { SLIDE_WAVE_COLORS, SLIDE_WAVE_COLORS_LIGHT } from "../data/sceneOrder";
 import { useIsDark } from "../hooks/useIsDark";
-import { useIsMobile } from "../hooks/useIsMobile";
 
 const DitherBackground = dynamic(() => import("./DitherBackground"), {
   ssr: false,
@@ -24,7 +23,6 @@ interface Props {
  */
 export default function StoryBackground({ slide, reduced = false }: Props) {
   const isDark = useIsDark();
-  const isMobile = useIsMobile();
   const palette = isDark ? SLIDE_WAVE_COLORS : SLIDE_WAVE_COLORS_LIGHT;
   const [waveColor, setWaveColor] = useState<[number, number, number]>(
     palette[slide] ?? [1, 0.5, 0.3]
@@ -70,8 +68,8 @@ export default function StoryBackground({ slide, reduced = false }: Props) {
         waveSpeed={reduced ? 0 : 0.04}
         waveFrequency={3}
         waveAmplitude={0.32}
-        colorNum={isMobile ? 4 : 5.6}
-        pixelSize={isMobile ? 3 : 2}
+        colorNum={5.6}
+        pixelSize={2}
         disableAnimation={reduced}
         enableMouseInteraction={!reduced}
         mouseRadius={0.3}
