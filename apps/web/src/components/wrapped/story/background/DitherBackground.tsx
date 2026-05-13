@@ -92,7 +92,11 @@ void main() {
     mouseNDC.x *= resolution.x / resolution.y;
     float dist = length(uv - mouseNDC);
     float effect = 1.0 - smoothstep(0.0, mouseRadius, dist);
-    f -= 0.5 * effect;
+    // In dark mode (baseColor near black) subtract: cursor darkens toward
+    // the base. In light mode (baseColor near white) add: cursor brings the
+    // wave color out instead of pulling toward white.
+    float dir = baseColor.r > 0.5 ? 1.0 : -1.0;
+    f += dir * 0.5 * effect;
   }
   vec3 col = mix(baseColor, waveColor, f);
   gl_FragColor = vec4(col, 1.0);
@@ -324,7 +328,7 @@ export default function DitherBackground({
       </Canvas>
       <div
         className={`pointer-events-none absolute inset-0 backdrop-blur-[1px] ${
-          overlay === "light" ? "bg-white/20" : "bg-black/35"
+          overlay === "light" ? "bg-white/10" : "bg-black/35"
         }`}
       />
     </div>

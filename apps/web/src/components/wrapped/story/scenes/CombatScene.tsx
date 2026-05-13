@@ -72,9 +72,9 @@ export default function CombatScene({ data }: { data: WrappedData }) {
             In combat, you
           </p>
 
-          <div className="relative mt-10 grid grid-cols-2 items-center gap-6 sm:gap-12">
+          <div className="relative mt-10 grid grid-cols-2 items-center gap-4 sm:gap-12">
             <div className="cb-kills text-right">
-              <p className="font-mc text-5xl font-bold tabular-nums dark:text-rose-200 text-rose-600 sm:text-8xl">
+              <p className="font-mc text-4xl font-bold tabular-nums dark:text-rose-200 text-rose-600 sm:text-8xl">
                 <DigitRoller value={mob_kills} duration={1.4} delay={1.0} />
               </p>
               <p className="mt-2 text-xs uppercase tracking-widest dark:text-white/60 text-stone-600 sm:text-sm">
@@ -82,7 +82,7 @@ export default function CombatScene({ data }: { data: WrappedData }) {
               </p>
             </div>
             <div className="cb-deaths text-left">
-              <p className="font-mc text-5xl font-bold tabular-nums dark:text-rose-300 text-rose-600 sm:text-8xl">
+              <p className="font-mc text-4xl font-bold tabular-nums dark:text-rose-300 text-rose-600 sm:text-8xl">
                 <DigitRoller value={deaths} duration={1.4} delay={1.0} />
               </p>
               <p className="mt-2 text-xs uppercase tracking-widest dark:text-white/60 text-stone-600 sm:text-sm">
