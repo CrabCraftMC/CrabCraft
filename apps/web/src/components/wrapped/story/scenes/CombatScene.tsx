@@ -52,7 +52,10 @@ export default function CombatScene({ data }: { data: WrappedData }) {
             duration: 0.7,
             ease: "power4.out",
             onStart: () => haptics.heavy(),
-            onComplete: () => setShakeKey((k) => k + 1),
+            onComplete: () => {
+              setShakeKey((k) => k + 1);
+              haptics.medium();
+            },
           },
           "<"
         )

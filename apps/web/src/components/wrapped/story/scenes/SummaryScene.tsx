@@ -7,6 +7,7 @@ import { useGSAP } from "@gsap/react";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useHaptics } from "../hooks/useHaptics";
 import { useIsDark } from "../hooks/useIsDark";
 import { useIsMobile } from "../hooks/useIsMobile";
 import SplitHeading from "../primitives/SplitHeading";
@@ -28,6 +29,7 @@ function formatTime(seconds: number) {
 export default function SummaryScene({ data }: { data: WrappedData }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
+  const haptics = useHaptics();
   const isDark = useIsDark();
   const isMobile = useIsMobile();
 
@@ -72,6 +74,14 @@ export default function SummaryScene({ data }: { data: WrappedData }) {
             duration: 0.55,
             ease: "back.out(1.6)",
             stagger: { each: 0.07, from: "random" },
+            onStart: () => {
+              // One tick per pill, paced to match the visual stagger. Decoupled
+              // from the timeline by scheduling from the stagger's own start.
+              const count = document.querySelectorAll(".summary-pill").length;
+              for (let i = 0; i < count; i++) {
+                gsap.delayedCall(i * 0.07, () => haptics.tick());
+              }
+            },
           },
           "+=0.3"
         )
@@ -92,9 +102,14 @@ export default function SummaryScene({ data }: { data: WrappedData }) {
             y: 14,
             duration: 0.5,
             ease: "back.out(1.5)",
+            onStart: () => haptics.heavy(),
           },
           "-=0.2"
         );
+
+      // SplitHeading runs its own internal tween — schedule the name-reveal
+      // thump to match its `delay={0.45}` prop on the JSX below.
+      gsap.delayedCall(0.45, () => haptics.medium());
     },
     { scope: ref, dependencies: [reduced] }
   );

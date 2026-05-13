@@ -5,6 +5,7 @@ import { useGSAP } from "@gsap/react";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useHaptics } from "../hooks/useHaptics";
 import { useIsDark } from "../hooks/useIsDark";
 import FloatingParticles from "../primitives/FloatingParticles";
 import SplitHeading from "../primitives/SplitHeading";
@@ -13,6 +14,7 @@ import type { WrappedData } from "@/lib/wrappedTypes";
 export default function IntroScene({ data }: { data: WrappedData }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
+  const haptics = useHaptics();
   const isDark = useIsDark();
 
   useGSAP(
@@ -53,7 +55,12 @@ export default function IntroScene({ data }: { data: WrappedData }) {
         duration: 0.7,
         ease: "back.out(2.4)",
         delay: 1.5,
+        onStart: () => haptics.light(),
       });
+
+      // SplitHeading runs its own internal tween — match its `delay={0.85}`
+      // prop in the JSX below with a thump on the name reveal.
+      gsap.delayedCall(0.85, () => haptics.medium());
 
       // Parallax stars: each gets a unique slow drift
       const stars = gsap.utils.toArray<HTMLElement>(".intro-star");
