@@ -1,29 +1,119 @@
 import { type Message, type PartialMessage } from "discord.js";
 import { extractNumberFromImage } from "./openai.js";
 
-type MathFn = (...args: number[]) => number;
+type Complex = { re: number; im: number };
+type MathFn = (...args: Complex[]) => Complex;
 
-const MATH_CONSTANTS: Readonly<Record<string, number>> = Object.freeze({
-  PI: Math.PI,
-  TAU: Math.PI * 2,
-  E: Math.E,
-  PHI: (1 + Math.sqrt(5)) / 2,
+const NAN_COMPLEX: Complex = { re: NaN, im: NaN };
+
+function cReal(n: number): Complex {
+  return { re: n, im: 0 };
+}
+
+function cAdd(a: Complex, b: Complex): Complex {
+  return { re: a.re + b.re, im: a.im + b.im };
+}
+
+function cSub(a: Complex, b: Complex): Complex {
+  return { re: a.re - b.re, im: a.im - b.im };
+}
+
+function cMul(a: Complex, b: Complex): Complex {
+  return {
+    re: a.re * b.re - a.im * b.im,
+    im: a.re * b.im + a.im * b.re,
+  };
+}
+
+function cDiv(a: Complex, b: Complex): Complex {
+  const d = b.re * b.re + b.im * b.im;
+  if (d === 0) return NAN_COMPLEX;
+  return {
+    re: (a.re * b.re + a.im * b.im) / d,
+    im: (a.im * b.re - a.re * b.im) / d,
+  };
+}
+
+function cNeg(a: Complex): Complex {
+  return { re: -a.re, im: -a.im };
+}
+
+function cAbs(a: Complex): number {
+  return Math.hypot(a.re, a.im);
+}
+
+function cExp(a: Complex): Complex {
+  const r = Math.exp(a.re);
+  return { re: r * Math.cos(a.im), im: r * Math.sin(a.im) };
+}
+
+function cLog(a: Complex): Complex {
+  const r = cAbs(a);
+  if (r === 0) return NAN_COMPLEX;
+  return { re: Math.log(r), im: Math.atan2(a.im, a.re) };
+}
+
+function cPow(base: Complex, exp: Complex): Complex {
+  if (base.re === 0 && base.im === 0) {
+    if (exp.im === 0 && exp.re > 0) return cReal(0);
+    if (exp.re === 0 && exp.im === 0) return cReal(1);
+    return NAN_COMPLEX;
+  }
+  if (base.im === 0 && exp.im === 0 && (base.re > 0 || Number.isInteger(exp.re))) {
+    return cReal(Math.pow(base.re, exp.re));
+  }
+  return cExp(cMul(exp, cLog(base)));
+}
+
+function cSqrt(a: Complex): Complex {
+  if (a.im === 0) {
+    if (a.re >= 0) return cReal(Math.sqrt(a.re));
+    return { re: 0, im: Math.sqrt(-a.re) };
+  }
+  const r = cAbs(a);
+  return {
+    re: Math.sqrt((r + a.re) / 2),
+    im: Math.sign(a.im) * Math.sqrt((r - a.re) / 2),
+  };
+}
+
+function cCbrt(a: Complex): Complex {
+  if (a.im === 0) return cReal(Math.cbrt(a.re));
+  return cPow(a, cReal(1 / 3));
+}
+
+const IM_TOLERANCE = 1e-9;
+const isReal = (a: Complex): boolean => Math.abs(a.im) < IM_TOLERANCE;
+
+const MATH_CONSTANTS: Readonly<Record<string, Complex>> = Object.freeze({
+  PI: cReal(Math.PI),
+  TAU: cReal(Math.PI * 2),
+  E: cReal(Math.E),
+  PHI: cReal((1 + Math.sqrt(5)) / 2),
+  i: { re: 0, im: 1 },
+  I: { re: 0, im: 1 },
 });
 
 const MATH_FUNCTIONS: Readonly<Record<string, MathFn>> = Object.freeze({
-  sqrt: Math.sqrt,
-  cbrt: Math.cbrt,
-  abs: Math.abs,
-  floor: Math.floor,
-  ceil: Math.ceil,
-  round: Math.round,
-  pow: Math.pow,
-  min: Math.min,
-  max: Math.max,
-  log: Math.log,
-  log2: Math.log2,
-  log10: Math.log10,
-  exp: Math.exp,
+  sqrt: (a) => cSqrt(a),
+  cbrt: (a) => cCbrt(a),
+  abs: (a) => cReal(cAbs(a)),
+  floor: (a) => (isReal(a) ? cReal(Math.floor(a.re)) : NAN_COMPLEX),
+  ceil: (a) => (isReal(a) ? cReal(Math.ceil(a.re)) : NAN_COMPLEX),
+  round: (a) => (isReal(a) ? cReal(Math.round(a.re)) : NAN_COMPLEX),
+  pow: (a, b) => cPow(a, b),
+  min: (...args) => {
+    if (args.some((a) => !isReal(a))) return NAN_COMPLEX;
+    return cReal(Math.min(...args.map((a) => a.re)));
+  },
+  max: (...args) => {
+    if (args.some((a) => !isReal(a))) return NAN_COMPLEX;
+    return cReal(Math.max(...args.map((a) => a.re)));
+  },
+  log: (a) => cLog(a),
+  log2: (a) => cDiv(cLog(a), cReal(Math.LN2)),
+  log10: (a) => cDiv(cLog(a), cReal(Math.LN10)),
+  exp: (a) => cExp(a),
 });
 
 const MAX_EXPR_LENGTH = 200;
@@ -221,32 +311,34 @@ class Parser {
   }
 }
 
-function evaluate(node: Node): number | null {
+function evaluate(node: Node): Complex | null {
   switch (node.type) {
     case "num":
-      return node.value;
+      return cReal(node.value);
     case "const": {
       if (!Object.hasOwn(MATH_CONSTANTS, node.name)) return null;
       const v = MATH_CONSTANTS[node.name];
-      return Number.isFinite(v) ? v : null;
+      if (!v || !Number.isFinite(v.re) || !Number.isFinite(v.im)) return null;
+      return v;
     }
     case "call": {
       if (!Object.hasOwn(MATH_FUNCTIONS, node.name)) return null;
       const fn = MATH_FUNCTIONS[node.name];
       if (typeof fn !== "function") return null;
-      const args: number[] = [];
+      const args: Complex[] = [];
       for (const a of node.args) {
         const v = evaluate(a);
         if (v === null) return null;
         args.push(v);
       }
       const r = fn(...args);
-      return typeof r === "number" ? r : null;
+      if (!r || typeof r.re !== "number" || typeof r.im !== "number") return null;
+      return r;
     }
     case "unary": {
       const v = evaluate(node.arg);
       if (v === null) return null;
-      return node.op === "-" ? -v : v;
+      return node.op === "-" ? cNeg(v) : v;
     }
     case "binary": {
       const a = evaluate(node.left);
@@ -255,13 +347,13 @@ function evaluate(node: Node): number | null {
       if (b === null) return null;
       switch (node.op) {
         case "+":
-          return a + b;
+          return cAdd(a, b);
         case "-":
-          return a - b;
+          return cSub(a, b);
         case "*":
-          return a * b;
+          return cMul(a, b);
         case "/":
-          return a / b;
+          return cDiv(a, b);
       }
     }
     // eslint-disable-next-line no-fallthrough
@@ -270,7 +362,7 @@ function evaluate(node: Node): number | null {
       if (base === null) return null;
       const exp = evaluate(node.exp);
       if (exp === null) return null;
-      return Math.pow(base, exp);
+      return cPow(base, exp);
     }
   }
 }
@@ -326,10 +418,17 @@ function tryEvalMath(raw: string): number | null {
   if (!ast) return null;
 
   const result = evaluate(ast);
-  if (result === null || !Number.isFinite(result)) return null;
+  if (
+    result === null ||
+    !Number.isFinite(result.re) ||
+    !Number.isFinite(result.im)
+  ) {
+    return null;
+  }
+  if (Math.abs(result.im) > IM_TOLERANCE) return null;
 
-  const rounded = Math.round(result);
-  if (Math.abs(result - rounded) > INTEGER_TOLERANCE) return null;
+  const rounded = Math.round(result.re);
+  if (Math.abs(result.re - rounded) > INTEGER_TOLERANCE) return null;
   if (rounded < 0 || rounded > Number.MAX_SAFE_INTEGER) return null;
   return rounded;
 }
