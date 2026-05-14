@@ -4,6 +4,7 @@ import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { parseNumberFromMessage } from "../utils/counting.js";
 import { withCountingQueue } from "../utils/countingQueue.js";
+import { markBotDeleted } from "../utils/countingDeletes.js";
 import { getCountingState, tryAdvanceCount } from "../utils/appDb.js";
 
 export default class MessageCreateEvent extends Event {
@@ -26,6 +27,7 @@ export default class MessageCreateEvent extends Event {
 
         if (state?.last_user_id === message.author.id) {
           logger.info(`${tag}: back-to-back from same user, deleting`);
+          markBotDeleted(message.id);
           await message.delete().catch(() => null);
           return;
         }
@@ -49,6 +51,7 @@ export default class MessageCreateEvent extends Event {
 
         if (number === null) {
           logger.info(`${tag}: no number found (${parsedFrom}), deleting`);
+          markBotDeleted(message.id);
           await message.delete().catch(() => null);
           return;
         }
@@ -57,6 +60,7 @@ export default class MessageCreateEvent extends Event {
           logger.info(
             `${tag}: parsed ${number} (${parsedFrom}) but expected ${expected}, deleting`,
           );
+          markBotDeleted(message.id);
           await message.delete().catch(() => null);
           return;
         }
@@ -68,6 +72,7 @@ export default class MessageCreateEvent extends Event {
         );
         if (!advanced) {
           logger.warn(`${tag}: lost race for ${expected}, deleting`);
+          markBotDeleted(message.id);
           await message.delete().catch(() => null);
           return;
         }

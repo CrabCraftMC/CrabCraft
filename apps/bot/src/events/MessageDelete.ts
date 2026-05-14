@@ -4,6 +4,7 @@ import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { parseNumberFromMessage } from "../utils/counting.js";
 import { withCountingQueue } from "../utils/countingQueue.js";
+import { wasBotDeleted } from "../utils/countingDeletes.js";
 import { getCountingState } from "../utils/appDb.js";
 
 export default class MessageDeleteEvent extends Event {
@@ -14,6 +15,7 @@ export default class MessageDeleteEvent extends Event {
   async execute(message: Message | PartialMessage) {
     if (!config.COUNTING_CHANNEL_ID) return;
     if (message.channelId !== config.COUNTING_CHANNEL_ID) return;
+    if (wasBotDeleted(message.id)) return;
     if (message.partial) return;
     if (!message.author || message.author.bot) return;
 
