@@ -106,8 +106,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: GIT_COMMIT_SHA=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=docker-web
+          cache-to: type=gha,mode=min,scope=docker-web
 
   # ── Build Minecraft plugin → Spigot and Velocity JARs ────────────
   build-plugin:
@@ -250,6 +250,10 @@ jobs:
           distribution: "temurin"
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          # Reuse the cache populated by build-plugin (same run) via
+          # restore-keys; do not write a second ~319MB entry.
+          cache-read-only: true
 
       - name: Rebuild plugin JARs with new version
         run: |
