@@ -1,0 +1,21 @@
+name: Cleanup old artifacts
+on:
+  schedule:
+    - cron: '0 3 * * *'  # daily at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all but the 5 newest artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPO/actions/artifacts" --paginate \
+            --jq '.artifacts | sort_by(.created_at) | reverse | .[5:] | .[].id' \
+          | xargs -r -I {} gh api -X DELETE "repos/$REPO/actions/artifacts/{}"
