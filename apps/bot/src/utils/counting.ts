@@ -417,12 +417,125 @@ function evaluate(node: Node): Complex | null {
   }
 }
 
+const DIGIT_BASES: readonly number[] = Object.freeze([
+  0x30, 0x660, 0x6f0, 0x7c0, 0x966, 0x9e6, 0xa66, 0xae6, 0xb66, 0xbe6,
+  0xc66, 0xce6, 0xd66, 0xde6, 0xe50, 0xed0, 0xf20, 0x1040, 0x1090, 0x17e0,
+  0x1810, 0x1946, 0x19d0, 0x1a80, 0x1a90, 0x1b50, 0x1bb0, 0x1c40, 0x1c50,
+  0xa620, 0xa8d0, 0xa900, 0xa9d0, 0xa9f0, 0xaa50, 0xabf0, 0xff10,
+  0x104a0, 0x10d30, 0x11066, 0x110f0, 0x11136, 0x111d0, 0x112f0, 0x11450,
+  0x114d0, 0x11650, 0x116c0, 0x11730, 0x118e0, 0x11c50, 0x11d50, 0x11da0,
+  0x11f50, 0x16a60, 0x16ac0, 0x16b50,
+  0x1d7ce, 0x1d7d8, 0x1d7e2, 0x1d7ec, 0x1d7f6,
+  0x1e140, 0x1e2f0, 0x1e4f0, 0x1e950, 0x1fbf0,
+]);
+
+function digitValueOf(cp: number): number {
+  for (const base of DIGIT_BASES) {
+    if (cp >= base && cp < base + 10) return cp - base;
+  }
+  return -1;
+}
+
+const SHORTCODE_DIGITS: Readonly<Record<string, string>> = Object.freeze({
+  ":zero:": "0",
+  ":one:": "1",
+  ":two:": "2",
+  ":three:": "3",
+  ":four:": "4",
+  ":five:": "5",
+  ":six:": "6",
+  ":seven:": "7",
+  ":eight:": "8",
+  ":nine:": "9",
+  ":keycap_ten:": "10",
+});
+
+function normalizeInputDigits(text: string): string {
+  let s = text.replace(/\u{1F51F}/gu, "10");
+  s = s.replace(/\u{FE0F}\u{20E3}/gu, "");
+  for (const [code, digit] of Object.entries(SHORTCODE_DIGITS)) {
+    if (s.includes(code)) s = s.split(code).join(digit);
+  }
+  let out = "";
+  for (const c of s) {
+    const cp = c.codePointAt(0);
+    if (cp === undefined) continue;
+    const v = digitValueOf(cp);
+    out += v >= 0 ? String(v) : c;
+  }
+  return out;
+}
+
+const ROMAN_VALUES: Readonly<Record<string, number>> = Object.freeze({
+  M: 1000, D: 500, C: 100, L: 50, X: 10, V: 5, I: 1,
+});
+
+function toRoman(n: number): string {
+  const pairs: ReadonlyArray<readonly [number, string]> = [
+    [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"],
+    [100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
+    [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+  ];
+  let s = "";
+  for (const [v, sym] of pairs) {
+    while (n >= v) {
+      s += sym;
+      n -= v;
+    }
+  }
+  return s;
+}
+
+function parseRoman(text: string): number | null {
+  const m = text.toUpperCase().match(/^([MDCLXVI]+)(?:$|[\s!?.,])/);
+  if (!m) return null;
+  const roman = m[1];
+  if (roman.length > 16) return null;
+  let total = 0;
+  let prev = 0;
+  for (let i = roman.length - 1; i >= 0; i--) {
+    const v = ROMAN_VALUES[roman[i]];
+    if (v < prev) total -= v;
+    else total += v;
+    prev = v;
+  }
+  if (total <= 0 || total > 3999) return null;
+  if (toRoman(total) !== roman) return null;
+  return total;
+}
+
+function parseTally(text: string): number | null {
+  let count = 0;
+  let hasTally = false;
+  for (const c of text) {
+    if (c === "|" || c === "\u{1D377}") {
+      count += 1;
+      hasTally = true;
+    } else if (c === "\u{1D378}") {
+      count += 5;
+      hasTally = true;
+    } else if (c === " " || c === "\t" || c === "\n" || c === "\r") {
+      continue;
+    } else {
+      return null;
+    }
+  }
+  if (!hasTally || count < 2) return null;
+  return count;
+}
+
 export function parseNumberFromText(content: string): number | null {
-  const trimmed = content.trim();
+  const trimmed = normalizeInputDigits(content.trim());
   if (!trimmed) return null;
 
   const math = parseMathExpression(trimmed);
   if (math !== null) return math;
+
+  const roman = parseRoman(trimmed);
+  if (roman !== null) return roman;
+
+  const tally = parseTally(trimmed);
+  if (tally !== null) return tally;
 
   const numMatch = trimmed.match(/^(\d+)(?:$|[\s!?.,])/);
   if (!numMatch) return null;
@@ -448,6 +561,18 @@ function parseMathExpression(text: string): number | null {
 
 function tryEvalMath(raw: string): number | null {
   const normalized = raw
+    .replace(/\b0[xX]([0-9a-fA-F]+)\b/g, (_, h) => {
+      const n = parseInt(h, 16);
+      return Number.isFinite(n) ? n.toString() : "NaN";
+    })
+    .replace(/\b0[bB]([01]+)\b/g, (_, b) => {
+      const n = parseInt(b, 2);
+      return Number.isFinite(n) ? n.toString() : "NaN";
+    })
+    .replace(/\b0[oO]([0-7]+)\b/g, (_, o) => {
+      const n = parseInt(o, 8);
+      return Number.isFinite(n) ? n.toString() : "NaN";
+    })
     .replace(/π/g, "PI")
     .replace(/τ/g, "TAU")
     .replace(/φ/g, "PHI")
@@ -458,8 +583,6 @@ function tryEvalMath(raw: string): number | null {
     .replace(/\be\b/g, "E")
     .replace(/(?<![A-Za-z_])[xX](?![A-Za-z_])/g, "*")
     .replace(/\^/g, "**");
-
-  if (!/[+\-*/]/.test(normalized) && !/[A-Za-z]/.test(normalized)) return null;
 
   const tokens = tokenize(normalized);
   if (!tokens || tokens.length === 0) return null;
