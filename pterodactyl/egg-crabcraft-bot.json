@@ -7,7 +7,7 @@
     "exported_at": "2026-05-17T00:00:00+00:00",
     "name": "CrabCraft Bot",
     "author": "ops@crabcraftmc.com",
-    "description": "Crabby — the CrabCraft Discord bot. Built on Bun + discord.js. The install script clones the CrabCraft monorepo, installs dependencies, and bundles the Infisical CLI. On each start, pterodactyl/start.sh logs into Infisical with a machine identity (universal auth) and runs the bot via `infisical run` so that all secrets (Discord token, database URLs, API keys) are injected from your Infisical project. Discord role/channel IDs are synced from panel variables into apps/bot/config.json. Set AUTO_UPDATE=1 to git fetch + reinstall on every restart.",
+    "description": "Crabby — the CrabCraft Discord bot. Built on Bun + discord.js. The install script clones the CrabCraft monorepo (authenticating with GITHUB_TOKEN for the private repo), installs dependencies, and bundles the Infisical CLI. On each start, pterodactyl/start.sh logs into Infisical via machine-identity universal auth and runs the bot through `infisical run`, so bot secrets (Discord token, database URLs, API keys) are injected from your Infisical project at launch. Discord role/channel IDs continue to live in apps/bot/config.json — edit that file via the panel file manager. Set AUTO_UPDATE=1 to git fetch + reinstall on every restart.",
     "features": null,
     "docker_images": {
         "Bun (latest)": "ghcr.io/parkervcp/yolks:bun_latest",
@@ -16,19 +16,28 @@
     "file_denylist": [],
     "startup": "bash /home/container/pterodactyl/start.sh",
     "config": {
-        "files": "{\n    \"apps/bot/config.json\": {\n        \"parser\": \"json\",\n        \"find\": {\n            \"roles.member\": \"{{server.build.env.MEMBER_ROLE_ID}}\",\n            \"roles.mod\": \"{{server.build.env.MOD_ROLE_ID}}\",\n            \"roles.live\": \"{{server.build.env.LIVE_ROLE_ID}}\",\n            \"channels.applicationCategory\": \"{{server.build.env.APPLICATION_CATEGORY_ID}}\",\n            \"channels.log\": \"{{server.build.env.LOG_CHANNEL_ID}}\",\n            \"channels.leaderboard\": \"{{server.build.env.LEADERBOARD_CHANNEL_ID}}\",\n            \"channels.wiki\": \"{{server.build.env.WIKI_CHANNEL_ID}}\",\n            \"channels.starboard\": \"{{server.build.env.STARBOARD_CHANNEL_ID}}\",\n            \"channels.counting\": \"{{server.build.env.COUNTING_CHANNEL_ID}}\",\n            \"channels.ticketCategory\": \"{{server.build.env.TICKET_CATEGORY_ID}}\"\n        }\n    }\n}",
+        "files": "{}",
         "startup": "{\n    \"done\": \"logged into Discord\"\n}",
         "logs": "{}",
         "stop": "^C"
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\n# CrabCraft Bot - Pterodactyl install script\nset -e\n\necho \"==> CrabCraft Bot install starting\"\n\napt -y update\napt -y install --no-install-recommends git curl ca-certificates gnupg unzip\n\nGIT_URL=\"${GIT_REPO_URL:-https://github.com/CrabCraftMC/CrabCraft.git}\"\nGIT_REF=\"${GIT_REF:-main}\"\n\necho \"==> Repo: ${GIT_URL}\"\necho \"==> Ref:  ${GIT_REF}\"\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nif [ -d \".git\" ]; then\n    echo \"==> Refreshing existing checkout\"\n    git remote set-url origin \"${GIT_URL}\"\n    git fetch --depth 1 origin \"${GIT_REF}\"\n    git reset --hard FETCH_HEAD\n    git clean -fd -e node_modules -e .local\nelse\n    echo \"==> Cloning fresh\"\n    tmpdir=\"$(mktemp -d)\"\n    git clone --branch \"${GIT_REF}\" --depth 1 \"${GIT_URL}\" \"${tmpdir}\"\n    shopt -s dotglob\n    cp -r \"${tmpdir}/.\" /mnt/server/\n    rm -rf \"${tmpdir}\"\nfi\n\necho \"==> Installing Bun (temporary, for dependency install)\"\nexport BUN_INSTALL=\"/tmp/bun\"\ncurl -fsSL https://bun.sh/install | bash\nexport PATH=\"${BUN_INSTALL}/bin:${PATH}\"\nbun --version\n\necho \"==> Installing dependencies\"\nbun install --frozen-lockfile --production\n\necho \"==> Installing Infisical CLI\"\ncurl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | bash\napt-get update\napt-get install -y infisical\nmkdir -p /mnt/server/.local/bin\ncp \"$(command -v infisical)\" /mnt/server/.local/bin/infisical\nchmod +x /mnt/server/.local/bin/infisical\n/mnt/server/.local/bin/infisical --version\n\nif [ ! -s apps/bot/config.json ] || ! grep -q '\"roles\"' apps/bot/config.json; then\n    echo \"==> Seeding apps/bot/config.json\"\n    cat > apps/bot/config.json <<'JSON'\n{\n  \"roles\": { \"member\": \"\", \"mod\": \"\", \"live\": \"\" },\n  \"channels\": {\n    \"applicationCategory\": \"\",\n    \"log\": \"\",\n    \"leaderboard\": \"\",\n    \"wiki\": \"\",\n    \"starboard\": \"\",\n    \"counting\": \"\",\n    \"ticketCategory\": \"\"\n  }\n}\nJSON\nfi\n\nif [ -f pterodactyl/start.sh ]; then\n    chmod +x pterodactyl/start.sh\nelse\n    echo \"WARNING: pterodactyl/start.sh not found in repo; the server will fail to start.\" >&2\nfi\n\necho \"==> Install complete\"\n",
+            "script": "#!/bin/bash\n# CrabCraft Bot - Pterodactyl install script\nset -e\n\necho \"==> CrabCraft Bot install starting\"\n\napt -y update\napt -y install --no-install-recommends git curl ca-certificates gnupg unzip\n\nGIT_URL=\"${GIT_REPO_URL:-https://github.com/CrabCraftMC/CrabCraft.git}\"\nGIT_REF=\"${GIT_REF:-main}\"\n\necho \"==> Repo: ${GIT_URL}\"\necho \"==> Ref:  ${GIT_REF}\"\n\nmkdir -p /mnt/server/.local/bin\n\n# Bundled git credential helper: reads GITHUB_TOKEN from env at use time so\n# the token never lands in .git/config or on any process command line.\ncat > /mnt/server/.local/bin/git-askpass.sh <<'ASK'\n#!/bin/sh\ncase \"$1\" in\n    Username*) echo \"x-access-token\" ;;\n    *) echo \"${GITHUB_TOKEN}\" ;;\nesac\nASK\nchmod +x /mnt/server/.local/bin/git-askpass.sh\n\nif [ -n \"${GITHUB_TOKEN:-}\" ]; then\n    export GIT_ASKPASS=/mnt/server/.local/bin/git-askpass.sh\n    export GIT_TERMINAL_PROMPT=0\n    echo \"==> GITHUB_TOKEN detected; using GIT_ASKPASS helper for clone/fetch\"\nelse\n    echo \"==> GITHUB_TOKEN not set; attempting unauthenticated clone (private repos will fail)\"\nfi\n\ncd /mnt/server\n\nif [ -d \".git\" ]; then\n    echo \"==> Refreshing existing checkout\"\n    git remote set-url origin \"${GIT_URL}\"\n    git fetch --depth 1 origin \"${GIT_REF}\"\n    git reset --hard FETCH_HEAD\n    git clean -fd -e node_modules -e .local\nelse\n    echo \"==> Cloning fresh\"\n    tmpdir=\"$(mktemp -d)\"\n    git clone --branch \"${GIT_REF}\" --depth 1 \"${GIT_URL}\" \"${tmpdir}\"\n    shopt -s dotglob\n    cp -r \"${tmpdir}/.\" /mnt/server/\n    rm -rf \"${tmpdir}\"\nfi\n\necho \"==> Installing Bun (temporary, for dependency install)\"\nexport BUN_INSTALL=\"/tmp/bun\"\ncurl -fsSL https://bun.sh/install | bash\nexport PATH=\"${BUN_INSTALL}/bin:${PATH}\"\nbun --version\n\necho \"==> Installing dependencies\"\nbun install --frozen-lockfile --production\n\necho \"==> Installing Infisical CLI\"\ncurl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | bash\napt-get update\napt-get install -y infisical\ncp \"$(command -v infisical)\" /mnt/server/.local/bin/infisical\nchmod +x /mnt/server/.local/bin/infisical\n/mnt/server/.local/bin/infisical --version\n\nif [ -f pterodactyl/start.sh ]; then\n    chmod +x pterodactyl/start.sh\nelse\n    echo \"WARNING: pterodactyl/start.sh not found in repo; the server will fail to start.\" >&2\nfi\n\necho \"==> Install complete\"\n",
             "container": "ghcr.io/parkervcp/installers:debian",
             "entrypoint": "bash"
         }
     },
     "variables": [
+        {
+            "name": "GitHub Token",
+            "description": "GitHub Personal Access Token (classic with `repo` scope, or a fine-grained token with read access to the CrabCraft repo). Required for cloning the private monorepo at install and for AUTO_UPDATE pulls. Stays in env only — never written to .git/config.",
+            "env_variable": "GITHUB_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string"
+        },
         {
             "name": "Infisical Client ID",
             "description": "Machine identity client ID from Infisical (Universal Auth). Find under Project → Access Control → Machine Identities.",
@@ -73,96 +82,6 @@
             "user_viewable": true,
             "user_editable": true,
             "rules": "nullable|string"
-        },
-        {
-            "name": "Member Role ID",
-            "description": "Discord role ID for verified members. Required.",
-            "env_variable": "MEMBER_ROLE_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string|digits_between:17,20"
-        },
-        {
-            "name": "Mod Role ID",
-            "description": "Discord role ID for moderators. Required.",
-            "env_variable": "MOD_ROLE_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string|digits_between:17,20"
-        },
-        {
-            "name": "Live Role ID",
-            "description": "Optional. Role applied to members who are currently live-streaming.",
-            "env_variable": "LIVE_ROLE_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string|max:20"
-        },
-        {
-            "name": "Application Category ID",
-            "description": "Discord category ID where application channels are created. Required.",
-            "env_variable": "APPLICATION_CATEGORY_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string|digits_between:17,20"
-        },
-        {
-            "name": "Log Channel ID",
-            "description": "Discord channel ID for moderation/audit logs. Required.",
-            "env_variable": "LOG_CHANNEL_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string|digits_between:17,20"
-        },
-        {
-            "name": "Ticket Category ID",
-            "description": "Discord category ID where support tickets are created. Required.",
-            "env_variable": "TICKET_CATEGORY_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string|digits_between:17,20"
-        },
-        {
-            "name": "Leaderboard Channel ID",
-            "description": "Optional. Channel where the live leaderboard message is posted.",
-            "env_variable": "LEADERBOARD_CHANNEL_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string|max:20"
-        },
-        {
-            "name": "Wiki Channel ID",
-            "description": "Optional. Channel where wiki change updates are posted.",
-            "env_variable": "WIKI_CHANNEL_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string|max:20"
-        },
-        {
-            "name": "Starboard Channel ID",
-            "description": "Optional. Channel where starred messages are reposted.",
-            "env_variable": "STARBOARD_CHANNEL_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string|max:20"
-        },
-        {
-            "name": "Counting Channel ID",
-            "description": "Optional. Channel where the counting game runs.",
-            "env_variable": "COUNTING_CHANNEL_ID",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string|max:20"
         },
         {
             "name": "Git Repository URL",

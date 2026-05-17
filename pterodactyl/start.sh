@@ -2,15 +2,25 @@
 # Pterodactyl startup wrapper for the CrabCraft Discord bot.
 # Invoked from the egg's `startup` field. Reads:
 #   - GIT_REPO_URL, GIT_REF, AUTO_UPDATE
+#   - GITHUB_TOKEN (used for cloning/pulling private mirrors)
 #   - INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET, INFISICAL_PROJECT_ID,
 #     INFISICAL_ENV, INFISICAL_DOMAIN (optional, defaults to Infisical Cloud)
-# Discord/database/API secrets are pulled from Infisical at launch and
-# injected into the bot's environment via `infisical run`.
+# Bot secrets (Discord token, database URLs, API keys) are pulled from
+# Infisical at launch and injected into the bot's environment via
+# `infisical run`. Role/channel IDs live in apps/bot/config.json and are
+# managed manually (panel file editor / SFTP).
 
 set -e
 
 cd /home/container
 export PATH="/home/container/.local/bin:${PATH}"
+
+# Plumb GITHUB_TOKEN into git via the bundled askpass helper, so the token
+# never lands in .git/config or argv.
+if [ -n "${GITHUB_TOKEN:-}" ] && [ -x /home/container/.local/bin/git-askpass.sh ]; then
+    export GIT_ASKPASS=/home/container/.local/bin/git-askpass.sh
+    export GIT_TERMINAL_PROMPT=0
+fi
 
 if [ "${AUTO_UPDATE:-1}" = "1" ]; then
     echo "[CrabCraft] Updating to ${GIT_REF:-main}..."
