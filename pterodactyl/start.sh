@@ -24,6 +24,16 @@ fi
 
 if [ "${AUTO_UPDATE:-1}" = "1" ]; then
     echo "[CrabCraft] Updating to ${GIT_REF:-main}..."
+
+    # apps/bot/config.json ships in the repo as an empty template and is
+    # filled in by the operator on this server. git reset --hard would
+    # otherwise revert those local edits on every restart.
+    config_backup=""
+    if [ -f apps/bot/config.json ]; then
+        config_backup="$(mktemp)"
+        cp apps/bot/config.json "$config_backup"
+    fi
+
     if git remote set-url origin "${GIT_REPO_URL:-https://github.com/CrabCraftMC/CrabCraft.git}" \
         && git fetch --depth 1 origin "${GIT_REF:-main}" \
         && git reset --hard FETCH_HEAD \
@@ -31,6 +41,10 @@ if [ "${AUTO_UPDATE:-1}" = "1" ]; then
         echo "[CrabCraft] Update OK."
     else
         echo "[CrabCraft] Update failed; starting with current version."
+    fi
+
+    if [ -n "$config_backup" ] && [ -f "$config_backup" ]; then
+        mv "$config_backup" apps/bot/config.json
     fi
 fi
 
