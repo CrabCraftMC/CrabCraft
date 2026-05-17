@@ -75,10 +75,10 @@
             "rules": "required|string|min:1"
         },
         {
-            "name": "Infisical Domain (self-hosted)",
-            "description": "Optional. Base URL for a self-hosted Infisical instance (e.g. https://infisical.example.com). Leave blank to use Infisical Cloud (https://app.infisical.com).",
+            "name": "Infisical Domain",
+            "description": "Base URL for the Infisical backend. Defaults to the EU region (https://eu.infisical.com) — change to https://app.infisical.com for US, or a custom URL for a self-hosted instance.",
             "env_variable": "INFISICAL_DOMAIN",
-            "default_value": "",
+            "default_value": "https://eu.infisical.com",
             "user_viewable": true,
             "user_editable": true,
             "rules": "nullable|string"
