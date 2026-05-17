@@ -40,9 +40,12 @@ if ! command -v infisical >/dev/null 2>&1; then
     exit 1
 fi
 
-domain_args=()
+login_domain_args=()
 if [ -n "${INFISICAL_DOMAIN:-}" ]; then
-    domain_args=(--domain="${INFISICAL_DOMAIN}")
+    # `infisical login` takes --domain explicitly; for all later commands
+    # we route through INFISICAL_API_URL per the CLI docs.
+    login_domain_args=(--domain="${INFISICAL_DOMAIN}")
+    export INFISICAL_API_URL="${INFISICAL_DOMAIN}"
 fi
 
 echo "[CrabCraft] Authenticating with Infisical (universal auth)..."
@@ -50,8 +53,9 @@ INFISICAL_TOKEN="$(infisical login \
     --method=universal-auth \
     --client-id="${INFISICAL_CLIENT_ID}" \
     --client-secret="${INFISICAL_CLIENT_SECRET}" \
+    --silent \
     --plain \
-    "${domain_args[@]}")"
+    "${login_domain_args[@]}")"
 export INFISICAL_TOKEN
 
 echo "[CrabCraft] Launching bot (project=${INFISICAL_PROJECT_ID}, env=${INFISICAL_ENV})..."
@@ -59,5 +63,4 @@ cd /home/container/apps/bot
 exec infisical run \
     --projectId="${INFISICAL_PROJECT_ID}" \
     --env="${INFISICAL_ENV}" \
-    "${domain_args[@]}" \
     -- bun run src/index.ts
