@@ -19,3 +19,12 @@ jobs:
           gh api "repos/$REPO/actions/artifacts" --paginate \
             --jq '.artifacts | sort_by(.created_at) | reverse | .[5:] | .[].id' \
           | xargs -r -I {} gh api -X DELETE "repos/$REPO/actions/artifacts/{}"
+
+      - name: Delete all but the 10 newest Actions caches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPO/actions/caches" --paginate \
+            --jq '.actions_caches | sort_by(.created_at) | reverse | .[10:] | .[].id' \
+          | xargs -r -I {} gh api -X DELETE "repos/$REPO/actions/caches/{}"
