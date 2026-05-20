@@ -16,6 +16,9 @@ commands:
   crabutilities:
     description: CrabUtilities admin commands.
     usage: /crabutilities <reload|update check|update download|update status>
+  jadehandshake:
+    description: Resend the Jade server handshake to your client.
+    permission: crabutilities.jade.handshake
 permissions:
   crabutilities.reload:
     description: Reload CrabUtilities configuration.
@@ -23,3 +26,6 @@ permissions:
   crabutilities.update:
     description: Run CrabUtilities update commands.
     default: op
+  crabutilities.jade.handshake:
+    description: Resend the Jade server handshake to your client.
+    default: true
