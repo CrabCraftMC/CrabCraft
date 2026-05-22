@@ -314,7 +314,9 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
-      // Update database
+      // Update database. The MC link in `players` is claimed at accept
+      // time only — here we just refresh the application row and keep
+      // the player's discord_username current.
       try {
         await appDb.updateApplication(interaction.user.id, {
           minecraftUsername: minecraftUsername,
@@ -327,8 +329,6 @@ export default class ModalInteractionEvent extends Event {
         await appDb.upsertUser({
           discordId: interaction.user.id,
           discordUsername: interaction.user.username,
-          minecraftUsername: minecraftUsername,
-          minecraftUuid: resolved.uuid,
         });
       } catch (e) {
         logger.error("Failed to update application in database:", e);
@@ -789,13 +789,14 @@ export default class ModalInteractionEvent extends Event {
       editButton,
     );
 
-    // Persist to database
+    // Persist to database. The MC link in `players` is claimed at accept
+    // time only — submitting an application shouldn't yank another
+    // player's MC link out of the players table.
+    let persisted = false;
     try {
       await appDb.upsertUser({
         discordId: interaction.user.id,
         discordUsername: interaction.user.username,
-        minecraftUsername: minecraftUsername,
-        minecraftUuid: UUID,
       });
       await appDb.createApplication({
         discordId: interaction.user.id,
@@ -807,8 +808,28 @@ export default class ModalInteractionEvent extends Event {
         joinReason: joinReason,
         favouriteWood: favouriteWood || undefined,
       });
+      persisted = true;
     } catch (e) {
       logger.error("Failed to persist application to database:", e);
+    }
+
+    // If we couldn't save the application, don't show the policy — the
+    // "I Agree" button would have no row to flip and staff would later
+    // see "applicant hasn't agreed to the policy yet" with no recourse.
+    if (!persisted) {
+      try {
+        await interaction.followUp({
+          components: [
+            errorContainer(
+              "**Error!** Failed to save your application. Please contact a moderator.",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } catch (e) {
+        logger.error("Failed to send persist-failure notice:", e);
+      }
+      return;
     }
 
     // Policy message

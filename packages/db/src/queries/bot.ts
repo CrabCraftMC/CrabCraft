@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, lte } from "drizzle-orm";
+import { eq, and, desc, sql, lte, ne } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
@@ -33,23 +33,40 @@ export interface CreateApplicationData {
 }
 
 export async function upsertUser(data: UpsertUserData): Promise<void> {
-  await db
-    .insert(players)
-    .values({
-      discord_id: data.discordId,
-      discord_username: data.discordUsername,
-      minecraft_username: data.minecraftUsername ?? null,
-      minecraft_uuid: data.minecraftUuid ?? null,
-    })
-    .onConflictDoUpdate({
-      target: players.discord_id,
-      set: {
-        discord_username: sql`excluded.discord_username`,
-        minecraft_username: sql`COALESCE(excluded.minecraft_username, ${players.minecraft_username})`,
-        minecraft_uuid: sql`COALESCE(excluded.minecraft_uuid, ${players.minecraft_uuid})`,
-        updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
-      },
-    });
+  await db.transaction(async (tx) => {
+    // players.minecraft_uuid is unique; if some other discord_id currently
+    // owns this UUID (e.g. a prior denied/cancelled application), detach it
+    // so the upsert's ON CONFLICT (discord_id) clause can resolve cleanly.
+    if (data.minecraftUuid) {
+      await tx
+        .update(players)
+        .set({ minecraft_uuid: null, minecraft_username: null })
+        .where(
+          and(
+            eq(players.minecraft_uuid, data.minecraftUuid),
+            ne(players.discord_id, data.discordId),
+          ),
+        );
+    }
+
+    await tx
+      .insert(players)
+      .values({
+        discord_id: data.discordId,
+        discord_username: data.discordUsername,
+        minecraft_username: data.minecraftUsername ?? null,
+        minecraft_uuid: data.minecraftUuid ?? null,
+      })
+      .onConflictDoUpdate({
+        target: players.discord_id,
+        set: {
+          discord_username: sql`excluded.discord_username`,
+          minecraft_username: sql`COALESCE(excluded.minecraft_username, ${players.minecraft_username})`,
+          minecraft_uuid: sql`COALESCE(excluded.minecraft_uuid, ${players.minecraft_uuid})`,
+          updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+        },
+      });
+  });
 }
 
 export async function createApplication(
