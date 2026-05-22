@@ -314,7 +314,9 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
-      // Update database
+      // Update database. The MC link in `players` is claimed at accept
+      // time only — here we just refresh the application row and keep
+      // the player's discord_username current.
       try {
         await appDb.updateApplication(interaction.user.id, {
           minecraftUsername: minecraftUsername,
@@ -327,8 +329,6 @@ export default class ModalInteractionEvent extends Event {
         await appDb.upsertUser({
           discordId: interaction.user.id,
           discordUsername: interaction.user.username,
-          minecraftUsername: minecraftUsername,
-          minecraftUuid: resolved.uuid,
         });
       } catch (e) {
         logger.error("Failed to update application in database:", e);
@@ -789,14 +789,14 @@ export default class ModalInteractionEvent extends Event {
       editButton,
     );
 
-    // Persist to database
+    // Persist to database. The MC link in `players` is claimed at accept
+    // time only — submitting an application shouldn't yank another
+    // player's MC link out of the players table.
     let persisted = false;
     try {
       await appDb.upsertUser({
         discordId: interaction.user.id,
         discordUsername: interaction.user.username,
-        minecraftUsername: minecraftUsername,
-        minecraftUuid: UUID,
       });
       await appDb.createApplication({
         discordId: interaction.user.id,

@@ -352,6 +352,20 @@ export default class ButtonInteractionEvent extends Event {
       try { await applicant.roles.add(config.MEMBER_ROLE_ID); }
       catch (e) { logger.error("Failed to add member role:", e); }
 
+      // Claim the MC link in `players` now (not at submit), detaching
+      // it from any prior owner. upsertUser handles the unique
+      // constraint on players.minecraft_uuid in a transaction.
+      try {
+        await appDb.upsertUser({
+          discordId: applicant.id,
+          discordUsername: applicant.user.username,
+          minecraftUsername: minecraftUsername,
+          minecraftUuid: UUID,
+        });
+      } catch (e) {
+        logger.error("Failed to upsert player on accept:", e);
+      }
+
       try { await appDb.acceptApplication(applicant.id, interaction.user.id); }
       catch (e) { logger.error("Failed to update application accept status:", e); }
 
