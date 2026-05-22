@@ -790,6 +790,7 @@ export default class ModalInteractionEvent extends Event {
     );
 
     // Persist to database
+    let persisted = false;
     try {
       await appDb.upsertUser({
         discordId: interaction.user.id,
@@ -807,8 +808,28 @@ export default class ModalInteractionEvent extends Event {
         joinReason: joinReason,
         favouriteWood: favouriteWood || undefined,
       });
+      persisted = true;
     } catch (e) {
       logger.error("Failed to persist application to database:", e);
+    }
+
+    // If we couldn't save the application, don't show the policy — the
+    // "I Agree" button would have no row to flip and staff would later
+    // see "applicant hasn't agreed to the policy yet" with no recourse.
+    if (!persisted) {
+      try {
+        await interaction.followUp({
+          components: [
+            errorContainer(
+              "**Error!** Failed to save your application. Please contact a moderator.",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } catch (e) {
+        logger.error("Failed to send persist-failure notice:", e);
+      }
+      return;
     }
 
     // Policy message
