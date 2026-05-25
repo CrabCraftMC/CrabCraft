@@ -51,7 +51,7 @@ jobs:
         with:
           name: crabcraft-bot
           path: crabcraft-bot-*.tar.gz
-          retention-days: 30
+          retention-days: 3
 
   # ── Build Web → Next.js standalone output + Docker image ─────────
   build-web:
@@ -159,19 +159,19 @@ jobs:
         with:
           name: CrabUtilities-Spigot
           path: apps/minecraft/spigot/build/libs/CrabUtilities*.jar
-          retention-days: 30
+          retention-days: 3
 
       - uses: actions/upload-artifact@v4
         with:
           name: CrabUtilities-Velocity
           path: apps/minecraft/velocity/build/libs/CrabUtilities-Velocity*.jar
-          retention-days: 30
+          retention-days: 3
 
       - uses: actions/upload-artifact@v4
         with:
           name: CrabUtilities-NeoForge
           path: apps/minecraft/neoforge/build/libs/CrabUtilities-NeoForge*.jar
-          retention-days: 30
+          retention-days: 3
 
       - uses: actions/upload-artifact@v4
         with:
@@ -179,13 +179,13 @@ jobs:
           path: |
             apps/minecraft/jars/*.jar
             apps/minecraft/jars/SHA256SUMS.txt
-          retention-days: 30
+          retention-days: 3
 
       - uses: actions/upload-artifact@v4
         with:
           name: CrabUtilities-Checksums
           path: apps/minecraft/jars/SHA256SUMS.txt
-          retention-days: 30
+          retention-days: 3
 
   # ── Auto-tag: bump patch version and tag on every push to main ───
   auto-release:
