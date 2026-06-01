@@ -1,11 +1,10 @@
 pluginManagement {
     repositories {
-        // ForgeGradle (for the neoforge subproject) is hosted here.
-        maven {
-            name = 'MinecraftForge'
-            url = 'https://maven.minecraftforge.net/'
-        }
         gradlePluginPortal()
+        maven {
+            name = 'papermc'
+            url = 'https://repo.papermc.io/repository/maven-public/'
+        }
     }
 }
 
@@ -17,4 +16,3 @@ rootProject.name = 'CrabUtilities'
 
 include 'spigot'
 include 'velocity'
-include 'neoforge'
