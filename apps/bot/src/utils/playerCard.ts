@@ -194,7 +194,7 @@ export async function generatePlayerCard(data: PlayerCardData): Promise<Buffer> 
   const skinW = skin ? Math.round(SKIN_H * (skin.w / skin.h)) : 0;
 
   const rankLabel = data.rank > 0 ? `Rank #${data.rank}` : "Unranked";
-  const subtitle = data.season ? `${rankLabel}  ·  Season ${data.season}` : rankLabel;
+  const subtitle = data.season ? `${rankLabel}  ·  ${data.season}` : rankLabel;
 
   const headerLeft: any[] = [text(data.username, { fontSize: 38, fontWeight: 700, color: "#ffffff" })];
   if (data.discordUsername) {

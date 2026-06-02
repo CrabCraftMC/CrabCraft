@@ -1,9 +1,6 @@
 import {
   ActionRowBuilder,
   AttachmentBuilder,
-  ContainerBuilder,
-  MediaGalleryBuilder,
-  MediaGalleryItemBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } from "discord.js";
@@ -64,7 +61,7 @@ export async function fetchPlayerSeasons(uuid: string): Promise<Season[]> {
 }
 
 export type ViewReply = {
-  components: (ContainerBuilder | ActionRowBuilder<StringSelectMenuBuilder>)[];
+  components: ActionRowBuilder<StringSelectMenuBuilder>[];
   files: AttachmentBuilder[];
 };
 
@@ -108,25 +105,17 @@ export async function buildPlayerInfoReply(
   });
 
   const file = new AttachmentBuilder(buffer, { name: "playerinfo.png" });
-  const container = new ContainerBuilder()
-    .addTextDisplayComponents((td) => td.setContent(`## ${displayName}`))
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL("attachment://playerinfo.png"),
-      ),
-    );
-
-  const components: ViewReply["components"] = [container];
+  const components: ViewReply["components"] = [];
 
   // Only worth a dropdown when there's more than one season to switch between.
   if (seasons.length > 1) {
     const menu = new StringSelectMenuBuilder()
       .setCustomId(`${SEASON_SELECT_PREFIX}${target.uuid}`)
-      .setPlaceholder(seasonName ? `Season ${seasonName}` : "Select a season")
+      .setPlaceholder(seasonName ?? "Select a season")
       .addOptions(
         seasons.slice(0, 25).map((s) =>
           new StringSelectMenuOptionBuilder()
-            .setLabel(`Season ${s.name}`)
+            .setLabel(s.name)
             .setValue(s.id)
             .setDefault(s.id === seasonId),
         ),
