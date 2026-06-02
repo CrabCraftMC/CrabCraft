@@ -27,7 +27,6 @@ const SANS_FONT_PATH = path.join(ASSET_DIR, "Unbounded.ttf");
 const SANS = "Unbounded";
 
 // ── theme tokens (mirrors apps/web dark theme) ───────────────────────────────
-const PAPER = "#1a1412";
 const PAPER2 = "#231c17";
 const FG = "#f5f0eb";
 const SUB = "rgb(245 240 235 / 0.5)";
@@ -277,9 +276,10 @@ export async function generatePlayerCard(data: PlayerCardData): Promise<Buffer> 
 
   const root = container({
     style: {
+      // Transparent backdrop — the cards float on Discord's own background.
       display: "flex", flexDirection: "column", alignItems: "center", gap: 18,
       paddingTop: 96, paddingLeft: 28, paddingRight: 28, paddingBottom: 28,
-      backgroundColor: PAPER, width: CARD_W + 56,
+      width: CARD_W + 56,
     },
     children: [header, medals, statGrid],
   });
