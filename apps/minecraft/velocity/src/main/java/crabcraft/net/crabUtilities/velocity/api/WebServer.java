@@ -285,6 +285,30 @@ public class WebServer {
             + "}"
             + "},"
 
+            + "\"/players/{uuid}/seasons\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Players\"],"
+            + "\"summary\":\"Player seasons with stats\","
+            + "\"description\":\"Returns the list of seasons a player has recorded season-stat data for, newest first. Useful for populating a season picker. Each entry has the season ID and display name. Returns an empty array (not a 404) when the player has no season stats.\","
+            + "\"operationId\":\"getPlayerSeasons\","
+            + "\"parameters\":["
+            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"List of seasons the player has stats for, newest first\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"uuid\":{\"type\":\"string\",\"format\":\"uuid\"},"
+            + "\"seasons\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
+            + "\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"}"
+            + "}}}"
+            + "}}}}},"
+            + "\"400\":{\"description\":\"UUID format is invalid. Must be a standard UUID with dashes.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"500\":{\"description\":\"Failed to query seasons\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
             // ── Awards ──
             + "\"/awards\":{"
             + "\"get\":{"
@@ -780,6 +804,25 @@ public class WebServer {
                         return;
                     }
                     sendJson(exchange, GSON.toJson(result));
+                    return;
+                }
+
+                // /players/{uuid}/seasons
+                if (sub.endsWith("/seasons")) {
+                    String uuid = sub.substring(0, sub.length() - "/seasons".length());
+                    if (!UUID_PATTERN.matcher(uuid).matches()) {
+                        sendError(exchange, 400, "invalid uuid format");
+                        return;
+                    }
+                    var seasons = plugin.getStatsQueryService().getPlayerSeasons(uuid);
+                    if (seasons == null) {
+                        sendError(exchange, 500, "failed to query seasons");
+                        return;
+                    }
+                    JsonObject out = new JsonObject();
+                    out.addProperty("uuid", uuid);
+                    out.add("seasons", seasons);
+                    sendJson(exchange, GSON.toJson(out));
                     return;
                 }
 

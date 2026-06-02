@@ -1,5 +1,6 @@
 package crabcraft.net.crabUtilities.velocity.awards;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
@@ -118,6 +119,30 @@ public final class StatsQueryService {
             }
         } catch (SQLException e) {
             logger.error("Failed to load player stats for uuid={}", uuid, e);
+            return null;
+        }
+    }
+
+    public JsonArray getPlayerSeasons(String uuid) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                 "SELECT s.id, s.name FROM player_season_stats pss "
+                 + "JOIN seasons s ON pss.season = s.id "
+                 + "WHERE pss.minecraft_uuid = ? "
+                 + "ORDER BY s.created_at DESC")) {
+            stmt.setString(1, uuid);
+            try (ResultSet rs = stmt.executeQuery()) {
+                JsonArray seasons = new JsonArray();
+                while (rs.next()) {
+                    JsonObject season = new JsonObject();
+                    season.addProperty("id", rs.getString("id"));
+                    season.addProperty("name", rs.getString("name"));
+                    seasons.add(season);
+                }
+                return seasons;
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to load player seasons for uuid={}", uuid, e);
             return null;
         }
     }

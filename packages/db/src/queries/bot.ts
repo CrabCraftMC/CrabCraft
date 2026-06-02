@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, lte, ne, ilike } from "drizzle-orm";
+import { eq, and, asc, desc, sql, lte, ne, ilike } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
@@ -755,4 +755,28 @@ export async function getCurrentSeason(): Promise<{ id: string; name: string } |
     .where(eq(seasons.is_current, true))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * Search linked players by Minecraft username substring (case-insensitive) for
+ * slash-command autocomplete. An empty query returns the first `limit` players
+ * alphabetically. LIKE metacharacters in the query are escaped.
+ */
+export async function searchPlayersByUsername(
+  query: string,
+  limit = 25,
+): Promise<{ minecraft_uuid: string; minecraft_username: string }[]> {
+  const rows = await db
+    .select({
+      minecraft_uuid: players.minecraft_uuid,
+      minecraft_username: players.minecraft_username,
+    })
+    .from(players)
+    .where(ilike(players.minecraft_username, `%${query.replace(/[%_\\]/g, (c) => "\\" + c)}%`))
+    .orderBy(asc(players.minecraft_username))
+    .limit(limit);
+  return rows.filter(
+    (r): r is { minecraft_uuid: string; minecraft_username: string } =>
+      r.minecraft_uuid !== null && r.minecraft_username !== null,
+  );
 }
