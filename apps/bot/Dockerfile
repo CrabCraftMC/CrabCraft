@@ -14,6 +14,7 @@ RUN bun install --frozen-lockfile --production
 
 COPY packages/ ./packages/
 COPY apps/bot/src/ ./apps/bot/src/
+COPY apps/bot/assets/ ./apps/bot/assets/
 COPY apps/bot/tsconfig.json ./apps/bot/
 COPY apps/bot/config.json ./apps/bot/
 

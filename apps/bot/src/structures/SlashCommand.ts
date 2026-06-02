@@ -1,4 +1,5 @@
 import type {
+  AutocompleteInteraction,
   ChatInputCommandInteraction,
   PermissionResolvable,
   RESTPostAPIApplicationCommandsJSONBody,
@@ -29,6 +30,12 @@ export default class SlashCommand {
   execute(_: ChatInputCommandInteraction) {
     throw new Error("Method not implemented.");
   }
+
+  /**
+   * Optional autocomplete handler. Commands with an autocomplete option override
+   * this; the default is a no-op so the dispatcher can call it unconditionally.
+   */
+  async autocomplete(_: AutocompleteInteraction): Promise<void> {}
 
   async build(
     command: SlashCommandBuilder
