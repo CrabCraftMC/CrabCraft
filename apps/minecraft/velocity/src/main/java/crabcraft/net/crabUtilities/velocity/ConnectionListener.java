@@ -47,10 +47,25 @@ public class ConnectionListener {
     @Subscribe(order = PostOrder.EARLY)
     public void onLogin(LoginEvent event) {
         Player player = event.getPlayer();
+        String uuid = player.getUniqueId().toString();
+
+        // Record the login streak first so it doesn't depend on
+        // LuckPerms being installed and updates regardless of which
+        // backend the player gets routed to (including ignored ones).
+        var streakService = plugin.getLoginStreakService();
+        var streakPublisher = plugin.getLoginStreakPublisher();
+        if (streakService != null) {
+            CompletableFuture.runAsync(() -> {
+                var snapshot = streakService.recordLogin(uuid);
+                if (snapshot != null && streakPublisher != null) {
+                    streakPublisher.publish(uuid, snapshot, streakService.getBufferHours());
+                }
+            });
+        }
+
         LuckPerms luckPerms = plugin.getLuckPerms();
         if (luckPerms == null) return; // LuckPerms not available
 
-        String uuid = player.getUniqueId().toString();
         boolean isAlt = plugin.getAltQueryService().isAlt(uuid);
 
         if (isAlt) {
@@ -197,15 +212,6 @@ public class ConnectionListener {
             plugin.getPgWriter().upsertPlayer(playerUuid, playerName, plain, raw);
             plugin.getPgWriter().upsertAltUsername(playerUuid, playerName);
             plugin.getPgWriter().recordMcLogin(playerUuid);
-
-            var streakService = plugin.getLoginStreakService();
-            var streakPublisher = plugin.getLoginStreakPublisher();
-            if (streakService != null) {
-                var snapshot = streakService.recordLogin(playerUuid);
-                if (snapshot != null && streakPublisher != null) {
-                    streakPublisher.publish(playerUuid, snapshot, streakService.getBufferHours());
-                }
-            }
         });
     }
 
