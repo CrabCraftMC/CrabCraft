@@ -48,7 +48,6 @@ export default class SelectMenuInteractionEvent extends Event {
       await interaction.editReply({
         components: reply.components,
         files: reply.files,
-        flags: MessageFlags.IsComponentsV2,
       });
     } catch (error) {
       logger.error("playerinfo season select failed", error);

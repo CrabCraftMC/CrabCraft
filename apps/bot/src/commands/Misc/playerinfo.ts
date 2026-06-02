@@ -106,7 +106,6 @@ export default class PlayerInfoCommand extends SlashCommand {
     await interaction.editReply({
       components: reply.components,
       files: reply.files,
-      flags: MessageFlags.IsComponentsV2,
     });
   }
 
