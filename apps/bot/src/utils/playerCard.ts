@@ -18,7 +18,13 @@ import logger from "./logger.js";
  */
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FONT_PATH = path.resolve(__dirname, "../../assets/player-card/Minecraft.otf");
+const ASSET_DIR = path.resolve(__dirname, "../../assets/player-card");
+const MC_FONT_PATH = path.join(ASSET_DIR, "Minecraft.otf");
+const SANS_FONT_PATH = path.join(ASSET_DIR, "Unbounded.ttf");
+
+// Body text uses Unbounded (the website's --font-sans); numbers use the
+// Minecraft face (the website's --font-mc).
+const SANS = "Unbounded";
 
 // ── theme tokens (mirrors apps/web dark theme) ───────────────────────────────
 const PAPER = "#1a1412";
@@ -149,8 +155,11 @@ let renderer: Renderer | null = null;
 function getRenderer(): Renderer {
   if (!renderer) {
     renderer = new Renderer({
-      loadDefaultFonts: true,
-      fonts: [{ name: "Minecraft", data: fs.readFileSync(FONT_PATH) }],
+      loadDefaultFonts: true, // glyph fallback for anything Unbounded lacks
+      fonts: [
+        { name: "Minecraft", data: fs.readFileSync(MC_FONT_PATH) },
+        { name: SANS, data: fs.readFileSync(SANS_FONT_PATH) },
+      ],
     });
   }
   return renderer;
@@ -164,7 +173,7 @@ function medal(label: string, value: number, from: string, to: string) {
       backgroundImage: `linear-gradient(135deg, ${from}, ${to})`,
     },
     children: [
-      text(label.toUpperCase(), { fontSize: 13, color: "rgb(255 255 255 / 0.75)", letterSpacing: 1.5 }),
+      text(label.toUpperCase(), { fontFamily: SANS, fontSize: 13, color: "rgb(255 255 255 / 0.75)", letterSpacing: 1.5 }),
       text(String(value), { fontFamily: "Minecraft", fontSize: 34, color: "#ffffff" }),
     ],
   });
@@ -178,7 +187,7 @@ function statTile([label, value]: [string, string]) {
     },
     children: [
       text(value, { fontFamily: "Minecraft", fontSize: 26, color: FG }),
-      text(label.toUpperCase(), { fontSize: 12, color: SUB, letterSpacing: 1 }),
+      text(label.toUpperCase(), { fontFamily: SANS, fontSize: 12, color: SUB, letterSpacing: 1 }),
     ],
   });
 }
@@ -196,16 +205,16 @@ export async function generatePlayerCard(data: PlayerCardData): Promise<Buffer> 
   const rankLabel = data.rank > 0 ? `Rank #${data.rank}` : "Unranked";
   const subtitle = data.season ? `${rankLabel}  ·  ${data.season}` : rankLabel;
 
-  const headerLeft: any[] = [text(data.username, { fontSize: 38, fontWeight: 700, color: "#ffffff" })];
+  const headerLeft: any[] = [text(data.username, { fontFamily: SANS, fontSize: 38, fontWeight: 700, color: "#ffffff" })];
   if (data.discordUsername) {
-    headerLeft.push(text(`@${data.discordUsername}`, { fontSize: 15, color: "rgb(255 255 255 / 0.55)" }));
+    headerLeft.push(text(`@${data.discordUsername}`, { fontFamily: SANS, fontSize: 15, color: "rgb(255 255 255 / 0.55)" }));
   }
-  headerLeft.push(text(subtitle, { fontSize: 15, color: "rgb(255 255 255 / 0.78)" }));
+  headerLeft.push(text(subtitle, { fontFamily: SANS, fontSize: 15, color: "rgb(255 255 255 / 0.78)" }));
 
   const gradientChildren: any[] = [];
   if (data.rank > 0) {
     gradientChildren.push(text(`#${data.rank}`, {
-      position: "absolute", top: -10, right: 28, fontSize: 150, fontWeight: 700,
+      fontFamily: SANS, position: "absolute", top: -10, right: 28, fontSize: 150, fontWeight: 700,
       color: "rgb(255 255 255 / 0.10)",
     } as any));
   }
@@ -221,7 +230,7 @@ export async function generatePlayerCard(data: PlayerCardData): Promise<Buffer> 
         style: { display: "flex", flexDirection: "column", alignItems: "flex-end" },
         children: [
           text(String(data.points), { fontFamily: "Minecraft", fontSize: 48, color: "#ffffff" }),
-          text("points", { fontSize: 15, color: "rgb(255 255 255 / 0.55)" }),
+          text("points", { fontFamily: SANS, fontSize: 15, color: "rgb(255 255 255 / 0.55)" }),
         ],
       }),
     ],
