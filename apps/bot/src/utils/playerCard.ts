@@ -83,7 +83,10 @@ function formatPlaytime(seconds: number): string {
 }
 
 function formatDistance(metres: number): string {
-  if (metres >= 1000) return `${(metres / 1000).toFixed(1)} km`;
+  if (metres >= 1000) {
+    // Thousands-separated km, at most one decimal, no trailing ".0".
+    return `${(metres / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} km`;
+  }
   return `${Math.round(metres)} m`;
 }
 
