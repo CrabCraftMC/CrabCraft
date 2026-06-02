@@ -15,6 +15,7 @@ import crabcraft.net.crabUtilities.velocity.awards.AwardDefinition;
 import crabcraft.net.crabUtilities.velocity.awards.AwardEvaluator;
 import crabcraft.net.crabUtilities.velocity.awards.AwardLoader;
 import crabcraft.net.crabUtilities.velocity.awards.AwardQueryService;
+import crabcraft.net.crabUtilities.velocity.awards.StatsQueryService;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementDbWriter;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementQueryService;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementRegistry;
@@ -67,6 +68,7 @@ public class CrabUtilitiesVelocity {
     private AwardEvaluator awardEvaluator;
     private AwardDbWriter awardDbWriter;
     private AwardQueryService awardQueryService;
+    private StatsQueryService statsQueryService;
     private AdvancementDbWriter advancementDbWriter;
     private AdvancementRegistry advancementRegistry;
     private AdvancementQueryService advancementQueryService;
@@ -108,6 +110,7 @@ public class CrabUtilitiesVelocity {
         this.awardEvaluator = new AwardEvaluator(awards);
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
         this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
+        this.statsQueryService = new StatsQueryService(pgWriter.getDataSource(), logger);
         this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
         this.advancementRegistry = new AdvancementRegistry(logger);
         this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger, advancementRegistry);
@@ -207,6 +210,7 @@ public class CrabUtilitiesVelocity {
         this.awardEvaluator = new AwardEvaluator(awards);
         this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
         this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
+        this.statsQueryService = new StatsQueryService(pgWriter.getDataSource(), logger);
         this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
         this.advancementRegistry = new AdvancementRegistry(logger);
         this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger, advancementRegistry);
@@ -281,6 +285,7 @@ public class CrabUtilitiesVelocity {
     public AwardEvaluator getAwardEvaluator() { return awardEvaluator; }
     public AwardDbWriter getAwardDbWriter() { return awardDbWriter; }
     public AwardQueryService getAwardQueryService() { return awardQueryService; }
+    public StatsQueryService getStatsQueryService() { return statsQueryService; }
     public AdvancementDbWriter getAdvancementDbWriter() { return advancementDbWriter; }
     public AdvancementQueryService getAdvancementQueryService() { return advancementQueryService; }
     public VelocityConfig getConfig() { return config; }

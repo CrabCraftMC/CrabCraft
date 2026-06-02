@@ -1,7 +1,8 @@
-import { eq, and, desc, sql, lte, ne } from "drizzle-orm";
+import { eq, and, desc, sql, lte, ne, ilike } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
+  seasons,
   applications,
   streamChannels,
   playerAlts,
@@ -700,6 +701,58 @@ export async function getPlayerLink(
     })
     .from(players)
     .where(eq(players.discord_id, discordId))
+    .limit(1);
+  return row ?? null;
+}
+
+// ── player profile card (/playerinfo) ───────────────────────────
+
+export interface PlayerIdentity {
+  minecraft_uuid: string;
+  minecraft_username: string | null;
+  discord_username: string;
+  role: string;
+}
+
+const PLAYER_IDENTITY_COLUMNS = {
+  minecraft_uuid: players.minecraft_uuid,
+  minecraft_username: players.minecraft_username,
+  discord_username: players.discord_username,
+  role: players.role,
+} as const;
+
+/** Resolve a linked player by Minecraft username (case-insensitive). */
+export async function getPlayerByMinecraftUsername(
+  username: string,
+): Promise<PlayerIdentity | null> {
+  const [row] = await db
+    .select(PLAYER_IDENTITY_COLUMNS)
+    .from(players)
+    .where(ilike(players.minecraft_username, username))
+    .limit(1);
+  if (!row?.minecraft_uuid) return null;
+  return row as PlayerIdentity;
+}
+
+/** Resolve a linked player by Minecraft UUID. */
+export async function getPlayerByMinecraftUuid(
+  uuid: string,
+): Promise<PlayerIdentity | null> {
+  const [row] = await db
+    .select(PLAYER_IDENTITY_COLUMNS)
+    .from(players)
+    .where(eq(players.minecraft_uuid, uuid))
+    .limit(1);
+  if (!row?.minecraft_uuid) return null;
+  return row as PlayerIdentity;
+}
+
+/** The currently active season, or null if none is flagged current. */
+export async function getCurrentSeason(): Promise<{ id: string; name: string } | null> {
+  const [row] = await db
+    .select({ id: seasons.id, name: seasons.name })
+    .from(seasons)
+    .where(eq(seasons.is_current, true))
     .limit(1);
   return row ?? null;
 }

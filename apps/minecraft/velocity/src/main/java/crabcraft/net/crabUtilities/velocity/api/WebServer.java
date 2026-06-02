@@ -243,6 +243,48 @@ public class WebServer {
             + "}"
             + "},"
 
+            + "\"/players/{uuid}/stats\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Players\"],"
+            + "\"summary\":\"Player season stats\","
+            + "\"description\":\"Returns a player's raw aggregated season stats: play time, movement distances (metres), combat counts, block/item totals, and the player's top block mined, mob killed, item crafted, item used, and death cause. Distances are floating-point metres; all other counters are integers. Returns 404 if the player has no recorded stats for the season.\","
+            + "\"operationId\":\"getPlayerStats\","
+            + "\"parameters\":["
+            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"},"
+            + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Player season stats retrieved successfully\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"uuid\":{\"type\":\"string\",\"format\":\"uuid\"},"
+            + "\"username\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"season\":{\"type\":\"string\"},"
+            + "\"stats\":{\"type\":\"object\",\"properties\":{"
+            + "\"play_time_seconds\":{\"type\":\"integer\"},"
+            + "\"walk_distance_m\":{\"type\":\"number\"},\"sprint_distance_m\":{\"type\":\"number\"},"
+            + "\"swim_distance_m\":{\"type\":\"number\"},\"fly_distance_m\":{\"type\":\"number\"},"
+            + "\"boat_distance_m\":{\"type\":\"number\"},\"elytra_distance_m\":{\"type\":\"number\"},"
+            + "\"horse_distance_m\":{\"type\":\"number\"},\"climb_distance_m\":{\"type\":\"number\"},"
+            + "\"fall_distance_m\":{\"type\":\"number\"},\"total_distance_m\":{\"type\":\"number\"},"
+            + "\"mob_kills\":{\"type\":\"integer\"},\"player_kills\":{\"type\":\"integer\"},\"deaths\":{\"type\":\"integer\"},"
+            + "\"damage_dealt\":{\"type\":\"integer\"},\"damage_taken\":{\"type\":\"integer\"},"
+            + "\"total_blocks_mined\":{\"type\":\"integer\"},\"total_blocks_placed\":{\"type\":\"integer\"},"
+            + "\"total_items_crafted\":{\"type\":\"integer\"},\"total_items_broken\":{\"type\":\"integer\"},"
+            + "\"jumps\":{\"type\":\"integer\"},\"animals_bred\":{\"type\":\"integer\"},\"fish_caught\":{\"type\":\"integer\"},"
+            + "\"villagers_traded\":{\"type\":\"integer\"},\"enchantments\":{\"type\":\"integer\"},\"times_slept\":{\"type\":\"integer\"},"
+            + "\"top_block_mined\":{\"type\":\"string\",\"nullable\":true},\"top_mob_killed\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"top_item_crafted\":{\"type\":\"string\",\"nullable\":true},\"top_item_used\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"top_death_cause\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"computed_at\":{\"type\":\"integer\",\"nullable\":true,\"description\":\"Unix seconds when these stats were last computed\"}"
+            + "}}"
+            + "}}}}},"
+            + "\"400\":{\"description\":\"UUID format is invalid. Must be a standard UUID with dashes.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"Player has no stat data for this season, or no season is currently active.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
             // ── Awards ──
             + "\"/awards\":{"
             + "\"get\":{"
@@ -713,6 +755,28 @@ public class WebServer {
                     }
                     if (result.has("notFound")) {
                         sendError(exchange, 404, "player has no advancement data");
+                        return;
+                    }
+                    sendJson(exchange, GSON.toJson(result));
+                    return;
+                }
+
+                // /players/{uuid}/stats
+                if (sub.endsWith("/stats")) {
+                    String uuid = sub.substring(0, sub.length() - "/stats".length());
+                    if (!UUID_PATTERN.matcher(uuid).matches()) {
+                        sendError(exchange, 400, "invalid uuid format");
+                        return;
+                    }
+                    var params = parseQuery(exchange.getRequestURI());
+                    var result = plugin.getStatsQueryService().getPlayerStats(
+                            uuid, params.get("season"));
+                    if (result == null) {
+                        sendError(exchange, 404, "no current season");
+                        return;
+                    }
+                    if (result.has("notFound")) {
+                        sendError(exchange, 404, "player has no stat data");
                         return;
                     }
                     sendJson(exchange, GSON.toJson(result));
