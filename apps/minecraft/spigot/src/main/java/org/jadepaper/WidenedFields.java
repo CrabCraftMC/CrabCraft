@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Either;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.animal.armadillo.Armadillo;
 import net.minecraft.world.entity.animal.frog.Tadpole;
+import net.minecraft.world.entity.animal.golem.CopperGolem;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.CompositeEntryBase;
@@ -29,6 +30,7 @@ import java.util.List;
 public final class WidenedFields {
 
     private static final MethodHandle ARMADILLO_SCUTE_TIME = unreflectField(Armadillo.class, int.class, "scuteTime");
+    private static final MethodHandle COPPER_GOLEM_NEXT_WEATHERING_TICK = unreflectField(CopperGolem.class, long.class, "nextWeatheringTick");
     private static final MethodHandle TADPOLE_TICKS_LEFT = unreflectMethod(Tadpole.class, "getTicksLeftUntilAdult", int.class);
     private static final MethodHandle LOOT_POOL_ENTRIES = unreflectField(LootPool.class, List.class, "entries");
     private static final MethodHandle LOOT_TABLE_POOLS = unreflectField(LootTable.class, List.class, "pools");
@@ -43,6 +45,14 @@ public final class WidenedFields {
     public static int scuteTime(Armadillo armadillo) {
         try {
             return (int) ARMADILLO_SCUTE_TIME.invoke(armadillo);
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    public static long nextWeatheringTick(CopperGolem golem) {
+        try {
+            return (long) COPPER_GOLEM_NEXT_WEATHERING_TICK.invoke(golem);
         } catch (Throwable t) {
             throw rethrow(t);
         }
