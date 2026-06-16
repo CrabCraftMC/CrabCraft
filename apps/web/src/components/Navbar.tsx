@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 
 import { Button } from "./ui/button";
+import Squircle from "./Squircle";
 import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import config from "../data/site-config.json";
@@ -68,8 +69,12 @@ export default function Navbar({ user }: { user?: UserData | null }) {
 
     return (
         <div className="sticky top-4 z-50 px-4 lg:px-8 relative">
-        <nav className="container mx-auto bg-paper-2/40 backdrop-blur-2xl backdrop-saturate-150 rounded-xl border border-line/60">
-            <div className="px-6 lg:px-8">
+        <nav className="container mx-auto relative">
+            <Squircle
+                cornerRadius={20}
+                className="absolute inset-0 z-0 bg-paper-2/80 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.10)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]"
+            />
+            <div className="relative z-10 px-6 lg:px-8">
                 <div className="flex items-center h-14 md:h-20">
                     <div className="flex-1 flex justify-start">
                         <Link href="/" className="flex items-center gap-3">
