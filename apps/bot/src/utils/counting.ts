@@ -470,6 +470,15 @@ const ROMAN_VALUES: Readonly<Record<string, number>> = Object.freeze({
   M: 1000, D: 500, C: 100, L: 50, X: 10, V: 5, I: 1,
 });
 
+// Combining marks that act as a vinculum (overline): a barred symbol is ×1000.
+// U+0305 COMBINING OVERLINE, U+0304 COMBINING MACRON.
+const ROMAN_BAR_MARKS: ReadonlySet<string> = new Set(["\u0305", "\u0304"]);
+
+// Largest value expressible with a single vinculum: 3,999 thousands + 999.
+const MAX_ROMAN_VALUE = 3_999_999;
+// Bound the scanned run so a pathological message can't blow up parsing.
+const MAX_ROMAN_RUN = 4096;
+
 function toRoman(n: number): string {
   const pairs: ReadonlyArray<readonly [number, string]> = [
     [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"],
@@ -486,21 +495,77 @@ function toRoman(n: number): string {
   return s;
 }
 
+type RomanSymbol = { value: number; barred: boolean };
+
+// Canonical decomposition of n into ordered (value, barred) symbols. When
+// vinculum is used the thousands are rendered as a barred Roman numeral
+// (each letter ×1000) followed by the unbarred 0-999 remainder; otherwise the
+// thousands are spelled out as repeated unbarred M's (MMMM = 4000, ...).
+function canonicalRomanSymbols(n: number, vinculum: boolean): RomanSymbol[] {
+  const out: RomanSymbol[] = [];
+  if (vinculum) {
+    for (const c of toRoman(Math.floor(n / 1000))) {
+      out.push({ value: ROMAN_VALUES[c], barred: true });
+    }
+    for (const c of toRoman(n % 1000)) {
+      out.push({ value: ROMAN_VALUES[c], barred: false });
+    }
+  } else {
+    for (const c of toRoman(n)) {
+      out.push({ value: ROMAN_VALUES[c], barred: false });
+    }
+  }
+  return out;
+}
+
+function sameSymbols(a: RomanSymbol[], b: RomanSymbol[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].value !== b[i].value || a[i].barred !== b[i].barred) return false;
+  }
+  return true;
+}
+
 function parseRoman(text: string): number | null {
-  const m = text.toUpperCase().match(/^([MDCLXVI]+)(?:$|[\s!?.,])/);
-  if (!m) return null;
-  const roman = m[1];
-  if (roman.length > 16) return null;
+  const upper = text.toUpperCase();
+  const symbols: RomanSymbol[] = [];
+  let consumed = 0;
+  let vinculum = false;
+
+  for (const ch of upper) {
+    if (Object.hasOwn(ROMAN_VALUES, ch)) {
+      symbols.push({ value: ROMAN_VALUES[ch], barred: false });
+    } else if (ROMAN_BAR_MARKS.has(ch)) {
+      const last = symbols[symbols.length - 1];
+      if (!last) return null; // a bar with no preceding letter
+      last.barred = true;
+      vinculum = true;
+    } else {
+      break;
+    }
+    consumed += ch.length;
+    if (consumed > MAX_ROMAN_RUN) return null;
+  }
+
+  if (symbols.length === 0) return null;
+
+  // Require a word boundary after the numeral, mirroring plain-number parsing.
+  const rest = upper.slice(consumed);
+  if (rest && !/^[\s!?.,]/.test(rest)) return null;
+
   let total = 0;
   let prev = 0;
-  for (let i = roman.length - 1; i >= 0; i--) {
-    const v = ROMAN_VALUES[roman[i]];
+  for (let i = symbols.length - 1; i >= 0; i--) {
+    const v = symbols[i].barred ? symbols[i].value * 1000 : symbols[i].value;
     if (v < prev) total -= v;
     else total += v;
     prev = v;
   }
-  if (total <= 0 || total > 3999) return null;
-  if (toRoman(total) !== roman) return null;
+
+  if (total <= 0 || total > MAX_ROMAN_VALUE) return null;
+  // Reject malformed numerals (e.g. IIII, VV, or a stray bar) by requiring the
+  // input to be the canonical spelling of its own value.
+  if (!sameSymbols(symbols, canonicalRomanSymbols(total, vinculum))) return null;
   return total;
 }
 
