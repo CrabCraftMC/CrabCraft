@@ -5,6 +5,7 @@ import {
   ChannelType,
   MessageFlags,
   PermissionFlagsBits,
+  TextDisplayBuilder,
   type CategoryChannel,
   type Guild,
   type GuildMember,
@@ -33,6 +34,17 @@ export async function getApplicationCategory(
   return channel as CategoryChannel;
 }
 
+/** Channel name for an applicant (sanitised username, no prefix). */
+export function buildApplicationChannelName(username: string): string {
+  return (
+    username
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 90) || "applicant"
+  );
+}
+
 /** The Apply button row shown on the welcome + reminder messages. */
 export function buildApplyButton(): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -44,17 +56,20 @@ export function buildApplyButton(): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
-/** Ping the applicant and post the welcome message + Apply button. */
+/**
+ * Post the welcome message: the applicant ping (as a text component) and the
+ * welcome/requirements panel + Apply button, all in a single message.
+ */
 async function sendApplicationWelcome(
   channel: TextChannel,
   member: GuildMember,
 ): Promise<void> {
   try {
-    await channel.send({ content: `<@!${member.id}>` });
     await channel.send({
       components: [
+        new TextDisplayBuilder().setContent(`<@!${member.id}>`),
         primaryContainer(
-          `## <:Crab:1397355651822256299> Welcome to CrabCraft ${member.displayName}!\nPlease click the button below this message to start your application.\n-# Any problems? Send a message in this channel.`,
+          `## <:Crab:1397355651822256299> Welcome to CrabCraft ${member.displayName}!\nClick the button below this message to start your application.\n\n**Requirements**\n- 17 or older\n- A Minecraft: Java Edition account\n\n-# Any problems? Just send a message in this channel.`,
         ),
         buildApplyButton(),
       ],
@@ -109,10 +124,9 @@ export async function createApplicationChannelFor(
   try {
     if (!channel) {
       channel = await member.guild.channels.create({
-        name: `app-${member.user.username}`,
+        name: buildApplicationChannelName(member.user.username),
         type: ChannelType.GuildText,
         parent: category.id,
-        topic: member.user.id,
         permissionOverwrites: [
           {
             id: member.user.id,

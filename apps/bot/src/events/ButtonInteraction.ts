@@ -8,6 +8,7 @@ import {
   MessageFlags,
   ModalBuilder,
   TextChannel,
+  TextDisplayBuilder,
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
@@ -93,6 +94,10 @@ export default class ButtonInteractionEvent extends Event {
       const joinReason = new TextInputBuilder()
         .setCustomId("join-reason")
         .setLabel("Why do you want to join CrabCraft?")
+        .setPlaceholder(
+          "In a sentence or two, tell us why you want to join and what you'd like to do on the server.",
+        )
+        .setMinLength(50)
         .setRequired(true)
         .setStyle(TextInputStyle.Paragraph);
 
@@ -188,10 +193,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      await interaction.message.edit({
+      await interaction.update({
         components: [
           coloredContainer(
-            "## Success\nYou have **agreed** to **CrabCraft's Griefing & Stealing Policy**",
+            "You have **agreed** to **CrabCraft's Griefing & Stealing Policy**",
             "Green",
           ),
         ],
@@ -199,11 +204,6 @@ export default class ButtonInteractionEvent extends Event {
       });
 
       await appDb.setPolicyAgreed(interaction.user.id, true);
-
-      await interaction.reply({
-        content: "Policy agreed",
-        flags: MessageFlags.Ephemeral,
-      });
     }
 
     if (interaction.customId == "disagree") {
@@ -218,10 +218,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      await interaction.message.edit({
+      await interaction.update({
         components: [
           coloredContainer(
-            "## Policy Rejected\nYou have **disagreed** to **CrabCraft's Griefing & Stealing Policy**",
+            "You have **disagreed** to **CrabCraft's Griefing & Stealing Policy**",
             "Red",
           ),
         ],
@@ -229,11 +229,6 @@ export default class ButtonInteractionEvent extends Event {
       });
 
       await appDb.setPolicyAgreed(interaction.user.id, false);
-
-      await interaction.reply({
-        content: "Policy disagreed",
-        flags: MessageFlags.Ephemeral,
-      });
     }
 
     // On app_accept — supports both new V2 (app_accept:username) and legacy (app_accept) formats
@@ -244,11 +239,15 @@ export default class ButtonInteractionEvent extends Event {
         )
       ) {
         await interaction.reply({
-          components: [errorContainer("**Missing permissions**")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          content: `You must have the <@&${config.MOD_ROLE_ID}> role to do this.`,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
+
+      // Acknowledge up-front: the work below (Mojang lookup, MariaDB, role add)
+      // can exceed the 3s window, and we post no visible reply on success.
+      await interaction.deferUpdate();
 
       const logChannel = await (
         interaction.member as GuildMember
@@ -262,7 +261,7 @@ export default class ButtonInteractionEvent extends Event {
           )?.value;
 
       if (!minecraftUsername) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** Could not find the Minecraft username from the application.",
@@ -280,7 +279,7 @@ export default class ButtonInteractionEvent extends Event {
       const applicantId = appRecord?.applicant_id;
 
       if (!applicantId) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** Could not determine the applicant from the channel.",
@@ -296,7 +295,7 @@ export default class ButtonInteractionEvent extends Event {
         .catch(() => null);
 
       if (!applicant) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** The applicant is no longer in the server.",
@@ -309,7 +308,7 @@ export default class ButtonInteractionEvent extends Event {
 
       const application = await appDb.getLatestApplication(applicantId);
       if (!application || !application.policy_agreed) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** The applicant hasn't agreed to the policy yet.",
@@ -322,7 +321,7 @@ export default class ButtonInteractionEvent extends Event {
 
       const resolved = await resolveUsername(minecraftUsername);
       if (!resolved) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** Failed to look up the Minecraft account. Please try again later.",
@@ -342,7 +341,7 @@ export default class ButtonInteractionEvent extends Event {
         .acceptApplication(applicant.id, interaction.user.id)
         .catch(() => false);
       if (!won) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer("This application has already been processed."),
           ],
@@ -360,7 +359,7 @@ export default class ButtonInteractionEvent extends Event {
         logger.error("Failed to insert whitelist record:", error);
         // Undo the accept-time status flip so a moderator can retry.
         await appDb.revertApplicationToPending(applicant.id).catch(() => null);
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** Failed to add the user to the whitelist database. Please try again.",
@@ -398,9 +397,9 @@ export default class ButtonInteractionEvent extends Event {
       // (application status was already flipped above as the race guard)
 
       try {
-        await appChannel.send({ content: `<@${applicant.id}>` });
         await appChannel.send({
           components: [
+            new TextDisplayBuilder().setContent(`<@${applicant.id}>`),
             successContainer(
               `## Application Accepted\n**Congratulations ${applicant.user.username}, your application has been accepted!**\n### Next Steps\nCheck out [our guide](https://wiki.crabcraft.net/Setup_Guide) for help installing **Simple Voice Chat**\n\nNeed anymore help? Let us know in this channel, or create a ticket <#1397191941782896670>\n-# Channel will be deleted in 12 hours`,
             ),
@@ -440,11 +439,9 @@ export default class ButtonInteractionEvent extends Event {
       } catch (e) {
         logger.error("Failed to disable accept/deny buttons:", e);
       }
-
-      await interaction.reply({
-        components: [primaryContainer("Successfully accepted application")],
-        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-      });
+      // No success reply — disabling the buttons + the acceptance message in
+      // the channel is the confirmation. The interaction was acked via
+      // deferUpdate above.
     }
 
     // On app_deny — supports both V2 and legacy formats
@@ -455,8 +452,8 @@ export default class ButtonInteractionEvent extends Event {
         )
       ) {
         await interaction.reply({
-          components: [errorContainer("**Missing permissions**")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          content: `You must have the <@&${config.MOD_ROLE_ID}> role to do this.`,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -721,8 +718,8 @@ export default class ButtonInteractionEvent extends Event {
       return;
     }
 
-    // Edit application button
-    if (interaction.customId.startsWith("edit_app:")) {
+    // Edit application button (lives on the application-submitted message)
+    if (interaction.customId === "edit_app") {
       const editRecord = await appDb
         .getApplicationChannelByChannelId(interaction.channelId ?? "")
         .catch(() => null);
@@ -743,10 +740,8 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      const appMessageId = interaction.customId.split(":")[1];
-
       const editModal = new ModalBuilder()
-        .setCustomId(`edit-application:${appMessageId}`)
+        .setCustomId("edit-application")
         .setTitle("Edit Application");
 
       const minecraftUsername = new TextInputBuilder()
@@ -776,6 +771,10 @@ export default class ButtonInteractionEvent extends Event {
       const joinReason = new TextInputBuilder()
         .setCustomId("join-reason")
         .setLabel("Why do you want to join CrabCraft?")
+        .setPlaceholder(
+          "In a sentence or two, tell us why you want to join and what you'd like to do on the server.",
+        )
+        .setMinLength(50)
         .setRequired(true)
         .setValue((application.join_reason as string) ?? "")
         .setStyle(TextInputStyle.Paragraph);

@@ -21,6 +21,7 @@ import {
   ContainerBuilder,
   PermissionFlagsBits,
   SectionBuilder,
+  TextDisplayBuilder,
   ThumbnailBuilder,
   MessageFlags,
 } from "discord.js";
@@ -61,6 +62,31 @@ function retryButtonRow(customId: string) {
       .setCustomId(customId)
       .setLabel("Retry Username")
       .setStyle(ButtonStyle.Primary),
+  );
+}
+
+/**
+ * Buttons shown on the application-submitted message: Accept / Deny (staff)
+ * and Edit Application (applicant). The MC username rides along on the
+ * accept/deny custom ids.
+ */
+function buildApplicationActionRow(
+  minecraftUsername: string,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`app_accept:${minecraftUsername}`)
+      .setLabel("Accept")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`app_deny:${minecraftUsername}`)
+      .setLabel("Deny")
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId("edit_app")
+      .setLabel("Edit Application")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("✏️"),
   );
 }
 
@@ -293,9 +319,7 @@ export default class ModalInteractionEvent extends Event {
     }
 
     // ── Edit Application ──────────────────────────────────────────────
-    if (interaction.customId.startsWith("edit-application:")) {
-      const appMessageId = interaction.customId.split(":")[1];
-
+    if (interaction.customId === "edit-application") {
       const minecraftUsername = interaction.fields.getTextInputValue("minecraft-username");
       const age = interaction.fields.getTextInputValue("age").toLocaleLowerCase();
       const ingameVoice = interaction.fields.getTextInputValue("ingame-voice").toLocaleLowerCase();
@@ -346,64 +370,46 @@ export default class ModalInteractionEvent extends Event {
         logger.error("Failed to update application in database:", e);
       }
 
-      // Edit the original application message
-      if (appMessageId && interaction.channel) {
-        try {
-          const appMessage = await interaction.channel.messages.fetch(appMessageId);
-          if (appMessage) {
-            const fields = [
-              `**Are you 17 or older?**\n${age}`,
-              `**Are you willing to speak in game?**\n${ingameVoice}`,
-              `**Why do you want to join CrabCraft?**\n${joinReason}`,
-            ];
-            if (favouriteWood)
-              fields.push(`**What is your favourite type of wood?**\n${favouriteWood}`);
+      // Re-render the application-submitted message (the one this modal was
+      // opened from) with the updated details. Editing it is the ack.
+      const fields = [
+        `**Are you 17 or older?**\n${age}`,
+        `**Are you willing to speak in game?**\n${ingameVoice}`,
+        `**Why do you want to join CrabCraft?**\n${joinReason}`,
+      ];
+      if (favouriteWood)
+        fields.push(`**What is your favourite type of wood?**\n${favouriteWood}`);
 
-            const updatedContainer = new ContainerBuilder()
-              .addSectionComponents(
-                new SectionBuilder()
-                  .addTextDisplayComponents((td) =>
-                    td.setContent(
-                      `## Application Submitted (Edited)\n**Minecraft Username**\n${minecraftUsername}`,
-                    ),
-                  )
-                  .setThumbnailAccessory(
-                    new ThumbnailBuilder().setURL(
-                      `https://api.mineatar.io/body/full/${resolved.uuid}?scale=12`,
-                    ),
-                  ),
-              )
-              .addTextDisplayComponents((td) => td.setContent(fields.join("\n\n")));
+      const updatedContainer = new ContainerBuilder()
+        .addSectionComponents(
+          new SectionBuilder()
+            .addTextDisplayComponents((td) =>
+              td.setContent(
+                `## Application Submitted (Edited)\n**Minecraft Username**\n${minecraftUsername}`,
+              ),
+            )
+            .setThumbnailAccessory(
+              new ThumbnailBuilder().setURL(
+                `https://api.mineatar.io/body/full/${resolved.uuid}?scale=12`,
+              ),
+            ),
+        )
+        .addTextDisplayComponents((td) => td.setContent(fields.join("\n\n")));
 
-            const adminAcceptButton = new ButtonBuilder()
-              .setCustomId(`app_accept:${minecraftUsername}`)
-              .setLabel("Accept")
-              .setStyle(ButtonStyle.Success);
-
-            const adminRejectButton = new ButtonBuilder()
-              .setCustomId(`app_deny:${minecraftUsername}`)
-              .setLabel("Deny")
-              .setStyle(ButtonStyle.Danger);
-
-            const adminButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
-              adminAcceptButton,
-              adminRejectButton,
-            );
-
-            await appMessage.edit({
-              components: [updatedContainer, adminButtons],
-              flags: MessageFlags.IsComponentsV2,
-            });
-          }
-        } catch (e) {
-          logger.error("Failed to edit application message:", e);
-        }
+      if (interaction.isFromMessage()) {
+        await interaction.update({
+          components: [
+            updatedContainer,
+            buildApplicationActionRow(minecraftUsername),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } else {
+        await interaction.reply({
+          components: [primaryContainer("Your application has been updated.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
       }
-
-      await interaction.reply({
-        components: [primaryContainer("Your application has been updated.")],
-        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-      });
       return;
     }
 
@@ -579,6 +585,11 @@ export default class ModalInteractionEvent extends Event {
       interaction.customId === "deny_modal" ||
       interaction.customId.startsWith("deny_modal:")
     ) {
+      // Acknowledge without a visible reply; disabling the buttons + the
+      // denial message in the channel is the confirmation. (The deny modal is
+      // always shown from the Deny button, so it is from a message.)
+      if (interaction.isFromMessage()) await interaction.deferUpdate();
+
       const reason =
         interaction.fields.getTextInputValue("deny_reason") ||
         "No reason provided";
@@ -629,21 +640,18 @@ export default class ModalInteractionEvent extends Event {
 
       const applicantId = denyRecord?.applicant_id;
       try {
-        if (applicantId) {
-          await appChannel.send({ content: `<@${applicantId}>` });
-        }
         await appChannel.send({
-          components: [denyContainer],
+          components: [
+            ...(applicantId
+              ? [new TextDisplayBuilder().setContent(`<@${applicantId}>`)]
+              : []),
+            denyContainer,
+          ],
           flags: MessageFlags.IsComponentsV2,
         });
       } catch (e) {
         logger.error("Failed to send denial message:", e);
       }
-
-      await interaction.reply({
-        content: "Successfully denied application.",
-        flags: MessageFlags.Ephemeral,
-      });
 
       // Get MC username from modal customId (V2) or fallback to embed fields (legacy)
       const minecraftUsername = interaction.customId.includes(":")
@@ -704,6 +712,12 @@ export default class ModalInteractionEvent extends Event {
     joinReason: string,
     favouriteWood: string,
   ) {
+    // Acknowledge the modal up-front (ephemeral). The submitted + policy
+    // messages are posted as fresh channel messages, then this ack is cleared.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const channel = interaction.channel as TextChannel;
+
     // Cancel any stale pending applications (e.g. user left and rejoined)
     try {
       await appDb.cancelPendingApplications(interaction.user.id);
@@ -727,7 +741,7 @@ export default class ModalInteractionEvent extends Event {
     );
 
     if (mysqlRows.length > 0) {
-      await interaction.reply({
+      await interaction.editReply({
         components: [
           errorContainer("**Error!** You are already a member of CrabCraft."),
         ],
@@ -766,57 +780,8 @@ export default class ModalInteractionEvent extends Event {
       )
       .addTextDisplayComponents((td) => td.setContent(fields.join("\n\n")));
 
-    const adminAcceptButton = new ButtonBuilder()
-      .setCustomId(`app_accept:${minecraftUsername}`)
-      .setLabel("Accept")
-      .setStyle(ButtonStyle.Success);
-
-    const adminRejectButton = new ButtonBuilder()
-      .setCustomId(`app_deny:${minecraftUsername}`)
-      .setLabel("Deny")
-      .setStyle(ButtonStyle.Danger);
-
-    const adminButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      adminAcceptButton,
-      adminRejectButton,
-    );
-
-    await interaction.reply({
-      components: [submittedContainer, adminButtons],
-      flags: MessageFlags.IsComponentsV2,
-    });
-
-    // Get the application message ID so the edit button can reference it
-    const appMessage = await interaction.fetchReply().catch(() => null);
-    const appMessageId = appMessage?.id ?? "";
-
-    const agreeButton = new ButtonBuilder()
-      .setCustomId("agree")
-      .setEmoji("✅")
-      .setLabel("I Agree")
-      .setStyle(ButtonStyle.Success);
-
-    const disagreeButton = new ButtonBuilder()
-      .setCustomId("disagree")
-      .setEmoji("❎")
-      .setLabel("I Disagree")
-      .setStyle(ButtonStyle.Danger);
-
-    const editButton = new ButtonBuilder()
-      .setCustomId(`edit_app:${appMessageId}`)
-      .setLabel("Edit Application")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji("✏️");
-
-    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      agreeButton,
-      disagreeButton,
-      editButton,
-    );
-
-    // Persist to database. The MC link in `players` is claimed at accept
-    // time only — submitting an application shouldn't yank another
-    // player's MC link out of the players table.
+    // Persist to database first; only post the application + policy if it
+    // saved. The MC link in `players` is claimed at accept time only.
     const currentSeason = await appDb.getCurrentSeason().catch(() => null);
     let persisted = false;
     try {
@@ -840,38 +805,55 @@ export default class ModalInteractionEvent extends Event {
       logger.error("Failed to persist application to database:", e);
     }
 
-    // If we couldn't save the application, don't show the policy — the
-    // "I Agree" button would have no row to flip and staff would later
-    // see "applicant hasn't agreed to the policy yet" with no recourse.
     if (!persisted) {
-      try {
-        await interaction.followUp({
+      await channel
+        .send({
           components: [
             errorContainer(
               "**Error!** Failed to save your application. Please contact a moderator.",
             ),
           ],
           flags: MessageFlags.IsComponentsV2,
-        });
-      } catch (e) {
-        logger.error("Failed to send persist-failure notice:", e);
-      }
+        })
+        .catch((e) => logger.error("Failed to send persist-failure notice:", e));
+      await interaction.deleteReply().catch(() => null);
       return;
     }
 
-    // Policy message
+    // Application-submitted message (fresh) with Accept / Deny / Edit.
+    await channel
+      .send({
+        components: [
+          submittedContainer,
+          buildApplicationActionRow(minecraftUsername),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      })
+      .catch((e) => logger.error("Failed to send application message:", e));
+
+    // Policy message (fresh) with Agree / Disagree.
     const policyContainer = primaryContainer(
       "## CrabCraft's Griefing & Stealing Policy\n**Just before we review your application, we need to ensure that you understand our policy on stealing.**\n\nWe have a zero tolerance policy towards stealing. If you steal from another player, you will be banned from the server.\nAll block interactions are logged, and all players are able to look into chest logs. This means any stealing will be traced back to the offending player.",
     );
+    const policyRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId("agree")
+        .setLabel("I Agree")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId("disagree")
+        .setLabel("I Disagree")
+        .setStyle(ButtonStyle.Danger),
+    );
 
-    try {
-      await interaction.followUp({
-        components: [policyContainer, actionRow],
+    await channel
+      .send({
+        components: [policyContainer, policyRow],
         flags: MessageFlags.IsComponentsV2,
-      });
-    } catch (e) {
-      logger.error("Failed to send policy message:", e);
-    }
+      })
+      .catch((e) => logger.error("Failed to send policy message:", e));
+
+    await interaction.deleteReply().catch(() => null);
   }
 
   // ── Shared: process a validated fast application ───────────────────
