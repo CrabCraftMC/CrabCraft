@@ -9,7 +9,7 @@ import {
   starboardPosts,
   countingState,
   tickets,
-  applicationThreads,
+  applicationChannels,
   type TicketCategory,
 } from "../schema";
 
@@ -27,7 +27,7 @@ export interface CreateApplicationData {
   discordUsername: string;
   minecraftUsername: string;
   minecraftUuid: string | null;
-  over15: boolean;
+  ageMet: boolean;
   voiceChat: boolean;
   joinReason?: string;
   favouriteWood?: string;
@@ -74,6 +74,11 @@ export async function upsertUser(data: UpsertUserData): Promise<void> {
 export async function createApplication(
   data: CreateApplicationData,
 ): Promise<number> {
+  // Applications are unique per (discord_id, season). A re-application for
+  // the same season (e.g. after a denial) upserts onto the existing row and
+  // resets it to a fresh pending state. When season is null the unique index
+  // treats the rows as distinct, so this simply inserts a new row.
+  const now = Math.floor(Date.now() / 1000);
   const [row] = await db
     .insert(applications)
     .values({
@@ -81,11 +86,29 @@ export async function createApplication(
       discord_username: data.discordUsername,
       minecraft_username: data.minecraftUsername,
       minecraft_uuid: data.minecraftUuid ?? null,
-      over_15: data.over15,
+      age_met: data.ageMet,
       voice_chat: data.voiceChat,
       join_reason: data.joinReason ?? null,
       favourite_wood: data.favouriteWood ?? null,
       season: data.season ?? null,
+    })
+    .onConflictDoUpdate({
+      target: [applications.discord_id, applications.season],
+      set: {
+        discord_username: sql`excluded.discord_username`,
+        minecraft_username: sql`excluded.minecraft_username`,
+        minecraft_uuid: sql`excluded.minecraft_uuid`,
+        age_met: sql`excluded.age_met`,
+        voice_chat: sql`excluded.voice_chat`,
+        join_reason: sql`excluded.join_reason`,
+        favourite_wood: sql`excluded.favourite_wood`,
+        status: "pending",
+        policy_agreed: false,
+        denial_reason: null,
+        resolved_at: null,
+        resolved_by_discord_id: null,
+        applied_at: now,
+      },
     })
     .returning({ id: applications.id });
   return row.id;
@@ -132,12 +155,17 @@ export async function hasPendingApplication(
   return rows.length > 0;
 }
 
+/**
+ * Atomically transition the applicant's pending application to accepted.
+ * Returns true only if a pending row was actually updated — callers use this
+ * as a lock to guard against two moderators accepting at the same time.
+ */
 export async function acceptApplication(
   discordId: string,
   resolvedBy: string,
-): Promise<void> {
+): Promise<boolean> {
   const now = Math.floor(Date.now() / 1000);
-  await db
+  const updated = await db
     .update(applications)
     .set({
       status: "accepted",
@@ -148,6 +176,31 @@ export async function acceptApplication(
       and(
         eq(applications.discord_id, discordId),
         eq(applications.status, "pending"),
+      ),
+    )
+    .returning({ id: applications.id });
+  return updated.length > 0;
+}
+
+/**
+ * Roll an accepted application back to pending. Used to undo the accept-time
+ * status flip (the double-accept guard) when a later step — e.g. the whitelist
+ * insert — fails, so a moderator can simply retry.
+ */
+export async function revertApplicationToPending(
+  discordId: string,
+): Promise<void> {
+  await db
+    .update(applications)
+    .set({
+      status: "pending",
+      resolved_at: null,
+      resolved_by_discord_id: null,
+    })
+    .where(
+      and(
+        eq(applications.discord_id, discordId),
+        eq(applications.status, "accepted"),
       ),
     );
 }
@@ -205,7 +258,7 @@ export async function updateApplication(
   data: {
     minecraftUsername: string;
     minecraftUuid: string;
-    over15: boolean;
+    ageMet: boolean;
     voiceChat: boolean;
     joinReason?: string;
     favouriteWood?: string;
@@ -216,7 +269,7 @@ export async function updateApplication(
     .set({
       minecraft_username: data.minecraftUsername,
       minecraft_uuid: data.minecraftUuid,
-      over_15: data.over15,
+      age_met: data.ageMet,
       voice_chat: data.voiceChat,
       join_reason: data.joinReason ?? null,
       favourite_wood: data.favouriteWood ?? null,
@@ -782,36 +835,34 @@ export async function searchPlayersByUsername(
   );
 }
 
-// ── Application threads ─────────────────────────────────────────
+// ── Application channels ────────────────────────────────────────
 
-export type ApplicationThread = typeof applicationThreads.$inferSelect;
+export type ApplicationChannel = typeof applicationChannels.$inferSelect;
 
-export interface CreateApplicationThreadData {
-  threadId: string;
+export interface CreateApplicationChannelData {
+  channelId: string;
   applicantId: string;
   applicantUsername: string;
   guildId: string;
-  parentChannelId: string;
 }
 
 /**
- * Record a freshly-opened application thread. Upserts on the thread id so
- * a re-created thread (e.g. a rejoin) cleanly replaces a stale row.
+ * Record an application channel. Upserts on the channel id so a reused
+ * channel cleanly refreshes (and resets the reminder/deletion state).
  */
-export async function createApplicationThread(
-  data: CreateApplicationThreadData,
-): Promise<ApplicationThread> {
+export async function createApplicationChannel(
+  data: CreateApplicationChannelData,
+): Promise<ApplicationChannel> {
   const [row] = await db
-    .insert(applicationThreads)
+    .insert(applicationChannels)
     .values({
-      thread_id: data.threadId,
+      channel_id: data.channelId,
       applicant_id: data.applicantId,
       applicant_username: data.applicantUsername,
       guild_id: data.guildId,
-      parent_channel_id: data.parentChannelId,
     })
     .onConflictDoUpdate({
-      target: applicationThreads.thread_id,
+      target: applicationChannels.channel_id,
       set: {
         applicant_id: sql`excluded.applicant_id`,
         applicant_username: sql`excluded.applicant_username`,
@@ -824,86 +875,86 @@ export async function createApplicationThread(
   return row;
 }
 
-export async function getApplicationThreadByThreadId(
-  threadId: string,
-): Promise<ApplicationThread | null> {
+export async function getApplicationChannelByChannelId(
+  channelId: string,
+): Promise<ApplicationChannel | null> {
   const [row] = await db
     .select()
-    .from(applicationThreads)
-    .where(eq(applicationThreads.thread_id, threadId))
+    .from(applicationChannels)
+    .where(eq(applicationChannels.channel_id, channelId))
     .limit(1);
   return row ?? null;
 }
 
-/** The most recent application thread opened for a given applicant. */
-export async function getApplicationThreadByApplicant(
+/** The most recent application channel opened for a given applicant. */
+export async function getApplicationChannelByApplicant(
   applicantId: string,
-): Promise<ApplicationThread | null> {
+): Promise<ApplicationChannel | null> {
   const [row] = await db
     .select()
-    .from(applicationThreads)
-    .where(eq(applicationThreads.applicant_id, applicantId))
-    .orderBy(desc(applicationThreads.created_at))
+    .from(applicationChannels)
+    .where(eq(applicationChannels.applicant_id, applicantId))
+    .orderBy(desc(applicationChannels.created_at))
     .limit(1);
   return row ?? null;
 }
 
-export async function markApplicationThreadReminded(
-  threadId: string,
+export async function markApplicationChannelReminded(
+  channelId: string,
 ): Promise<void> {
   await db
-    .update(applicationThreads)
+    .update(applicationChannels)
     .set({ reminded: true, updated_at: Math.floor(Date.now() / 1000) })
-    .where(eq(applicationThreads.thread_id, threadId));
+    .where(eq(applicationChannels.channel_id, channelId));
 }
 
-export async function setApplicationThreadDeleteAfter(
-  threadId: string,
+export async function setApplicationChannelDeleteAfter(
+  channelId: string,
   deleteAfter: number,
 ): Promise<void> {
   await db
-    .update(applicationThreads)
+    .update(applicationChannels)
     .set({
       delete_after: deleteAfter,
       updated_at: Math.floor(Date.now() / 1000),
     })
-    .where(eq(applicationThreads.thread_id, threadId));
+    .where(eq(applicationChannels.channel_id, channelId));
 }
 
 /**
- * Application threads due a "you haven't applied yet" reminder: created
+ * Application channels due a "you haven't applied yet" reminder: created
  * before `createdBefore` (unix seconds), not yet reminded, and not already
  * scheduled for deletion (i.e. still awaiting an application).
  */
-export async function getApplicationThreadsNeedingReminder(
+export async function getApplicationChannelsNeedingReminder(
   createdBefore: number,
-): Promise<ApplicationThread[]> {
+): Promise<ApplicationChannel[]> {
   return db
     .select()
-    .from(applicationThreads)
+    .from(applicationChannels)
     .where(
       and(
-        eq(applicationThreads.reminded, false),
-        isNull(applicationThreads.delete_after),
-        lte(applicationThreads.created_at, createdBefore),
+        eq(applicationChannels.reminded, false),
+        isNull(applicationChannels.delete_after),
+        lte(applicationChannels.created_at, createdBefore),
       ),
     );
 }
 
-/** Threads whose post-decision deletion window has elapsed. */
-export async function getExpiredApplicationThreads(
+/** Channels whose post-decision deletion window has elapsed. */
+export async function getExpiredApplicationChannels(
   now: number,
-): Promise<ApplicationThread[]> {
+): Promise<ApplicationChannel[]> {
   return db
     .select()
-    .from(applicationThreads)
-    .where(lte(applicationThreads.delete_after, now));
+    .from(applicationChannels)
+    .where(lte(applicationChannels.delete_after, now));
 }
 
-export async function deleteApplicationThreadRow(
-  threadId: string,
+export async function deleteApplicationChannelRow(
+  channelId: string,
 ): Promise<void> {
   await db
-    .delete(applicationThreads)
-    .where(eq(applicationThreads.thread_id, threadId));
+    .delete(applicationChannels)
+    .where(eq(applicationChannels.channel_id, channelId));
 }

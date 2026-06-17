@@ -10,7 +10,6 @@ import {
   TextChannel,
   TextInputBuilder,
   TextInputStyle,
-  ThreadChannel,
 } from "discord.js";
 import { errorContainer, successContainer, primaryContainer, coloredContainer, logAccept } from "../utils/embeds.js";
 import config from "../utils/config.js";
@@ -44,11 +43,11 @@ export default class ButtonInteractionEvent extends Event {
     if (interaction.user.bot) return;
 
     if (interaction.customId == "apply") {
-      // Only the thread's applicant can use the apply button
-      const appThread = await appDb
-        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+      // Only the channel's applicant can use the apply button
+      const appRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
         .catch(() => null);
-      if (!appThread || appThread.applicant_id !== interaction.user.id) {
+      if (!appRecord || appRecord.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -65,9 +64,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
+      const currentSeason = await appDb.getCurrentSeason().catch(() => null);
       const applicationModal = new ModalBuilder()
         .setCustomId("application")
-        .setTitle("Season 6 Application");
+        .setTitle(`${currentSeason?.name ?? "Server"} Application`.slice(0, 45));
 
       const minecraftUsername = new TextInputBuilder()
         .setCustomId("minecraft-username")
@@ -78,7 +78,7 @@ export default class ButtonInteractionEvent extends Event {
 
       const age = new TextInputBuilder()
         .setCustomId("age")
-        .setLabel("Are you 15 or older?")
+        .setLabel("Are you 17 or older?")
         .setPlaceholder("Answer must be: Y/N")
         .setRequired(true)
         .setStyle(TextInputStyle.Short);
@@ -134,9 +134,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
+      const currentSeasonFast = await appDb.getCurrentSeason().catch(() => null);
       const applicationModal = new ModalBuilder()
         .setCustomId("fast-application")
-        .setTitle("Season 6 Application");
+        .setTitle(`${currentSeasonFast?.name ?? "Server"} Application`.slice(0, 45));
 
       const minecraftUsername = new TextInputBuilder()
         .setCustomId("minecraft-username")
@@ -176,10 +177,10 @@ export default class ButtonInteractionEvent extends Event {
     }
 
     if (interaction.customId == "agree") {
-      const agreeThread = await appDb
-        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+      const agreeRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
         .catch(() => null);
-      if (!agreeThread || agreeThread.applicant_id !== interaction.user.id) {
+      if (!agreeRecord || agreeRecord.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -206,10 +207,10 @@ export default class ButtonInteractionEvent extends Event {
     }
 
     if (interaction.customId == "disagree") {
-      const disagreeThread = await appDb
-        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+      const disagreeRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
         .catch(() => null);
-      if (!disagreeThread || disagreeThread.applicant_id !== interaction.user.id) {
+      if (!disagreeRecord || disagreeRecord.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -272,17 +273,17 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      const appThread = interaction.channel as ThreadChannel;
-      const threadRow = await appDb
-        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+      const appChannel = interaction.channel as TextChannel;
+      const appRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
         .catch(() => null);
-      const applicantId = threadRow?.applicant_id;
+      const applicantId = appRecord?.applicant_id;
 
       if (!applicantId) {
         await interaction.reply({
           components: [
             errorContainer(
-              "**Error!** Could not determine the applicant from the thread.",
+              "**Error!** Could not determine the applicant from the channel.",
             ),
           ],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -334,6 +335,22 @@ export default class ButtonInteractionEvent extends Event {
 
       const UUID = resolved.uuid;
 
+      // Atomic guard against a double-accept race (two mods clicking at the
+      // same time): only the click that actually flips the application from
+      // pending → accepted proceeds; the loser bails out here.
+      const won = await appDb
+        .acceptApplication(applicant.id, interaction.user.id)
+        .catch(() => false);
+      if (!won) {
+        await interaction.reply({
+          components: [
+            errorContainer("This application has already been processed."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
       try {
         await mysql.query(
           "INSERT INTO discordsrv_accounts (uuid, discord) VALUES (?, ?)",
@@ -341,10 +358,12 @@ export default class ButtonInteractionEvent extends Event {
         );
       } catch (error) {
         logger.error("Failed to insert whitelist record:", error);
+        // Undo the accept-time status flip so a moderator can retry.
+        await appDb.revertApplicationToPending(applicant.id).catch(() => null);
         await interaction.reply({
           components: [
             errorContainer(
-              "**Error!** Failed to add the user to the whitelist database.",
+              "**Error!** Failed to add the user to the whitelist database. Please try again.",
             ),
           ],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -376,15 +395,14 @@ export default class ButtonInteractionEvent extends Event {
         logger.error("Failed to upsert player on accept:", e);
       }
 
-      try { await appDb.acceptApplication(applicant.id, interaction.user.id); }
-      catch (e) { logger.error("Failed to update application accept status:", e); }
+      // (application status was already flipped above as the race guard)
 
       try {
-        await appThread.send({ content: `<@${applicant.id}>` });
-        await appThread.send({
+        await appChannel.send({ content: `<@${applicant.id}>` });
+        await appChannel.send({
           components: [
             successContainer(
-              `## Application Accepted\n**Congratulations ${applicant.user.username}, your application has been accepted!**\n### Next Steps\nCheck out [our guide](https://wiki.crabcraft.net/Setup_Guide) for help installing **Simple Voice Chat**\n\nNeed anymore help? Let us know in this thread, or create a ticket <#1397191941782896670>\n-# This thread will be deleted in 12 hours`,
+              `## Application Accepted\n**Congratulations ${applicant.user.username}, your application has been accepted!**\n### Next Steps\nCheck out [our guide](https://wiki.crabcraft.net/Setup_Guide) for help installing **Simple Voice Chat**\n\nNeed anymore help? Let us know in this channel, or create a ticket <#1397191941782896670>\n-# Channel will be deleted in 12 hours`,
             ),
           ],
           flags: MessageFlags.IsComponentsV2,
@@ -394,14 +412,14 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       if (logChannel) {
-        await saveTranscriptToLog(appThread, logChannel, `accepted by ${interaction.user.tag}`).catch(() => null);
+        await saveTranscriptToLog(appChannel, logChannel, `accepted by ${interaction.user.tag}`).catch(() => null);
       }
 
       // Schedule deletion: the periodic + startup cleanup scans remove the
-      // thread (and the applicant's channel access) once this passes.
+      // channel once this passes (restart-safe).
       const acceptDeleteAt = Math.floor((Date.now() + CHANNEL_DELETE_DELAY_MS) / 1000);
       await appDb
-        .setApplicationThreadDeleteAfter(appThread.id, acceptDeleteAt)
+        .setApplicationChannelDeleteAfter(appChannel.id, acceptDeleteAt)
         .catch(() => null);
 
       try {
@@ -705,10 +723,10 @@ export default class ButtonInteractionEvent extends Event {
 
     // Edit application button
     if (interaction.customId.startsWith("edit_app:")) {
-      const editThread = await appDb
-        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+      const editRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
         .catch(() => null);
-      if (!editThread || editThread.applicant_id !== interaction.user.id) {
+      if (!editRecord || editRecord.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -741,10 +759,10 @@ export default class ButtonInteractionEvent extends Event {
 
       const age = new TextInputBuilder()
         .setCustomId("age")
-        .setLabel("Are you 15 or older?")
+        .setLabel("Are you 17 or older?")
         .setPlaceholder("Answer must be: Y/N")
         .setRequired(true)
-        .setValue(application.over_15 ? "Yes" : "No")
+        .setValue(application.age_met ? "Yes" : "No")
         .setStyle(TextInputStyle.Short);
 
       const ingameVoice = new TextInputBuilder()

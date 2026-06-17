@@ -7,7 +7,7 @@ import { logMemberLeft } from "../utils/embeds.js";
 import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
 import { fetchPlayerName } from "../utils/mojang.js";
-import { finalizeApplicationThread } from "../utils/applicationThread.js";
+import { finalizeApplicationChannel } from "../utils/applicationChannel.js";
 import { deleteAllAltsForUser } from "../utils/altDb.js";
 
 export default class MemberLeftEvent extends Event {
@@ -18,23 +18,22 @@ export default class MemberLeftEvent extends Event {
   async execute(member: GuildMember) {
     if (member.user.bot) return;
 
-    // 1. Tear down the applicant's private application thread (save a
-    //    transcript first, then delete the thread + revoke channel access).
+    // 1. Tear down the applicant's application channel (save a transcript
+    //    first, then delete the channel). Skip the transcript if the
+    //    application was already resolved (accept/deny already saved one).
     try {
       const row = await appDb
-        .getApplicationThreadByApplicant(member.id)
+        .getApplicationChannelByApplicant(member.id)
         .catch(() => null);
       if (row) {
-        // Skip the transcript if the application was already resolved
-        // (accept/deny already saved one); otherwise capture it now.
-        await finalizeApplicationThread(
+        await finalizeApplicationChannel(
           member.guild,
           row,
           row.delete_after ? null : `member ${member.user.tag} left`,
         );
       }
     } catch (error) {
-      logger.error("Failed to tear down application thread for departing member:", error);
+      logger.error("Failed to tear down application channel for departing member:", error);
     }
 
     // 2. Remove whitelist entry from MariaDB

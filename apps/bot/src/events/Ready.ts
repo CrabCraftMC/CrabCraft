@@ -4,7 +4,6 @@ import {
   SlashCommandBuilder,
   type Client,
   TextChannel,
-  ThreadChannel,
   MessageFlags,
 } from "discord.js";
 import Event from "../structures/Event.js";
@@ -25,10 +24,10 @@ import { syncLeaderboardEmojis } from "../utils/playerEmoji.js";
 import * as appDb from "../utils/appDb.js";
 import { primaryContainer } from "../utils/embeds.js";
 import {
+  backfillApplicationChannels,
   buildApplyButton,
-  ensureApplicationChannelPermissions,
-  finalizeApplicationThread,
-} from "../utils/applicationThread.js";
+  finalizeApplicationChannel,
+} from "../utils/applicationChannel.js";
 import { initWikiPoller } from "../utils/wiki.js";
 import { initStreamMonitor } from "../utils/streamMonitor.js";
 
@@ -42,15 +41,40 @@ export default class ReadyEvent extends Event {
       `${client.user?.tag} logged into Discord in ${Date.now() - start}ms`,
     );
 
-    // Ensure the moderator role can see + manage the application channel and
-    // its private threads on every startup (idempotent).
+    // One-time migration: adopt any pre-existing topic-based application
+    // channels into the application_channels table so in-flight applications
+    // keep working after this deploy.
     try {
       for (const [, guild] of client.guilds.cache) {
-        await ensureApplicationChannelPermissions(guild);
+        await backfillApplicationChannels(guild);
       }
     } catch (error) {
-      logger.error("Error ensuring application channel permissions:", error);
+      logger.error("Error backfilling application channels:", error);
     }
+
+    // Application channel cleanup — delete channels past their post-decision
+    // deletion window. Runs on startup and on an interval, so a restart that
+    // loses the in-process timer can't orphan a channel.
+    const cleanupExpiredApplicationChannels = async () => {
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const expired = await appDb.getExpiredApplicationChannels(now);
+        for (const row of expired) {
+          const guild = await client.guilds
+            .fetch(row.guild_id)
+            .catch(() => null);
+          if (!guild) {
+            await appDb.deleteApplicationChannelRow(row.channel_id).catch(() => null);
+            continue;
+          }
+          await finalizeApplicationChannel(guild, row, null);
+        }
+      } catch (error) {
+        logger.error("Application channel cleanup scan failed:", error);
+      }
+    };
+    await cleanupExpiredApplicationChannels();
+    setInterval(cleanupExpiredApplicationChannels, TICKET_CLEANUP_INTERVAL_MS);
 
     // Start leaderboard update loop
     setInterval(
@@ -85,42 +109,41 @@ export default class ReadyEvent extends Event {
       LEADERBOARD_REFRESH_MS,
     );
 
-    // Application reminder scan — nudge applicants who opened a thread but
+    // Application reminder scan — nudge applicants who opened a channel but
     // haven't submitted an application after the reminder delay.
     const scanApplicationReminders = async () => {
       try {
         const createdBefore = Math.floor(
           (Date.now() - APPLICATION_REMINDER_DELAY_MS) / 1000,
         );
-        const due = await appDb.getApplicationThreadsNeedingReminder(createdBefore);
+        const due = await appDb.getApplicationChannelsNeedingReminder(createdBefore);
 
         for (const row of due) {
           // Skip if the applicant already submitted an application.
           const hasPending = await appDb.hasPendingApplication(row.applicant_id);
           if (hasPending) continue;
 
-          const thread = await client.channels
-            .fetch(row.thread_id)
-            .catch(() => null) as ThreadChannel | null;
-          if (!thread) {
-            // Thread is gone — drop the stale row.
-            await appDb.deleteApplicationThreadRow(row.thread_id).catch(() => null);
+          const channel = await client.channels
+            .fetch(row.channel_id)
+            .catch(() => null) as TextChannel | null;
+          if (!channel) {
+            // Channel is gone — drop the stale row.
+            await appDb.deleteApplicationChannelRow(row.channel_id).catch(() => null);
             continue;
           }
-          if (thread.archived) await thread.setArchived(false).catch(() => null);
 
-          await thread.send({ content: `<@${row.applicant_id}>` });
-          await thread.send({
+          await channel.send({ content: `<@${row.applicant_id}>` });
+          await channel.send({
             components: [
               primaryContainer(
-                `## <:Crab:1397355651822256299> Reminder!\nYou haven't submitted your application yet! If you have any questions, feel free to ask in this thread.\n\nOtherwise, click the button below to get started.`,
+                `## <:Crab:1397355651822256299> Reminder!\nYou haven't submitted your application yet! If you have any questions, feel free to ask in this channel.\n\nOtherwise, click the button below to get started.`,
               ),
               buildApplyButton(),
             ],
             flags: MessageFlags.IsComponentsV2,
           });
 
-          await appDb.markApplicationThreadReminded(row.thread_id);
+          await appDb.markApplicationChannelReminded(row.channel_id);
         }
       } catch (error) {
         logger.error("Error during application reminder scan:", error);
@@ -130,29 +153,6 @@ export default class ReadyEvent extends Event {
     // Run once on startup, then every 30 minutes
     await scanApplicationReminders();
     setInterval(scanApplicationReminders, APPLICATION_REMINDER_CHECK_MS);
-
-    // Application thread cleanup — delete threads past their post-decision
-    // deletion window (restart-safe; survives lost in-process timers).
-    const cleanupExpiredApplicationThreads = async () => {
-      try {
-        const now = Math.floor(Date.now() / 1000);
-        const expired = await appDb.getExpiredApplicationThreads(now);
-        for (const row of expired) {
-          const guild = await client.guilds
-            .fetch(row.guild_id)
-            .catch(() => null);
-          if (!guild) {
-            await appDb.deleteApplicationThreadRow(row.thread_id).catch(() => null);
-            continue;
-          }
-          await finalizeApplicationThread(guild, row, null);
-        }
-      } catch (error) {
-        logger.error("Application thread cleanup scan failed:", error);
-      }
-    };
-    await cleanupExpiredApplicationThreads();
-    setInterval(cleanupExpiredApplicationThreads, TICKET_CLEANUP_INTERVAL_MS);
 
     // Ticket cleanup — delete closed-ticket channels past their delete window
     const cleanupExpiredTickets = async () => {

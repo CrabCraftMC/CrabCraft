@@ -53,7 +53,7 @@ async function migrateApplications() {
 
   for (const row of rows) {
     await pg`
-      INSERT INTO applications (id, discord_id, discord_username, minecraft_username, minecraft_uuid, over_15, voice_chat, policy_agreed, status, join_reason, favourite_wood, denial_reason, season, applied_at, resolved_at, resolved_by_discord_id)
+      INSERT INTO applications (id, discord_id, discord_username, minecraft_username, minecraft_uuid, age_met, voice_chat, policy_agreed, status, join_reason, favourite_wood, denial_reason, season, applied_at, resolved_at, resolved_by_discord_id)
       VALUES (
         ${row.id as number},
         ${row.discord_id as string},
