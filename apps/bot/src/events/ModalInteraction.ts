@@ -821,7 +821,7 @@ export default class ModalInteractionEvent extends Event {
     }
 
     // Application-submitted message (fresh) with Accept / Deny / Edit.
-    await channel
+    const submittedMessage = await channel
       .send({
         components: [
           submittedContainer,
@@ -829,9 +829,12 @@ export default class ModalInteractionEvent extends Event {
         ],
         flags: MessageFlags.IsComponentsV2,
       })
-      .catch((e) => logger.error("Failed to send application message:", e));
+      .catch((e) => {
+        logger.error("Failed to send application message:", e);
+        return null;
+      });
 
-    // Policy message (fresh) with Agree / Disagree.
+    // Policy message — sent as a reply to the application-submitted message.
     const policyContainer = primaryContainer(
       "## CrabCraft's Griefing & Stealing Policy\n**Just before we review your application, we need to ensure that you understand our policy on stealing.**\n\nWe have a zero tolerance policy towards stealing. If you steal from another player, you will be banned from the server.\nAll block interactions are logged, and all players are able to look into chest logs. This means any stealing will be traced back to the offending player.",
     );
@@ -850,6 +853,14 @@ export default class ModalInteractionEvent extends Event {
       .send({
         components: [policyContainer, policyRow],
         flags: MessageFlags.IsComponentsV2,
+        ...(submittedMessage
+          ? {
+              reply: {
+                messageReference: submittedMessage.id,
+                failIfNotExists: false,
+              },
+            }
+          : {}),
       })
       .catch((e) => logger.error("Failed to send policy message:", e));
 
