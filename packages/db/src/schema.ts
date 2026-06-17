@@ -409,38 +409,3 @@ export const tickets = pgTable(
     index("tickets_delete_after_idx").on(table.delete_after),
   ],
 );
-
-// ── application_threads ─────────────────────────────────────────
-// Private threads opened for each new member's whitelist application.
-// Replaces the old "one text channel per applicant under a category"
-// model: every applicant gets a private thread under the configured
-// application channel. Threads have no `topic` to stash metadata in, so
-// this table is the source of truth for thread↔applicant identity, the
-// "you haven't applied yet" reminder flag, and the post-decision
-// deletion window. Lifecycle: created on join → (optional) reminder →
-// delete_after set on accept/deny → row + thread removed by cleanup.
-export const applicationThreads = pgTable(
-  "application_threads",
-  {
-    thread_id: text("thread_id").primaryKey(),
-    applicant_id: text("applicant_id").notNull(),
-    applicant_username: text("applicant_username").notNull(),
-    guild_id: text("guild_id").notNull(),
-    parent_channel_id: text("parent_channel_id").notNull(),
-    reminded: boolean("reminded").notNull().default(false),
-    // Unix seconds; set when the application is accepted/denied. The
-    // thread (and the applicant's parent-channel access) is removed at
-    // this point by the periodic + startup cleanup scans.
-    delete_after: integer("delete_after"),
-    created_at: integer("created_at")
-      .notNull()
-      .$defaultFn(() => Math.floor(Date.now() / 1000)),
-    updated_at: integer("updated_at")
-      .notNull()
-      .$defaultFn(() => Math.floor(Date.now() / 1000)),
-  },
-  (table) => [
-    index("appthreads_applicant_idx").on(table.applicant_id),
-    index("appthreads_delete_after_idx").on(table.delete_after),
-  ],
-);

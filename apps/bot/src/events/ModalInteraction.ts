@@ -13,7 +13,6 @@ import {
   type GuildMember,
   type ModalSubmitInteraction,
   type TextChannel,
-  type ThreadChannel,
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
@@ -573,13 +572,10 @@ export default class ModalInteractionEvent extends Event {
         "No reason provided";
 
       const denyContainer = errorContainer(
-        `## Application Denied\nYour application has been **denied**.\n**Reason**\n\`\`\`${reason}\`\`\`\n-# This thread will be deleted in 12 hours`,
+        `## Application Denied\nYour application has been **denied**.\n**Reason**\n\`\`\`${reason}\`\`\`\n-# Channel will be deleted in 12 hours`,
       );
 
-      const appThread = interaction.channel as ThreadChannel;
-      const denyThreadRow = await appDb
-        .getApplicationThreadByThreadId(interaction.channelId ?? "")
-        .catch(() => null);
+      const appChannel = interaction.channel as TextChannel;
 
       if (!interaction.guild) return;
       const logChannel = await interaction.guild.channels
@@ -616,12 +612,12 @@ export default class ModalInteractionEvent extends Event {
         }
       }
 
-      const applicantId = denyThreadRow?.applicant_id;
+      const applicantId = appChannel.topic?.split("|")[0];
       try {
         if (applicantId) {
-          await appThread.send({ content: `<@${applicantId}>` });
+          await appChannel.send({ content: `<@${applicantId}>` });
         }
-        await appThread.send({
+        await appChannel.send({
           components: [denyContainer],
           flags: MessageFlags.IsComponentsV2,
         });
@@ -658,26 +654,16 @@ export default class ModalInteractionEvent extends Event {
       }
 
       if (logChannel) {
-        await saveTranscriptToLog(appThread, logChannel, `denied by ${interaction.user.tag}`).catch(() => null);
+        await saveTranscriptToLog(appChannel, logChannel, `denied by ${interaction.user.tag}`).catch(() => null);
       }
 
-      // Schedule deletion: the periodic + startup cleanup scans remove the
-      // thread (and the applicant's channel access) once this passes.
-      const denyDeleteAt = Math.floor((Date.now() + CHANNEL_DELETE_DELAY_MS) / 1000);
-      if (denyThreadRow) {
-        await appDb
-          .setApplicationThreadDeleteAfter(denyThreadRow.thread_id, denyDeleteAt)
-          .catch(() => null);
-      } else {
-        // No tracking row (anomaly) — fall back to a direct timed deletion so
-        // the thread isn't left orphaned (the cleanup scan only sees rows).
-        logger.warn(
-          `Deny: no application_threads row for thread ${appThread.id}; scheduling direct deletion.`,
-        );
-        setTimeout(() => {
-          appThread.delete("Application denied").catch(() => null);
-        }, CHANNEL_DELETE_DELAY_MS);
-      }
+      await appChannel.setTopic(`${applicantId}|delete-after:${Date.now() + CHANNEL_DELETE_DELAY_MS}`).catch(() => null);
+      setTimeout(
+        async () => {
+          await appChannel.delete().catch(() => null);
+        },
+        CHANNEL_DELETE_DELAY_MS,
+      );
       return;
     }
   }
