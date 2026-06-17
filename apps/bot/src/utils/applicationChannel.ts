@@ -56,6 +56,24 @@ export function buildApplyButton(): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
+/** The Application Hub panel (posted once by /application-hub). */
+export function buildApplicationHubContainer() {
+  return primaryContainer(
+    `## <:Crab:1397355651822256299> Application Hub\nWant to join CrabCraft, or did your application channel close due to inactivity?\n\nClick the button below to open a fresh application channel — only you and our staff can see it.`,
+  );
+}
+
+/** The "Open Application" button shown on the Application Hub panel. */
+export function buildApplicationHubButton(): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId("app_hub_open")
+      .setLabel("Open Application")
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji("📝"),
+  );
+}
+
 /**
  * Post the welcome message: the applicant ping (as a text component) and the
  * welcome/requirements panel + Apply button, all in a single message.
