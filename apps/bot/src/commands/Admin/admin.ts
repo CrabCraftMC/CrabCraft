@@ -12,6 +12,7 @@ import {
   buildFastTrackContainer,
 } from "../../utils/applicationChannel.js";
 import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
+import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
 import {
   fetchLeaderboardData,
   buildLeaderboardComponents,
@@ -424,17 +425,7 @@ export default class AdminCommand extends SlashCommand {
 
         case "rules_info":
           await textChannel.send({
-            components: [
-              primaryContainer(
-                "## <:Crab:1397355651822256299> Rules & Info\n" +
-                  "**1. Be respectful.** Treat everyone with kindness — no harassment, hate, or drama.\n" +
-                  "**2. Zero tolerance for griefing & stealing.** All block and chest interactions are logged; offenders are banned.\n" +
-                  "**3. No cheating.** Hacked clients, exploits, and duping are not allowed.\n" +
-                  "**4. Keep it friendly.** Use common sense and listen to staff.\n\n" +
-                  "**Voice chat** — we use Simple Voice Chat. Setup guide: <https://wiki.crabcraft.net/Setup_Guide>\n" +
-                  "**Need more info?** Check the wiki: <https://wiki.crabcraft.net>",
-              ),
-            ],
+            components: buildRulesInfoComponents(),
             flags: MessageFlags.IsComponentsV2,
           });
           label = "Rules & info";
