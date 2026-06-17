@@ -12,7 +12,7 @@ interface IdConfig {
     live?: string;
   };
   channels: {
-    applicationCategory: string;
+    applicationChannel: string;
     log: string;
     leaderboard?: string;
     wiki?: string;
@@ -47,7 +47,7 @@ if (missingEnv.length > 0) {
 const REQUIRED_IDS: Array<[string, string | undefined]> = [
   ["roles.member", ids.roles?.member],
   ["roles.mod", ids.roles?.mod],
-  ["channels.applicationCategory", ids.channels?.applicationCategory],
+  ["channels.applicationChannel", ids.channels?.applicationChannel],
   ["channels.log", ids.channels?.log],
   ["channels.ticketCategory", ids.channels?.ticketCategory],
 ];
@@ -72,7 +72,7 @@ interface IConfig {
   MEMBER_ROLE_ID: string;
   MOD_ROLE_ID: string;
   LIVE_ROLE_ID: string;
-  APPLICATION_CATEGORY_ID: string;
+  APPLICATION_CHANNEL_ID: string;
   LOG_CHANNEL_ID: string;
   LEADERBOARD_CHANNEL_ID: string;
   WIKI_CHANNEL_ID: string;
@@ -93,7 +93,7 @@ const config: IConfig = {
   MEMBER_ROLE_ID: ids.roles.member,
   MOD_ROLE_ID: ids.roles.mod,
   LIVE_ROLE_ID: ids.roles.live ?? "",
-  APPLICATION_CATEGORY_ID: ids.channels.applicationCategory,
+  APPLICATION_CHANNEL_ID: ids.channels.applicationChannel,
   LOG_CHANNEL_ID: ids.channels.log,
   LEADERBOARD_CHANNEL_ID: ids.channels.leaderboard ?? "",
   WIKI_CHANNEL_ID: ids.channels.wiki ?? "",

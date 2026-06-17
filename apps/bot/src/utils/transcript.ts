@@ -1,5 +1,6 @@
 import {
   type TextChannel,
+  type ThreadChannel,
   type Message,
   type APIEmbed,
   ComponentType,
@@ -8,6 +9,9 @@ import {
 } from "discord.js";
 import logger from "./logger.js";
 
+/** A channel whose messages can be rendered to a transcript. */
+export type TranscriptChannel = TextChannel | ThreadChannel;
+
 // ── Public API ────────────────────────────────────────────────────────
 
 /**
@@ -15,7 +19,7 @@ import logger from "./logger.js";
  * Failures are logged but never thrown — this must not block channel deletion.
  */
 export async function saveTranscriptToLog(
-  channel: TextChannel,
+  channel: TranscriptChannel,
   logChannel: TextChannel,
   description: string,
 ): Promise<void> {
@@ -36,13 +40,13 @@ export async function saveTranscriptToLog(
 
 // ── Transcript generation ─────────────────────────────────────────────
 
-export async function generateTranscript(channel: TextChannel, maxMessages?: number): Promise<string> {
+export async function generateTranscript(channel: TranscriptChannel, maxMessages?: number): Promise<string> {
   const messages = await fetchAllMessages(channel, maxMessages);
   const rendered = messages.map((msg) => renderMessage(msg)).join("\n");
   return wrapInHtml(channel.name, rendered);
 }
 
-async function fetchAllMessages(channel: TextChannel, maxMessages?: number): Promise<Message[]> {
+async function fetchAllMessages(channel: TranscriptChannel, maxMessages?: number): Promise<Message[]> {
   const all: Message[] = [];
   let lastId: string | undefined;
   const cap = maxMessages ?? Infinity;
