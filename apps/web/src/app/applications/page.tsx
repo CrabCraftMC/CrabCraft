@@ -169,14 +169,14 @@ export default async function ApplicationsPage() {
                         )}
                         <div>
                           <span className="text-gray-500 dark:text-gray-400">
-                            Over 15:{" "}
+                            Age requirement:{" "}
                           </span>
                           <span
                             className={
-                              app.over_15 ? "text-green-500" : "text-red-500"
+                              app.age_met ? "text-green-500" : "text-red-500"
                             }
                           >
-                            {app.over_15 ? "Yes" : "No"}
+                            {app.age_met ? "Yes" : "No"}
                           </span>
                         </div>
                         <div>

@@ -1,6 +1,5 @@
 import logger from "../utils/logger.js";
 import {
-  ChannelType,
   Routes,
   SlashCommandBuilder,
   type Client,
@@ -9,8 +8,6 @@ import {
 } from "discord.js";
 import Event from "../structures/Event.js";
 import { start } from "../index.js";
-import config from "../utils/config.js";
-import { saveTranscriptToLog } from "../utils/transcript.js";
 import { commands } from "../index.js";
 import { loadLeaderboardState } from "../utils/leaderboardState.js";
 import {
@@ -26,7 +23,11 @@ import {
 import { syncLeaderboardEmojis } from "../utils/playerEmoji.js";
 import * as appDb from "../utils/appDb.js";
 import { primaryContainer } from "../utils/embeds.js";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import {
+  backfillApplicationChannels,
+  buildApplyButton,
+  finalizeApplicationChannel,
+} from "../utils/applicationChannel.js";
 import { initWikiPoller } from "../utils/wiki.js";
 import { initStreamMonitor } from "../utils/streamMonitor.js";
 
@@ -40,29 +41,40 @@ export default class ReadyEvent extends Event {
       `${client.user?.tag} logged into Discord in ${Date.now() - start}ms`,
     );
 
-    // Clean up application channels that were scheduled for deletion before a restart
+    // One-time migration: adopt any pre-existing topic-based application
+    // channels into the application_channels table so in-flight applications
+    // keep working after this deploy.
     try {
-      const category = client.channels.cache.get(config.APPLICATION_CATEGORY_ID);
-      if (category?.type === ChannelType.GuildCategory) {
-        for (const [, ch] of category.children.cache) {
-          const topic = (ch as TextChannel).topic ?? "";
-          const match = topic.match(/\|delete-after:(\d+)/);
-          if (match && Date.now() >= Number(match[1])) {
-            try {
-              const logCh = await (ch as TextChannel).guild.channels
-                .fetch(config.LOG_CHANNEL_ID)
-                .catch(() => null) as TextChannel | null;
-              if (logCh) {
-                await saveTranscriptToLog(ch as TextChannel, logCh, "startup cleanup").catch(() => null);
-              }
-            } catch { /* don't block cleanup */ }
-            await ch.delete().catch((e) => logger.error("Startup channel cleanup failed:", e));
-          }
-        }
+      for (const [, guild] of client.guilds.cache) {
+        await backfillApplicationChannels(guild);
       }
     } catch (error) {
-      logger.error("Error during startup channel cleanup:", error);
+      logger.error("Error backfilling application channels:", error);
     }
+
+    // Application channel cleanup — delete channels past their post-decision
+    // deletion window. Runs on startup and on an interval, so a restart that
+    // loses the in-process timer can't orphan a channel.
+    const cleanupExpiredApplicationChannels = async () => {
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const expired = await appDb.getExpiredApplicationChannels(now);
+        for (const row of expired) {
+          const guild = await client.guilds
+            .fetch(row.guild_id)
+            .catch(() => null);
+          if (!guild) {
+            await appDb.deleteApplicationChannelRow(row.channel_id).catch(() => null);
+            continue;
+          }
+          await finalizeApplicationChannel(guild, row, null);
+        }
+      } catch (error) {
+        logger.error("Application channel cleanup scan failed:", error);
+      }
+    };
+    await cleanupExpiredApplicationChannels();
+    setInterval(cleanupExpiredApplicationChannels, TICKET_CLEANUP_INTERVAL_MS);
 
     // Start leaderboard update loop
     setInterval(
@@ -97,55 +109,41 @@ export default class ReadyEvent extends Event {
       LEADERBOARD_REFRESH_MS,
     );
 
-    // Application reminder scan - sends a reminder to inactive applicants
+    // Application reminder scan — nudge applicants who opened a channel but
+    // haven't submitted an application after the reminder delay.
     const scanApplicationReminders = async () => {
       try {
-        const appCategory = client.channels.cache.get(config.APPLICATION_CATEGORY_ID);
-        if (!appCategory || appCategory.type !== ChannelType.GuildCategory) return;
+        const createdBefore = Math.floor(
+          (Date.now() - APPLICATION_REMINDER_DELAY_MS) / 1000,
+        );
+        const due = await appDb.getApplicationChannelsNeedingReminder(createdBefore);
 
-        for (const [, ch] of appCategory.children.cache) {
-          if (!ch.isTextBased()) continue;
-          const textChannel = ch as TextChannel;
-          const topic = textChannel.topic;
-          if (!topic) continue;
-
-          const parts = topic.split("|");
-          const userId = parts[0];
-
-          // Skip if already reminded or scheduled for deletion
-          if (parts.some((p) => p === "reminded" || p.startsWith("delete-after:"))) continue;
-
-          // Use Discord's built-in channel creation time
-          if (Date.now() - ch.createdTimestamp < APPLICATION_REMINDER_DELAY_MS) continue;
-
-          // Check if user already has a pending application
-          const hasPending = await appDb.hasPendingApplication(userId);
+        for (const row of due) {
+          // Skip if the applicant already submitted an application.
+          const hasPending = await appDb.hasPendingApplication(row.applicant_id);
           if (hasPending) continue;
 
-          // Send reminder
-          const applyButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId("apply")
-              .setLabel("Apply")
-              .setStyle(ButtonStyle.Primary)
-              .setEmoji("📝"),
-          );
+          const channel = await client.channels
+            .fetch(row.channel_id)
+            .catch(() => null) as TextChannel | null;
+          if (!channel) {
+            // Channel is gone — drop the stale row.
+            await appDb.deleteApplicationChannelRow(row.channel_id).catch(() => null);
+            continue;
+          }
 
-          await textChannel.send({
-            content: `<@${userId}>`,
-          });
-          await textChannel.send({
+          await channel.send({ content: `<@${row.applicant_id}>` });
+          await channel.send({
             components: [
               primaryContainer(
                 `## <:Crab:1397355651822256299> Reminder!\nYou haven't submitted your application yet! If you have any questions, feel free to ask in this channel.\n\nOtherwise, click the button below to get started.`,
               ),
-              applyButton,
+              buildApplyButton(),
             ],
             flags: MessageFlags.IsComponentsV2,
           });
 
-          // Mark as reminded
-          await textChannel.setTopic(`${topic}|reminded`).catch(() => null);
+          await appDb.markApplicationChannelReminded(row.channel_id);
         }
       } catch (error) {
         logger.error("Error during application reminder scan:", error);

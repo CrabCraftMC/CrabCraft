@@ -163,9 +163,9 @@ export default function AccountTab({
                         </div>
                       )}
                       <div>
-                        <span className="opacity-50">Over 15: </span>
-                        <span className={app.over_15 ? "text-green-500" : "text-red-500"}>
-                          {app.over_15 ? "Yes" : "No"}
+                        <span className="opacity-50">Age requirement: </span>
+                        <span className={app.age_met ? "text-green-500" : "text-red-500"}>
+                          {app.age_met ? "Yes" : "No"}
                         </span>
                       </div>
                       <div>

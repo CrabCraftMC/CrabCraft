@@ -44,8 +44,10 @@ export default class ButtonInteractionEvent extends Event {
 
     if (interaction.customId == "apply") {
       // Only the channel's applicant can use the apply button
-      const appChannel = interaction.channel as TextChannel;
-      if (!appChannel.topic || appChannel.topic.split("|")[0] !== interaction.user.id) {
+      const appRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
+        .catch(() => null);
+      if (!appRecord || appRecord.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -62,9 +64,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
+      const currentSeason = await appDb.getCurrentSeason().catch(() => null);
       const applicationModal = new ModalBuilder()
         .setCustomId("application")
-        .setTitle("Season 6 Application");
+        .setTitle(`${currentSeason?.name ?? "Server"} Application`.slice(0, 45));
 
       const minecraftUsername = new TextInputBuilder()
         .setCustomId("minecraft-username")
@@ -75,7 +78,7 @@ export default class ButtonInteractionEvent extends Event {
 
       const age = new TextInputBuilder()
         .setCustomId("age")
-        .setLabel("Are you 15 or older?")
+        .setLabel("Are you 17 or older?")
         .setPlaceholder("Answer must be: Y/N")
         .setRequired(true)
         .setStyle(TextInputStyle.Short);
@@ -131,9 +134,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
+      const currentSeasonFast = await appDb.getCurrentSeason().catch(() => null);
       const applicationModal = new ModalBuilder()
         .setCustomId("fast-application")
-        .setTitle("Season 6 Application");
+        .setTitle(`${currentSeasonFast?.name ?? "Server"} Application`.slice(0, 45));
 
       const minecraftUsername = new TextInputBuilder()
         .setCustomId("minecraft-username")
@@ -173,8 +177,10 @@ export default class ButtonInteractionEvent extends Event {
     }
 
     if (interaction.customId == "agree") {
-      const agreeChannel = interaction.channel as TextChannel;
-      if (!agreeChannel.topic || agreeChannel.topic.split("|")[0] !== interaction.user.id) {
+      const agreeRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
+        .catch(() => null);
+      if (!agreeRecord || agreeRecord.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -201,8 +207,10 @@ export default class ButtonInteractionEvent extends Event {
     }
 
     if (interaction.customId == "disagree") {
-      const disagreeChannel = interaction.channel as TextChannel;
-      if (!disagreeChannel.topic || disagreeChannel.topic.split("|")[0] !== interaction.user.id) {
+      const disagreeRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
+        .catch(() => null);
+      if (!disagreeRecord || disagreeRecord.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -265,8 +273,11 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      const appChannel = interaction.message.channel as TextChannel;
-      const applicantId = appChannel.topic?.split("|")[0];
+      const appChannel = interaction.channel as TextChannel;
+      const appRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
+        .catch(() => null);
+      const applicantId = appRecord?.applicant_id;
 
       if (!applicantId) {
         await interaction.reply({
@@ -324,6 +335,22 @@ export default class ButtonInteractionEvent extends Event {
 
       const UUID = resolved.uuid;
 
+      // Atomic guard against a double-accept race (two mods clicking at the
+      // same time): only the click that actually flips the application from
+      // pending → accepted proceeds; the loser bails out here.
+      const won = await appDb
+        .acceptApplication(applicant.id, interaction.user.id)
+        .catch(() => false);
+      if (!won) {
+        await interaction.reply({
+          components: [
+            errorContainer("This application has already been processed."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
       try {
         await mysql.query(
           "INSERT INTO discordsrv_accounts (uuid, discord) VALUES (?, ?)",
@@ -331,10 +358,12 @@ export default class ButtonInteractionEvent extends Event {
         );
       } catch (error) {
         logger.error("Failed to insert whitelist record:", error);
+        // Undo the accept-time status flip so a moderator can retry.
+        await appDb.revertApplicationToPending(applicant.id).catch(() => null);
         await interaction.reply({
           components: [
             errorContainer(
-              "**Error!** Failed to add the user to the whitelist database.",
+              "**Error!** Failed to add the user to the whitelist database. Please try again.",
             ),
           ],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -366,14 +395,11 @@ export default class ButtonInteractionEvent extends Event {
         logger.error("Failed to upsert player on accept:", e);
       }
 
-      try { await appDb.acceptApplication(applicant.id, interaction.user.id); }
-      catch (e) { logger.error("Failed to update application accept status:", e); }
+      // (application status was already flipped above as the race guard)
 
       try {
-        // @ts-ignore
-        await interaction.channel.send({ content: `<@${applicant.id}>` });
-        // @ts-ignore
-        await interaction.channel.send({
+        await appChannel.send({ content: `<@${applicant.id}>` });
+        await appChannel.send({
           components: [
             successContainer(
               `## Application Accepted\n**Congratulations ${applicant.user.username}, your application has been accepted!**\n### Next Steps\nCheck out [our guide](https://wiki.crabcraft.net/Setup_Guide) for help installing **Simple Voice Chat**\n\nNeed anymore help? Let us know in this channel, or create a ticket <#1397191941782896670>\n-# Channel will be deleted in 12 hours`,
@@ -389,13 +415,12 @@ export default class ButtonInteractionEvent extends Event {
         await saveTranscriptToLog(appChannel, logChannel, `accepted by ${interaction.user.tag}`).catch(() => null);
       }
 
-      await appChannel.setTopic(`${appChannel.topic}|delete-after:${Date.now() + CHANNEL_DELETE_DELAY_MS}`).catch(() => null);
-      setTimeout(
-        async () => {
-          await appChannel.delete().catch(() => null);
-        },
-        CHANNEL_DELETE_DELAY_MS,
-      );
+      // Schedule deletion: the periodic + startup cleanup scans remove the
+      // channel once this passes (restart-safe).
+      const acceptDeleteAt = Math.floor((Date.now() + CHANNEL_DELETE_DELAY_MS) / 1000);
+      await appDb
+        .setApplicationChannelDeleteAfter(appChannel.id, acceptDeleteAt)
+        .catch(() => null);
 
       try {
         const disabledRows = interaction.message.components
@@ -698,8 +723,10 @@ export default class ButtonInteractionEvent extends Event {
 
     // Edit application button
     if (interaction.customId.startsWith("edit_app:")) {
-      const appChannel = interaction.channel as TextChannel;
-      if (!appChannel.topic || appChannel.topic.split("|")[0] !== interaction.user.id) {
+      const editRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
+        .catch(() => null);
+      if (!editRecord || editRecord.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -732,10 +759,10 @@ export default class ButtonInteractionEvent extends Event {
 
       const age = new TextInputBuilder()
         .setCustomId("age")
-        .setLabel("Are you 15 or older?")
+        .setLabel("Are you 17 or older?")
         .setPlaceholder("Answer must be: Y/N")
         .setRequired(true)
-        .setValue(application.over_15 ? "Yes" : "No")
+        .setValue(application.age_met ? "Yes" : "No")
         .setStyle(TextInputStyle.Short);
 
       const ingameVoice = new TextInputBuilder()

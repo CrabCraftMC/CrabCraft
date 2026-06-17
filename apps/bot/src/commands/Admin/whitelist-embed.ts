@@ -1,4 +1,5 @@
 import SlashCommand from "../../structures/SlashCommand.js";
+import * as appDb from "../../utils/appDb.js";
 
 import {
   ActionRowBuilder,
@@ -17,17 +18,19 @@ export default class AccessCCCommand extends SlashCommand {
   }
 
   async execute(interaction: ChatInputCommandInteraction) {
+    const currentSeason = await appDb.getCurrentSeason().catch(() => null);
+    const seasonName = currentSeason?.name ?? "the server";
+
     const button = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId("fast-apply")
         .setEmoji("🎄")
-        .setLabel("Season 6")
+        .setLabel(seasonName.slice(0, 80))
         .setStyle(ButtonStyle.Primary),
     );
 
     (interaction.channel as TextChannel).send({
-      content:
-        "Want to join us for **Season 6?**\nClick the button below this message to gain access.",
+      content: `Want to join us for **${seasonName}?**\nClick the button below this message to gain access.`,
       components: [button],
     });
 

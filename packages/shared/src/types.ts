@@ -86,7 +86,7 @@ export interface Application {
   discord_username: string;
   minecraft_username: string;
   minecraft_uuid: string;
-  over_15: boolean;
+  age_met: boolean;
   voice_chat: boolean;
   policy_agreed: boolean;
   status: "pending" | "accepted" | "denied";

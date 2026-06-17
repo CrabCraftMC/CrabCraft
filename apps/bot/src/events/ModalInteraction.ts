@@ -104,18 +104,30 @@ export default class ModalInteractionEvent extends Event {
 
       interaction.message?.delete().catch(() => null);
 
-      if (parseInt(age) < 15 && !ACCEPTED_VALUES.includes(age)) {
+      // Age gate: must affirmatively confirm 17+ (an affirmative answer, or a
+      // number ≥ 17). Anything else — "no", a number < 17, or junk — is an
+      // automatic denial.
+      const ageNumber = parseInt(age, 10);
+      const meetsAge =
+        ACCEPTED_VALUES.includes(age) ||
+        (Number.isFinite(ageNumber) && ageNumber >= 17);
+      if (!meetsAge) {
         await interaction.reply({
           components: [
             errorContainer(
-              "**Sorry**, you must be 15 or older to join CrabCraft.",
+              "**Sorry**, you must be 17 or older to join CrabCraft.",
             ),
           ],
           flags: MessageFlags.IsComponentsV2,
         });
         if (logChannel) {
           await logChannel.send({
-            components: [logAutoReject(interaction.user.id, "Under 15")],
+            components: [
+              logAutoReject(
+                interaction.user.id,
+                "Age requirement not met (must be 17+)",
+              ),
+            ],
             flags: MessageFlags.IsComponentsV2,
           }).catch(() => null);
         }
@@ -321,7 +333,7 @@ export default class ModalInteractionEvent extends Event {
         await appDb.updateApplication(interaction.user.id, {
           minecraftUsername: minecraftUsername,
           minecraftUuid: resolved.uuid,
-          over15: ACCEPTED_VALUES.includes(age) || parseInt(age) >= 15,
+          ageMet: ACCEPTED_VALUES.includes(age) || parseInt(age, 10) >= 17,
           voiceChat: ACCEPTED_VALUES.includes(ingameVoice),
           joinReason: joinReason,
           favouriteWood: favouriteWood || undefined,
@@ -340,7 +352,7 @@ export default class ModalInteractionEvent extends Event {
           const appMessage = await interaction.channel.messages.fetch(appMessageId);
           if (appMessage) {
             const fields = [
-              `**Are you 15 or older?**\n${age}`,
+              `**Are you 17 or older?**\n${age}`,
               `**Are you willing to speak in game?**\n${ingameVoice}`,
               `**Why do you want to join CrabCraft?**\n${joinReason}`,
             ];
@@ -576,6 +588,9 @@ export default class ModalInteractionEvent extends Event {
       );
 
       const appChannel = interaction.channel as TextChannel;
+      const denyRecord = await appDb
+        .getApplicationChannelByChannelId(interaction.channelId ?? "")
+        .catch(() => null);
 
       if (!interaction.guild) return;
       const logChannel = await interaction.guild.channels
@@ -612,7 +627,7 @@ export default class ModalInteractionEvent extends Event {
         }
       }
 
-      const applicantId = appChannel.topic?.split("|")[0];
+      const applicantId = denyRecord?.applicant_id;
       try {
         if (applicantId) {
           await appChannel.send({ content: `<@${applicantId}>` });
@@ -657,13 +672,23 @@ export default class ModalInteractionEvent extends Event {
         await saveTranscriptToLog(appChannel, logChannel, `denied by ${interaction.user.tag}`).catch(() => null);
       }
 
-      await appChannel.setTopic(`${applicantId}|delete-after:${Date.now() + CHANNEL_DELETE_DELAY_MS}`).catch(() => null);
-      setTimeout(
-        async () => {
-          await appChannel.delete().catch(() => null);
-        },
-        CHANNEL_DELETE_DELAY_MS,
-      );
+      // Schedule deletion: the periodic + startup cleanup scans remove the
+      // channel once this passes (restart-safe).
+      const denyDeleteAt = Math.floor((Date.now() + CHANNEL_DELETE_DELAY_MS) / 1000);
+      if (denyRecord) {
+        await appDb
+          .setApplicationChannelDeleteAfter(denyRecord.channel_id, denyDeleteAt)
+          .catch(() => null);
+      } else {
+        // No tracking row (anomaly) — fall back to a direct timed deletion so
+        // the channel isn't orphaned (the cleanup scan only sees rows).
+        logger.warn(
+          `Deny: no application_channels row for channel ${appChannel.id}; scheduling direct deletion.`,
+        );
+        setTimeout(() => {
+          appChannel.delete().catch(() => null);
+        }, CHANNEL_DELETE_DELAY_MS);
+      }
       return;
     }
   }
@@ -718,7 +743,7 @@ export default class ModalInteractionEvent extends Event {
     }
 
     const fields = [
-      `**Are you 15 or older?**\n${age}`,
+      `**Are you 17 or older?**\n${age}`,
       `**Are you willing to speak in game?**\n${ingameVoice}`,
       `**Why do you want to join CrabCraft?**\n${joinReason}`,
     ];
@@ -792,6 +817,7 @@ export default class ModalInteractionEvent extends Event {
     // Persist to database. The MC link in `players` is claimed at accept
     // time only — submitting an application shouldn't yank another
     // player's MC link out of the players table.
+    const currentSeason = await appDb.getCurrentSeason().catch(() => null);
     let persisted = false;
     try {
       await appDb.upsertUser({
@@ -803,10 +829,11 @@ export default class ModalInteractionEvent extends Event {
         discordUsername: interaction.user.username,
         minecraftUsername: minecraftUsername,
         minecraftUuid: UUID,
-        over15: ACCEPTED_VALUES.includes(age) || parseInt(age) >= 15,
+        ageMet: ACCEPTED_VALUES.includes(age) || parseInt(age, 10) >= 17,
         voiceChat: ACCEPTED_VALUES.includes(ingameVoice),
         joinReason: joinReason,
         favouriteWood: favouriteWood || undefined,
+        season: currentSeason?.id ?? null,
       });
       persisted = true;
     } catch (e) {
@@ -924,6 +951,7 @@ export default class ModalInteractionEvent extends Event {
 
     // Persist to database (upsert user + create accepted application)
     try {
+      const currentSeason = await appDb.getCurrentSeason().catch(() => null);
       await appDb.upsertUser({
         discordId: interaction.user.id,
         discordUsername: interaction.user.username,
@@ -935,8 +963,9 @@ export default class ModalInteractionEvent extends Event {
         discordUsername: interaction.user.username,
         minecraftUsername: minecraftUsername,
         minecraftUuid: UUID,
-        over15: true,
+        ageMet: true,
         voiceChat: true,
+        season: currentSeason?.id ?? null,
       });
       await appDb.acceptApplication(interaction.user.id, interaction.user.id);
     } catch (e) {
