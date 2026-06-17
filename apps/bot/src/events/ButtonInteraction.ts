@@ -10,6 +10,7 @@ import {
   TextChannel,
   TextInputBuilder,
   TextInputStyle,
+  ThreadChannel,
 } from "discord.js";
 import { errorContainer, successContainer, primaryContainer, coloredContainer, logAccept } from "../utils/embeds.js";
 import config from "../utils/config.js";
@@ -43,9 +44,11 @@ export default class ButtonInteractionEvent extends Event {
     if (interaction.user.bot) return;
 
     if (interaction.customId == "apply") {
-      // Only the channel's applicant can use the apply button
-      const appChannel = interaction.channel as TextChannel;
-      if (!appChannel.topic || appChannel.topic.split("|")[0] !== interaction.user.id) {
+      // Only the thread's applicant can use the apply button
+      const appThread = await appDb
+        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+        .catch(() => null);
+      if (!appThread || appThread.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -173,8 +176,10 @@ export default class ButtonInteractionEvent extends Event {
     }
 
     if (interaction.customId == "agree") {
-      const agreeChannel = interaction.channel as TextChannel;
-      if (!agreeChannel.topic || agreeChannel.topic.split("|")[0] !== interaction.user.id) {
+      const agreeThread = await appDb
+        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+        .catch(() => null);
+      if (!agreeThread || agreeThread.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -201,8 +206,10 @@ export default class ButtonInteractionEvent extends Event {
     }
 
     if (interaction.customId == "disagree") {
-      const disagreeChannel = interaction.channel as TextChannel;
-      if (!disagreeChannel.topic || disagreeChannel.topic.split("|")[0] !== interaction.user.id) {
+      const disagreeThread = await appDb
+        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+        .catch(() => null);
+      if (!disagreeThread || disagreeThread.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -265,14 +272,17 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      const appChannel = interaction.message.channel as TextChannel;
-      const applicantId = appChannel.topic?.split("|")[0];
+      const appThread = interaction.channel as ThreadChannel;
+      const threadRow = await appDb
+        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+        .catch(() => null);
+      const applicantId = threadRow?.applicant_id;
 
       if (!applicantId) {
         await interaction.reply({
           components: [
             errorContainer(
-              "**Error!** Could not determine the applicant from the channel.",
+              "**Error!** Could not determine the applicant from the thread.",
             ),
           ],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -370,13 +380,11 @@ export default class ButtonInteractionEvent extends Event {
       catch (e) { logger.error("Failed to update application accept status:", e); }
 
       try {
-        // @ts-ignore
-        await interaction.channel.send({ content: `<@${applicant.id}>` });
-        // @ts-ignore
-        await interaction.channel.send({
+        await appThread.send({ content: `<@${applicant.id}>` });
+        await appThread.send({
           components: [
             successContainer(
-              `## Application Accepted\n**Congratulations ${applicant.user.username}, your application has been accepted!**\n### Next Steps\nCheck out [our guide](https://wiki.crabcraft.net/Setup_Guide) for help installing **Simple Voice Chat**\n\nNeed anymore help? Let us know in this channel, or create a ticket <#1397191941782896670>\n-# Channel will be deleted in 12 hours`,
+              `## Application Accepted\n**Congratulations ${applicant.user.username}, your application has been accepted!**\n### Next Steps\nCheck out [our guide](https://wiki.crabcraft.net/Setup_Guide) for help installing **Simple Voice Chat**\n\nNeed anymore help? Let us know in this thread, or create a ticket <#1397191941782896670>\n-# This thread will be deleted in 12 hours`,
             ),
           ],
           flags: MessageFlags.IsComponentsV2,
@@ -386,16 +394,15 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       if (logChannel) {
-        await saveTranscriptToLog(appChannel, logChannel, `accepted by ${interaction.user.tag}`).catch(() => null);
+        await saveTranscriptToLog(appThread, logChannel, `accepted by ${interaction.user.tag}`).catch(() => null);
       }
 
-      await appChannel.setTopic(`${appChannel.topic}|delete-after:${Date.now() + CHANNEL_DELETE_DELAY_MS}`).catch(() => null);
-      setTimeout(
-        async () => {
-          await appChannel.delete().catch(() => null);
-        },
-        CHANNEL_DELETE_DELAY_MS,
-      );
+      // Schedule deletion: the periodic + startup cleanup scans remove the
+      // thread (and the applicant's channel access) once this passes.
+      const acceptDeleteAt = Math.floor((Date.now() + CHANNEL_DELETE_DELAY_MS) / 1000);
+      await appDb
+        .setApplicationThreadDeleteAfter(appThread.id, acceptDeleteAt)
+        .catch(() => null);
 
       try {
         const disabledRows = interaction.message.components
@@ -698,8 +705,10 @@ export default class ButtonInteractionEvent extends Event {
 
     // Edit application button
     if (interaction.customId.startsWith("edit_app:")) {
-      const appChannel = interaction.channel as TextChannel;
-      if (!appChannel.topic || appChannel.topic.split("|")[0] !== interaction.user.id) {
+      const editThread = await appDb
+        .getApplicationThreadByThreadId(interaction.channelId ?? "")
+        .catch(() => null);
+      if (!editThread || editThread.applicant_id !== interaction.user.id) {
         await interaction.reply({
           components: [errorContainer("This button is not for you.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,

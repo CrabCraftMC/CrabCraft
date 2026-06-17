@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, sql, lte, ne, ilike } from "drizzle-orm";
+import { eq, and, asc, desc, sql, lte, ne, ilike, isNull } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
@@ -9,6 +9,7 @@ import {
   starboardPosts,
   countingState,
   tickets,
+  applicationThreads,
   type TicketCategory,
 } from "../schema";
 
@@ -779,4 +780,130 @@ export async function searchPlayersByUsername(
     (r): r is { minecraft_uuid: string; minecraft_username: string } =>
       r.minecraft_uuid !== null && r.minecraft_username !== null,
   );
+}
+
+// ── Application threads ─────────────────────────────────────────
+
+export type ApplicationThread = typeof applicationThreads.$inferSelect;
+
+export interface CreateApplicationThreadData {
+  threadId: string;
+  applicantId: string;
+  applicantUsername: string;
+  guildId: string;
+  parentChannelId: string;
+}
+
+/**
+ * Record a freshly-opened application thread. Upserts on the thread id so
+ * a re-created thread (e.g. a rejoin) cleanly replaces a stale row.
+ */
+export async function createApplicationThread(
+  data: CreateApplicationThreadData,
+): Promise<ApplicationThread> {
+  const [row] = await db
+    .insert(applicationThreads)
+    .values({
+      thread_id: data.threadId,
+      applicant_id: data.applicantId,
+      applicant_username: data.applicantUsername,
+      guild_id: data.guildId,
+      parent_channel_id: data.parentChannelId,
+    })
+    .onConflictDoUpdate({
+      target: applicationThreads.thread_id,
+      set: {
+        applicant_id: sql`excluded.applicant_id`,
+        applicant_username: sql`excluded.applicant_username`,
+        reminded: false,
+        delete_after: null,
+        updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+      },
+    })
+    .returning();
+  return row;
+}
+
+export async function getApplicationThreadByThreadId(
+  threadId: string,
+): Promise<ApplicationThread | null> {
+  const [row] = await db
+    .select()
+    .from(applicationThreads)
+    .where(eq(applicationThreads.thread_id, threadId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** The most recent application thread opened for a given applicant. */
+export async function getApplicationThreadByApplicant(
+  applicantId: string,
+): Promise<ApplicationThread | null> {
+  const [row] = await db
+    .select()
+    .from(applicationThreads)
+    .where(eq(applicationThreads.applicant_id, applicantId))
+    .orderBy(desc(applicationThreads.created_at))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function markApplicationThreadReminded(
+  threadId: string,
+): Promise<void> {
+  await db
+    .update(applicationThreads)
+    .set({ reminded: true, updated_at: Math.floor(Date.now() / 1000) })
+    .where(eq(applicationThreads.thread_id, threadId));
+}
+
+export async function setApplicationThreadDeleteAfter(
+  threadId: string,
+  deleteAfter: number,
+): Promise<void> {
+  await db
+    .update(applicationThreads)
+    .set({
+      delete_after: deleteAfter,
+      updated_at: Math.floor(Date.now() / 1000),
+    })
+    .where(eq(applicationThreads.thread_id, threadId));
+}
+
+/**
+ * Application threads due a "you haven't applied yet" reminder: created
+ * before `createdBefore` (unix seconds), not yet reminded, and not already
+ * scheduled for deletion (i.e. still awaiting an application).
+ */
+export async function getApplicationThreadsNeedingReminder(
+  createdBefore: number,
+): Promise<ApplicationThread[]> {
+  return db
+    .select()
+    .from(applicationThreads)
+    .where(
+      and(
+        eq(applicationThreads.reminded, false),
+        isNull(applicationThreads.delete_after),
+        lte(applicationThreads.created_at, createdBefore),
+      ),
+    );
+}
+
+/** Threads whose post-decision deletion window has elapsed. */
+export async function getExpiredApplicationThreads(
+  now: number,
+): Promise<ApplicationThread[]> {
+  return db
+    .select()
+    .from(applicationThreads)
+    .where(lte(applicationThreads.delete_after, now));
+}
+
+export async function deleteApplicationThreadRow(
+  threadId: string,
+): Promise<void> {
+  await db
+    .delete(applicationThreads)
+    .where(eq(applicationThreads.thread_id, threadId));
 }
