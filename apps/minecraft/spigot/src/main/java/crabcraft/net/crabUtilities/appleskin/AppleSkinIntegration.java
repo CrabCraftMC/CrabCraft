@@ -20,6 +20,11 @@ public final class AppleSkinIntegration {
     }
 
     public static void enable(@NotNull JavaPlugin plugin) {
+        if (!plugin.getConfig().getBoolean("mod-protocols.appleskin.enabled", true)) {
+            plugin.getLogger().info("AppleSkin integration disabled in config.");
+            return;
+        }
+
         AppleSkinSpigot.init(plugin);
 
         final PluginManager pluginManager = plugin.getServer().getPluginManager();

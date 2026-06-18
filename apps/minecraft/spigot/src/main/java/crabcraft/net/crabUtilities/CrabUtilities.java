@@ -2,6 +2,7 @@ package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
+import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
 import crabcraft.net.crabUtilities.voicechat.CrabVoicechatPlugin;
@@ -69,6 +70,10 @@ public final class CrabUtilities extends JavaPlugin {
 
         // AppleSkin server-side companion (saturation/exhaustion sync).
         AppleSkinIntegration.enable(this);
+
+        // Xaero map server-side companion (sends a world id so Xaero's Minimap/
+        // World Map store saved maps per-world rather than per connection IP).
+        XaeroBootstrap.enable(this);
 
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);

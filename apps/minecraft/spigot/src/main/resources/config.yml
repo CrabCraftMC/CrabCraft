@@ -33,6 +33,29 @@ auto-update:
   github-repo: "CrabCraftMC/CrabCraft"
   github-token: ""
 
+# Server-side companions for client-side mods. Each feeds extra data to
+# players who have the matching mod installed and is harmless for players who
+# don't. Toggle any of them off here.
+mod-protocols:
+  # Jade (the "what am I looking at" tooltip mod): block/entity info such as
+  # tool requirements, growth/breeding progress, container contents, etc.
+  jade:
+    enabled: true
+  # AppleSkin: saturation, exhaustion and natural-regeneration info on the
+  # hunger bar.
+  appleskin:
+    enabled: true
+  # Xaero's Minimap / World Map: on join, sends a small "world id" packet so
+  # clients store saved maps keyed off that id instead of the connection
+  # address. Behind a proxy every backend shares one IP, so without this Xaero
+  # would merge the maps of different worlds; with it, each world keeps its own.
+  xaero-map:
+    enabled: true
+    # Integer identifying this world to Xaero clients. Leave at 0 to generate a
+    # random id on first start and write it back here (so it stays stable across
+    # restarts). Changing it makes Xaero treat this as a brand-new world.
+    server-id: 0
+
 # Simple Voice Chat cross-server bridge.
 # Creates a fixed set of persistent open voice groups with deterministic
 # UUIDs on every backend, then forwards opus frames between backends
