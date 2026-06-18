@@ -55,6 +55,19 @@ const ACCEPTED_VALUES = [
   "positive",
 ];
 
+// Explicitly negative answers to "Are you 17 or older?". These — together with
+// any number below 17 — are the only answers that trigger an automatic denial.
+// Anything else (e.g. "Yerp" or junk like "sdfjhgsdf") is left for a human to
+// review rather than auto-rejected.
+const DENIED_VALUES = [
+  "n",
+  "no",
+  "nope",
+  "nah",
+  "false",
+  "negative",
+];
+
 /** Build a retry button row for invalid usernames. */
 function retryButtonRow(customId: string) {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -130,14 +143,15 @@ export default class ModalInteractionEvent extends Event {
 
       interaction.message?.delete().catch(() => null);
 
-      // Age gate: must affirmatively confirm 17+ (an affirmative answer, or a
-      // number ≥ 17). Anything else — "no", a number < 17, or junk — is an
-      // automatic denial.
+      // Age gate: only auto-deny when the applicant explicitly says no (a
+      // negative answer) or gives a number below 17. Anything else — including
+      // ambiguous or junk answers like "Yerp" or "sdfjhgsdf" — passes the gate
+      // and is left for a human to review.
       const ageNumber = parseInt(age, 10);
-      const meetsAge =
-        ACCEPTED_VALUES.includes(age) ||
-        (Number.isFinite(ageNumber) && ageNumber >= 17);
-      if (!meetsAge) {
+      const isUnderage =
+        DENIED_VALUES.includes(age) ||
+        (Number.isFinite(ageNumber) && ageNumber < 17);
+      if (isUnderage) {
         await interaction.reply({
           components: [
             errorContainer(
