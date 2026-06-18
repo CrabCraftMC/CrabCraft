@@ -941,6 +941,24 @@ export async function getApplicationChannelsNeedingReminder(
     );
 }
 
+/**
+ * Live application channels (no decision yet) created before `createdBefore`
+ * (unix seconds). Used to sweep channels of applicants who never submitted.
+ */
+export async function getApplicationChannelsOlderThan(
+  createdBefore: number,
+): Promise<ApplicationChannel[]> {
+  return db
+    .select()
+    .from(applicationChannels)
+    .where(
+      and(
+        isNull(applicationChannels.delete_after),
+        lte(applicationChannels.created_at, createdBefore),
+      ),
+    );
+}
+
 /** Channels whose post-decision deletion window has elapsed. */
 export async function getExpiredApplicationChannels(
   now: number,

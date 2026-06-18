@@ -245,7 +245,7 @@ export async function getPlayerInfo(
 
 // ── Builders ──────────────────────────────────────────────────────
 
-/** The public-facing trigger embed posted by /ticket-embed. */
+/** The public-facing trigger embed posted via /admin send. */
 export function buildTriggerEmbed(): ContainerBuilder {
   const lines = [
     "## <:Crab:1397355651822256299> Open a Support Ticket",

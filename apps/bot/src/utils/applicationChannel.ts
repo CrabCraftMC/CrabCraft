@@ -56,6 +56,44 @@ export function buildApplyButton(): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
+/** The Application Hub panel (posted via /admin send). */
+export function buildApplicationHubContainer() {
+  return primaryContainer(
+    `## <:Crab:1397355651822256299> Application Hub\nWant to join CrabCraft, or did your application channel close due to inactivity?\n\nClick the button below to open a fresh application channel — only you and our staff can see it.`,
+  );
+}
+
+/** The "Open Application" button shown on the Application Hub panel. */
+export function buildApplicationHubButton(): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId("app_hub_open")
+      .setLabel("Open Application")
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji("📝"),
+  );
+}
+
+/** The Fast Track (direct access) panel (posted via /admin send). */
+export function buildFastTrackContainer(seasonName: string) {
+  return primaryContainer(
+    `## <:Crab:1397355651822256299> Join us for ${seasonName}!\nClick the button below to gain instant access to CrabCraft.`,
+  );
+}
+
+/** The fast-track button (instant whitelist via the fast-apply modal). */
+export function buildFastTrackButton(
+  seasonName: string,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId("fast-apply")
+      .setLabel(seasonName.slice(0, 80))
+      .setEmoji("🎄")
+      .setStyle(ButtonStyle.Primary),
+  );
+}
+
 /**
  * Post the welcome message: the applicant ping (as a text component) and the
  * welcome/requirements panel + Apply button, all in a single message.

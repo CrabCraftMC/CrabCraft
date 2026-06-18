@@ -15,6 +15,7 @@ import {
 import { errorContainer, successContainer, primaryContainer, coloredContainer, logAccept } from "../utils/embeds.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
+import { createApplicationChannelFor } from "../utils/applicationChannel.js";
 
 import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
@@ -42,6 +43,70 @@ export default class ButtonInteractionEvent extends Event {
 
     // I have no idea if bots can click buttons or not.. but this is here incase
     if (interaction.user.bot) return;
+
+    // Application Hub: open (or point to) the member's application channel.
+    if (interaction.customId === "app_hub_open") {
+      const member = interaction.member as GuildMember | null;
+      if (!member) {
+        await interaction.reply({
+          content: "Member information is missing. Please rejoin the server.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (member.roles.cache.has(config.MEMBER_ROLE_ID)) {
+        await interaction.reply({
+          content: "You're already a member of CrabCraft 🎉",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      // If they already have a live application channel, point them to it.
+      const existing = await appDb
+        .getApplicationChannelByApplicant(member.id)
+        .catch(() => null);
+      if (existing) {
+        const existingChannel = await interaction.guild?.channels
+          .fetch(existing.channel_id)
+          .catch(() => null);
+        if (existingChannel) {
+          await interaction.editReply({
+            components: [
+              primaryContainer(
+                `You already have an open application channel: <#${existing.channel_id}>`,
+              ),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          return;
+        }
+      }
+
+      const channel = await createApplicationChannelFor(member);
+      if (!channel) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "Sorry, I couldn't open an application channel. Please contact a moderator.",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+        return;
+      }
+
+      await interaction.editReply({
+        components: [
+          primaryContainer(`Your application channel is ready: <#${channel.id}>`),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
+    }
 
     if (interaction.customId == "apply") {
       // Only the channel's applicant can use the apply button

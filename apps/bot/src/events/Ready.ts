@@ -18,6 +18,7 @@ import {
   LEADERBOARD_REFRESH_MS,
   APPLICATION_REMINDER_DELAY_MS,
   APPLICATION_REMINDER_CHECK_MS,
+  APPLICATION_INACTIVE_DELETE_MS,
   TICKET_CLEANUP_INTERVAL_MS,
 } from "../utils/constants.js";
 import { syncLeaderboardEmojis } from "../utils/playerEmoji.js";
@@ -153,6 +154,36 @@ export default class ReadyEvent extends Event {
     // Run once on startup, then every 30 minutes
     await scanApplicationReminders();
     setInterval(scanApplicationReminders, APPLICATION_REMINDER_CHECK_MS);
+
+    // Inactive application cleanup — delete the channel (but keep the member)
+    // when no application has been submitted within the inactivity window.
+    // They can reopen one anytime from the application hub.
+    const cleanupInactiveApplicationChannels = async () => {
+      try {
+        const createdBefore = Math.floor(
+          (Date.now() - APPLICATION_INACTIVE_DELETE_MS) / 1000,
+        );
+        const stale = await appDb.getApplicationChannelsOlderThan(createdBefore);
+        for (const row of stale) {
+          // Keep channels for applicants who actually submitted (awaiting review).
+          const hasPending = await appDb.hasPendingApplication(row.applicant_id);
+          if (hasPending) continue;
+
+          const guild = await client.guilds
+            .fetch(row.guild_id)
+            .catch(() => null);
+          if (!guild) {
+            await appDb.deleteApplicationChannelRow(row.channel_id).catch(() => null);
+            continue;
+          }
+          await finalizeApplicationChannel(guild, row, null);
+        }
+      } catch (error) {
+        logger.error("Inactive application cleanup scan failed:", error);
+      }
+    };
+    await cleanupInactiveApplicationChannels();
+    setInterval(cleanupInactiveApplicationChannels, APPLICATION_REMINDER_CHECK_MS);
 
     // Ticket cleanup — delete closed-ticket channels past their delete window
     const cleanupExpiredTickets = async () => {
