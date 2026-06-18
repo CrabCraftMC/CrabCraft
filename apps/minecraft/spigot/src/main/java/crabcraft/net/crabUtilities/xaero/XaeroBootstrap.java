@@ -1,0 +1,73 @@
+package crabcraft.net.crabUtilities.xaero;
+
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.messaging.Messenger;
+import org.jetbrains.annotations.NotNull;
+import org.spongepowered.configurate.yaml.NodeStyle;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
+
+import java.nio.file.Path;
+import java.util.concurrent.ThreadLocalRandom;
+
+/**
+ * Static initialiser for the in-tree Xaero map server-side companion.
+ *
+ * <p>Resolves the per-world id Xaero clients key their saved maps off: a value
+ * of {@code 0} in config means "generate a random id and persist it back" so it
+ * stays stable across restarts. Because the config is per-backend, each backend
+ * auto-gets a distinct id, giving every world its own Xaero map storage.
+ */
+public final class XaeroBootstrap {
+
+    private XaeroBootstrap() {
+    }
+
+    public static void enable(@NotNull JavaPlugin plugin) {
+        FileConfiguration config = plugin.getConfig();
+        boolean enabled = config.getBoolean("mod-protocols.xaero-map.enabled", true);
+
+        int serverId = config.getInt("mod-protocols.xaero-map.server-id", 0);
+        if (serverId == 0) {
+            serverId = ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
+            persistServerId(plugin, serverId);
+            config.set("mod-protocols.xaero-map.server-id", serverId); // keep the in-memory view consistent
+        }
+
+        XaeroMapProtocol.configure(enabled, serverId);
+
+        if (!enabled) {
+            plugin.getLogger().info("Xaero map integration disabled in config.");
+            return;
+        }
+
+        plugin.getServer().getPluginManager().registerEvents(new XaeroIntegration(), plugin);
+
+        // Payloads go out over the NMS connection, but register the channels with
+        // Bukkit's messenger too for bookkeeping (mirrors the Jade port).
+        Messenger messenger = plugin.getServer().getMessenger();
+        messenger.registerOutgoingPluginChannel(plugin, XaeroMapProtocol.idMini("main").toString());
+        messenger.registerOutgoingPluginChannel(plugin, XaeroMapProtocol.idWorld("main").toString());
+
+        plugin.getLogger().info("Xaero map integration enabled (server id " + serverId + ")");
+    }
+
+    /**
+     * Writes the generated id back to config.yml via Configurate so the on-disk
+     * comments survive (Bukkit's {@code saveConfig} would strip them).
+     */
+    private static void persistServerId(@NotNull JavaPlugin plugin, int serverId) {
+        try {
+            Path configPath = plugin.getDataFolder().toPath().resolve("config.yml");
+            YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
+                    .path(configPath)
+                    .nodeStyle(NodeStyle.BLOCK)
+                    .build();
+            var root = loader.load();
+            root.node("mod-protocols", "xaero-map", "server-id").set(serverId);
+            loader.save(root);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to persist generated Xaero server id: " + e.getMessage());
+        }
+    }
+}
