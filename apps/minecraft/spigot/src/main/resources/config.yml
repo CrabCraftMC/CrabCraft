@@ -17,12 +17,6 @@ redis:
 stats-push:
   interval-minutes: 5
 
-# Optional server resource pack. Players can toggle with /pack.
-resource-pack:
-  url: ""
-  hash: ""
-  auto-enabled: []
-
 # Polls GitHub Releases for new versions and stages the JAR into
 # plugins/update/ so Paper swaps it in on the next restart.
 auto-update:

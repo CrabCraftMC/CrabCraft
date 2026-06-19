@@ -18,7 +18,6 @@ import java.io.File;
 public final class CrabUtilities extends JavaPlugin {
 
     private Plugin essentials; // Optional: present when EssentialsX is installed
-    private ResourcePackManager resourcePackManager;
     private StatsPushTask statsPushTask;
     private UpdateService updateService;
     private CrabVoicechatPlugin voicechatPlugin;
@@ -38,8 +37,6 @@ public final class CrabUtilities extends JavaPlugin {
         saveDefaultConfig();
         mergeConfigDefaults();
         reloadConfig();
-
-        this.resourcePackManager = new ResourcePackManager(this);
 
         // Plugin messaging channels (bidirectional for nickname sync)
         getServer().getMessenger().registerOutgoingPluginChannel(this, "crabutilities:nicknames");
@@ -63,7 +60,6 @@ public final class CrabUtilities extends JavaPlugin {
 
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new PackJoinListener(this), this);
         Bukkit.getPluginManager().registerEvents(nicknameSync, this);
         nicknameSync.syncAll();
 
@@ -75,10 +71,6 @@ public final class CrabUtilities extends JavaPlugin {
         }
 
         // Commands
-        PackCommand packCommand = new PackCommand(this);
-        getCommand("pack").setExecutor(packCommand);
-        getCommand("pack").setTabCompleter(packCommand);
-
         ReloadCommand reloadCommand = new ReloadCommand(this, updateCommand);
         getCommand("crabutilities").setExecutor(reloadCommand);
         getCommand("crabutilities").setTabCompleter(reloadCommand);
@@ -164,10 +156,6 @@ public final class CrabUtilities extends JavaPlugin {
 
     public Plugin getEssentials() {
         return essentials;
-    }
-
-    public ResourcePackManager getResourcePackManager() {
-        return resourcePackManager;
     }
 
     /**
