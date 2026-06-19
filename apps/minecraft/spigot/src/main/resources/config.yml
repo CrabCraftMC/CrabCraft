@@ -50,6 +50,34 @@ mod-protocols:
     # restarts). Changing it makes Xaero treat this as a brand-new world.
     server-id: 0
 
+# Global chat: sync this server's normal chat across the network via Redis.
+# DISABLED by default. Turn this on only for servers that should share one
+# chat; servers left off keep their chat local. Staff chat is unaffected.
+global-chat:
+  enabled: false
+  # Shown via the <server> placeholder in the format. Optional, free text.
+  server-name: ""
+  # MiniMessage format for each line. Placeholders: <server>, <display_name>,
+  # <username>, <message>. Player text fills <message> and is never parsed as
+  # MiniMessage (no tag injection).
+  format: "<gray>[</gray><aqua><server></aqua><gray>]</gray> <display_name><gray>:</gray> <message>"
+  mentions:
+    enabled: true
+    # Trigger character before a name, e.g. @Steve.
+    prefix: "@"
+    # MiniMessage wrapping applied to a matched @name token. <name> = the token.
+    highlight: "<yellow><underlined><name></underlined></yellow>"
+    sound:
+      enabled: true
+      key: "minecraft:block.note_block.pling"
+      volume: 1.0
+      pitch: 1.0
+# Mute enforcement (mute data is owned by the Velocity proxy and synced here).
+mute:
+  message: "<red>You are currently muted and cannot chat."
+  # <time> = human-readable remaining duration (e.g. "2h 5m").
+  message-temp: "<red>You are muted for <time>."
+
 # Simple Voice Chat cross-server bridge.
 # Creates a fixed set of persistent open voice groups with deterministic
 # UUIDs on every backend, then forwards opus frames between backends

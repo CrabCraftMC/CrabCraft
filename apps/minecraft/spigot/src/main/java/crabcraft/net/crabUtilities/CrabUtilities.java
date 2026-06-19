@@ -1,6 +1,9 @@
 package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
+import crabcraft.net.crabUtilities.chat.GlobalChatListener;
+import crabcraft.net.crabUtilities.chat.GlobalChatService;
+import crabcraft.net.crabUtilities.chat.MuteCache;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
@@ -23,6 +26,8 @@ public final class CrabUtilities extends JavaPlugin {
     private CrabVoicechatPlugin voicechatPlugin;
     private LoginStreakCache loginStreakCache;
     private LoginStreakExpansion loginStreakExpansion;
+    private MuteCache muteCache;
+    private GlobalChatService globalChatService;
 
     @Override
     public void onEnable() {
@@ -100,6 +105,17 @@ public final class CrabUtilities extends JavaPlugin {
         } else {
             getLogger().info("PlaceholderAPI not detected — streak placeholders disabled.");
         }
+
+        // Global chat: mirror Velocity-owned mutes from Redis and, on servers
+        // where global chat is enabled, capture/format/sync normal chat across
+        // the network. The mute cache always runs so mutes are enforced even on
+        // servers that keep chat local.
+        this.muteCache = new MuteCache(this);
+        muteCache.start();
+        this.globalChatService = new GlobalChatService(this);
+        globalChatService.start();
+        Bukkit.getPluginManager().registerEvents(
+                new GlobalChatListener(this, muteCache, globalChatService), this);
 
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
@@ -183,6 +199,12 @@ public final class CrabUtilities extends JavaPlugin {
         }
         if (loginStreakCache != null) {
             loginStreakCache.shutdown();
+        }
+        if (globalChatService != null) {
+            globalChatService.shutdown();
+        }
+        if (muteCache != null) {
+            muteCache.shutdown();
         }
     }
 }

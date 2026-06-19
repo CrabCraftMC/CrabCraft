@@ -25,6 +25,10 @@ import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.ReplyCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
+import crabcraft.net.crabUtilities.velocity.mute.MuteCommands;
+import crabcraft.net.crabUtilities.velocity.mute.MuteService;
+import crabcraft.net.crabUtilities.velocity.mute.MuteStore;
+import crabcraft.net.crabUtilities.velocity.mute.RedisMutePublisher;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
 import crabcraft.net.crabUtilities.velocity.voicechat.PlayerLocationTracker;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
@@ -77,6 +81,8 @@ public class CrabUtilitiesVelocity {
     private AltQueryService altQueryService;
     private LoginStreakService loginStreakService;
     private LoginStreakPublisher loginStreakPublisher;
+    private RedisMutePublisher redisMutePublisher;
+    private MuteService muteService;
     private LuckPerms luckPerms;
 
     @Inject
@@ -121,6 +127,12 @@ public class CrabUtilitiesVelocity {
                 pgWriter.getDataSource(), logger, config.getLoginStreakBufferHours());
         this.loginStreakPublisher = new LoginStreakPublisher(this, config);
 
+        this.redisMutePublisher = new RedisMutePublisher(this, config);
+        this.redisMutePublisher.start();
+        MuteStore muteStore = new MuteStore(pgWriter.getDataSource(), logger);
+        this.muteService = new MuteService(muteStore, redisMutePublisher);
+        this.muteService.init();
+
         try {
             this.luckPerms = LuckPermsProvider.get();
             logger.info("LuckPerms API connected.");
@@ -154,6 +166,7 @@ public class CrabUtilitiesVelocity {
         ReplyCommand.register(this);
         SocialSpyCommand.register(this);
         ReloadCommand.register(this);
+        MuteCommands.register(this);
 
         server.getEventManager().register(this, new StaffChatListener(this));
         server.getEventManager().register(this, new ConnectionListener(this));
@@ -184,6 +197,9 @@ public class CrabUtilitiesVelocity {
         }
         if (loginStreakPublisher != null) {
             loginStreakPublisher.shutdown();
+        }
+        if (redisMutePublisher != null) {
+            redisMutePublisher.shutdown();
         }
         if (pgWriter != null) {
             pgWriter.close();
@@ -226,6 +242,15 @@ public class CrabUtilitiesVelocity {
             loginStreakPublisher.shutdown();
         }
         this.loginStreakPublisher = new LoginStreakPublisher(this, config);
+
+        if (redisMutePublisher != null) {
+            redisMutePublisher.shutdown();
+        }
+        this.redisMutePublisher = new RedisMutePublisher(this, config);
+        this.redisMutePublisher.start();
+        MuteStore muteStore = new MuteStore(pgWriter.getDataSource(), logger);
+        this.muteService = new MuteService(muteStore, redisMutePublisher);
+        this.muteService.init();
 
         if (statsPushSubscriber != null) {
             statsPushSubscriber.shutdown();
@@ -293,5 +318,6 @@ public class CrabUtilitiesVelocity {
     public AltQueryService getAltQueryService() { return altQueryService; }
     public LoginStreakService getLoginStreakService() { return loginStreakService; }
     public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
+    public MuteService getMuteService() { return muteService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
 }
