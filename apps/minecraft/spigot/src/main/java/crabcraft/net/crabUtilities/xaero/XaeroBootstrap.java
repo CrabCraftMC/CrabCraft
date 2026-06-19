@@ -4,10 +4,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.Messenger;
 import org.jetbrains.annotations.NotNull;
-import org.spongepowered.configurate.yaml.NodeStyle;
-import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
-import java.nio.file.Path;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -29,9 +26,12 @@ public final class XaeroBootstrap {
 
         int serverId = config.getInt("mod-protocols.xaero-map.server-id", 0);
         if (serverId == 0) {
+            // First start with no id configured: pick a stable random one and
+            // persist it so it survives restarts. saveConfig keeps the on-disk
+            // comments intact (parseComments defaults to true on modern Paper).
             serverId = ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
-            persistServerId(plugin, serverId);
-            config.set("mod-protocols.xaero-map.server-id", serverId); // keep the in-memory view consistent
+            config.set("mod-protocols.xaero-map.server-id", serverId);
+            plugin.saveConfig();
         }
 
         XaeroMapProtocol.configure(enabled, serverId);
@@ -50,24 +50,5 @@ public final class XaeroBootstrap {
         messenger.registerOutgoingPluginChannel(plugin, XaeroMapProtocol.idWorld("main").toString());
 
         plugin.getLogger().info("Xaero map integration enabled (server id " + serverId + ")");
-    }
-
-    /**
-     * Writes the generated id back to config.yml via Configurate so the on-disk
-     * comments survive (Bukkit's {@code saveConfig} would strip them).
-     */
-    private static void persistServerId(@NotNull JavaPlugin plugin, int serverId) {
-        try {
-            Path configPath = plugin.getDataFolder().toPath().resolve("config.yml");
-            YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
-                    .path(configPath)
-                    .nodeStyle(NodeStyle.BLOCK)
-                    .build();
-            var root = loader.load();
-            root.node("mod-protocols", "xaero-map", "server-id").set(serverId);
-            loader.save(root);
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to persist generated Xaero server id: " + e.getMessage());
-        }
     }
 }

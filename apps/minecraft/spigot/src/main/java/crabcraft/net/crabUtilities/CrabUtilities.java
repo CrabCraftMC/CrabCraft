@@ -8,6 +8,8 @@ import crabcraft.net.crabUtilities.update.UpdateService;
 import crabcraft.net.crabUtilities.voicechat.CrabVoicechatPlugin;
 import de.maxhenkel.voicechat.api.BukkitVoicechatService;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -28,29 +30,13 @@ public final class CrabUtilities extends JavaPlugin {
         // Detect EssentialsX (optional) and register event listeners
         this.essentials = Bukkit.getPluginManager().getPlugin("Essentials");
 
-        // Config: save default if missing, then merge new keys from bundled
-        // default using Configurate (preserves comments unlike Bukkit's saveConfig)
+        // Config: write the bundled default on first run, then top up any keys
+        // added in newer versions. Bukkit's YamlConfiguration round-trips
+        // comments on modern Paper (parseComments defaults to true), so this
+        // keeps the comments shipped in config.yml intact — and restores any an
+        // earlier build may have stripped.
         saveDefaultConfig();
-        try {
-            java.nio.file.Path configPath = getDataFolder().toPath().resolve("config.yml");
-            var loader = org.spongepowered.configurate.yaml.YamlConfigurationLoader.builder()
-                    .path(configPath)
-                    .nodeStyle(org.spongepowered.configurate.yaml.NodeStyle.BLOCK)
-                    .build();
-            var root = loader.load();
-            try (java.io.InputStream defaultIn = getResource("config.yml")) {
-                if (defaultIn != null) {
-                    var defaults = org.spongepowered.configurate.yaml.YamlConfigurationLoader.builder()
-                            .source(() -> new java.io.BufferedReader(new java.io.InputStreamReader(defaultIn)))
-                            .build()
-                            .load();
-                    root.mergeFrom(defaults);
-                    loader.save(root);
-                }
-            }
-        } catch (Exception e) {
-            getLogger().warning("Failed to merge config defaults: " + e.getMessage());
-        }
+        mergeConfigDefaults();
         reloadConfig();
 
         this.resourcePackManager = new ResourcePackManager(this);
@@ -134,6 +120,46 @@ public final class CrabUtilities extends JavaPlugin {
         }
 
         getLogger().info("CrabUtilities enabled. EssentialsX present: " + (essentials != null));
+    }
+
+    /**
+     * Tops up the live config from the bundled default: adds any keys it is
+     * missing (e.g. options introduced by a newer version) and restores
+     * block/inline comments that an older build may have stripped. Existing
+     * values are never overwritten. Bukkit's YamlConfiguration preserves
+     * comments on save (parseComments defaults to true on modern Paper), so the
+     * file stays documented across upgrades.
+     */
+    private void mergeConfigDefaults() {
+        FileConfiguration config = getConfig();
+        // JavaPlugin loads the bundled config.yml (comments and all) as the
+        // default Configuration; reuse it as the source of truth.
+        Configuration defaults = config.getDefaults();
+        if (defaults == null) {
+            return;
+        }
+        boolean changed = false;
+        for (String key : defaults.getKeys(true)) {
+            if (!config.contains(key, true)) {
+                if (defaults.isConfigurationSection(key)) {
+                    config.createSection(key);
+                } else {
+                    config.set(key, defaults.get(key));
+                }
+                changed = true;
+            }
+            if (config.getComments(key).isEmpty() && !defaults.getComments(key).isEmpty()) {
+                config.setComments(key, defaults.getComments(key));
+                changed = true;
+            }
+            if (config.getInlineComments(key).isEmpty() && !defaults.getInlineComments(key).isEmpty()) {
+                config.setInlineComments(key, defaults.getInlineComments(key));
+                changed = true;
+            }
+        }
+        if (changed) {
+            saveConfig();
+        }
     }
 
     public Plugin getEssentials() {
