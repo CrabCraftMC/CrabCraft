@@ -9,10 +9,6 @@ softdepend:
   - voicechat
   - PlaceholderAPI
 commands:
-  pack:
-    description: Enable or disable the server resource pack for yourself.
-    usage: /pack <on|off>
-    aliases: [resourcepack, rp]
   crabutilities:
     description: CrabUtilities admin commands.
     usage: /crabutilities <reload|update check|update download|update status>

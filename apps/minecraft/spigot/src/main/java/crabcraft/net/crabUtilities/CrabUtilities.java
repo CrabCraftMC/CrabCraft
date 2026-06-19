@@ -1,6 +1,8 @@
 package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
+import crabcraft.net.crabUtilities.chat.GlobalChatListener;
+import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
@@ -18,12 +20,12 @@ import java.io.File;
 public final class CrabUtilities extends JavaPlugin {
 
     private Plugin essentials; // Optional: present when EssentialsX is installed
-    private ResourcePackManager resourcePackManager;
     private StatsPushTask statsPushTask;
     private UpdateService updateService;
     private CrabVoicechatPlugin voicechatPlugin;
     private LoginStreakCache loginStreakCache;
     private LoginStreakExpansion loginStreakExpansion;
+    private GlobalChatService globalChatService;
 
     @Override
     public void onEnable() {
@@ -38,8 +40,6 @@ public final class CrabUtilities extends JavaPlugin {
         saveDefaultConfig();
         mergeConfigDefaults();
         reloadConfig();
-
-        this.resourcePackManager = new ResourcePackManager(this);
 
         // Plugin messaging channels (bidirectional for nickname sync)
         getServer().getMessenger().registerOutgoingPluginChannel(this, "crabutilities:nicknames");
@@ -63,7 +63,6 @@ public final class CrabUtilities extends JavaPlugin {
 
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new PackJoinListener(this), this);
         Bukkit.getPluginManager().registerEvents(nicknameSync, this);
         nicknameSync.syncAll();
 
@@ -75,10 +74,6 @@ public final class CrabUtilities extends JavaPlugin {
         }
 
         // Commands
-        PackCommand packCommand = new PackCommand(this);
-        getCommand("pack").setExecutor(packCommand);
-        getCommand("pack").setTabCompleter(packCommand);
-
         ReloadCommand reloadCommand = new ReloadCommand(this, updateCommand);
         getCommand("crabutilities").setExecutor(reloadCommand);
         getCommand("crabutilities").setTabCompleter(reloadCommand);
@@ -108,6 +103,14 @@ public final class CrabUtilities extends JavaPlugin {
         } else {
             getLogger().info("PlaceholderAPI not detected — streak placeholders disabled.");
         }
+
+        // Global chat: on servers where it's enabled, capture/format/sync
+        // normal chat across the network over Redis. Disabled servers stay
+        // fully local.
+        this.globalChatService = new GlobalChatService(this);
+        globalChatService.start();
+        Bukkit.getPluginManager().registerEvents(
+                new GlobalChatListener(globalChatService), this);
 
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
@@ -166,10 +169,6 @@ public final class CrabUtilities extends JavaPlugin {
         return essentials;
     }
 
-    public ResourcePackManager getResourcePackManager() {
-        return resourcePackManager;
-    }
-
     /**
      * Exposes the on-disk plugin jar so the updater can stage a replacement with
      * the same filename into {@code plugins/update/}.
@@ -195,6 +194,9 @@ public final class CrabUtilities extends JavaPlugin {
         }
         if (loginStreakCache != null) {
             loginStreakCache.shutdown();
+        }
+        if (globalChatService != null) {
+            globalChatService.shutdown();
         }
     }
 }

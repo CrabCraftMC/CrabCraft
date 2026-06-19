@@ -17,12 +17,6 @@ redis:
 stats-push:
   interval-minutes: 5
 
-# Optional server resource pack. Players can toggle with /pack.
-resource-pack:
-  url: ""
-  hash: ""
-  auto-enabled: []
-
 # Polls GitHub Releases for new versions and stages the JAR into
 # plugins/update/ so Paper swaps it in on the next restart.
 auto-update:
@@ -55,6 +49,29 @@ mod-protocols:
     # random id on first start and write it back here (so it stays stable across
     # restarts). Changing it makes Xaero treat this as a brand-new world.
     server-id: 0
+
+# Global chat: sync this server's normal chat across the network via Redis.
+# DISABLED by default. Turn this on only for servers that should share one
+# chat; servers left off keep their chat local. Staff chat is unaffected.
+global-chat:
+  enabled: false
+  # Shown via the <server> placeholder in the format. Optional, free text.
+  server-name: ""
+  # MiniMessage format for each line. Placeholders: <server>, <display_name>,
+  # <username>, <message>. Player text fills <message> and is never parsed as
+  # MiniMessage (no tag injection).
+  format: "<gray>[</gray><aqua><server></aqua><gray>]</gray> <display_name><gray>:</gray> <message>"
+  mentions:
+    enabled: true
+    # Trigger character before a name, e.g. @Steve.
+    prefix: "@"
+    # MiniMessage wrapping applied to a matched @name token. <name> = the token.
+    highlight: "<yellow><underlined><name></underlined></yellow>"
+    sound:
+      enabled: true
+      key: "minecraft:block.note_block.pling"
+      volume: 1.0
+      pitch: 1.0
 
 # Simple Voice Chat cross-server bridge.
 # Creates a fixed set of persistent open voice groups with deterministic

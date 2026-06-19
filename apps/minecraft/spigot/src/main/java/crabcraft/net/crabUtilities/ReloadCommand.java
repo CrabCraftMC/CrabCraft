@@ -30,7 +30,6 @@ public class ReloadCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             plugin.reloadConfig();
-            plugin.getResourcePackManager().reload();
             sender.sendMessage(ChatColor.GREEN + "CrabUtilities config reloaded.");
             return true;
         }
