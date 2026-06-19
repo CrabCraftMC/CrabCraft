@@ -84,8 +84,7 @@ public class GlobalChatService {
 
     public void start() {
         // Disabled servers stay fully local: no publish, and no subscribe (so
-        // they don't display the network's chat either). Mutes still apply —
-        // that's the separately-started MuteCache, not this service.
+        // they don't display the network's chat either).
         if (!enabled) {
             plugin.getLogger().info("Global chat disabled for this server; chat stays local.");
             return;

@@ -72,11 +72,6 @@ global-chat:
       key: "minecraft:block.note_block.pling"
       volume: 1.0
       pitch: 1.0
-# Mute enforcement (mute data is owned by the Velocity proxy and synced here).
-mute:
-  message: "<red>You are currently muted and cannot chat."
-  # <time> = human-readable remaining duration (e.g. "2h 5m").
-  message-temp: "<red>You are muted for <time>."
 
 # Simple Voice Chat cross-server bridge.
 # Creates a fixed set of persistent open voice groups with deterministic

@@ -3,7 +3,6 @@ package crabcraft.net.crabUtilities;
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatService;
-import crabcraft.net.crabUtilities.chat.MuteCache;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
@@ -26,7 +25,6 @@ public final class CrabUtilities extends JavaPlugin {
     private CrabVoicechatPlugin voicechatPlugin;
     private LoginStreakCache loginStreakCache;
     private LoginStreakExpansion loginStreakExpansion;
-    private MuteCache muteCache;
     private GlobalChatService globalChatService;
 
     @Override
@@ -106,16 +104,13 @@ public final class CrabUtilities extends JavaPlugin {
             getLogger().info("PlaceholderAPI not detected — streak placeholders disabled.");
         }
 
-        // Global chat: mirror Velocity-owned mutes from Redis and, on servers
-        // where global chat is enabled, capture/format/sync normal chat across
-        // the network. The mute cache always runs so mutes are enforced even on
-        // servers that keep chat local.
-        this.muteCache = new MuteCache(this);
-        muteCache.start();
+        // Global chat: on servers where it's enabled, capture/format/sync
+        // normal chat across the network over Redis. Disabled servers stay
+        // fully local.
         this.globalChatService = new GlobalChatService(this);
         globalChatService.start();
         Bukkit.getPluginManager().registerEvents(
-                new GlobalChatListener(this, muteCache, globalChatService), this);
+                new GlobalChatListener(globalChatService), this);
 
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
@@ -202,9 +197,6 @@ public final class CrabUtilities extends JavaPlugin {
         }
         if (globalChatService != null) {
             globalChatService.shutdown();
-        }
-        if (muteCache != null) {
-            muteCache.shutdown();
         }
     }
 }
