@@ -33,15 +33,13 @@ public final class PlayerLookup {
             for (Player player : plugin.getServer().getAllPlayers()) {
                 if (player.getUniqueId().equals(selfId)) continue;
 
-                String username = player.getUsername();
-                if (username.toLowerCase().startsWith(input)) {
-                    builder.suggest(username);
-                }
-
+                // Show a single name per player: the nickname when set,
+                // otherwise the real username. Typing the real username still
+                // resolves via resolve(), it just isn't suggested separately.
                 String plain = plugin.getNicknameCache().getPlainNickname(player.getUniqueId());
-                if (plain != null && !plain.equalsIgnoreCase(username)
-                        && plain.toLowerCase().startsWith(input)) {
-                    builder.suggest(plain);
+                String display = (plain != null && !plain.isBlank()) ? plain : player.getUsername();
+                if (display.toLowerCase().startsWith(input)) {
+                    builder.suggest(display);
                 }
             }
             return builder.buildFuture();
