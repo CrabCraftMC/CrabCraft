@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight,
-  Search, ExternalLink,
+  Boxes, Search, ExternalLink,
 } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import { Instagram } from "lucide-react";
@@ -14,6 +14,7 @@ import config from "@/data/site-config.json";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight,
+  Boxes,
   youtube: FaYoutube, instagram: Instagram, tiktok: FaTiktok, discord: FaDiscord,
 };
 

@@ -269,8 +269,10 @@ export default async function LeaderboardPage() {
 
           {players.length === 0 && (
             <div className="px-6 py-12 text-center text-gray-500 dark:text-gray-400 relative z-10">
-              <p className="text-lg font-bold">No player data available</p>
-              <p className="text-sm mt-1">Check back later</p>
+              <p className="text-lg font-bold">The new season is starting soon</p>
+              <p className="text-sm mt-1">
+                Rankings will appear here once players start earning awards.
+              </p>
             </div>
           )}
         </Squircle>

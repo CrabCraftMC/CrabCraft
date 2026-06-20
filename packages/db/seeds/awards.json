@@ -1385,6 +1385,21 @@
     }
   },
   {
+    "id": "kill_sulfur_cube",
+    "title": "Cube Control",
+    "description": "Sulfur cubes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_sulfur_cube.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:sulfur_cube"
+      ]
+    }
+  },
+  {
     "id": "kill_mooshroom",
     "title": "Shroom Cow Slayer",
     "description": "Mooshrooms killed",

@@ -38,6 +38,11 @@
                 "icon": "Circle"
             },
             {
+                "name": "Stack Calculator",
+                "url": "/tools/stack-calculator",
+                "icon": "Boxes"
+            },
+            {
                 "name": "Portal Calculator",
                 "url": "/tools/portal-calculator",
                 "icon": "ArrowLeftRight"

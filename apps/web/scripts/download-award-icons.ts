@@ -93,6 +93,7 @@ const ICON_MAP: Record<string, string> = {
   kill_iron_golem: "Iron_Ingot",
   kill_llama: "Llama_Spawn_Egg",
   kill_magma_cube: "Magma_Cream",
+  kill_sulfur_cube: "Sulfur_Cube_Spawn_Egg",
   kill_mooshroom: "Mooshroom_Spawn_Egg",
   kill_ocelot: "Ocelot_Spawn_Egg",
   kill_panda: "Panda_Spawn_Egg",

@@ -707,6 +707,13 @@
     "icon": "/advancements/icons/husbandry_tame_an_animal.png"
   },
   {
+    "id": "minecraft:husbandry/uh_oh",
+    "name": "Uh Oh",
+    "description": "Have a Sulfur Cube absorb a TNT block",
+    "category": "husbandry",
+    "icon": "/advancements/icons/husbandry_uh_oh.png"
+  },
+  {
     "id": "minecraft:husbandry/make_a_sign_glow",
     "name": "Glow and Behold!",
     "description": "Make the text of any kind of sign glow",

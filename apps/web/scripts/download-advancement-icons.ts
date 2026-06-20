@@ -125,6 +125,7 @@ const ICON_MAP: Record<string, string> = {
   "minecraft:husbandry/allay_deliver_item_to_player": "Cookie",
   "minecraft:husbandry/ride_a_boat_with_a_goat": "Oak_Boat",
   "minecraft:husbandry/tame_an_animal": "Lead",
+  "minecraft:husbandry/uh_oh": "TNT",
   "minecraft:husbandry/make_a_sign_glow": "Glow_Ink_Sac",
   "minecraft:husbandry/fishy_business": "Fishing_Rod",
   "minecraft:husbandry/silk_touch_nest": "Bee_Nest",
