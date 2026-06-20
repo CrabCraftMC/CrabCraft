@@ -903,6 +903,27 @@ export async function isUuidPrimaryAccount(minecraftUuid: string): Promise<boole
   return rows.length > 0;
 }
 
+export type Platform = "youtube" | "twitch" | "tiktok";
+
+export async function addStreamChannelForUser(
+  platform: Platform,
+  channelId: string,
+  discordUserId: string,
+  displayName?: string,
+): Promise<boolean> {
+  const inserted = await db
+    .insert(streamChannels)
+    .values({
+      platform,
+      channel_id: channelId,
+      discord_user_id: discordUserId,
+      display_name: displayName ?? null,
+    })
+    .onConflictDoNothing()
+    .returning({ id: streamChannels.id });
+  return inserted.length > 0;
+}
+
 export async function removeStreamChannelForUser(
   platform: string,
   channelId: string,
