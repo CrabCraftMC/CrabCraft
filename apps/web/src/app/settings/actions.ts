@@ -9,13 +9,19 @@ import {
   isAltUuidTaken,
   MAX_ALTS,
 } from "@crabcraft/db/queries/bot";
-import type { Platform } from "@crabcraft/db/queries/bot";
-import { addStreamChannel } from "@crabcraft/db/queries/bot";
-import { removeStreamChannelForUser, getStreamChannelsForUser, isUuidPrimaryAccount } from "@crabcraft/db/queries/web";
+import {
+  addStreamChannelForUser,
+  removeStreamChannelForUser,
+  getStreamChannelsForUser,
+  isUuidPrimaryAccount,
+} from "@crabcraft/db/queries/web";
+import type { Platform } from "@crabcraft/db/queries/web";
 import { resolveUsername, isValidUsername } from "@crabcraft/shared/mojang";
 import { revalidatePath } from "next/cache";
 
 type ActionResult = { success: true } | { success: false; error: string };
+
+const ALLOWED_PLAYER_ROLES = new Set(["verified", "moderator", "admin"]);
 
 async function requireAuth() {
   const session = await auth();
@@ -36,12 +42,20 @@ export async function addAltAction(formData: FormData): Promise<ActionResult> {
     return { success: false, error: `You can only have ${MAX_ALTS} alt accounts.` };
   }
 
+  if (!ALLOWED_PLAYER_ROLES.has(user.role)) {
+    return { success: false, error: "You must be a whitelisted member to manage alt accounts." };
+  }
+
+  const primaryUuid = await getPlayerPrimaryUuid(user.discordId);
+  if (!primaryUuid) {
+    return { success: false, error: "You must link a primary Minecraft account before adding alts." };
+  }
+
   const resolved = await resolveUsername(username);
   if (!resolved) {
     return { success: false, error: "Player not found. Check the username and try again." };
   }
 
-  const primaryUuid = await getPlayerPrimaryUuid(user.discordId);
   if (primaryUuid === resolved.uuid) {
     return { success: false, error: "You cannot add your own main account as an alt." };
   }
@@ -91,7 +105,10 @@ export async function addChannelAction(formData: FormData): Promise<ActionResult
     return { success: false, error: `You already have a ${platform} channel linked.` };
   }
 
-  await addStreamChannel(platform as Platform, channelId, user.discordId, displayName);
+  const added = await addStreamChannelForUser(platform as Platform, channelId, user.discordId, displayName);
+  if (!added) {
+    return { success: false, error: "This channel is already linked." };
+  }
 
   revalidatePath("/settings");
   return { success: true };
