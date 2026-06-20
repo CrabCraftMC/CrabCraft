@@ -1716,6 +1716,60 @@
     "texture": "chiseled_tuff"
   },
   {
+    "id": "cinnabar",
+    "name": "Cinnabar",
+    "color": "#995450",
+    "texture": "cinnabar"
+  },
+  {
+    "id": "polished_cinnabar",
+    "name": "Polished Cinnabar",
+    "color": "#9B3C39",
+    "texture": "polished_cinnabar"
+  },
+  {
+    "id": "cinnabar_bricks",
+    "name": "Cinnabar Bricks",
+    "color": "#973A38",
+    "texture": "cinnabar_bricks"
+  },
+  {
+    "id": "chiseled_cinnabar",
+    "name": "Chiseled Cinnabar",
+    "color": "#963A3A",
+    "texture": "chiseled_cinnabar"
+  },
+  {
+    "id": "sulfur",
+    "name": "Sulfur",
+    "color": "#BEB066",
+    "texture": "sulfur"
+  },
+  {
+    "id": "polished_sulfur",
+    "name": "Polished Sulfur",
+    "color": "#BDAD5C",
+    "texture": "polished_sulfur"
+  },
+  {
+    "id": "sulfur_bricks",
+    "name": "Sulfur Bricks",
+    "color": "#BCAB5C",
+    "texture": "sulfur_bricks"
+  },
+  {
+    "id": "chiseled_sulfur",
+    "name": "Chiseled Sulfur",
+    "color": "#BDAE5C",
+    "texture": "chiseled_sulfur"
+  },
+  {
+    "id": "potent_sulfur",
+    "name": "Potent Sulfur",
+    "color": "#D3D162",
+    "texture": "potent_sulfur"
+  },
+  {
     "id": "cracked_deepslate_bricks",
     "name": "Cracked Deepslate Bricks",
     "color": "#454546",

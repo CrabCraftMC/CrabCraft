@@ -14,8 +14,14 @@ import {
   oklabToSrgb,
   rgbToHex,
 } from "@/lib/colors";
-import { RotateCcw, ArrowLeftRight } from "lucide-react";
+import { RotateCcw, ArrowLeftRight, ChevronDown, Check } from "lucide-react";
 import blocks from "@/data/blocks.json";
+import {
+  BLOCK_GRADIENT_PRESETS,
+  isBlockAllowedForPreset,
+  isBlockGradientPresetId,
+  type BlockGradientPresetId,
+} from "@/lib/blockGradientPresets";
 
 const TEXTURE_BASE = "/textures/blocks";
 
@@ -90,10 +96,12 @@ export default function BlockGradient() {
   const [steps, setSteps] = useState(12);
   const [randomness, setRandomness] = useState(20);
   const [gradientLength, setGradientLength] = useState(7);
+  const [blockPreset, setBlockPreset] = useState<BlockGradientPresetId>("all");
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [presetMenuOpen, setPresetMenuOpen] = useState(false);
 
   // Block picker modal state
   const [blockPickerFor, setBlockPickerFor] = useState<
@@ -119,6 +127,7 @@ export default function BlockGradient() {
   // Color picker refs
   const startPickerRef = useRef<ColorPickerHandle>(null);
   const endPickerRef = useRef<ColorPickerHandle>(null);
+  const presetMenuRef = useRef<HTMLDivElement>(null);
 
   // Load saved state after hydration
   useEffect(() => {
@@ -143,6 +152,9 @@ export default function BlockGradient() {
       if (saved.steps) setSteps(saved.steps);
       if (saved.randomness !== undefined) setRandomness(saved.randomness);
       if (saved.gradientLength) setGradientLength(saved.gradientLength);
+      if (isBlockGradientPresetId(saved.blockPreset)) {
+        setBlockPreset(saved.blockPreset);
+      }
       if (saved.excludedIds) setExcludedIds(saved.excludedIds);
     }
     setHydrated(true);
@@ -159,10 +171,11 @@ export default function BlockGradient() {
         steps,
         randomness,
         gradientLength,
+        blockPreset,
         excludedIds,
       })
     );
-  }, [start, end, steps, randomness, gradientLength, excludedIds, hydrated]);
+  }, [start, end, steps, randomness, gradientLength, blockPreset, excludedIds, hydrated]);
 
   // Close wall popover on outside click
   useEffect(() => {
@@ -176,13 +189,25 @@ export default function BlockGradient() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (showResetConfirm) setShowResetConfirm(false);
+      if (presetMenuOpen) setPresetMenuOpen(false);
+      else if (showResetConfirm) setShowResetConfirm(false);
       else if (blockPickerFor) { setBlockPickerFor(null); setTooltip(null); }
       else if (wallPopover) setWallPopover(null);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [showResetConfirm, blockPickerFor, wallPopover]);
+  }, [presetMenuOpen, showResetConfirm, blockPickerFor, wallPopover]);
+
+  useEffect(() => {
+    if (!presetMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!presetMenuRef.current?.contains(e.target as Node)) {
+        setPresetMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [presetMenuOpen]);
 
   // Pre-compute OkLAB values for all blocks
   const blocksWithLab = useMemo(() => {
@@ -193,13 +218,49 @@ export default function BlockGradient() {
     });
   }, []);
 
-  // Available blocks for gradient matching (excluding user-excluded + glazed terracotta)
+  const activePreset = useMemo(
+    () =>
+      BLOCK_GRADIENT_PRESETS.find((preset) => preset.id === blockPreset) ??
+      BLOCK_GRADIENT_PRESETS[0],
+    [blockPreset]
+  );
+
+  const presetBlocks = useMemo(() => {
+    return blocks.filter((block) => isBlockAllowedForPreset(block, blockPreset));
+  }, [blockPreset]);
+
+  const presetBlocksWithLab = useMemo(() => {
+    return blocksWithLab.filter((block) => isBlockAllowedForPreset(block, blockPreset));
+  }, [blocksWithLab, blockPreset]);
+
+  // Drop selected block endpoints when the active preset no longer allows them.
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const sanitizeEndpoint = (endpoint: GradientEndpoint): GradientEndpoint => {
+      if (!endpoint.blockId) return endpoint;
+      const block = blocks.find((b) => b.id === endpoint.blockId);
+      if (block && isBlockAllowedForPreset(block, blockPreset)) return endpoint;
+      return {
+        ...endpoint,
+        mode: "color",
+        blockId: null,
+        blockName: null,
+        blockTexture: null,
+      };
+    };
+
+    setStart((current) => sanitizeEndpoint(current));
+    setEnd((current) => sanitizeEndpoint(current));
+  }, [blockPreset, hydrated]);
+
+  // Available blocks for gradient matching (excluding preset-hidden, user-excluded + glazed terracotta)
   const availableBlocks = useMemo(() => {
     const excluded = new Set(excludedIds);
-    return blocksWithLab.filter(
+    return presetBlocksWithLab.filter(
       (b) => !excluded.has(b.id) && !b.id.endsWith("_glazed_terracotta")
     );
-  }, [blocksWithLab, excludedIds]);
+  }, [presetBlocksWithLab, excludedIds]);
 
   // Pre-compute start/end OkLAB values
   const startLab = useMemo(
@@ -214,9 +275,19 @@ export default function BlockGradient() {
   // Find closest block to an OkLAB color
   const findClosest = useCallback(
     (targetLab: [number, number, number]): BlockWithLab => {
-      let closest = availableBlocks[0];
+      const fallbackBlock = blocksWithLab[0];
+      if (!fallbackBlock) {
+        throw new Error("No blocks are available for gradient matching");
+      }
+      const searchBlocks =
+        availableBlocks.length > 0
+          ? availableBlocks
+          : presetBlocksWithLab.length > 0
+            ? presetBlocksWithLab
+            : [fallbackBlock];
+      let closest = searchBlocks[0];
       let minDist = Infinity;
-      for (const block of availableBlocks) {
+      for (const block of searchBlocks) {
         const dist = colorDistanceLab(targetLab, block.lab);
         if (dist < minDist) {
           minDist = dist;
@@ -225,16 +296,16 @@ export default function BlockGradient() {
       }
       return closest;
     },
-    [availableBlocks]
+    [availableBlocks, presetBlocksWithLab, blocksWithLab]
   );
 
   // Compute gradient: oversample, dedup, then select `steps` unique blocks
   const displayGradient = useMemo(() => {
     const startBlock = start.blockId
-      ? blocksWithLab.find((b) => b.id === start.blockId)
+      ? presetBlocksWithLab.find((b) => b.id === start.blockId)
       : null;
     const endBlock = end.blockId
-      ? blocksWithLab.find((b) => b.id === end.blockId)
+      ? presetBlocksWithLab.find((b) => b.id === end.blockId)
       : null;
 
     // Oversample at high resolution to discover all unique blocks
@@ -265,7 +336,7 @@ export default function BlockGradient() {
       result.push(unique[idx]);
     }
     return result;
-  }, [startLab, endLab, steps, findClosest, start.blockId, end.blockId, blocksWithLab]);
+  }, [startLab, endLab, steps, findClosest, start.blockId, end.blockId, presetBlocksWithLab]);
 
   // Build the wall grid with per-cell randomness
   const WALL_COLS = 10;
@@ -305,10 +376,10 @@ export default function BlockGradient() {
 
   // Filtered blocks for modal
   const filteredBlocks = useMemo(() => {
-    if (!blockSearch.trim()) return blocks;
+    if (!blockSearch.trim()) return presetBlocks;
     const q = blockSearch.toLowerCase();
-    return blocks.filter((b) => b.name.toLowerCase().includes(q));
-  }, [blockSearch]);
+    return presetBlocks.filter((b) => b.name.toLowerCase().includes(q));
+  }, [blockSearch, presetBlocks]);
 
   const openBlockPicker = (endpoint: "start" | "end") => {
     setBlockSearch("");
@@ -354,6 +425,7 @@ export default function BlockGradient() {
     setSteps(12);
     setRandomness(20);
     setGradientLength(7);
+    setBlockPreset("all");
     setExcludedIds([]);
   };
 
@@ -424,7 +496,7 @@ export default function BlockGradient() {
               <button
                 type="button"
                 onClick={() => startPickerRef.current?.show()}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-line hover:border-orange-400 transition-colors cursor-pointer"
               >
                 <div className="pcr-square flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <ColorPicker
@@ -448,7 +520,7 @@ export default function BlockGradient() {
             {start.mode === "block" && (
               <button
                 onClick={() => openBlockPicker("start")}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 text-gray-500 hover:text-orange-500 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-line hover:border-orange-400 text-gray-500 hover:text-orange-500 transition-colors cursor-pointer"
               >
                 {start.blockTexture ? (
                   <div key={start.blockTexture} className="w-8 h-8 flex-shrink-0 rounded overflow-hidden">
@@ -514,7 +586,7 @@ export default function BlockGradient() {
               <button
                 type="button"
                 onClick={() => endPickerRef.current?.show()}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-line hover:border-orange-400 transition-colors cursor-pointer"
               >
                 <div className="pcr-square flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <ColorPicker
@@ -538,7 +610,7 @@ export default function BlockGradient() {
             {end.mode === "block" && (
               <button
                 onClick={() => openBlockPicker("end")}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 text-gray-500 hover:text-orange-500 transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-line hover:border-orange-400 text-gray-500 hover:text-orange-500 transition-colors cursor-pointer"
               >
                 {end.blockTexture ? (
                   <div key={end.blockTexture} className="w-8 h-8 flex-shrink-0 rounded overflow-hidden">
@@ -578,6 +650,62 @@ export default function BlockGradient() {
             </button>
           </div>
 
+          {/* Preset filter */}
+          <div className="mb-4">
+            <div ref={presetMenuRef} className="relative">
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
+                Preset
+              </label>
+              <button
+                type="button"
+                onClick={() => setPresetMenuOpen((open) => !open)}
+                aria-haspopup="listbox"
+                aria-expanded={presetMenuOpen}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-line bg-paper text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-paper/80 focus:outline-none focus:border-orange-400 transition-colors cursor-pointer"
+              >
+                <span className="truncate">{activePreset.name}</span>
+                <ChevronDown
+                  className={`w-4 h-4 text-gray-400 transition-transform ${
+                    presetMenuOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {presetMenuOpen && (
+                <div
+                  role="listbox"
+                  className="absolute left-0 right-0 top-full mt-2 z-30 bg-paper-2 rounded-xl shadow-lg overflow-hidden animate-[scaleIn_0.15s_ease-out]"
+                >
+                  {BLOCK_GRADIENT_PRESETS.map((preset) => {
+                    const selected = preset.id === blockPreset;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        onClick={() => {
+                          setBlockPreset(preset.id);
+                          setPresetMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-bold transition-colors cursor-pointer ${
+                          selected
+                            ? "bg-orange-500/10 text-orange-500"
+                            : "text-gray-700 dark:text-gray-300 hover:bg-paper"
+                        }`}
+                      >
+                        <span>{preset.name}</span>
+                        {selected && <Check className="w-4 h-4" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+              {activePreset.description} Matching from {availableBlocks.length} blocks.
+            </p>
+          </div>
+
           {/* Excluded blocks */}
           {excludedIds.length > 0 && (
             <div className="mb-4">
@@ -611,7 +739,7 @@ export default function BlockGradient() {
           )}
 
           {/* Blocks slider */}
-          <div className="mb-4 pt-4 border-t border-gray-200 dark:border-[#3d3028]">
+          <div className="mb-4 pt-4 border-t border-line">
             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
               Blocks: {steps}
             </label>
@@ -710,7 +838,7 @@ export default function BlockGradient() {
               </div>
             ))}
           </div>
-          <div className="px-6 py-4 flex flex-col gap-4 border-t border-gray-200 dark:border-[#3d3028]">
+          <div className="px-6 py-4 flex flex-col gap-4 border-t border-line">
             {/* Randomness slider */}
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
@@ -758,9 +886,14 @@ export default function BlockGradient() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                Pick a Block
-              </h2>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                  Pick a Block
+                </h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {activePreset.name} preset
+                </p>
+              </div>
               <button
                 onClick={() => {
                   setBlockPickerFor(null);
@@ -779,7 +912,7 @@ export default function BlockGradient() {
               value={blockSearch}
               onChange={(e) => setBlockSearch(e.target.value)}
               autoFocus
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-[#3d3028] bg-paper dark:bg-[#2a221b] text-sm focus:outline-none focus:border-orange-400 mb-4"
+              className="w-full px-4 py-2.5 rounded-xl border border-line bg-paper text-sm focus:outline-none focus:border-orange-400 mb-4"
             />
             <div
               className="overflow-y-auto flex-1 -mx-1 px-1 themed-scrollbar"
@@ -801,7 +934,7 @@ export default function BlockGradient() {
                     onMouseLeave={() => setTooltip(null)}
                     className={`rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-110 hover:z-10 ${
                       selectedBlockId === block.id
-                        ? "ring-2 ring-orange-500 ring-offset-1 ring-offset-white dark:ring-offset-[#231c17]"
+                        ? "ring-2 ring-orange-500 ring-offset-1 ring-offset-paper-2"
                         : ""
                     }`}
                     style={{ backgroundColor: block.color }}
@@ -832,7 +965,7 @@ export default function BlockGradient() {
           className="fixed z-[60] pointer-events-none -translate-x-1/2 -translate-y-full whitespace-nowrap animate-[fadeIn_0.1s_ease-out]"
           style={{ left: tooltip.x, top: tooltip.y }}
         >
-          <div className="bg-paper-2 rounded-xl shadow-xl border border-gray-200 dark:border-[#3d3028] p-3 flex items-center gap-3">
+          <div className="bg-paper-2 rounded-xl shadow-xl border border-line p-3 flex items-center gap-3">
             {tooltip.texture && (
               <div className="w-8 h-8 flex-shrink-0 rounded overflow-hidden">
                 <img
@@ -854,7 +987,7 @@ export default function BlockGradient() {
             </div>
           </div>
           <div className="flex justify-center">
-            <div className="w-2 h-2 bg-paper-2 border-b border-r border-gray-200 dark:border-[#3d3028] rotate-45 -mt-1.5" />
+            <div className="w-2 h-2 bg-paper-2 border-b border-r border-line rotate-45 -mt-1.5" />
           </div>
         </div>
       )}
@@ -865,7 +998,7 @@ export default function BlockGradient() {
           className="fixed z-[60] -translate-x-1/2 -translate-y-full animate-[scaleIn_0.1s_ease-out]"
           style={{ left: wallPopover.x, top: wallPopover.y }}
         >
-          <div className="bg-paper-2 rounded-xl shadow-xl border border-gray-200 dark:border-[#3d3028] p-3 flex items-center gap-3">
+          <div className="bg-paper-2 rounded-xl shadow-xl border border-line p-3 flex items-center gap-3">
             <div className="w-8 h-8 flex-shrink-0 rounded overflow-hidden">
               <img
                 src={`${TEXTURE_BASE}/${wallPopover.block.texture}.png`}
@@ -891,7 +1024,7 @@ export default function BlockGradient() {
             </div>
           </div>
           <div className="flex justify-center">
-            <div className="w-2 h-2 bg-paper-2 border-b border-r border-gray-200 dark:border-[#3d3028] rotate-45 -mt-1.5" />
+            <div className="w-2 h-2 bg-paper-2 border-b border-r border-line rotate-45 -mt-1.5" />
           </div>
         </div>
       )}
@@ -911,7 +1044,7 @@ export default function BlockGradient() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-[#2a221b] hover:bg-gray-200 dark:hover:bg-[#3d3028] text-gray-700 dark:text-gray-300 font-bold text-sm cursor-pointer transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-paper hover:bg-line text-gray-700 dark:text-gray-300 font-bold text-sm cursor-pointer transition-colors"
               >
                 Cancel
               </button>

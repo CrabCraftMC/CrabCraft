@@ -518,7 +518,7 @@ export default function RGBGenerator() {
                                 ))}
                                 <button
                                     onClick={addColor}
-                                    className="w-full py-2 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 text-gray-400 hover:text-orange-500 flex items-center justify-center text-sm transition-colours cursor-pointer mt-1"
+                                    className="w-full py-2 rounded-xl border-2 border-dashed border-line hover:border-orange-400 text-gray-400 hover:text-orange-500 flex items-center justify-center text-sm transition-colours cursor-pointer mt-1"
                                 >
                                     + Add Colour
                                 </button>
@@ -569,7 +569,7 @@ export default function RGBGenerator() {
                                 value={output}
                                 rows={4}
                                 onClick={() => copyToClipboard(output, "output")}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[#3d3028] bg-paper dark:bg-[#2a221b] text-sm font-mono resize-none focus:outline-none cursor-pointer"
+                                className="w-full px-4 py-3 rounded-xl border border-line bg-paper text-sm font-mono resize-none focus:outline-none cursor-pointer"
                             />
                             {copied === "output" && (
                                 <p className="text-xs text-orange-500 mt-1">Copied!</p>
@@ -640,7 +640,7 @@ export default function RGBGenerator() {
                                 <button
                                     key={preset.name}
                                     onClick={() => applyPreset(preset)}
-                                    className="rounded-xl p-3 text-left hover:bg-paper dark:hover:bg-[#2a221b] transition-colors cursor-pointer border border-gray-100 dark:border-[#3d3028] hover:border-orange-300"
+                                    className="rounded-xl p-3 text-left hover:bg-paper transition-colors cursor-pointer border border-line hover:border-orange-300"
                                 >
                                     <div
                                         className="h-6 rounded-lg mb-2"
@@ -669,7 +669,7 @@ export default function RGBGenerator() {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowResetConfirm(false)}
-                                className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-[#2a221b] hover:bg-gray-200 dark:hover:bg-[#3d3028] text-gray-700 dark:text-gray-300 font-bold text-sm cursor-pointer transition-colors"
+                                className="flex-1 py-2.5 rounded-xl bg-paper hover:bg-line text-gray-700 dark:text-gray-300 font-bold text-sm cursor-pointer transition-colors"
                             >
                                 Cancel
                             </button>
