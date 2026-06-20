@@ -58,11 +58,24 @@ if (missingIds.length > 0) {
   );
 }
 
+const DEFAULT_CRABCRAFT_API_URL = "https://api.crabcraft.net";
+
+function normalizeOptionalUrl(name: string, fallback: string): string {
+  const raw = process.env[name]?.trim();
+  const value = raw && raw.length > 0 ? raw : fallback;
+  try {
+    return new URL(value).toString().replace(/\/+$/, "");
+  } catch {
+    throw new Error(`${name} must be a valid URL.`);
+  }
+}
+
 interface IConfig {
   // Secrets / environment-specific
   DISCORD_BOT_TOKEN: string;
   DISCORD_DATABASE_URL: string;
   DATABASE_URL: string;
+  CRABCRAFT_API_URL: string;
   YOUTUBE_API_KEY: string;
   TWITCH_CLIENT_ID: string;
   TWITCH_CLIENT_SECRET: string;
@@ -85,6 +98,10 @@ const config: IConfig = {
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN!,
   DISCORD_DATABASE_URL: process.env.DISCORD_DATABASE_URL!,
   DATABASE_URL: process.env.DATABASE_URL!,
+  CRABCRAFT_API_URL: normalizeOptionalUrl(
+    "CRABCRAFT_API_URL",
+    DEFAULT_CRABCRAFT_API_URL,
+  ),
   YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY ?? "",
   TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID ?? "",
   TWITCH_CLIENT_SECRET: process.env.TWITCH_CLIENT_SECRET ?? "",
