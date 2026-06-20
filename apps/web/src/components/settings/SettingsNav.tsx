@@ -4,12 +4,11 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-const TABS = ["account", "alts", "channels", "display"] as const;
+const TABS = ["account", "channels", "display"] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABELS: Record<Tab, string> = {
   account: "Account",
-  alts: "Alts",
   channels: "Linked Channels",
   display: "Display",
 };

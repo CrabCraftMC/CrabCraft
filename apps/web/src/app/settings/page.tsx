@@ -1,13 +1,11 @@
 import { auth, getAvatarUrl } from "@/lib/auth";
 import { getPlayerJoinInfo, getStreamChannelsForUser, getUserApplications } from "@crabcraft/db/queries/web";
-import { getPlayerAlts } from "@crabcraft/db/queries/bot";
 import SettingsNav from "@/components/settings/SettingsNav";
 import AccountTab from "@/components/settings/AccountTab";
-import AltsTab from "@/components/settings/AltsTab";
 import ChannelsTab from "@/components/settings/ChannelsTab";
 import DisplayTab from "@/components/settings/DisplayTab";
 
-const TABS = ["account", "alts", "channels", "display"] as const;
+const TABS = ["account", "channels", "display"] as const;
 type Tab = (typeof TABS)[number];
 
 export default async function SettingsPage({
@@ -29,7 +27,6 @@ export default async function SettingsPage({
 
       <div className="w-full min-w-0">
         {activeTab === "account" && <AccountContent user={user} />}
-        {activeTab === "alts" && <AltsContent discordId={user.discordId} minecraftUuid={user.minecraftUuid} />}
         {activeTab === "channels" && <ChannelsContent discordId={user.discordId} />}
         {activeTab === "display" && <DisplayTab />}
       </div>
@@ -54,11 +51,6 @@ async function AccountContent({ user }: { user: { discordId: string; name?: stri
       applications={applications}
     />
   );
-}
-
-async function AltsContent({ discordId, minecraftUuid }: { discordId: string; minecraftUuid: string | null }) {
-  const alts = await getPlayerAlts(discordId);
-  return <AltsTab alts={alts} maxAlts={2} minecraftUuid={minecraftUuid} />;
 }
 
 async function ChannelsContent({ discordId }: { discordId: string }) {

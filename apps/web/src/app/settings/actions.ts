@@ -1,18 +1,9 @@
 "use server";
 
 import { auth } from "@/lib/auth";
-import {
-  addPlayerAlt,
-  removePlayerAlt,
-  getAltCountForUser,
-  getPlayerPrimaryUuid,
-  isAltUuidTaken,
-  MAX_ALTS,
-} from "@crabcraft/db/queries/bot";
 import type { Platform } from "@crabcraft/db/queries/bot";
 import { addStreamChannel } from "@crabcraft/db/queries/bot";
-import { removeStreamChannelForUser, getStreamChannelsForUser, isUuidPrimaryAccount } from "@crabcraft/db/queries/web";
-import { resolveUsername, isValidUsername } from "@crabcraft/shared/mojang";
+import { removeStreamChannelForUser, getStreamChannelsForUser } from "@crabcraft/db/queries/web";
 import { revalidatePath } from "next/cache";
 
 type ActionResult = { success: true } | { success: false; error: string };
@@ -21,54 +12,6 @@ async function requireAuth() {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
   return session.user;
-}
-
-export async function addAltAction(formData: FormData): Promise<ActionResult> {
-  const user = await requireAuth();
-  const username = (formData.get("username") as string)?.trim();
-
-  if (!username || !isValidUsername(username)) {
-    return { success: false, error: "Invalid username. Must be 3-16 characters (letters, numbers, underscores)." };
-  }
-
-  const altCount = await getAltCountForUser(user.discordId);
-  if (altCount >= MAX_ALTS) {
-    return { success: false, error: `You can only have ${MAX_ALTS} alt accounts.` };
-  }
-
-  const resolved = await resolveUsername(username);
-  if (!resolved) {
-    return { success: false, error: "Player not found. Check the username and try again." };
-  }
-
-  const primaryUuid = await getPlayerPrimaryUuid(user.discordId);
-  if (primaryUuid === resolved.uuid) {
-    return { success: false, error: "You cannot add your own main account as an alt." };
-  }
-
-  const isPrimary = await isUuidPrimaryAccount(resolved.uuid);
-  if (isPrimary) {
-    return { success: false, error: "This account is already a primary account for another player." };
-  }
-
-  const taken = await isAltUuidTaken(resolved.uuid);
-  if (taken) {
-    return { success: false, error: "This account is already linked as an alt." };
-  }
-
-  await addPlayerAlt(user.discordId, resolved.uuid, resolved.name);
-  revalidatePath("/settings");
-  return { success: true };
-}
-
-export async function removeAltAction(formData: FormData): Promise<ActionResult> {
-  const user = await requireAuth();
-  const uuid = formData.get("uuid") as string;
-  if (!uuid) return { success: false, error: "Missing UUID." };
-
-  await removePlayerAlt(user.discordId, uuid);
-  revalidatePath("/settings");
-  return { success: true };
 }
 
 const VALID_PLATFORMS: Platform[] = ["twitch", "tiktok", "youtube"];
