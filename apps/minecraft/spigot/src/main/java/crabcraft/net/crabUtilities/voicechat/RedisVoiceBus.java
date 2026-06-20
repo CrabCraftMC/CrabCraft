@@ -53,7 +53,7 @@ class RedisVoiceBus {
         this.password = plugin.getConfig().getString("redis.password", "");
     }
 
-    boolean start(BiConsumer<UUID, byte[]> audioHandler, Consumer<String> rosterHandler) {
+    void start(BiConsumer<UUID, byte[]> audioHandler, Consumer<String> rosterHandler) {
         this.audioHandler = audioHandler;
         this.rosterHandler = rosterHandler;
 
@@ -65,17 +65,8 @@ class RedisVoiceBus {
             jedisPool = new JedisPool(poolConfig, host, port, 2000);
         }
 
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.ping();
-        } catch (Exception e) {
-            plugin.getLogger().severe("Voice bus failed to connect to Redis: " + e.getMessage());
-            jedisPool.close();
-            jedisPool = null;
-            return false;
-        }
-
         startRosterSubscriber();
-        return true;
+        plugin.getLogger().info("Voice bus started; Redis will be retried asynchronously if unavailable.");
     }
 
     private void startRosterSubscriber() {
@@ -90,15 +81,27 @@ class RedisVoiceBus {
             }
         };
         rosterSubscriberThread = new Thread(() -> {
+            boolean warned = false;
             while (!Thread.currentThread().isInterrupted()) {
-                try (Jedis jedis = jedisPool.getResource()) {
+                JedisPool pool = jedisPool;
+                if (pool == null || pool.isClosed()) break;
+                try (Jedis jedis = pool.getResource()) {
+                    if (warned) {
+                        plugin.getLogger().info("Voice roster Redis subscriber reconnected.");
+                        warned = false;
+                    }
                     jedis.subscribe(rosterPubSub, VoiceMessages.ROSTER_CHANNEL);
                 } catch (NoClassDefFoundError e) {
                     break;
                 } catch (Exception e) {
                     if (Thread.currentThread().isInterrupted()) break;
-                    plugin.getLogger().warning(
-                            "Voice roster subscriber disconnected, reconnecting in 3s: " + e.getMessage());
+                    if (!warned) {
+                        plugin.getLogger().warning(
+                                "Voice roster Redis subscriber unavailable; reconnecting in 3s: " + e.getMessage());
+                        warned = true;
+                    } else {
+                        plugin.getLogger().fine("Voice roster subscriber disconnected: " + e.getMessage());
+                    }
                     try { Thread.sleep(3000L); } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         break;
@@ -112,7 +115,8 @@ class RedisVoiceBus {
 
     /** Subscribe to a per-group audio channel. Idempotent. */
     void subscribeAudio(UUID groupId) {
-        if (jedisPool == null) return;
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         audioSubs.computeIfAbsent(groupId, this::createAudioSubscription);
     }
 
@@ -123,9 +127,10 @@ class RedisVoiceBus {
     }
 
     void publishAudio(UUID groupId, byte[] frame) {
-        if (jedisPool == null) return;
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         audioPublishExecutor.execute(() -> {
-            try (Jedis jedis = jedisPool.getResource()) {
+            try (Jedis jedis = pool.getResource()) {
                 jedis.publish(VoiceMessages.audioChannel(groupId).getBytes(StandardCharsets.UTF_8), frame);
             } catch (Exception e) {
                 plugin.getLogger().fine("Voice audio publish failed: " + e.getMessage());
@@ -134,9 +139,10 @@ class RedisVoiceBus {
     }
 
     void publishRoster(String message) {
-        if (jedisPool == null) return;
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try (Jedis jedis = jedisPool.getResource()) {
+            try (Jedis jedis = pool.getResource()) {
                 jedis.publish(VoiceMessages.ROSTER_CHANNEL, message);
             } catch (Exception e) {
                 plugin.getLogger().warning("Voice roster publish failed: " + e.getMessage());
@@ -146,8 +152,9 @@ class RedisVoiceBus {
 
     /** Returns the home backend for the speaker, or null if not set. */
     String fetchPlayerHome(UUID playerId) {
-        if (jedisPool == null) return null;
-        try (Jedis jedis = jedisPool.getResource()) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return null;
+        try (Jedis jedis = pool.getResource()) {
             return jedis.get(VoiceMessages.playerHomeKey(playerId));
         } catch (Exception e) {
             return null;
@@ -159,8 +166,9 @@ class RedisVoiceBus {
      * or null if no record / expired. Used for auto-rejoin on server hop.
      */
     String fetchPlayerGroup(UUID playerId) {
-        if (jedisPool == null) return null;
-        try (Jedis jedis = jedisPool.getResource()) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return null;
+        try (Jedis jedis = pool.getResource()) {
             return jedis.get(VoiceMessages.playerGroupKey(playerId));
         } catch (Exception e) {
             return null;
@@ -168,9 +176,10 @@ class RedisVoiceBus {
     }
 
     void writePlayerGroup(UUID playerId, UUID groupId, long ttlSeconds) {
-        if (jedisPool == null) return;
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try (Jedis jedis = jedisPool.getResource()) {
+            try (Jedis jedis = pool.getResource()) {
                 jedis.setex(VoiceMessages.playerGroupKey(playerId), ttlSeconds, groupId.toString());
             } catch (Exception e) {
                 plugin.getLogger().fine("writePlayerGroup failed: " + e.getMessage());
@@ -179,9 +188,10 @@ class RedisVoiceBus {
     }
 
     void deletePlayerGroup(UUID playerId) {
-        if (jedisPool == null) return;
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try (Jedis jedis = jedisPool.getResource()) {
+            try (Jedis jedis = pool.getResource()) {
                 jedis.del(VoiceMessages.playerGroupKey(playerId));
             } catch (Exception ignored) {}
         });
@@ -244,13 +254,28 @@ class RedisVoiceBus {
             byte[] channelBytes = VoiceMessages.audioChannel(groupId)
                     .getBytes(StandardCharsets.UTF_8);
             thread = new Thread(() -> {
+                boolean warned = false;
                 while (!Thread.currentThread().isInterrupted()) {
-                    try (Jedis jedis = jedisPool.getResource()) {
+                    JedisPool pool = jedisPool;
+                    if (pool == null || pool.isClosed()) break;
+                    try (Jedis jedis = pool.getResource()) {
+                        if (warned) {
+                            plugin.getLogger().info("Voice audio Redis subscriber reconnected for " + groupId + ".");
+                            warned = false;
+                        }
                         jedis.subscribe(pubSub, channelBytes);
                     } catch (NoClassDefFoundError e) {
                         break;
                     } catch (Exception e) {
                         if (Thread.currentThread().isInterrupted()) break;
+                        if (!warned) {
+                            plugin.getLogger().warning("Voice audio Redis subscriber unavailable for " + groupId
+                                    + "; reconnecting in 3s: " + e.getMessage());
+                            warned = true;
+                        } else {
+                            plugin.getLogger().fine("Voice audio subscriber disconnected for " + groupId + ": "
+                                    + e.getMessage());
+                        }
                         try { Thread.sleep(3000L); } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
                             break;

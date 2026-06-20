@@ -119,12 +119,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.roster = new RosterTracker(plugin, svcPackets,
                 crossServerGroupIds, thisBackend, logger);
 
-        boolean ok = bus.start(audioRelay::onAudioFrame, roster::onLifecycleMessage);
-        if (!ok) {
-            logger.warning("Voice bridge Redis connection failed — cross-server voice DISABLED");
-            this.bus = null;
-            return;
-        }
+        bus.start(audioRelay::onAudioFrame, roster::onLifecycleMessage);
 
         for (UUID id : crossServerGroupIds) {
             bus.subscribeAudio(id);

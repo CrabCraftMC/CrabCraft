@@ -39,10 +39,13 @@ public class StatsPushTask {
     private final String password;
     private final String season;
     private final long intervalMinutes;
+    private final File statsDir;
+    private final File advancementsDir;
 
     private JedisPool jedisPool;
     private BukkitTask task;
     private final Map<String, Long> lastSeenMtime = new HashMap<>();
+    private volatile boolean redisFailureLogged;
 
     public StatsPushTask(CrabUtilities plugin) {
         this.plugin = plugin;
@@ -52,6 +55,11 @@ public class StatsPushTask {
         this.season = plugin.getConfig().getString("season", "").trim();
         this.intervalMinutes = Math.max(1L,
                 plugin.getConfig().getLong("stats-push.interval-minutes", 5L));
+        File worldFolder = plugin.getServer().getWorlds().isEmpty()
+                ? null
+                : plugin.getServer().getWorlds().get(0).getWorldFolder();
+        this.statsDir = worldFolder == null ? null : new File(worldFolder, "stats");
+        this.advancementsDir = worldFolder == null ? null : new File(worldFolder, "advancements");
     }
 
     public void start() {
@@ -59,29 +67,24 @@ public class StatsPushTask {
             plugin.getLogger().info("Stats push DISABLED: 'season' is not set in config.yml");
             return;
         }
+        if (statsDir == null) {
+            plugin.getLogger().warning("Stats push DISABLED: no world folder is available yet.");
+            return;
+        }
         JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxTotal(2);
         if (password != null && !password.isEmpty()) {
             jedisPool = new JedisPool(poolConfig, host, port, 2000, password);
         } else {
-            jedisPool = new JedisPool(poolConfig, host, port);
-        }
-
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.ping();
-            plugin.getLogger().info("StatsPushTask connected to Redis at " + host + ":" + port);
-        } catch (Exception e) {
-            plugin.getLogger().severe("StatsPushTask failed to connect to Redis: " + e.getMessage());
-            jedisPool.close();
-            jedisPool = null;
-            return;
+            jedisPool = new JedisPool(poolConfig, host, port, 2000);
         }
 
         long intervalTicks = TICKS_PER_MINUTE * intervalMinutes;
         this.task = Bukkit.getScheduler().runTaskTimerAsynchronously(
                 plugin, this::scan, 0L, intervalTicks);
         plugin.getLogger().info(
-                "Stats push scheduled every " + intervalMinutes + " minute(s) on channel " + CHANNEL);
+                "Stats push scheduled every " + intervalMinutes + " minute(s) on channel " + CHANNEL
+                        + "; Redis will be retried asynchronously if unavailable.");
     }
 
     /**
@@ -89,70 +92,73 @@ public class StatsPushTask {
      * anything whose mtime has moved since the previous scan.
      */
     private void scan() {
-        if (jedisPool == null) return;
-        File statsDir = new File(
-                plugin.getServer().getWorlds().get(0).getWorldFolder(),
-                "stats");
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         if (!statsDir.isDirectory()) return;
 
         File[] files = statsDir.listFiles((dir, name) -> name.endsWith(".json"));
         if (files == null) return;
 
         int pushed = 0;
-        for (File file : files) {
-            long mtime = file.lastModified();
-            Long prev = lastSeenMtime.get(file.getName());
-            if (prev != null && prev == mtime) continue;
-
-            String uuid = file.getName().substring(0, file.getName().length() - ".json".length());
-            String raw;
-            try {
-                raw = Files.readString(file.toPath());
-            } catch (IOException e) {
-                plugin.getLogger().warning("Failed to read stats file " + file.getName() + ": " + e.getMessage());
-                continue;
+        try (Jedis jedis = pool.getResource()) {
+            if (redisFailureLogged) {
+                plugin.getLogger().info("Stats push Redis connection recovered.");
+                redisFailureLogged = false;
             }
-            // Parse once so we can embed the inner object directly and
-            // reject malformed files before they hit the wire.
-            try {
-                JsonParser.parseString(raw);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Skipping malformed stats file " + file.getName());
-                continue;
-            }
+            for (File file : files) {
+                long mtime = file.lastModified();
+                Long prev = lastSeenMtime.get(file.getName());
+                if (prev != null && prev == mtime) continue;
 
-            JsonObject envelope = new JsonObject();
-            envelope.addProperty("season", season);
-            envelope.addProperty("uuid", uuid);
-            envelope.add("stats", JsonParser.parseString(raw));
-
-            // Include advancements if available for this player
-            File advDir = new File(
-                    plugin.getServer().getWorlds().get(0).getWorldFolder(),
-                    "advancements");
-            File advFile = new File(advDir, uuid + ".json");
-            if (advFile.isFile()) {
+                String uuid = file.getName().substring(0, file.getName().length() - ".json".length());
+                String raw;
                 try {
-                    String advRaw = Files.readString(advFile.toPath());
-                    JsonObject advJson = JsonParser.parseString(advRaw).getAsJsonObject();
-                    // Strip recipe unlocks — they bloat the payload and aren't real advancements
-                    advJson.keySet().removeIf(k -> k.startsWith("minecraft:recipes/"));
-                    envelope.add("advancements", advJson);
-                } catch (Exception e) {
-                    // Advancement read failure is non-fatal; just skip it
-                    plugin.getLogger().fine("Could not read advancements for " + uuid + ": " + e.getMessage());
+                    raw = Files.readString(file.toPath());
+                } catch (IOException e) {
+                    plugin.getLogger().warning("Failed to read stats file " + file.getName() + ": " + e.getMessage());
+                    continue;
                 }
-            }
+                // Parse once so we can embed the inner object directly and
+                // reject malformed files before they hit the wire.
+                try {
+                    JsonParser.parseString(raw);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Skipping malformed stats file " + file.getName());
+                    continue;
+                }
 
-            String payload = envelope.toString();
+                JsonObject envelope = new JsonObject();
+                envelope.addProperty("season", season);
+                envelope.addProperty("uuid", uuid);
+                envelope.add("stats", JsonParser.parseString(raw));
 
-            try (Jedis jedis = jedisPool.getResource()) {
+                // Include advancements if available for this player
+                File advFile = new File(advancementsDir, uuid + ".json");
+                if (advFile.isFile()) {
+                    try {
+                        String advRaw = Files.readString(advFile.toPath());
+                        JsonObject advJson = JsonParser.parseString(advRaw).getAsJsonObject();
+                        // Strip recipe unlocks — they bloat the payload and aren't real advancements
+                        advJson.keySet().removeIf(k -> k.startsWith("minecraft:recipes/"));
+                        envelope.add("advancements", advJson);
+                    } catch (Exception e) {
+                        // Advancement read failure is non-fatal; just skip it
+                        plugin.getLogger().fine("Could not read advancements for " + uuid + ": " + e.getMessage());
+                    }
+                }
+
+                String payload = envelope.toString();
                 jedis.publish(CHANNEL, payload);
                 lastSeenMtime.put(file.getName(), mtime);
                 pushed++;
-            } catch (Exception e) {
-                plugin.getLogger().warning("Failed to publish stats for " + uuid + ": " + e.getMessage());
             }
+        } catch (Exception e) {
+            if (!redisFailureLogged) {
+                plugin.getLogger().warning("Stats push Redis unavailable; will retry on the next scan: "
+                        + e.getMessage());
+                redisFailureLogged = true;
+            }
+            return;
         }
 
         if (pushed > 0) {

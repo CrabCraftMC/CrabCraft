@@ -13,6 +13,7 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,32 +56,20 @@ public class LoginStreakCache implements Listener {
     public void start() {
         JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxTotal(2);
-        try {
-            if (redisPassword != null && !redisPassword.isEmpty()) {
-                this.jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisPassword);
-            } else {
-                this.jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000);
-            }
-            try (Jedis jedis = jedisPool.getResource()) {
-                jedis.ping();
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Login streak cache: Redis unreachable — placeholders will return 0. " + e.getMessage());
-            if (jedisPool != null) {
-                try { jedisPool.close(); } catch (Exception ignored) {}
-            }
-            jedisPool = null;
-            return;
+        if (redisPassword != null && !redisPassword.isEmpty()) {
+            this.jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisPassword);
+        } else {
+            this.jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000);
         }
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::primeFromHash);
+        primeOnlinePlayers();
 
         subscriberThread = new SubscriberThread();
         subscriberThread.setName("crabutilities-streak-subscriber");
         subscriberThread.setDaemon(true);
         subscriberThread.start();
 
-        plugin.getLogger().info("Login streak cache connected to Redis");
+        plugin.getLogger().info("Login streak cache started; Redis will be retried asynchronously if unavailable.");
     }
 
     public void shutdown() {
@@ -91,6 +80,7 @@ public class LoginStreakCache implements Listener {
                     subscriberThread.subscriber.unsubscribe();
                 }
             } catch (Exception ignored) {}
+            subscriberThread.interrupt();
             subscriberThread = null;
         }
         if (jedisPool != null && !jedisPool.isClosed()) {
@@ -117,11 +107,27 @@ public class LoginStreakCache implements Listener {
         cache.remove(event.getPlayer().getUniqueId());
     }
 
-    private void primeFromHash() {
+    private void primeOnlinePlayers() {
+        Runnable capture = () -> {
+            List<UUID> onlinePlayers = Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getUniqueId)
+                    .toList();
+            if (!onlinePlayers.isEmpty()) {
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> primeFromHash(onlinePlayers));
+            }
+        };
+        if (Bukkit.isPrimaryThread()) {
+            capture.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, capture);
+        }
+    }
+
+    private void primeFromHash(List<UUID> onlinePlayers) {
         if (jedisPool == null) return;
         try (Jedis jedis = jedisPool.getResource()) {
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                String json = jedis.hget(HASH_KEY, online.getUniqueId().toString());
+            for (UUID uuid : onlinePlayers) {
+                String json = jedis.hget(HASH_KEY, uuid.toString());
                 if (json != null) ingest(json);
             }
         } catch (Exception e) {
@@ -192,8 +198,16 @@ public class LoginStreakCache implements Listener {
             // until the connection drops, so we wrap it in a loop with
             // backoff for transient Redis outages.
             long backoffMs = 1000L;
+            boolean warned = false;
             while (!cancelled) {
-                try (Jedis jedis = jedisPool.getResource()) {
+                JedisPool pool = jedisPool;
+                if (pool == null || pool.isClosed()) return;
+                try (Jedis jedis = pool.getResource()) {
+                    if (warned) {
+                        plugin.getLogger().info("Login streak Redis subscription reconnected.");
+                        warned = false;
+                        primeOnlinePlayers();
+                    }
                     subscriber = new JedisPubSub() {
                         @Override
                         public void onMessage(String channel, String message) {
@@ -204,7 +218,13 @@ public class LoginStreakCache implements Listener {
                     jedis.subscribe(subscriber, UPDATE_CHANNEL);
                 } catch (Exception e) {
                     if (cancelled) return;
-                    plugin.getLogger().fine("Streak subscription dropped: " + e.getMessage());
+                    if (!warned) {
+                        plugin.getLogger().warning("Login streak Redis subscription unavailable; retrying: "
+                                + e.getMessage());
+                        warned = true;
+                    } else {
+                        plugin.getLogger().fine("Streak subscription dropped: " + e.getMessage());
+                    }
                     try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { return; }
                     backoffMs = Math.min(30_000L, backoffMs * 2L);
                 }

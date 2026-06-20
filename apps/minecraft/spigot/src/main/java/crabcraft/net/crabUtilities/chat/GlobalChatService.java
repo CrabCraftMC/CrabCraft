@@ -24,7 +24,7 @@ import java.util.UUID;
  * over Redis pub/sub on {@code crabutilities:globalchat}.
  *
  * <p>Pool/subscriber idiom follows {@code RedisVoiceBus}: a JedisPool
- * with a 2s timeout and a ping on start, a daemon {@code while(!interrupted)}
+ * with a 2s timeout, a daemon {@code while(!interrupted)}
  * subscriber that reconnects with a ~3s backoff and swallows
  * {@code NoClassDefFoundError} on shutdown, and async publishes via
  * {@code Bukkit.getScheduler().runTaskAsynchronously}.
@@ -56,6 +56,7 @@ public class GlobalChatService {
     private JedisPool jedisPool;
     private JedisPubSub pubSub;
     private Thread subscriberThread;
+    private volatile boolean stopped;
 
     public GlobalChatService(CrabUtilities plugin) {
         this.plugin = plugin;
@@ -98,17 +99,9 @@ public class GlobalChatService {
             jedisPool = new JedisPool(poolConfig, host, port, 2000);
         }
 
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.ping();
-        } catch (Exception e) {
-            plugin.getLogger().severe("Global chat failed to connect to Redis: " + e.getMessage());
-            jedisPool.close();
-            jedisPool = null;
-            return;
-        }
-
         startSubscriber();
-        plugin.getLogger().info("Global chat connected to Redis (enabled=" + enabled + ", serverId=" + serverId + ")");
+        plugin.getLogger().info("Global chat started (enabled=" + enabled + ", serverId=" + serverId
+                + "); Redis will be retried asynchronously if unavailable.");
     }
 
     public boolean isEnabled() {
@@ -127,15 +120,27 @@ public class GlobalChatService {
             }
         };
         subscriberThread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try (Jedis jedis = jedisPool.getResource()) {
+            boolean warned = false;
+            while (!stopped && !Thread.currentThread().isInterrupted()) {
+                JedisPool pool = jedisPool;
+                if (pool == null || pool.isClosed()) break;
+                try (Jedis jedis = pool.getResource()) {
+                    if (warned) {
+                        plugin.getLogger().info("Global chat Redis subscriber reconnected.");
+                        warned = false;
+                    }
                     jedis.subscribe(pubSub, CHANNEL);
                 } catch (NoClassDefFoundError e) {
                     break;
                 } catch (Exception e) {
                     if (Thread.currentThread().isInterrupted()) break;
-                    plugin.getLogger().warning(
-                            "Global chat subscriber disconnected, reconnecting in 3s: " + e.getMessage());
+                    if (!warned) {
+                        plugin.getLogger().warning(
+                                "Global chat Redis subscriber unavailable; reconnecting in 3s: " + e.getMessage());
+                        warned = true;
+                    } else {
+                        plugin.getLogger().fine("Global chat subscriber disconnected: " + e.getMessage());
+                    }
                     try { Thread.sleep(3000L); } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         break;
@@ -155,6 +160,9 @@ public class GlobalChatService {
      * message component are bound via {@link Placeholder#component} and the
      * server name / username via {@link Placeholder#unparsed}, so nothing the
      * player typed is parsed as MiniMessage.
+     *
+     * <p>Must run on the main thread because mention resolution walks the
+     * online Bukkit player list and reads display names.
      */
     public RenderedLine renderLine(Component displayName, String username, String plainMessage, UUID senderUuid) {
         MentionProcessor.Result mention = mentionProcessor.process(plainMessage, senderUuid);
@@ -166,16 +174,38 @@ public class GlobalChatService {
         return new RenderedLine(line, mention.mentioned());
     }
 
+    public void handleLocalChat(UUID senderUuid, String plainMessage) {
+        runOnMain(() -> {
+            if (stopped) {
+                return;
+            }
+            Player player = Bukkit.getPlayer(senderUuid);
+            if (player == null || !player.isOnline()) {
+                return;
+            }
+
+            String username = player.getName();
+            Component displayName = player.displayName();
+            RenderedLine rendered = renderLine(displayName, username, plainMessage, senderUuid);
+
+            deliverLocally(rendered.line(), rendered.mentioned());
+            publish(senderUuid, username, displayName, plainMessage);
+        });
+    }
+
     /**
      * Sends {@code line} to every online local player on the main thread,
      * playing the ping sound to anyone in {@code mentioned}.
      */
     public void deliverLocally(Component line, Set<UUID> mentioned) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                p.sendMessage(line);
-                if (soundEnabled && mentioned.contains(p.getUniqueId())) {
-                    p.playSound(mentionSound, Sound.Emitter.self());
+        runOnMain(() -> {
+            if (stopped) {
+                return;
+            }
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.sendMessage(line);
+                if (soundEnabled && mentioned.contains(player.getUniqueId())) {
+                    player.playSound(mentionSound, Sound.Emitter.self());
                 }
             }
         });
@@ -187,7 +217,9 @@ public class GlobalChatService {
      * serverId so receivers can drop their own echoes.
      */
     public void publish(UUID senderUuid, String username, Component displayName, String plainMessage) {
-        if (jedisPool == null) return;
+        if (stopped) return;
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         JsonObject envelope = new JsonObject();
         envelope.addProperty("origin", serverId.toString());
         envelope.addProperty("server", serverName == null ? "" : serverName);
@@ -198,7 +230,7 @@ public class GlobalChatService {
         String payload = envelope.toString();
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try (Jedis jedis = jedisPool.getResource()) {
+            try (Jedis jedis = pool.getResource()) {
                 jedis.publish(CHANNEL, payload);
             } catch (Exception e) {
                 plugin.getLogger().warning("Global chat publish failed: " + e.getMessage());
@@ -208,6 +240,7 @@ public class GlobalChatService {
 
     /** Parses an inbound envelope, drops our own echoes, then renders + delivers it. */
     private void handleIncoming(String payload) {
+        if (stopped) return;
         JsonObject envelope = JsonParser.parseString(payload).getAsJsonObject();
         String origin = envelope.has("origin") ? envelope.get("origin").getAsString() : "";
         if (serverId.toString().equals(origin)) {
@@ -216,30 +249,45 @@ public class GlobalChatService {
         String username = envelope.has("username") ? envelope.get("username").getAsString() : "";
         String message = envelope.has("message") ? envelope.get("message").getAsString() : "";
         String uuidStr = envelope.has("uuid") ? envelope.get("uuid").getAsString() : null;
-        UUID senderUuid;
+        UUID parsedSenderUuid;
         try {
-            senderUuid = uuidStr == null ? new UUID(0L, 0L) : UUID.fromString(uuidStr);
+            parsedSenderUuid = uuidStr == null ? new UUID(0L, 0L) : UUID.fromString(uuidStr);
         } catch (IllegalArgumentException e) {
-            senderUuid = new UUID(0L, 0L);
+            parsedSenderUuid = new UUID(0L, 0L);
         }
+        UUID senderUuid = parsedSenderUuid;
 
-        Component displayName;
         String displayJson = envelope.has("displayName") ? envelope.get("displayName").getAsString() : null;
-        if (displayJson != null && !displayJson.isEmpty()) {
-            try {
-                displayName = GsonComponentSerializer.gson().deserialize(displayJson);
-            } catch (Exception e) {
+        runOnMain(() -> {
+            if (stopped) {
+                return;
+            }
+            Component displayName;
+            if (displayJson != null && !displayJson.isEmpty()) {
+                try {
+                    displayName = GsonComponentSerializer.gson().deserialize(displayJson);
+                } catch (Exception e) {
+                    displayName = Component.text(username);
+                }
+            } else {
                 displayName = Component.text(username);
             }
-        } else {
-            displayName = Component.text(username);
-        }
 
-        RenderedLine rendered = renderLine(displayName, username, message, senderUuid);
-        deliverLocally(rendered.line(), rendered.mentioned());
+            RenderedLine rendered = renderLine(displayName, username, message, senderUuid);
+            deliverLocally(rendered.line(), rendered.mentioned());
+        });
+    }
+
+    private void runOnMain(Runnable task) {
+        if (Bukkit.isPrimaryThread()) {
+            task.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, task);
+        }
     }
 
     public void shutdown() {
+        stopped = true;
         if (pubSub != null) {
             try { pubSub.unsubscribe(); } catch (Exception ignored) {}
         }

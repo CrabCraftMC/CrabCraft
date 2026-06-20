@@ -118,7 +118,7 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: "21"
+          java-version: "25"
           distribution: "temurin"
 
       - uses: gradle/actions/setup-gradle@v4
@@ -147,26 +147,27 @@ jobs:
       - name: Generate SHA256SUMS.txt
         run: |
           cd apps/minecraft/jars
-          sha256sum *.jar > SHA256SUMS.txt
+          sha256sum CrabUtilities.jar CrabUtilities-Velocity.jar > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
           name: CrabUtilities-Spigot
-          path: apps/minecraft/spigot/build/libs/CrabUtilities*.jar
+          path: apps/minecraft/jars/CrabUtilities.jar
           retention-days: 3
 
       - uses: actions/upload-artifact@v4
         with:
           name: CrabUtilities-Velocity
-          path: apps/minecraft/velocity/build/libs/CrabUtilities-Velocity*.jar
+          path: apps/minecraft/jars/CrabUtilities-Velocity.jar
           retention-days: 3
 
       - uses: actions/upload-artifact@v4
         with:
           name: CrabUtilities-All
           path: |
-            apps/minecraft/jars/*.jar
+            apps/minecraft/jars/CrabUtilities.jar
+            apps/minecraft/jars/CrabUtilities-Velocity.jar
             apps/minecraft/jars/SHA256SUMS.txt
           retention-days: 3
 
@@ -230,7 +231,7 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: "21"
+          java-version: "25"
           distribution: "temurin"
 
       - uses: gradle/actions/setup-gradle@v4
@@ -248,7 +249,7 @@ jobs:
       - name: Generate SHA256SUMS.txt
         run: |
           cd apps/minecraft/jars
-          sha256sum *.jar > SHA256SUMS.txt
+          sha256sum CrabUtilities.jar CrabUtilities-Velocity.jar > SHA256SUMS.txt
 
       - uses: actions/download-artifact@v4
         with:
@@ -261,8 +262,8 @@ jobs:
           tag_name: v${{ steps.bump.outputs.version }}
           files: |
             artifacts/crabcraft-bot/*.tar.gz
-            apps/minecraft/spigot/build/libs/CrabUtilities*.jar
-            apps/minecraft/velocity/build/libs/CrabUtilities-Velocity*.jar
+            apps/minecraft/jars/CrabUtilities.jar
+            apps/minecraft/jars/CrabUtilities-Velocity.jar
             apps/minecraft/jars/SHA256SUMS.txt
           generate_release_notes: true
 
@@ -285,7 +286,7 @@ jobs:
         with:
           files: |
             artifacts/crabcraft-bot/*.tar.gz
-            artifacts/CrabUtilities-Spigot/*.jar
-            artifacts/CrabUtilities-Velocity/*.jar
+            artifacts/CrabUtilities-Spigot/CrabUtilities.jar
+            artifacts/CrabUtilities-Velocity/CrabUtilities-Velocity.jar
             artifacts/CrabUtilities-Checksums/SHA256SUMS.txt
           generate_release_notes: true

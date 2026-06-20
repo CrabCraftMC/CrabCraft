@@ -31,6 +31,7 @@ public class LoginStreakPublisher {
     private final CrabUtilitiesVelocity plugin;
     private final VelocityConfig config;
     private JedisPool jedisPool;
+    private volatile boolean redisFailureLogged;
 
     public LoginStreakPublisher(CrabUtilitiesVelocity plugin, VelocityConfig config) {
         this.plugin = plugin;
@@ -41,28 +42,18 @@ public class LoginStreakPublisher {
     private void connect() {
         JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxTotal(2);
-        try {
-            if (config.getRedisPassword() != null && !config.getRedisPassword().isEmpty()) {
-                this.jedisPool = new JedisPool(poolConfig, config.getRedisHost(),
-                        config.getRedisPort(), 2000, config.getRedisPassword());
-            } else {
-                this.jedisPool = new JedisPool(poolConfig, config.getRedisHost(),
-                        config.getRedisPort(), 2000);
-            }
-            try (Jedis jedis = jedisPool.getResource()) {
-                jedis.ping();
-            }
-        } catch (Exception e) {
-            plugin.getLogger().error("Login streak publisher failed to connect to Redis", e);
-            if (jedisPool != null) {
-                try { jedisPool.close(); } catch (Exception ignored) {}
-            }
-            jedisPool = null;
+        if (config.getRedisPassword() != null && !config.getRedisPassword().isEmpty()) {
+            this.jedisPool = new JedisPool(poolConfig, config.getRedisHost(),
+                    config.getRedisPort(), 2000, config.getRedisPassword());
+        } else {
+            this.jedisPool = new JedisPool(poolConfig, config.getRedisHost(),
+                    config.getRedisPort(), 2000);
         }
+        plugin.getLogger().info("Login streak publisher ready; Redis will be retried on publish if unavailable.");
     }
 
     public void publish(String uuid, LoginStreakService.StreakSnapshot snapshot, long bufferHours) {
-        if (jedisPool == null || snapshot == null) return;
+        if (jedisPool == null || jedisPool.isClosed() || snapshot == null) return;
 
         long now = System.currentTimeMillis() / 1000L;
         long expiresAt = snapshot.lastLoginAt + bufferHours * 3600L;
@@ -83,8 +74,17 @@ public class LoginStreakPublisher {
         try (Jedis jedis = jedisPool.getResource()) {
             jedis.hset(HASH_KEY, uuid, body);
             jedis.publish(UPDATE_CHANNEL, body);
+            if (redisFailureLogged) {
+                plugin.getLogger().info("Login streak Redis publisher recovered.");
+                redisFailureLogged = false;
+            }
         } catch (Exception e) {
-            plugin.getLogger().warn("Failed to publish login streak for {}", uuid, e);
+            if (!redisFailureLogged) {
+                plugin.getLogger().warn("Failed to publish login streak for {}; will retry on later logins", uuid, e);
+                redisFailureLogged = true;
+            } else {
+                plugin.getLogger().debug("Failed to publish login streak for {}: {}", uuid, e.getMessage());
+            }
         }
     }
 

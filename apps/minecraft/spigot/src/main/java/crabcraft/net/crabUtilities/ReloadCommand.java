@@ -29,8 +29,14 @@ public class ReloadCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ChatColor.RED + "You don't have permission to reload CrabUtilities.");
                 return true;
             }
-            plugin.reloadConfig();
+            List<String> messages = plugin.reloadRuntimeConfig();
             sender.sendMessage(ChatColor.GREEN + "CrabUtilities config reloaded.");
+            for (String message : messages) {
+                ChatColor color = message.startsWith("Restart required")
+                        ? ChatColor.YELLOW
+                        : ChatColor.GRAY;
+                sender.sendMessage(color + "- " + message);
+            }
             return true;
         }
         if (args.length >= 1 && args[0].equalsIgnoreCase("update") && updateCommand != null) {
