@@ -105,9 +105,6 @@ public final class LiteBansInfractionService {
 
     private Infraction readInfraction(String type, ResultSet rs) throws SQLException {
         Map<String, Integer> columns = columns(rs.getMetaData());
-        if (Boolean.TRUE.equals(getNullableBoolean(columns, rs, "silent"))) {
-            return null;
-        }
 
         long createdAtMs = getLong(columns, rs, "time", 0L);
         Long expiresAtMs = getNullableLong(columns, rs, "until");

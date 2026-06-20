@@ -37,6 +37,7 @@ public class WebServer {
     private static final Pattern USERNAME = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
     private static final Pattern UUID_PATTERN = Pattern.compile(
             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+    private static final Pattern COMPACT_UUID_PATTERN = Pattern.compile("^[0-9a-fA-F]{32}$");
     private static final Pattern AWARD_ID_PATTERN = Pattern.compile("^[a-z0-9_]+$");
 
     private static final String ERROR_SCHEMA =
@@ -321,7 +322,7 @@ public class WebServer {
             + "\"description\":\"Returns sanitized public LiteBans history for a player, combining bans, mutes, warnings, and kicks. IP data is never exposed. Results are newest-first and capped by the `limit` query parameter.\","
             + "\"operationId\":\"getPlayerInfractions\","
             + "\"parameters\":["
-            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"},"
+            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\"},\"description\":\"Minecraft player UUID, with or without dashes\"},"
             + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":10,\"minimum\":1,\"maximum\":25},\"description\":\"Maximum number of infractions to return (1-25)\"}"
             + "],"
             + "\"responses\":{"
@@ -629,6 +630,21 @@ public class WebServer {
         return params;
     }
 
+    private static String normalizeMinecraftUuid(String value) {
+        if (UUID_PATTERN.matcher(value).matches()) {
+            return UUID.fromString(value).toString();
+        }
+        if (COMPACT_UUID_PATTERN.matcher(value).matches()) {
+            return UUID.fromString(
+                    value.substring(0, 8) + "-"
+                            + value.substring(8, 12) + "-"
+                            + value.substring(12, 16) + "-"
+                            + value.substring(16, 20) + "-"
+                            + value.substring(20)).toString();
+        }
+        return null;
+    }
+
     public boolean start() {
         if (httpServer != null) {
             plugin.getLogger().warn("Web API is already running.");
@@ -884,11 +900,11 @@ public class WebServer {
                 // /players/{uuid}/infractions
                 if (sub.endsWith("/infractions")) {
                     String uuid = sub.substring(0, sub.length() - "/infractions".length());
-                    if (!UUID_PATTERN.matcher(uuid).matches()) {
+                    uuid = normalizeMinecraftUuid(uuid);
+                    if (uuid == null) {
                         sendError(exchange, 400, "invalid uuid format");
                         return;
                     }
-                    uuid = UUID.fromString(uuid).toString();
                     var params = parseQuery(exchange.getRequestURI());
                     int limit = 10;
                     String rawLimit = params.get("limit");
