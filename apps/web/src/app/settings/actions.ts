@@ -1,9 +1,12 @@
 "use server";
 
 import { auth } from "@/lib/auth";
-import type { Platform } from "@crabcraft/db/queries/bot";
-import { addStreamChannel } from "@crabcraft/db/queries/bot";
-import { removeStreamChannelForUser, getStreamChannelsForUser } from "@crabcraft/db/queries/web";
+import {
+  addStreamChannelForUser,
+  removeStreamChannelForUser,
+  getStreamChannelsForUser,
+} from "@crabcraft/db/queries/web";
+import type { Platform } from "@crabcraft/db/queries/web";
 import { revalidatePath } from "next/cache";
 
 type ActionResult = { success: true } | { success: false; error: string };
@@ -34,7 +37,10 @@ export async function addChannelAction(formData: FormData): Promise<ActionResult
     return { success: false, error: `You already have a ${platform} channel linked.` };
   }
 
-  await addStreamChannel(platform as Platform, channelId, user.discordId, displayName);
+  const added = await addStreamChannelForUser(platform as Platform, channelId, user.discordId, displayName);
+  if (!added) {
+    return { success: false, error: "This channel is already linked." };
+  }
 
   revalidatePath("/settings");
   return { success: true };
