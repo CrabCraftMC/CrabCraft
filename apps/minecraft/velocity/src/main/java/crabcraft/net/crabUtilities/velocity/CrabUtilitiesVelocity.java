@@ -40,6 +40,12 @@ import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Plugin(
         id = "crabutilities",
@@ -78,6 +84,8 @@ public class CrabUtilitiesVelocity {
     private LoginStreakService loginStreakService;
     private LoginStreakPublisher loginStreakPublisher;
     private LuckPerms luckPerms;
+    private volatile ExecutorService databaseExecutor;
+    private final Object lifecycleLock = new Object();
 
     @Inject
     public CrabUtilitiesVelocity(ProxyServer server, Logger logger,
@@ -91,6 +99,7 @@ public class CrabUtilitiesVelocity {
     public void onProxyInitialize(ProxyInitializeEvent event) {
         this.config = VelocityConfig.load(dataDirectory, logger);
         VelocityConfig config = this.config;
+        this.databaseExecutor = createExecutor("CrabUtilities-DB", 4, 256);
 
         this.nicknameCache = new NicknameCache();
         this.pendingJoinManager = new PendingJoinManager();
@@ -170,105 +179,85 @@ public class CrabUtilitiesVelocity {
 
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
-        if (webServer != null) {
-            webServer.stop();
-        }
-        if (statsPushSubscriber != null) {
-            statsPushSubscriber.shutdown();
-        }
-        if (redisStaffChat != null) {
-            redisStaffChat.shutdown();
-        }
-        if (playerLocationTracker != null) {
-            playerLocationTracker.shutdown();
-        }
-        if (loginStreakPublisher != null) {
-            loginStreakPublisher.shutdown();
-        }
-        if (pgWriter != null) {
-            pgWriter.close();
-        }
-        if (updateService != null) {
-            updateService.shutdown();
+        synchronized (lifecycleLock) {
+            stopRuntimeConsumers();
+            shutdownDatabaseExecutor("shutdown");
+            stopLoginStreakPublisher();
+            if (pgWriter != null) {
+                pgWriter.close();
+                pgWriter = null;
+            }
         }
         logger.info("CrabUtilities Velocity disabled.");
     }
 
     public void reload() {
-        this.config = VelocityConfig.load(dataDirectory, logger);
-        VelocityConfig config = this.config;
+        synchronized (lifecycleLock) {
+            VelocityConfig newConfig = VelocityConfig.load(dataDirectory, logger);
 
-        if (pgWriter != null) {
-            pgWriter.close();
-        }
-        this.pgWriter = new PostgresStatsWriter(
-            config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
-        );
-        AwardSeeder.seedIfEmpty(pgWriter.getDataSource(), logger);
-        Map<String, AwardDefinition> awards = AwardLoader.loadAll(pgWriter.getDataSource(), logger);
-        logger.info("Loaded {} award definitions from database", awards.size());
-        this.awardEvaluator = new AwardEvaluator(awards);
-        this.awardDbWriter = new AwardDbWriter(pgWriter.getDataSource(), logger);
-        this.awardQueryService = new AwardQueryService(pgWriter.getDataSource(), logger);
-        this.statsQueryService = new StatsQueryService(pgWriter.getDataSource(), logger);
-        this.advancementDbWriter = new AdvancementDbWriter(pgWriter.getDataSource(), logger);
-        this.advancementRegistry = new AdvancementRegistry(logger);
-        this.advancementQueryService = new AdvancementQueryService(pgWriter.getDataSource(), logger, advancementRegistry);
-        this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
+            stopRuntimeConsumers();
+            shutdownDatabaseExecutor("reload");
+            stopLoginStreakPublisher();
 
-        if (loginStreakService != null) {
-            this.loginStreakService.setBufferHours(config.getLoginStreakBufferHours());
-        } else {
+            PostgresStatsWriter oldPgWriter = this.pgWriter;
+            PostgresStatsWriter newPgWriter = new PostgresStatsWriter(
+                newConfig.getDbUrl(), newConfig.getDbUsername(), newConfig.getDbPassword(), logger
+            );
+
+            AwardSeeder.seedIfEmpty(newPgWriter.getDataSource(), logger);
+            Map<String, AwardDefinition> awards = AwardLoader.loadAll(newPgWriter.getDataSource(), logger);
+            logger.info("Loaded {} award definitions from database", awards.size());
+
+            AdvancementRegistry newAdvancementRegistry = new AdvancementRegistry(logger);
+
+            this.config = newConfig;
+            this.pgWriter = newPgWriter;
+            this.awardEvaluator = new AwardEvaluator(awards);
+            this.awardDbWriter = new AwardDbWriter(newPgWriter.getDataSource(), logger);
+            this.awardQueryService = new AwardQueryService(newPgWriter.getDataSource(), logger);
+            this.statsQueryService = new StatsQueryService(newPgWriter.getDataSource(), logger);
+            this.advancementDbWriter = new AdvancementDbWriter(newPgWriter.getDataSource(), logger);
+            this.advancementRegistry = newAdvancementRegistry;
+            this.advancementQueryService = new AdvancementQueryService(
+                    newPgWriter.getDataSource(), logger, newAdvancementRegistry);
+            this.altQueryService = new AltQueryService(newPgWriter.getDataSource(), logger);
             this.loginStreakService = new LoginStreakService(
-                    pgWriter.getDataSource(), logger, config.getLoginStreakBufferHours());
-        }
-        if (loginStreakPublisher != null) {
-            loginStreakPublisher.shutdown();
-        }
-        this.loginStreakPublisher = new LoginStreakPublisher(this, config);
+                    newPgWriter.getDataSource(), logger, newConfig.getLoginStreakBufferHours());
 
-        if (statsPushSubscriber != null) {
-            statsPushSubscriber.shutdown();
-        }
-        this.statsPushSubscriber = new StatsPushSubscriber(this, config, logger);
-        this.statsPushSubscriber.start();
+            if (oldPgWriter != null) {
+                oldPgWriter.close();
+            }
 
-        if (webServer != null) {
-            webServer.stop();
-        }
-        this.webServer = new WebServer(this, config.getApiPort());
-        this.webServer.start();
+            this.loginStreakPublisher = new LoginStreakPublisher(this, newConfig);
+            this.discordWebhook = new DiscordWebhook(newConfig.getDiscordWebhookUrl(), logger);
+            this.staffChatDiscordWebhook = new DiscordWebhook(newConfig.getStaffChatDiscordWebhookUrl(), logger);
+            this.databaseExecutor = createExecutor("CrabUtilities-DB", 4, 256);
 
-        if (redisStaffChat != null) {
-            redisStaffChat.shutdown();
-        }
-        this.redisStaffChat = new RedisStaffChat(this, config);
-        this.redisStaffChat.start();
+            this.statsPushSubscriber = new StatsPushSubscriber(this, newConfig, logger);
+            this.statsPushSubscriber.start();
 
-        if (playerLocationTracker != null) {
-            playerLocationTracker.shutdown();
-            this.playerLocationTracker = null;
-        }
-        if (config.isVoicechatCrossServerEnabled()) {
-            this.playerLocationTracker = new PlayerLocationTracker(this, config);
-            this.playerLocationTracker.start();
-            server.getEventManager().register(this, playerLocationTracker);
-        }
+            this.webServer = new WebServer(this, newConfig.getApiPort());
+            this.webServer.start();
 
-        this.discordWebhook = new DiscordWebhook(config.getDiscordWebhookUrl(), logger);
-        this.staffChatDiscordWebhook = new DiscordWebhook(config.getStaffChatDiscordWebhookUrl(), logger);
-        this.staffChatManager = new StaffChatManager(this, redisStaffChat,
-                staffChatDiscordWebhook, config.getStaffChatDiscordAvatarUrl());
+            this.redisStaffChat = new RedisStaffChat(this, newConfig);
+            this.redisStaffChat.start();
 
-        if (updateService != null) {
-            updateService.shutdown();
-        }
-        this.updateService = new UpdateService(this);
-        if (config.isUpdateEnabled()) {
-            updateService.start();
-        }
+            if (newConfig.isVoicechatCrossServerEnabled()) {
+                this.playerLocationTracker = new PlayerLocationTracker(this, newConfig);
+                this.playerLocationTracker.start();
+                server.getEventManager().register(this, playerLocationTracker);
+            }
 
-        logger.info("CrabUtilities Velocity reloaded.");
+            this.staffChatManager = new StaffChatManager(this, redisStaffChat,
+                    staffChatDiscordWebhook, newConfig.getStaffChatDiscordAvatarUrl());
+
+            this.updateService = new UpdateService(this);
+            if (newConfig.isUpdateEnabled()) {
+                updateService.start();
+            }
+
+            logger.info("CrabUtilities Velocity reloaded.");
+        }
     }
 
     public ProxyServer getServer() { return server; }
@@ -294,4 +283,94 @@ public class CrabUtilitiesVelocity {
     public LoginStreakService getLoginStreakService() { return loginStreakService; }
     public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
     public LuckPerms getLuckPerms() { return luckPerms; }
+
+    public void runDatabaseTask(String taskName, Runnable task) {
+        ExecutorService executor = databaseExecutor;
+        if (executor == null || executor.isShutdown()) {
+            logger.warn("Skipping database task {} because the executor is stopped", taskName);
+            return;
+        }
+        try {
+            executor.execute(() -> {
+                try {
+                    task.run();
+                } catch (Exception e) {
+                    logger.error("Database task {} failed", taskName, e);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            logger.warn("Skipping database task {} because the executor queue is full", taskName);
+        }
+    }
+
+    private void stopRuntimeConsumers() {
+        if (statsPushSubscriber != null) {
+            statsPushSubscriber.shutdown();
+            statsPushSubscriber = null;
+        }
+        if (webServer != null) {
+            webServer.stop();
+            webServer = null;
+        }
+        if (redisStaffChat != null) {
+            redisStaffChat.shutdown();
+            redisStaffChat = null;
+        }
+        if (playerLocationTracker != null) {
+            playerLocationTracker.shutdown();
+            server.getEventManager().unregisterListener(this, playerLocationTracker);
+            playerLocationTracker = null;
+        }
+        if (updateService != null) {
+            updateService.shutdown();
+            updateService = null;
+        }
+    }
+
+    private void stopLoginStreakPublisher() {
+        if (loginStreakPublisher != null) {
+            loginStreakPublisher.shutdown();
+            loginStreakPublisher = null;
+        }
+    }
+
+    private void shutdownDatabaseExecutor(String reason) {
+        ExecutorService executor = databaseExecutor;
+        databaseExecutor = null;
+        if (executor == null) return;
+
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(15, TimeUnit.SECONDS)) {
+                logger.warn("Database executor did not stop cleanly during {}; interrupting queued work", reason);
+                executor.shutdownNow();
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    logger.warn("Database executor still has running work after {}", reason);
+                }
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private static ExecutorService createExecutor(String name, int threads, int queueSize) {
+        ThreadFactory factory = new ThreadFactory() {
+            private final java.util.concurrent.atomic.AtomicInteger count =
+                    new java.util.concurrent.atomic.AtomicInteger();
+
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r, name + "-" + count.incrementAndGet());
+                thread.setDaemon(true);
+                return thread;
+            }
+        };
+        return new ThreadPoolExecutor(
+                threads, threads,
+                30L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(queueSize),
+                factory,
+                new ThreadPoolExecutor.AbortPolicy());
+    }
 }

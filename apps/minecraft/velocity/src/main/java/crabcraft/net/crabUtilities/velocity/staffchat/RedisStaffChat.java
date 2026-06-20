@@ -31,17 +31,10 @@ public class RedisStaffChat {
                     config.getRedisPort(), 2000, config.getRedisPassword());
         } else {
             jedisPool = new JedisPool(poolConfig, config.getRedisHost(),
-                    config.getRedisPort());
+                    config.getRedisPort(), 2000);
         }
-
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.ping();
-            plugin.getLogger().info("Connected to Redis at {}:{}", config.getRedisHost(), config.getRedisPort());
-        } catch (Exception e) {
-            plugin.getLogger().error("Failed to connect to Redis at {}:{}",
-                    config.getRedisHost(), config.getRedisPort(), e);
-            return;
-        }
+        plugin.getLogger().info("Staff chat Redis subscriber starting for {}:{}; reconnects will run asynchronously.",
+                config.getRedisHost(), config.getRedisPort());
 
         pubSub = new JedisPubSub() {
             @Override
@@ -60,15 +53,27 @@ public class RedisStaffChat {
         };
 
         subscriberThread = new Thread(() -> {
+            boolean warned = false;
             while (!Thread.currentThread().isInterrupted()) {
-                try (Jedis jedis = jedisPool.getResource()) {
+                JedisPool pool = jedisPool;
+                if (pool == null || pool.isClosed()) break;
+                try (Jedis jedis = pool.getResource()) {
+                    if (warned) {
+                        plugin.getLogger().info("Staff chat Redis subscriber reconnected.");
+                        warned = false;
+                    }
                     jedis.subscribe(pubSub, config.getRedisChannel());
                 } catch (NoClassDefFoundError e) {
                     // Classloader closed during shutdown, exit silently
                     break;
                 } catch (Exception e) {
                     if (Thread.currentThread().isInterrupted()) break;
-                    plugin.getLogger().warn("Redis subscriber disconnected, reconnecting in 3s...", e);
+                    if (!warned) {
+                        plugin.getLogger().warn("Staff chat Redis subscriber unavailable, reconnecting in 3s...", e);
+                        warned = true;
+                    } else {
+                        plugin.getLogger().debug("Staff chat Redis subscriber disconnected: {}", e.getMessage());
+                    }
                     try {
                         Thread.sleep(3000);
                     } catch (InterruptedException ie) {
@@ -83,8 +88,10 @@ public class RedisStaffChat {
     }
 
     public void publish(String senderName, String message) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         plugin.getServer().getScheduler().buildTask(plugin, () -> {
-            try (Jedis jedis = jedisPool.getResource()) {
+            try (Jedis jedis = pool.getResource()) {
                 jedis.publish(config.getRedisChannel(), senderName + SEPARATOR + message);
             } catch (Exception e) {
                 plugin.getLogger().error("Failed to publish staff chat message to Redis", e);

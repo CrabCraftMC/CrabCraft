@@ -12,10 +12,13 @@ import de.maxhenkel.voicechat.api.BukkitVoicechatService;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class CrabUtilities extends JavaPlugin {
 
@@ -26,6 +29,7 @@ public final class CrabUtilities extends JavaPlugin {
     private LoginStreakCache loginStreakCache;
     private LoginStreakExpansion loginStreakExpansion;
     private GlobalChatService globalChatService;
+    private GlobalChatListener globalChatListener;
 
     @Override
     public void onEnable() {
@@ -69,48 +73,25 @@ public final class CrabUtilities extends JavaPlugin {
         // Auto-updater
         this.updateService = new UpdateService(this);
         UpdateCommand updateCommand = new UpdateCommand(this, updateService);
-        if (getConfig().getBoolean("auto-update.enabled", true)) {
-            updateService.start();
-        }
+        startUpdateService();
 
         // Commands
         ReloadCommand reloadCommand = new ReloadCommand(this, updateCommand);
         getCommand("crabutilities").setExecutor(reloadCommand);
         getCommand("crabutilities").setTabCompleter(reloadCommand);
 
-        this.statsPushTask = new StatsPushTask(this);
-        statsPushTask.start();
+        startStatsPushTask();
 
         // Login streaks: read-only mirror of the Velocity-owned data,
         // populated via Redis. Soft dependency on PlaceholderAPI — if
         // it's not loaded, the cache still runs (other features could
         // consume it) but the placeholder expansion is skipped.
-        this.loginStreakCache = new LoginStreakCache(this);
-        loginStreakCache.start();
-        Bukkit.getPluginManager().registerEvents(loginStreakCache, this);
-
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            try {
-                this.loginStreakExpansion = new LoginStreakExpansion(this, loginStreakCache);
-                if (loginStreakExpansion.register()) {
-                    getLogger().info("Registered PlaceholderAPI expansion 'crabutilities'");
-                } else {
-                    getLogger().warning("PlaceholderAPI expansion registration returned false");
-                }
-            } catch (NoClassDefFoundError e) {
-                getLogger().warning("PlaceholderAPI present but classes not visible: " + e.getMessage());
-            }
-        } else {
-            getLogger().info("PlaceholderAPI not detected — streak placeholders disabled.");
-        }
+        startLoginStreakCache();
 
         // Global chat: on servers where it's enabled, capture/format/sync
         // normal chat across the network over Redis. Disabled servers stay
         // fully local.
-        this.globalChatService = new GlobalChatService(this);
-        globalChatService.start();
-        Bukkit.getPluginManager().registerEvents(
-                new GlobalChatListener(globalChatService), this);
+        startGlobalChatService();
 
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
@@ -177,11 +158,114 @@ public final class CrabUtilities extends JavaPlugin {
         return getFile();
     }
 
-    @Override
-    public void onDisable() {
+    public List<String> reloadRuntimeConfig() {
+        reloadConfig();
+        mergeConfigDefaults();
+        reloadConfig();
+
+        List<String> messages = new ArrayList<>();
+
+        stopStatsPushTask();
+        startStatsPushTask();
+        messages.add("Stats push restarted with current season, Redis, and interval settings.");
+
+        stopLoginStreakCache();
+        startLoginStreakCache();
+        messages.add("Login streak cache restarted with current Redis settings.");
+
+        stopGlobalChatService();
+        startGlobalChatService();
+        messages.add("Global chat restarted with current Redis, format, and mention settings.");
+
+        if (updateService != null) {
+            updateService.shutdown();
+            if (getConfig().getBoolean("auto-update.enabled", true)) {
+                updateService.start();
+                messages.add("Auto-update scheduler restarted with current settings.");
+            } else {
+                messages.add("Auto-update scheduler stopped because auto-update.enabled=false.");
+            }
+        }
+
+        messages.add("Restart required for voicechat.cross-server and mod-protocols settings.");
+        return messages;
+    }
+
+    private void startUpdateService() {
+        if (updateService != null && getConfig().getBoolean("auto-update.enabled", true)) {
+            updateService.start();
+        }
+    }
+
+    private void startStatsPushTask() {
+        this.statsPushTask = new StatsPushTask(this);
+        statsPushTask.start();
+    }
+
+    private void stopStatsPushTask() {
         if (statsPushTask != null) {
             statsPushTask.shutdown();
+            statsPushTask = null;
         }
+    }
+
+    private void startLoginStreakCache() {
+        this.loginStreakCache = new LoginStreakCache(this);
+        loginStreakCache.start();
+        Bukkit.getPluginManager().registerEvents(loginStreakCache, this);
+        registerLoginStreakExpansion();
+    }
+
+    private void stopLoginStreakCache() {
+        if (loginStreakExpansion != null) {
+            try { loginStreakExpansion.unregister(); } catch (Throwable ignored) {}
+            loginStreakExpansion = null;
+        }
+        if (loginStreakCache != null) {
+            HandlerList.unregisterAll(loginStreakCache);
+            loginStreakCache.shutdown();
+            loginStreakCache = null;
+        }
+    }
+
+    private void registerLoginStreakExpansion() {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            try {
+                this.loginStreakExpansion = new LoginStreakExpansion(this, loginStreakCache);
+                if (loginStreakExpansion.register()) {
+                    getLogger().info("Registered PlaceholderAPI expansion 'crabutilities'");
+                } else {
+                    getLogger().warning("PlaceholderAPI expansion registration returned false");
+                }
+            } catch (NoClassDefFoundError e) {
+                getLogger().warning("PlaceholderAPI present but classes not visible: " + e.getMessage());
+            }
+        } else {
+            getLogger().info("PlaceholderAPI not detected — streak placeholders disabled.");
+        }
+    }
+
+    private void startGlobalChatService() {
+        this.globalChatService = new GlobalChatService(this);
+        globalChatService.start();
+        this.globalChatListener = new GlobalChatListener(globalChatService);
+        Bukkit.getPluginManager().registerEvents(globalChatListener, this);
+    }
+
+    private void stopGlobalChatService() {
+        if (globalChatListener != null) {
+            HandlerList.unregisterAll(globalChatListener);
+            globalChatListener = null;
+        }
+        if (globalChatService != null) {
+            globalChatService.shutdown();
+            globalChatService = null;
+        }
+    }
+
+    @Override
+    public void onDisable() {
+        stopStatsPushTask();
         if (updateService != null) {
             updateService.shutdown();
         }
@@ -189,14 +273,7 @@ public final class CrabUtilities extends JavaPlugin {
             voicechatPlugin.shutdown();
             getServer().getServicesManager().unregister(voicechatPlugin);
         }
-        if (loginStreakExpansion != null) {
-            try { loginStreakExpansion.unregister(); } catch (Throwable ignored) {}
-        }
-        if (loginStreakCache != null) {
-            loginStreakCache.shutdown();
-        }
-        if (globalChatService != null) {
-            globalChatService.shutdown();
-        }
+        stopLoginStreakCache();
+        stopGlobalChatService();
     }
 }

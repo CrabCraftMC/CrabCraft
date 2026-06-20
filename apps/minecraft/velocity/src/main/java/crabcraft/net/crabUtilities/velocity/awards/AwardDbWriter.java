@@ -62,7 +62,7 @@ public final class AwardDbWriter {
             conn.setAutoCommit(false);
             try {
                 upsertPlayerScores(conn, uuid, season, scores);
-                recomputeMedals(conn, season);
+                recomputeMedalsInTransaction(conn, season);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -72,6 +72,46 @@ public final class AwardDbWriter {
             }
         } catch (SQLException e) {
             logger.error("Failed to write award scores for uuid={}", uuid, e);
+        }
+    }
+
+    /**
+     * Writes one player's scores without refreshing season-wide medals.
+     * Callers that process many players should batch/debounce
+     * {@link #recomputeMedals(String)} instead of running it once per player.
+     */
+    public void writeScoresForPlayer(String uuid, String season, Map<String, Double> scores) {
+        if (scores == null || scores.isEmpty()) return;
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                upsertPlayerScores(conn, uuid, season, scores);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to write award scores for uuid={}", uuid, e);
+        }
+    }
+
+    public void recomputeMedals(String season) {
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                recomputeMedalsInTransaction(conn, season);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to recompute award medals for season={}", season, e);
         }
     }
 
@@ -89,7 +129,7 @@ public final class AwardDbWriter {
         }
     }
 
-    private void recomputeMedals(Connection conn, String season) throws SQLException {
+    private void recomputeMedalsInTransaction(Connection conn, String season) throws SQLException {
         try (PreparedStatement stmt = conn.prepareStatement(RECOMPUTE_MEDALS)) {
             stmt.setString(1, season);
             stmt.executeUpdate();

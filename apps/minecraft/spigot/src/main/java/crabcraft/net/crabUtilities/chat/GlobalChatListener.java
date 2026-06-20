@@ -1,9 +1,7 @@
 package crabcraft.net.crabUtilities.chat;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -33,15 +31,11 @@ public class GlobalChatListener implements Listener {
             return;
         }
 
-        Player player = event.getPlayer();
-        UUID id = player.getUniqueId();
+        UUID id = event.getPlayer().getUniqueId();
         String plain = PlainTextComponentSerializer.plainText().serialize(event.message());
-        Component displayName = player.displayName();
-        GlobalChatService.RenderedLine rendered = service.renderLine(displayName, player.getName(), plain, id);
 
         // We own delivery on a global server, so cancel the vanilla broadcast.
         event.setCancelled(true);
-        service.deliverLocally(rendered.line(), rendered.mentioned());
-        service.publish(id, player.getName(), displayName, plain);
+        service.handleLocalChat(id, plain);
     }
 }

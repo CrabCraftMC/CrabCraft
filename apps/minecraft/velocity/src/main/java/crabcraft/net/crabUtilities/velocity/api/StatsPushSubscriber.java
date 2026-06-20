@@ -16,7 +16,22 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Subscribes to {@code crabutilities:stats-push} and, for each message,
@@ -33,13 +48,21 @@ public class StatsPushSubscriber {
 
     private static final String CHANNEL = "crabutilities:stats-push";
     private static final Gson GSON = new Gson();
+    private static final int WORKER_THREADS = 2;
+    private static final int WORK_QUEUE_SIZE = 512;
+    private static final long MEDAL_RECOMPUTE_DELAY_SECONDS = 5L;
 
     private final CrabUtilitiesVelocity plugin;
     private final VelocityConfig config;
     private final Logger logger;
+    private final AtomicBoolean accepting = new AtomicBoolean(false);
+    private final ConcurrentMap<String, ScheduledFuture<?>> pendingMedalRecomputes =
+            new ConcurrentHashMap<>();
     private JedisPool jedisPool;
     private Thread subscriberThread;
     private JedisPubSub pubSub;
+    private ExecutorService statsExecutor;
+    private ScheduledExecutorService medalExecutor;
 
     public StatsPushSubscriber(CrabUtilitiesVelocity plugin, VelocityConfig config, Logger logger) {
         this.plugin = plugin;
@@ -48,6 +71,11 @@ public class StatsPushSubscriber {
     }
 
     public void start() {
+        accepting.set(true);
+        statsExecutor = createWorkerPool("CrabUtilities-Stats-Push", WORKER_THREADS, WORK_QUEUE_SIZE);
+        medalExecutor = Executors.newSingleThreadScheduledExecutor(
+                threadFactory("CrabUtilities-Award-Medals"));
+
         JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxTotal(2);
 
@@ -58,32 +86,26 @@ public class StatsPushSubscriber {
             jedisPool = new JedisPool(poolConfig, config.getRedisHost(), config.getRedisPort());
         }
 
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.ping();
-            logger.info("StatsPushSubscriber listening on {}", CHANNEL);
-        } catch (Exception e) {
-            logger.error("StatsPushSubscriber failed to connect to Redis at {}:{}",
-                    config.getRedisHost(), config.getRedisPort(), e);
-            jedisPool.close();
-            jedisPool = null;
-            return;
-        }
+        logger.info("StatsPushSubscriber listening on {}; Redis will be retried asynchronously if unavailable.",
+                CHANNEL);
 
         pubSub = new JedisPubSub() {
             @Override
             public void onMessage(String channel, String message) {
-                handleMessage(message);
+                enqueueMessage(message);
             }
         };
 
         subscriberThread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try (Jedis jedis = jedisPool.getResource()) {
+            while (accepting.get() && !Thread.currentThread().isInterrupted()) {
+                JedisPool pool = jedisPool;
+                if (pool == null || pool.isClosed()) break;
+                try (Jedis jedis = pool.getResource()) {
                     jedis.subscribe(pubSub, CHANNEL);
                 } catch (NoClassDefFoundError e) {
                     break;
                 } catch (Exception e) {
-                    if (Thread.currentThread().isInterrupted()) break;
+                    if (!accepting.get() || Thread.currentThread().isInterrupted()) break;
                     logger.warn("Stats push subscriber disconnected, reconnecting in 3s...", e);
                     try {
                         Thread.sleep(3000);
@@ -98,7 +120,25 @@ public class StatsPushSubscriber {
         subscriberThread.start();
     }
 
-    private void handleMessage(String message) {
+    private void enqueueMessage(String message) {
+        if (!accepting.get()) return;
+        ExecutorService executor = statsExecutor;
+        if (executor == null || executor.isShutdown()) return;
+
+        try {
+            executor.execute(() -> {
+                try {
+                    processMessage(message);
+                } catch (Exception e) {
+                    logger.warn("Failed to process stats-push message", e);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            logger.warn("Dropping stats-push message because the processing queue is full");
+        }
+    }
+
+    private void processMessage(String message) {
         JsonObject envelope;
         try {
             envelope = GSON.fromJson(message, JsonObject.class);
@@ -123,7 +163,9 @@ public class StatsPushSubscriber {
         String season = envelope.has("season") && envelope.get("season").isJsonPrimitive()
                 ? envelope.get("season").getAsString() : null;
         if (season == null || season.isBlank()) {
-            season = plugin.getAwardQueryService().getCurrentSeason();
+            if (plugin.getAwardQueryService() != null) {
+                season = plugin.getAwardQueryService().getCurrentSeason();
+            }
         }
         if (season == null || season.isBlank()) {
             logger.warn("Skipping stats-push for uuid={}: no season in envelope and no current season in DB", uuid);
@@ -135,7 +177,9 @@ public class StatsPushSubscriber {
         try {
             String rawStatsJson = stats.toString();
             ComputedStats computed = StatsParser.parse(rawStatsJson);
-            plugin.getPgWriter().writePlayerSeasonStats(uuid, season, computed);
+            if (plugin.getPgWriter() != null) {
+                plugin.getPgWriter().writePlayerSeasonStats(uuid, season, computed);
+            }
         } catch (Exception e) {
             logger.warn("Failed to write player_season_stats for uuid={}", uuid, e);
         }
@@ -143,12 +187,14 @@ public class StatsPushSubscriber {
         // Award scores + medals.
         AwardEvaluator evaluator = plugin.getAwardEvaluator();
         AwardDbWriter writer = plugin.getAwardDbWriter();
-        if (evaluator == null || writer == null) return;
-        try {
-            Map<String, Double> scores = evaluator.evaluate(stats);
-            writer.writeForPlayer(uuid, season, scores);
-        } catch (Exception e) {
-            logger.warn("Failed to write award scores for uuid={}", uuid, e);
+        if (evaluator != null && writer != null) {
+            try {
+                Map<String, Double> scores = evaluator.evaluate(stats);
+                writer.writeScoresForPlayer(uuid, season, scores);
+                queueMedalRecompute(season);
+            } catch (Exception e) {
+                logger.warn("Failed to write award scores for uuid={}", uuid, e);
+            }
         }
 
         // Advancements.
@@ -166,7 +212,35 @@ public class StatsPushSubscriber {
         }
     }
 
+    private void queueMedalRecompute(String season) {
+        if (season == null || season.isBlank()) return;
+        ScheduledExecutorService scheduler = medalExecutor;
+        if (scheduler == null || scheduler.isShutdown()) return;
+
+        pendingMedalRecomputes.computeIfAbsent(season, key -> {
+            try {
+                return scheduler.schedule(() -> recomputeMedals(key),
+                        MEDAL_RECOMPUTE_DELAY_SECONDS, TimeUnit.SECONDS);
+            } catch (RejectedExecutionException e) {
+                logger.warn("Failed to schedule medal recompute for season={}", key);
+                return null;
+            }
+        });
+    }
+
+    private void recomputeMedals(String season) {
+        pendingMedalRecomputes.remove(season);
+        AwardDbWriter writer = plugin.getAwardDbWriter();
+        if (writer == null) return;
+        try {
+            writer.recomputeMedals(season);
+        } catch (Exception e) {
+            logger.warn("Failed to recompute award medals for season={}", season, e);
+        }
+    }
+
     public void shutdown() {
+        accepting.set(false);
         if (pubSub != null) {
             try {
                 pubSub.unsubscribe();
@@ -174,11 +248,74 @@ public class StatsPushSubscriber {
         }
         if (subscriberThread != null) {
             subscriberThread.interrupt();
+            try {
+                subscriberThread.join(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
+
+        shutdownExecutor(statsExecutor, "stats-push workers", 15);
+        statsExecutor = null;
+
+        List<String> pendingSeasons = drainPendingMedalSeasons();
+        shutdownExecutor(medalExecutor, "award medal scheduler", 5);
+        medalExecutor = null;
+        for (String season : pendingSeasons) {
+            recomputeMedals(season);
+        }
+
         if (jedisPool != null && !jedisPool.isClosed()) {
             try {
                 jedisPool.close();
             } catch (NoClassDefFoundError ignored) {}
         }
+        jedisPool = null;
+    }
+
+    private List<String> drainPendingMedalSeasons() {
+        List<String> seasons = new ArrayList<>(pendingMedalRecomputes.keySet());
+        for (String season : seasons) {
+            ScheduledFuture<?> future = pendingMedalRecomputes.remove(season);
+            if (future != null) {
+                future.cancel(false);
+            }
+        }
+        return seasons;
+    }
+
+    private void shutdownExecutor(ExecutorService executor, String name, int timeoutSeconds) {
+        if (executor == null) return;
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(timeoutSeconds, TimeUnit.SECONDS)) {
+                logger.warn("{} did not stop cleanly; interrupting queued work", name);
+                executor.shutdownNow();
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    logger.warn("{} still has running work", name);
+                }
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private static ExecutorService createWorkerPool(String name, int threads, int queueSize) {
+        return new ThreadPoolExecutor(
+                threads, threads,
+                30L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(queueSize),
+                threadFactory(name),
+                new ThreadPoolExecutor.AbortPolicy());
+    }
+
+    private static ThreadFactory threadFactory(String name) {
+        AtomicInteger count = new AtomicInteger();
+        return task -> {
+            Thread thread = new Thread(task, name + "-" + count.incrementAndGet());
+            thread.setDaemon(true);
+            return thread;
+        };
     }
 }

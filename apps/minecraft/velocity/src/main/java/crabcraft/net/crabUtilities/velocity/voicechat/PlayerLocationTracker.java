@@ -51,14 +51,8 @@ public class PlayerLocationTracker {
             jedisPool = new JedisPool(poolConfig, config.getRedisHost(),
                     config.getRedisPort(), 2000);
         }
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.ping();
-            plugin.getLogger().info("Voice location tracker connected to Redis (TTL {}s)", ttlSeconds);
-        } catch (Exception e) {
-            plugin.getLogger().error("Voice location tracker failed to connect to Redis", e);
-            jedisPool.close();
-            jedisPool = null;
-        }
+        plugin.getLogger().info("Voice location tracker started (TTL {}s); Redis will be retried on player updates.",
+                ttlSeconds);
     }
 
     public void shutdown() {
@@ -91,8 +85,10 @@ public class PlayerLocationTracker {
     }
 
     private void writeHome(UUID playerId, String backend) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         String key = "crabcraft:svc:player-home:" + playerId;
-        try (Jedis jedis = jedisPool.getResource()) {
+        try (Jedis jedis = pool.getResource()) {
             jedis.set(key, backend, SetParams.setParams().ex(ttlSeconds));
         } catch (Exception e) {
             plugin.getLogger().debug("Failed to write player home: " + e.getMessage());
@@ -100,15 +96,19 @@ public class PlayerLocationTracker {
     }
 
     private void deleteHome(UUID playerId) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         String key = "crabcraft:svc:player-home:" + playerId;
-        try (Jedis jedis = jedisPool.getResource()) {
+        try (Jedis jedis = pool.getResource()) {
             jedis.del(key);
         } catch (Exception ignored) {}
     }
 
     private void deletePlayerGroup(UUID playerId) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
         String key = "crabcraft:svc:player-group:" + playerId;
-        try (Jedis jedis = jedisPool.getResource()) {
+        try (Jedis jedis = pool.getResource()) {
             jedis.del(key);
         } catch (Exception ignored) {}
     }
