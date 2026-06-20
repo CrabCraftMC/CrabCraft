@@ -11,6 +11,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -106,14 +111,15 @@ public final class LiteBansInfractionService {
     private Infraction readInfraction(String type, ResultSet rs) throws SQLException {
         Map<String, Integer> columns = columns(rs.getMetaData());
 
-        long createdAtMs = getLong(columns, rs, "time", 0L);
-        Long expiresAtMs = getNullableLong(columns, rs, "until");
+        Long createdAtValue = getNullableTimestampMillis(columns, rs, "time");
+        long createdAtMs = createdAtValue == null ? 0L : createdAtValue;
+        Long expiresAtMs = getNullableTimestampMillis(columns, rs, "until");
         if (expiresAtMs != null && expiresAtMs <= 0L) {
             expiresAtMs = null;
         }
         Boolean active = getNullableBoolean(columns, rs, "active");
         String removedBy = getString(columns, rs, "removed_by_name");
-        Long removedAtMs = getNullableLong(columns, rs, "removed_by_date");
+        Long removedAtMs = getNullableTimestampMillis(columns, rs, "removed_by_date");
         boolean removed = (removedAtMs != null && removedAtMs > 0L) || removedBy != null;
 
         return new Infraction(
@@ -249,6 +255,45 @@ public final class LiteBansInfractionService {
         if (index == null) return null;
         long value = rs.getLong(index);
         return rs.wasNull() ? null : value;
+    }
+
+    private static Long getNullableTimestampMillis(Map<String, Integer> columns, ResultSet rs,
+                                                   String column) throws SQLException {
+        Integer index = columns.get(column);
+        if (index == null) return null;
+        Object value = rs.getObject(index);
+        if (value == null || rs.wasNull()) return null;
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof Timestamp timestamp) {
+            return timestamp.getTime();
+        }
+        if (value instanceof java.util.Date date) {
+            return date.getTime();
+        }
+        if (value instanceof LocalDateTime localDateTime) {
+            return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        }
+        if (value instanceof OffsetDateTime offsetDateTime) {
+            return offsetDateTime.toInstant().toEpochMilli();
+        }
+        if (value instanceof ZonedDateTime zonedDateTime) {
+            return zonedDateTime.toInstant().toEpochMilli();
+        }
+
+        String text = value.toString().trim();
+        if (text.isEmpty()) return null;
+        try {
+            return Long.parseLong(text);
+        } catch (NumberFormatException ignored) {
+            // H2 LiteBans date fields can be formatted as yyyy-MM-dd HH:mm:ss.SSS.
+        }
+        try {
+            return Timestamp.valueOf(text).getTime();
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private static Boolean getNullableBoolean(Map<String, Integer> columns, ResultSet rs,
