@@ -72,7 +72,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
         <nav className="container mx-auto relative">
             <Squircle
                 cornerRadius={20}
-                className="absolute inset-0 z-0 bg-paper-2/80 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.10)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]"
+                className="absolute inset-0 z-0 bg-paper-2/80 backdrop-blur-2xl backdrop-saturate-150 shadow-lg shadow-black/5 dark:shadow-black/30"
             />
             <div className="relative z-10 px-6 lg:px-8">
                 <div className="flex items-center h-14 md:h-20">
@@ -126,7 +126,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                             </button>
                             {isToolsOpen && (
                                 <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50">
-                                    <div className="bg-paper-2 rounded-xl shadow-lg border border-gray-200 dark:border-[#3d3028] overflow-hidden min-w-[220px] animate-[scaleIn_0.15s_ease-out]">
+                                    <div className="bg-paper-2 rounded-xl shadow-lg overflow-hidden min-w-[220px] animate-[scaleIn_0.15s_ease-out]">
                                         {config.navbar.tools.map((tool) => {
                                             const ToolIcon = iconMap[tool.icon];
                                             const isToolActive = currentPath === tool.url;
@@ -135,7 +135,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                                     key={tool.name}
                                                     href={tool.url}
                                                     onClick={() => setIsToolsOpen(false)}
-                                                    className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${isToolActive ? "bg-orange-500/10 text-orange-500" : "text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b]"}`}
+                                                    className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${isToolActive ? "bg-orange-500/10 text-orange-500" : "text-gray-700 dark:text-gray-300 hover:bg-paper"}`}
                                                 >
                                                     {ToolIcon && <ToolIcon className="w-4 h-4" />}
                                                     {tool.name}
@@ -152,7 +152,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                         <button
                             onClick={() => window.dispatchEvent(new Event("open-command-menu"))}
                             aria-label="Search"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200/50 dark:hover:bg-[#3d3028]/50 transition-colors cursor-pointer"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-paper transition-colors cursor-pointer"
                         >
                             <Search className="w-4 h-4 text-gray-400" />
                         </button>
@@ -182,7 +182,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <button onClick={toggleDarkMode} aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200/50 dark:hover:bg-[#3d3028]/50 transition-colors cursor-pointer">
+                                <button onClick={toggleDarkMode} aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-paper transition-colors cursor-pointer">
                                     {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                                 </button>
                                 <button onClick={() => signIn("discord")} className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-orange-500 transition-colors cursor-pointer">
@@ -210,11 +210,11 @@ export default function Navbar({ user }: { user?: UserData | null }) {
             </div>
         </nav>
         {isUserMenuOpen && user && (
-            <div className="hidden md:block fixed w-44 bg-paper-2 rounded-xl shadow-lg border border-gray-200 dark:border-[#3d3028] overflow-hidden z-50 animate-[scaleIn_0.15s_ease-out] user-menu-wrapper" style={{ top: dropdownPos.top, right: dropdownPos.right }}>
+            <div className="hidden md:block fixed w-44 bg-paper-2 rounded-xl shadow-lg overflow-hidden z-50 animate-[scaleIn_0.15s_ease-out] user-menu-wrapper" style={{ top: dropdownPos.top, right: dropdownPos.right }}>
                 {user.minecraftUuid && (
                     <Link
                         href={`/stats/${user.minecraftUuid}`}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper transition-colors"
                     >
                         <User className="w-4 h-4" />
                         Your Profile
@@ -222,14 +222,14 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                 )}
                 <Link
                     href="/wrapped"
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper transition-colors"
                 >
                     <Gift className="w-4 h-4" />
                     Wrapped
                 </Link>
                 <Link
                     href="/settings"
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper transition-colors"
                 >
                     <Settings className="w-4 h-4" />
                     Settings
@@ -237,7 +237,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                 {(user.role === "moderator" || user.role === "admin") && (
                     <Link
                         href="/admin"
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-orange-500 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-orange-500 hover:bg-paper transition-colors"
                     >
                         <Wrench className="w-4 h-4" />
                         Admin Panel
@@ -245,7 +245,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                 )}
                 <button
                     onClick={() => signOut()}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-paper transition-colors cursor-pointer"
                 >
                     <LogOut className="w-4 h-4" />
                     Sign Out
@@ -254,7 +254,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
         )}
         {isMenuOpen && (
                 <div
-                    className="md:hidden mt-2 bg-paper-2/90 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-white/30 dark:border-white/10 overflow-hidden absolute left-4 right-4 animate-[scaleIn_0.15s_ease-out]"
+                    className="md:hidden mt-2 bg-paper-2/90 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl shadow-lg overflow-hidden absolute left-4 right-4 animate-[scaleIn_0.15s_ease-out]"
                 >
                     <div className="p-4 space-y-1">
                         {/* Search */}
@@ -308,7 +308,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
 
                         {/* User section */}
                         {user ? (
-                            <div className="pt-2 mt-2 border-t border-gray-200/50 dark:border-white/5 space-y-1">
+                            <div className="pt-2 mt-2 space-y-1">
                                 <div className="flex items-center gap-3 px-3 py-2">
                                     <Image
                                         src={user.minecraftUuid ? `https://mc-heads.net/avatar/${user.minecraftUuid}/64.png` : user.avatarUrl}
@@ -345,7 +345,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 </button>
                             </div>
                         ) : (
-                            <div className="pt-2 mt-2 border-t border-gray-200/50 dark:border-white/5">
+                            <div className="pt-2 mt-2">
                                 <button
                                     onClick={() => { setIsMenuOpen(false); signIn("discord"); }}
                                     className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-colors cursor-pointer"

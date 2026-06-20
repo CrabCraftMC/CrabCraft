@@ -365,7 +365,7 @@ export default function CircleGenerator() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-[#2a221b] hover:bg-gray-200 dark:hover:bg-[#3d3028] text-gray-700 dark:text-gray-300 font-bold text-sm cursor-pointer transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-paper hover:bg-line text-gray-700 dark:text-gray-300 font-bold text-sm cursor-pointer transition-colors"
               >
                 Cancel
               </button>
