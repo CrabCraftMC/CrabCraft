@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import com.velocitypowered.api.plugin.Dependency;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
@@ -33,6 +34,7 @@ import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
 import crabcraft.net.crabUtilities.velocity.db.AltQueryService;
 import crabcraft.net.crabUtilities.velocity.db.LoginStreakService;
+import crabcraft.net.crabUtilities.velocity.litebans.LiteBansInfractionService;
 import crabcraft.net.crabUtilities.velocity.update.UpdateService;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -52,7 +54,8 @@ import java.util.concurrent.TimeUnit;
         name = "CrabUtilities",
         version = BuildInfo.VERSION,
         url = "https://www.crabcraft.net",
-        authors = {"Max"}
+        authors = {"Max"},
+        dependencies = {@Dependency(id = "litebans", optional = true)}
 )
 public class CrabUtilitiesVelocity {
 
@@ -83,6 +86,7 @@ public class CrabUtilitiesVelocity {
     private AltQueryService altQueryService;
     private LoginStreakService loginStreakService;
     private LoginStreakPublisher loginStreakPublisher;
+    private LiteBansInfractionService liteBansInfractionService;
     private LuckPerms luckPerms;
     private volatile ExecutorService databaseExecutor;
     private final Object lifecycleLock = new Object();
@@ -129,6 +133,7 @@ public class CrabUtilitiesVelocity {
         this.loginStreakService = new LoginStreakService(
                 pgWriter.getDataSource(), logger, config.getLoginStreakBufferHours());
         this.loginStreakPublisher = new LoginStreakPublisher(this, config);
+        this.liteBansInfractionService = new LiteBansInfractionService(logger);
 
         try {
             this.luckPerms = LuckPermsProvider.get();
@@ -223,6 +228,7 @@ public class CrabUtilitiesVelocity {
             this.altQueryService = new AltQueryService(newPgWriter.getDataSource(), logger);
             this.loginStreakService = new LoginStreakService(
                     newPgWriter.getDataSource(), logger, newConfig.getLoginStreakBufferHours());
+            this.liteBansInfractionService = new LiteBansInfractionService(logger);
 
             if (oldPgWriter != null) {
                 oldPgWriter.close();
@@ -282,6 +288,7 @@ public class CrabUtilitiesVelocity {
     public AltQueryService getAltQueryService() { return altQueryService; }
     public LoginStreakService getLoginStreakService() { return loginStreakService; }
     public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
+    public LiteBansInfractionService getLiteBansInfractionService() { return liteBansInfractionService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
 
     public void runDatabaseTask(String taskName, Runnable task) {

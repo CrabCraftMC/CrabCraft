@@ -33,6 +33,10 @@ import { resolveUsername } from "../utils/mojang.js";
 import { CHANNEL_DELETE_DELAY_MS } from "../utils/constants.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
 import {
+  fetchPlayerInfractions,
+  type TicketInfractionInfo,
+} from "../utils/infractions.js";
+import {
   buildChannelName,
   buildStaffButtons,
   buildTicketHeader,
@@ -473,6 +477,43 @@ export default class ModalInteractionEvent extends Event {
         }
       }
 
+      const missingRequired = meta.fields
+        .filter((field) => field.required && !intake[field.id])
+        .map((field) => field.display);
+      if (missingRequired.length > 0) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              `**Missing required field.** Please reopen the form and complete: ${missingRequired.join(", ")}.`,
+            ),
+          ],
+        });
+        return;
+      }
+
+      let ticketInfractionInfo: TicketInfractionInfo | null = null;
+      if (meta.category === "appeal" && intake.mc_username) {
+        const submittedUsername = intake.mc_username;
+        const resolved = await resolveUsername(submittedUsername);
+        if (resolved) {
+          intake.mc_username = resolved.name;
+          intake.resolved_minecraft_username = resolved.name;
+          intake.resolved_minecraft_uuid = resolved.uuid;
+          ticketInfractionInfo = await fetchPlayerInfractions(
+            resolved.name,
+            resolved.uuid,
+            10,
+          );
+        } else {
+          ticketInfractionInfo = {
+            username: submittedUsername,
+            uuid: null,
+            infractions: null,
+            error: "Could not resolve the submitted Minecraft username.",
+          };
+        }
+      }
+
       const subject =
         meta.category === "general" && intake.subject
           ? intake.subject
@@ -575,13 +616,19 @@ export default class ModalInteractionEvent extends Event {
         await ticketChannel.send({ content: `<@${interaction.user.id}> <@&${config.MOD_ROLE_ID}>` });
         await ticketChannel.send({
           components: [
-            buildTicketHeader(ticket, meta, player, intake),
+            buildTicketHeader(ticket, meta, player, intake, ticketInfractionInfo),
             buildStaffButtons(ticket.id),
           ],
           flags: MessageFlags.IsComponentsV2,
         });
       } catch (e) {
         logger.error("Ticket: failed to send opening message:", e);
+        await ticketChannel.send({
+          content:
+            `Ticket #${String(ticket.id).padStart(4, "0")} was opened by <@${interaction.user.id}> for ${meta.label}, but the rich ticket summary could not be posted automatically.`,
+        }).catch((fallbackError) => {
+          logger.error("Ticket: failed to send fallback opening message:", fallbackError);
+        });
       }
 
       await interaction.editReply({

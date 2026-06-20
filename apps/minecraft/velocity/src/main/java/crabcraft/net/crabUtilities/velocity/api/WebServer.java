@@ -15,10 +15,15 @@ import java.net.URI;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -309,6 +314,42 @@ public class WebServer {
             + "}"
             + "},"
 
+            + "\"/players/{uuid}/infractions\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Players\"],"
+            + "\"summary\":\"Player punishment history\","
+            + "\"description\":\"Returns sanitized public LiteBans history for a player, combining bans, mutes, warnings, and kicks. IP data is never exposed. Results are newest-first and capped by the `limit` query parameter.\","
+            + "\"operationId\":\"getPlayerInfractions\","
+            + "\"parameters\":["
+            + "{\"name\":\"uuid\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"format\":\"uuid\"},\"description\":\"Minecraft player UUID (with dashes)\"},"
+            + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":10,\"minimum\":1,\"maximum\":25},\"description\":\"Maximum number of infractions to return (1-25)\"}"
+            + "],"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Player infraction history retrieved\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"uuid\":{\"type\":\"string\",\"format\":\"uuid\"},"
+            + "\"count\":{\"type\":\"integer\"},"
+            + "\"infractions\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
+            + "\"type\":{\"type\":\"string\",\"enum\":[\"ban\",\"mute\",\"warning\",\"kick\"]},"
+            + "\"id\":{\"type\":\"integer\"},"
+            + "\"reason\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"staff\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"created_at\":{\"type\":\"integer\",\"description\":\"Unix seconds when the infraction was created\"},"
+            + "\"expires_at\":{\"type\":\"integer\",\"nullable\":true},"
+            + "\"active\":{\"type\":\"boolean\",\"nullable\":true},"
+            + "\"removed\":{\"type\":\"boolean\"},"
+            + "\"removed_by\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"removed_at\":{\"type\":\"integer\",\"nullable\":true}"
+            + "}}}"
+            + "}}}}},"
+            + "\"400\":{\"description\":\"UUID format is invalid. Must be a standard UUID with dashes.\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"500\":{\"description\":\"LiteBans query failed\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"503\":{\"description\":\"LiteBans is not available on this proxy\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
             // ── Awards ──
             + "\"/awards\":{"
             + "\"get\":{"
@@ -508,6 +549,7 @@ public class WebServer {
     private final CrabUtilitiesVelocity plugin;
     private final int port;
     private HttpServer httpServer;
+    private ExecutorService httpExecutor;
     private ScheduledExecutorService cloudflareIpRefresher;
 
     // [count, windowStartMs] per IP
@@ -594,6 +636,19 @@ public class WebServer {
         }
         try {
             httpServer = HttpServer.create(new InetSocketAddress(port), 0);
+            httpExecutor = new ThreadPoolExecutor(
+                    2,
+                    4,
+                    60L,
+                    TimeUnit.SECONDS,
+                    new LinkedBlockingQueue<>(128),
+                    r -> {
+                        Thread t = new Thread(r, "crabutilities-api-worker");
+                        t.setDaemon(true);
+                        return t;
+                    },
+                    new ThreadPoolExecutor.AbortPolicy());
+            httpServer.setExecutor(httpExecutor);
 
             httpServer.createContext("/", exchange -> {
                 if (!"GET".equals(exchange.getRequestMethod())) {
@@ -826,6 +881,45 @@ public class WebServer {
                     return;
                 }
 
+                // /players/{uuid}/infractions
+                if (sub.endsWith("/infractions")) {
+                    String uuid = sub.substring(0, sub.length() - "/infractions".length());
+                    if (!UUID_PATTERN.matcher(uuid).matches()) {
+                        sendError(exchange, 400, "invalid uuid format");
+                        return;
+                    }
+                    uuid = UUID.fromString(uuid).toString();
+                    var params = parseQuery(exchange.getRequestURI());
+                    int limit = 10;
+                    String rawLimit = params.get("limit");
+                    if (rawLimit != null) {
+                        try {
+                            limit = Integer.parseInt(rawLimit);
+                        } catch (NumberFormatException e) {
+                            sendError(exchange, 400, "limit must be an integer between 1 and 25");
+                            return;
+                        }
+                        if (limit < 1 || limit > 25) {
+                            sendError(exchange, 400, "limit must be between 1 and 25");
+                            return;
+                        }
+                    }
+                    var service = plugin.getLiteBansInfractionService();
+                    if (service == null) {
+                        sendError(exchange, 503, "litebans service unavailable");
+                        return;
+                    }
+                    try {
+                        sendJson(exchange, GSON.toJson(service.getInfractionsJson(uuid, limit)));
+                    } catch (crabcraft.net.crabUtilities.velocity.litebans.LiteBansInfractionService.LiteBansUnavailableException e) {
+                        sendError(exchange, 503, "litebans is not available");
+                    } catch (SQLException e) {
+                        plugin.getLogger().warn("Failed to query LiteBans infractions for {}", uuid, e);
+                        sendError(exchange, 500, "failed to query litebans infractions");
+                    }
+                    return;
+                }
+
                 // /players/{uuid}/streak
                 if (sub.endsWith("/streak")) {
                     String uuid = sub.substring(0, sub.length() - "/streak".length());
@@ -968,6 +1062,10 @@ public class WebServer {
 
             return true;
         } catch (IOException e) {
+            if (httpExecutor != null) {
+                httpExecutor.shutdownNow();
+                httpExecutor = null;
+            }
             plugin.getLogger().error("Failed to start Web API on port {}", port, e);
             return false;
         }
@@ -982,6 +1080,10 @@ public class WebServer {
             httpServer.stop(0);
             httpServer = null;
             plugin.getLogger().info("Web API stopped.");
+        }
+        if (httpExecutor != null) {
+            httpExecutor.shutdownNow();
+            httpExecutor = null;
         }
     }
 }
