@@ -1996,5 +1996,473 @@
     "name": "Flowering Azalea Leaves",
     "color": "#646C4C",
     "texture": "azalea_leaves_flowers_opaque"
+  },
+  {
+    "id": "oak_wood",
+    "name": "Oak Wood",
+    "color": "#715834",
+    "texture": "log_oak"
+  },
+  {
+    "id": "spruce_wood",
+    "name": "Spruce Wood",
+    "color": "#3C2712",
+    "texture": "log_spruce"
+  },
+  {
+    "id": "birch_wood",
+    "name": "Birch Wood",
+    "color": "#E0DFDB",
+    "texture": "log_birch"
+  },
+  {
+    "id": "jungle_wood",
+    "name": "Jungle Wood",
+    "color": "#57451A",
+    "texture": "log_jungle"
+  },
+  {
+    "id": "acacia_wood",
+    "name": "Acacia Wood",
+    "color": "#696258",
+    "texture": "log_acacia"
+  },
+  {
+    "id": "dark_oak_wood",
+    "name": "Dark Oak Wood",
+    "color": "#3E2F1B",
+    "texture": "log_big_oak"
+  },
+  {
+    "id": "mangrove_wood",
+    "name": "Mangrove Wood",
+    "color": "#554429",
+    "texture": "mangrove_log_side"
+  },
+  {
+    "id": "cherry_wood",
+    "name": "Cherry Wood",
+    "color": "#38222D",
+    "texture": "cherry_log_side"
+  },
+  {
+    "id": "pale_oak_planks",
+    "name": "Pale Oak Planks",
+    "color": "#E5DBDA",
+    "texture": "pale_oak_planks"
+  },
+  {
+    "id": "pale_oak_log",
+    "name": "Pale Oak Log",
+    "color": "#5A504D",
+    "texture": "pale_oak_log_side"
+  },
+  {
+    "id": "stripped_pale_oak_log",
+    "name": "Stripped Pale Oak Log",
+    "color": "#F6EEED",
+    "texture": "stripped_pale_oak_log_side"
+  },
+  {
+    "id": "pale_oak_wood",
+    "name": "Pale Oak Wood",
+    "color": "#5A504D",
+    "texture": "pale_oak_log_side"
+  },
+  {
+    "id": "stripped_oak_wood",
+    "name": "Stripped Oak Wood",
+    "color": "#B29157",
+    "texture": "stripped_oak_log"
+  },
+  {
+    "id": "stripped_spruce_wood",
+    "name": "Stripped Spruce Wood",
+    "color": "#745A35",
+    "texture": "stripped_spruce_log"
+  },
+  {
+    "id": "stripped_birch_wood",
+    "name": "Stripped Birch Wood",
+    "color": "#C5B177",
+    "texture": "stripped_birch_log"
+  },
+  {
+    "id": "stripped_jungle_wood",
+    "name": "Stripped Jungle Wood",
+    "color": "#AC8555",
+    "texture": "stripped_jungle_log"
+  },
+  {
+    "id": "stripped_acacia_wood",
+    "name": "Stripped Acacia Wood",
+    "color": "#AF5D3C",
+    "texture": "stripped_acacia_log"
+  },
+  {
+    "id": "stripped_dark_oak_wood",
+    "name": "Stripped Dark Oak Wood",
+    "color": "#493924",
+    "texture": "stripped_dark_oak_log"
+  },
+  {
+    "id": "stripped_mangrove_wood",
+    "name": "Stripped Mangrove Wood",
+    "color": "#783730",
+    "texture": "stripped_mangrove_log_side"
+  },
+  {
+    "id": "stripped_cherry_wood",
+    "name": "Stripped Cherry Wood",
+    "color": "#D79195",
+    "texture": "stripped_cherry_log_side"
+  },
+  {
+    "id": "stripped_pale_oak_wood",
+    "name": "Stripped Pale Oak Wood",
+    "color": "#F6EEED",
+    "texture": "stripped_pale_oak_log_side"
+  },
+  {
+    "id": "crimson_hyphae",
+    "name": "Crimson Hyphae",
+    "color": "#611C24",
+    "texture": "huge_fungus/crimson_log_side"
+  },
+  {
+    "id": "warped_hyphae",
+    "name": "Warped Hyphae",
+    "color": "#3F4451",
+    "texture": "huge_fungus/warped_stem_side"
+  },
+  {
+    "id": "stripped_crimson_hyphae",
+    "name": "Stripped Crimson Hyphae",
+    "color": "#8A3A5A",
+    "texture": "huge_fungus/stripped_crimson_stem_side"
+  },
+  {
+    "id": "stripped_warped_hyphae",
+    "name": "Stripped Warped Hyphae",
+    "color": "#3A9794",
+    "texture": "huge_fungus/stripped_warped_stem_side"
+  },
+  {
+    "id": "pale_moss_block",
+    "name": "Pale Moss Block",
+    "color": "#6C726A",
+    "texture": "pale_moss_block"
+  },
+  {
+    "id": "resin_block",
+    "name": "Resin Block",
+    "color": "#DB691E",
+    "texture": "resin_block"
+  },
+  {
+    "id": "resin_bricks",
+    "name": "Resin Bricks",
+    "color": "#D05F1C",
+    "texture": "resin_bricks"
+  },
+  {
+    "id": "chiseled_resin_bricks",
+    "name": "Chiseled Resin Bricks",
+    "color": "#CB5B1C",
+    "texture": "chiseled_resin_bricks"
+  },
+  {
+    "id": "creaking_heart",
+    "name": "Creaking Heart",
+    "color": "#564945",
+    "texture": "creaking_heart_side_inactive"
+  },
+  {
+    "id": "waxed_copper_block",
+    "name": "Waxed Copper Block",
+    "color": "#C26D52",
+    "texture": "copper_block"
+  },
+  {
+    "id": "waxed_exposed_copper",
+    "name": "Waxed Exposed Copper",
+    "color": "#A47E69",
+    "texture": "exposed_copper"
+  },
+  {
+    "id": "waxed_weathered_copper",
+    "name": "Waxed Weathered Copper",
+    "color": "#6D9B71",
+    "texture": "weathered_copper"
+  },
+  {
+    "id": "waxed_oxidized_copper",
+    "name": "Waxed Oxidized Copper",
+    "color": "#54A587",
+    "texture": "oxidized_copper"
+  },
+  {
+    "id": "waxed_cut_copper",
+    "name": "Waxed Cut Copper",
+    "color": "#C16D53",
+    "texture": "cut_copper"
+  },
+  {
+    "id": "waxed_exposed_cut_copper",
+    "name": "Waxed Exposed Cut Copper",
+    "color": "#9E7B67",
+    "texture": "exposed_cut_copper"
+  },
+  {
+    "id": "waxed_weathered_cut_copper",
+    "name": "Waxed Weathered Cut Copper",
+    "color": "#6F946E",
+    "texture": "weathered_cut_copper"
+  },
+  {
+    "id": "waxed_oxidized_cut_copper",
+    "name": "Waxed Oxidized Cut Copper",
+    "color": "#529D81",
+    "texture": "oxidized_cut_copper"
+  },
+  {
+    "id": "chiseled_copper",
+    "name": "Chiseled Copper",
+    "color": "#BB674C",
+    "texture": "chiseled_copper"
+  },
+  {
+    "id": "exposed_chiseled_copper",
+    "name": "Exposed Chiseled Copper",
+    "color": "#9E7866",
+    "texture": "exposed_chiseled_copper"
+  },
+  {
+    "id": "weathered_chiseled_copper",
+    "name": "Weathered Chiseled Copper",
+    "color": "#6A9A73",
+    "texture": "weathered_chiseled_copper"
+  },
+  {
+    "id": "oxidized_chiseled_copper",
+    "name": "Oxidized Chiseled Copper",
+    "color": "#55A587",
+    "texture": "oxidized_chiseled_copper"
+  },
+  {
+    "id": "waxed_chiseled_copper",
+    "name": "Waxed Chiseled Copper",
+    "color": "#BB674C",
+    "texture": "chiseled_copper"
+  },
+  {
+    "id": "waxed_exposed_chiseled_copper",
+    "name": "Waxed Exposed Chiseled Copper",
+    "color": "#9E7866",
+    "texture": "exposed_chiseled_copper"
+  },
+  {
+    "id": "waxed_weathered_chiseled_copper",
+    "name": "Waxed Weathered Chiseled Copper",
+    "color": "#6A9A73",
+    "texture": "weathered_chiseled_copper"
+  },
+  {
+    "id": "waxed_oxidized_chiseled_copper",
+    "name": "Waxed Oxidized Chiseled Copper",
+    "color": "#55A587",
+    "texture": "oxidized_chiseled_copper"
+  },
+  {
+    "id": "copper_bulb",
+    "name": "Copper Bulb",
+    "color": "#A45C41",
+    "texture": "copper_bulb"
+  },
+  {
+    "id": "exposed_copper_bulb",
+    "name": "Exposed Copper Bulb",
+    "color": "#8E6E5D",
+    "texture": "exposed_copper_bulb"
+  },
+  {
+    "id": "weathered_copper_bulb",
+    "name": "Weathered Copper Bulb",
+    "color": "#5F8467",
+    "texture": "weathered_copper_bulb"
+  },
+  {
+    "id": "oxidized_copper_bulb",
+    "name": "Oxidized Copper Bulb",
+    "color": "#498C73",
+    "texture": "oxidized_copper_bulb"
+  },
+  {
+    "id": "waxed_copper_bulb",
+    "name": "Waxed Copper Bulb",
+    "color": "#A45C41",
+    "texture": "copper_bulb"
+  },
+  {
+    "id": "waxed_exposed_copper_bulb",
+    "name": "Waxed Exposed Copper Bulb",
+    "color": "#8E6E5D",
+    "texture": "exposed_copper_bulb"
+  },
+  {
+    "id": "waxed_weathered_copper_bulb",
+    "name": "Waxed Weathered Copper Bulb",
+    "color": "#5F8467",
+    "texture": "weathered_copper_bulb"
+  },
+  {
+    "id": "waxed_oxidized_copper_bulb",
+    "name": "Waxed Oxidized Copper Bulb",
+    "color": "#498C73",
+    "texture": "oxidized_copper_bulb"
+  },
+  {
+    "id": "chiseled_bookshelf",
+    "name": "Chiseled Bookshelf",
+    "color": "#8D6C54",
+    "texture": "chiseled_bookshelf_occupied"
+  },
+  {
+    "id": "barrel",
+    "name": "Barrel",
+    "color": "#745634",
+    "texture": "barrel_side"
+  },
+  {
+    "id": "bee_nest",
+    "name": "Bee Nest",
+    "color": "#C29950",
+    "texture": "bee_nest_front"
+  },
+  {
+    "id": "beehive",
+    "name": "Beehive",
+    "color": "#A0814F",
+    "texture": "beehive_front"
+  },
+  {
+    "id": "mushroom_stem",
+    "name": "Mushroom Stem",
+    "color": "#CBC5BA",
+    "texture": "mushroom_block_skin_stem"
+  },
+  {
+    "id": "piston",
+    "name": "Piston",
+    "color": "#776F67",
+    "texture": "piston_side"
+  },
+  {
+    "id": "sticky_piston",
+    "name": "Sticky Piston",
+    "color": "#869E6C",
+    "texture": "piston_top_sticky"
+  },
+  {
+    "id": "shulker_box",
+    "name": "Shulker Box",
+    "color": "#8C618C",
+    "texture": "shulker_top_undyed"
+  },
+  {
+    "id": "white_shulker_box",
+    "name": "White Shulker Box",
+    "color": "#D8DDDE",
+    "texture": "shulker_top_white"
+  },
+  {
+    "id": "orange_shulker_box",
+    "name": "Orange Shulker Box",
+    "color": "#EB6B09",
+    "texture": "shulker_top_orange"
+  },
+  {
+    "id": "magenta_shulker_box",
+    "name": "Magenta Shulker Box",
+    "color": "#AF37A4",
+    "texture": "shulker_top_magenta"
+  },
+  {
+    "id": "light_blue_shulker_box",
+    "name": "Light Blue Shulker Box",
+    "color": "#32A5D4",
+    "texture": "shulker_top_light_blue"
+  },
+  {
+    "id": "yellow_shulker_box",
+    "name": "Yellow Shulker Box",
+    "color": "#F8BD1E",
+    "texture": "shulker_top_yellow"
+  },
+  {
+    "id": "lime_shulker_box",
+    "name": "Lime Shulker Box",
+    "color": "#65AE17",
+    "texture": "shulker_top_lime"
+  },
+  {
+    "id": "pink_shulker_box",
+    "name": "Pink Shulker Box",
+    "color": "#E77B9E",
+    "texture": "shulker_top_pink"
+  },
+  {
+    "id": "gray_shulker_box",
+    "name": "Gray Shulker Box",
+    "color": "#383B3F",
+    "texture": "shulker_top_gray"
+  },
+  {
+    "id": "light_gray_shulker_box",
+    "name": "Light Gray Shulker Box",
+    "color": "#7E7E75",
+    "texture": "shulker_top_silver"
+  },
+  {
+    "id": "cyan_shulker_box",
+    "name": "Cyan Shulker Box",
+    "color": "#147B88",
+    "texture": "shulker_top_cyan"
+  },
+  {
+    "id": "purple_shulker_box",
+    "name": "Purple Shulker Box",
+    "color": "#68219D",
+    "texture": "shulker_top_purple"
+  },
+  {
+    "id": "blue_shulker_box",
+    "name": "Blue Shulker Box",
+    "color": "#2C2E8D",
+    "texture": "shulker_top_blue"
+  },
+  {
+    "id": "brown_shulker_box",
+    "name": "Brown Shulker Box",
+    "color": "#6B4224",
+    "texture": "shulker_top_brown"
+  },
+  {
+    "id": "green_shulker_box",
+    "name": "Green Shulker Box",
+    "color": "#4F6520",
+    "texture": "shulker_top_green"
+  },
+  {
+    "id": "red_shulker_box",
+    "name": "Red Shulker Box",
+    "color": "#8E201E",
+    "texture": "shulker_top_red"
+  },
+  {
+    "id": "black_shulker_box",
+    "name": "Black Shulker Box",
+    "color": "#1A1A1E",
+    "texture": "shulker_top_black"
   }
 ]
