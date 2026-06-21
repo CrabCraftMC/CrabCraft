@@ -752,7 +752,7 @@ export default function EnchantmentPlanner() {
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-5 flex min-h-[40px] flex-wrap items-center gap-2">
                 {selectedEntries.length === 0 ? (
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     Pick enchantments below or start with the recommended set.
@@ -863,31 +863,35 @@ export default function EnchantmentPlanner() {
                           )}
                         </div>
 
-                        {activeLevel && enchantment.maxLevel > 1 && (
-                          <div className="mt-4 flex items-center justify-between gap-3">
-                            <button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setLevel(id, activeLevel - 1);
-                              }}
-                              className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
-                              aria-label={`Lower ${enchantment.name} level`}
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
-                              Level {toRoman(activeLevel)}
-                            </span>
-                            <button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setLevel(id, activeLevel + 1);
-                              }}
-                              className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
-                              aria-label={`Raise ${enchantment.name} level`}
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
+                        {enchantment.maxLevel > 1 && (
+                          <div className="mt-4 flex h-9 items-center justify-between gap-3">
+                            {activeLevel && (
+                              <>
+                                <button
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setLevel(id, activeLevel - 1);
+                                  }}
+                                  className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
+                                  aria-label={`Lower ${enchantment.name} level`}
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
+                                  Level {toRoman(activeLevel)}
+                                </span>
+                                <button
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setLevel(id, activeLevel + 1);
+                                  }}
+                                  className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
+                                  aria-label={`Raise ${enchantment.name} level`}
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
