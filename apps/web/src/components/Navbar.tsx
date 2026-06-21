@@ -23,16 +23,16 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 const featuredToolUrls = [
+    "/tools/rgb-nickname",
+    "/tools/block-gradient",
     "/tools/enchantment-planner",
-    "/tools/stack-calculator",
-    "/tools/beacon-calculator",
     "/tools/portal-calculator"
 ];
 
 const toolDescriptions: Record<string, string> = {
+    "/tools/rgb-nickname": "Create coloured names",
+    "/tools/block-gradient": "Blend block palettes",
     "/tools/enchantment-planner": "Build legal gear loadouts",
-    "/tools/stack-calculator": "Convert items into stacks",
-    "/tools/beacon-calculator": "Plan pyramid materials",
     "/tools/portal-calculator": "Link Overworld and Nether"
 };
 
