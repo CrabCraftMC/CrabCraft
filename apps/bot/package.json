@@ -17,6 +17,7 @@
     "figma-squircle": "^1.1.0",
     "mariadb": "^3.4.5",
     "sharp": "^0.34.5",
+    "tiktok-live-connector": "^2.4.0",
     "winston": "^3.13.0"
   },
   "devDependencies": {
