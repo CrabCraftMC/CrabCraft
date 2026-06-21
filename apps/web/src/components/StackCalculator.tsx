@@ -194,7 +194,7 @@ export default function StackCalculator() {
       <div className="container mx-auto px-4 max-w-5xl">
         <div className="text-center mb-10 animate-in">
           <h1 className="text-4xl lg:text-5xl font-bold text-orange-500 font-mc">
-            Stack Calculator
+            Stack & Shulker
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Convert item counts into stacks, shulkers, and storage space
@@ -376,7 +376,7 @@ export default function StackCalculator() {
                     <Boxes className="w-4 h-4 text-orange-500" />
                   </div>
                   <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                    Last Shulker
+                    Shulker Fill
                   </h2>
                 </div>
                 <div className="grid grid-cols-9 gap-1">
@@ -400,7 +400,7 @@ export default function StackCalculator() {
                 <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                   {breakdown.shulkersNeeded === 0
                     ? "No shulker needed"
-                    : `${partialSlots} of 27 slots used in the final shulker`}
+                    : `${partialSlots} of 27 slots used in the shown shulker`}
                 </p>
               </Squircle>
 

@@ -4,14 +4,14 @@ import dynamic from "next/dynamic";
 const StackCalculator = dynamic(() => import("@/components/StackCalculator"));
 
 export const metadata: Metadata = {
-  title: "Minecraft Stack & Shulker Calculator",
+  title: "Minecraft Stack & Shulker Tool",
   description:
     "Convert Minecraft item counts into stacks, shulker boxes, double chests, and split materials between builders — free online tool.",
   alternates: {
     canonical: "https://crabcraft.net/tools/stack-calculator",
   },
   openGraph: {
-    title: "Minecraft Stack & Shulker Calculator - CrabCraft",
+    title: "Minecraft Stack & Shulker Tool - CrabCraft",
     description:
       "Convert item counts into stacks, shulker boxes, double chests, and builder splits.",
     url: "https://crabcraft.net/tools/stack-calculator",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Minecraft Stack & Shulker Calculator",
+  name: "Minecraft Stack & Shulker Tool",
   description:
     "Convert Minecraft item counts into stacks, shulker boxes, double chests, and builder splits.",
   url: "https://crabcraft.net/tools/stack-calculator",

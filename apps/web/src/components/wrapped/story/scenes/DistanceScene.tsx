@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
+import PixelIcon from "@/components/PixelIcon";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
@@ -122,12 +123,9 @@ export default function DistanceScene({ data }: { data: WrappedData }) {
             const kmMode = (m.value / 1000).toFixed(1);
             return (
               <div key={m.key} className="dist-row flex items-center gap-3">
-                <img
+                <PixelIcon
                   src={m.texture}
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="pixelated shrink-0"
+                  size={32}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-baseline justify-between text-xs">

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { formatValue } from "@/lib/formatValue";
 import { notFound } from "next/navigation";
@@ -65,13 +65,9 @@ export default async function AwardLeaderboardPage({ params }: Props) {
       <div className="container mx-auto px-4 max-w-3xl">
         <div className="text-center mb-10 animate-in">
           <div className="flex items-center justify-center gap-3 mb-2">
-            <Image
+            <PixelIcon
               src={meta.icon}
-              alt=""
-              width={48}
-              height={48}
-              unoptimized
-              className="pixelated"
+              size={48}
             />
             <h1 className="text-4xl lg:text-5xl font-bold text-orange-500 font-mc">
               {meta.title}
@@ -129,12 +125,11 @@ export default async function AwardLeaderboardPage({ params }: Props) {
                           ? "rd"
                           : "th"}
                   </span>
-                  <Image
+                  <PixelIcon
                     src={`https://mc-heads.net/avatar/${entry.uuid}/64.png`}
                     alt={entry.username ?? ""}
-                    width={32}
-                    height={32}
-                    className="rounded shrink-0"
+                    size={32}
+                    imgClassName="rounded"
                   />
                   <span className="flex-1 font-bold text-sm text-gray-800 dark:text-gray-200 truncate">
                     {entry.username ?? "Unknown"}

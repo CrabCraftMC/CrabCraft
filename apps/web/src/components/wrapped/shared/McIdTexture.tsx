@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import PixelIcon from "@/components/PixelIcon";
 import { mcIdToTextureCandidates } from "@/lib/mc-textures";
 
 interface McIdTextureProps {
@@ -27,13 +28,11 @@ export default function McIdTexture({
   if (failed) return null;
 
   return (
-    <img
+    <PixelIcon
       src={`/minecraft/${candidates[index]}`}
       alt={alt ?? id}
-      width={size}
-      height={size}
-      className={`pixelated ${className ?? ""}`}
-      draggable={false}
+      size={size}
+      className={className}
       onError={() => {
         if (index + 1 < candidates.length) {
           setIndex(index + 1);

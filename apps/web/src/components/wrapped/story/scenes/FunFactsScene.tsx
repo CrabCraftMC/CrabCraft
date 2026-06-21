@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
+import PixelIcon from "@/components/PixelIcon";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
@@ -95,13 +96,10 @@ export default function FunFactsScene({ data }: { data: WrappedData }) {
                 cornerRadius={16}
                 className={`ff-card relative overflow-hidden bg-gradient-to-br p-4 backdrop-blur-sm ${f.accent}`}
               >
-                <img
+                <PixelIcon
                   src={f.texture}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="ff-icon pixelated mb-2"
-                  style={{ display: "inline-block" }}
+                  size={28}
+                  className="ff-icon mb-2"
                 />
                 <p className="font-mc text-2xl font-bold tabular-nums dark:text-stone-100 text-stone-800 sm:text-3xl">
                   <DigitRoller value={value} duration={1.2} delay={1.0} haptic={false} />

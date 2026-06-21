@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 
+import PixelIcon from "./PixelIcon";
 import { Button } from "./ui/button";
 import Squircle from "./Squircle";
 import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings } from "lucide-react";
@@ -169,13 +170,22 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                     }}
                                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                                 >
-                                    <Image
-                                        src={user.minecraftUuid ? `https://mc-heads.net/avatar/${user.minecraftUuid}/56.png` : user.avatarUrl}
-                                        alt={user.minecraftUsername || user.name}
-                                        width={28}
-                                        height={28}
-                                        className={user.minecraftUuid ? "rounded" : "rounded-full"}
-                                    />
+                                    {user.minecraftUuid ? (
+                                        <PixelIcon
+                                            src={`https://mc-heads.net/avatar/${user.minecraftUuid}/56.png`}
+                                            alt={user.minecraftUsername || user.name}
+                                            size={28}
+                                            imgClassName="rounded"
+                                        />
+                                    ) : (
+                                        <Image
+                                            src={user.avatarUrl}
+                                            alt={user.name}
+                                            width={28}
+                                            height={28}
+                                            className="rounded-full"
+                                        />
+                                    )}
                                     <span className="text-xs font-bold">{user.minecraftUsername || user.name}</span>
                                     {isUserMenuOpen ? <ChevronUp className="w-3 h-3 text-gray-400" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
                                 </button>
@@ -310,13 +320,22 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                         {user ? (
                             <div className="pt-2 mt-2 space-y-1">
                                 <div className="flex items-center gap-3 px-3 py-2">
-                                    <Image
-                                        src={user.minecraftUuid ? `https://mc-heads.net/avatar/${user.minecraftUuid}/64.png` : user.avatarUrl}
-                                        alt={user.minecraftUsername || user.name}
-                                        width={28}
-                                        height={28}
-                                        className={user.minecraftUuid ? "rounded" : "rounded-full"}
-                                    />
+                                    {user.minecraftUuid ? (
+                                        <PixelIcon
+                                            src={`https://mc-heads.net/avatar/${user.minecraftUuid}/64.png`}
+                                            alt={user.minecraftUsername || user.name}
+                                            size={28}
+                                            imgClassName="rounded"
+                                        />
+                                    ) : (
+                                        <Image
+                                            src={user.avatarUrl}
+                                            alt={user.name}
+                                            width={28}
+                                            height={28}
+                                            className="rounded-full"
+                                        />
+                                    )}
                                     <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex-1">{user.minecraftUsername || user.name}</span>
                                 </div>
                                 {user.minecraftUuid && (

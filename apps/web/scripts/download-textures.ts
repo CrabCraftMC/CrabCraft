@@ -20,12 +20,13 @@ const TEXTURE_BASE =
   "https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/textures/blocks";
 
 const MC_TEXTURE_BASE =
-  "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures";
+  "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/26.2/assets/minecraft/textures";
 
 // Java edition occasionally lacks the exact filename the Wrapped manifest asks
 // for and we want a sensible visual substitute.
 const JAVA_PATH_OVERRIDES: Record<string, string> = {
   "block/ancient_debris.png": "block/ancient_debris_side.png",
+  "item/crossbow.png": "item/crossbow_standby.png",
 };
 
 const EXTERNAL_MC_ROOT = resolve(
