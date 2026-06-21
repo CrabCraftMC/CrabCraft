@@ -613,7 +613,14 @@ export default class ModalInteractionEvent extends Event {
       }
 
       try {
-        await ticketChannel.send({ content: `<@${interaction.user.id}> <@&${config.MOD_ROLE_ID}>` });
+        await ticketChannel.send({
+          content: `<@${interaction.user.id}>`,
+          allowedMentions: {
+            parse: [],
+            users: [interaction.user.id],
+            roles: [],
+          },
+        });
         await ticketChannel.send({
           components: [
             buildTicketHeader(ticket, meta, player, intake, ticketInfractionInfo),
