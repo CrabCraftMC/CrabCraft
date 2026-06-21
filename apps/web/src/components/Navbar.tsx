@@ -30,7 +30,7 @@ const featuredToolUrls = [
 ];
 
 const toolDescriptions: Record<string, string> = {
-    "/tools/rgb-nickname": "Create coloured names",
+    "/tools/rgb-nickname": "Create coloured nicknames",
     "/tools/block-gradient": "Blend block palettes",
     "/tools/enchantment-planner": "Build legal gear loadouts",
     "/tools/portal-calculator": "Link Overworld and Nether"
