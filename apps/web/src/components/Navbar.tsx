@@ -22,6 +22,20 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     discord: FaDiscord
 };
 
+const featuredToolUrls = [
+    "/tools/enchantment-planner",
+    "/tools/stack-calculator",
+    "/tools/beacon-calculator",
+    "/tools/portal-calculator"
+];
+
+const toolDescriptions: Record<string, string> = {
+    "/tools/enchantment-planner": "Build legal gear loadouts",
+    "/tools/stack-calculator": "Convert items into stacks",
+    "/tools/beacon-calculator": "Plan pyramid materials",
+    "/tools/portal-calculator": "Link Overworld and Nether"
+};
+
 interface UserData {
     discordId: string;
     name: string;
@@ -41,6 +55,10 @@ export default function Navbar({ user }: { user?: UserData | null }) {
     const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
     const currentPath = usePathname();
     const [isDark, setIsDark] = useState(false);
+    const featuredTools = featuredToolUrls
+        .map((url) => config.navbar.tools.find((tool) => tool.url === url))
+        .filter((tool): tool is (typeof config.navbar.tools)[number] => Boolean(tool));
+    const compactTools = config.navbar.tools.filter((tool) => !featuredToolUrls.includes(tool.url));
 
     useEffect(() => {
         setIsDark(document.documentElement.classList.contains("dark"));
@@ -126,23 +144,59 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 {isToolsOpen ? <ChevronUp className="w-3 h-3 opacity-50" /> : <ChevronDown className="w-3 h-3 opacity-50" />}
                             </button>
                             {isToolsOpen && (
-                                <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50">
-                                    <div className="bg-paper-2 rounded-xl shadow-lg overflow-hidden min-w-[220px] animate-[scaleIn_0.15s_ease-out]">
-                                        {config.navbar.tools.map((tool) => {
-                                            const ToolIcon = iconMap[tool.icon];
-                                            const isToolActive = currentPath === tool.url;
-                                            return (
-                                                <Link
-                                                    key={tool.name}
-                                                    href={tool.url}
-                                                    onClick={() => setIsToolsOpen(false)}
-                                                    className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${isToolActive ? "bg-orange-500/10 text-orange-500" : "text-gray-700 dark:text-gray-300 hover:bg-paper"}`}
-                                                >
-                                                    {ToolIcon && <ToolIcon className="w-4 h-4" />}
-                                                    {tool.name}
-                                                </Link>
-                                            );
-                                        })}
+                                <div className="absolute left-1/2 -translate-x-1/2 top-full pt-3 z-50">
+                                    <div className="w-[600px] max-w-[calc(100vw-2rem)] rounded-2xl bg-paper-2/95 backdrop-blur-2xl shadow-xl shadow-black/10 dark:shadow-black/30 p-3 animate-[scaleIn_0.15s_ease-out]">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {featuredTools.map((tool) => {
+                                                const ToolIcon = iconMap[tool.icon];
+                                                const isToolActive = currentPath === tool.url;
+                                                return (
+                                                    <Link
+                                                        key={tool.name}
+                                                        href={tool.url}
+                                                        onClick={() => setIsToolsOpen(false)}
+                                                        className={`group rounded-xl p-3 transition-colors ${isToolActive ? "bg-orange-500 text-white" : "bg-paper hover:bg-orange-500 hover:text-white text-gray-800 dark:text-gray-200"}`}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${isToolActive ? "bg-white/20" : "bg-orange-500/10 text-orange-500 group-hover:bg-white/20 group-hover:text-white"}`}>
+                                                                {ToolIcon && <ToolIcon className="w-4 h-4" />}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="text-sm font-bold leading-tight">
+                                                                    {tool.name}
+                                                                </div>
+                                                                <div className={`mt-1 text-xs leading-snug ${isToolActive ? "text-white/80" : "text-gray-500 dark:text-gray-400 group-hover:text-white/80"}`}>
+                                                                    {toolDescriptions[tool.url]}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="mt-3 border-t border-line/70 pt-3">
+                                            <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                                More tools
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                {compactTools.map((tool) => {
+                                                    const ToolIcon = iconMap[tool.icon];
+                                                    const isToolActive = currentPath === tool.url;
+                                                    return (
+                                                        <Link
+                                                            key={tool.name}
+                                                            href={tool.url}
+                                                            onClick={() => setIsToolsOpen(false)}
+                                                            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${isToolActive ? "bg-orange-500/10 text-orange-500" : "text-gray-600 dark:text-gray-300 hover:bg-paper"}`}
+                                                        >
+                                                            {ToolIcon && <ToolIcon className="w-4 h-4 shrink-0" />}
+                                                            <span className="truncate">{tool.name}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
