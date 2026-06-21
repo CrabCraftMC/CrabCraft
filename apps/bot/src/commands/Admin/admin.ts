@@ -11,6 +11,10 @@ import {
   buildFastTrackButton,
   buildFastTrackContainer,
 } from "../../utils/applicationChannel.js";
+import {
+  buildShopDeedPanel,
+  buildShopDeedPanelButton,
+} from "../../utils/shopDeed.js";
 import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
 import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
 import {
@@ -439,6 +443,14 @@ export default class AdminCommand extends SlashCommand {
           label = "Ticket panel";
           break;
 
+        case "shop_deed_panel":
+          await textChannel.send({
+            components: [buildShopDeedPanel(), buildShopDeedPanelButton()],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Shop deed panel";
+          break;
+
         default:
           await interaction.reply({
             components: [errorContainer("**Error!** Unknown panel.")],
@@ -570,6 +582,7 @@ export default class AdminCommand extends SlashCommand {
                 { name: "Fast Track (Access)", value: "fast_track" },
                 { name: "Rules & Info", value: "rules_info" },
                 { name: "Ticket Panel", value: "ticket_panel" },
+                { name: "Shop Deed Panel", value: "shop_deed_panel" },
                 { name: "Leaderboard", value: "leaderboard" },
               ),
           ),
