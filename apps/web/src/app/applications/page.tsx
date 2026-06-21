@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getUserApplications } from "@/lib/queries";
 import type { Application } from "@/lib/types";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 
 export const metadata: Metadata = {
@@ -126,12 +126,11 @@ export default async function ApplicationsPage() {
 
                     <div className="flex items-center gap-3 mb-4">
                       {app.minecraft_uuid && (
-                        <Image
+                        <PixelIcon
                           src={`https://mc-heads.net/avatar/${app.minecraft_uuid}/32.png`}
-                          alt={app.minecraft_username}
-                          width={32}
-                          height={32}
-                          className="rounded"
+                          alt={app.minecraft_username ?? ""}
+                          size={32}
+                          imgClassName="rounded"
                         />
                       )}
                       {app.minecraft_username && (

@@ -15,6 +15,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/tools/block-gradient`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/circle-generator`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/stack-calculator`, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE_URL}/tools/beacon-calculator`, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE_URL}/tools/xp-calculator`, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE_URL}/tools/enchantment-planner`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/portal-calculator`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/wrapped`, changeFrequency: "weekly", priority: 0.7 },
   ];

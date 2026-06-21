@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
+import PixelIcon from "@/components/PixelIcon";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
@@ -92,12 +93,9 @@ export default function PlaytimeScene({ data }: { data: WrappedData }) {
             aria-hidden
             className="pt-clock pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-15"
           >
-            <img
+            <PixelIcon
               src="/minecraft/item/clock_16.png"
-              alt=""
-              width={140}
-              height={140}
-              className="pixelated"
+              size={140}
             />
           </div>
           <ShockwaveRing delay={1.2} size={120} maxScale={3.2} color="rgba(251, 191, 36, 0.6)" />

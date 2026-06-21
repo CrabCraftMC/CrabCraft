@@ -1,5 +1,5 @@
 /**
- * Manifest of Minecraft texture files required by the Wrapped story flow.
+ * Manifest of Minecraft texture files required by Wrapped and tool UIs.
  * Paths are relative to `apps/web/public/minecraft/`. The build-time
  * downloader (scripts/download-textures.ts) prefers to copy from
  * `_external/crabcraft-wrapped-main/public/minecraft/` if present, otherwise
@@ -42,6 +42,25 @@ export const REQUIRED_MC_TEXTURES = [
   "item/emerald.png",
   "item/enchanted_book.png",
   "block/red_wool.png",
+  // Tool material icons
+  "item/iron_ingot.png",
+  "item/gold_ingot.png",
+  "item/diamond.png",
+  "item/netherite_ingot.png",
+  // Enchantment planner icons
+  "item/diamond_axe.png",
+  "item/diamond_shovel.png",
+  "item/diamond_hoe.png",
+  "item/bow.png",
+  "item/crossbow.png",
+  "item/trident.png",
+  "item/mace.png",
+  "item/diamond_spear.png",
+  "item/diamond_helmet.png",
+  "item/diamond_chestplate.png",
+  "item/diamond_leggings.png",
+  "item/diamond_boots.png",
+  "item/fishing_rod.png",
   // Crafting
   "block/crafting_table_front.png",
   // Combat HUD

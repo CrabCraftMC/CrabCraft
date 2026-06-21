@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import config from "@/data/site-config.json";
 import CopyIPCard from "@/components/CopyIPCard";
 import CountdownBanner from "@/components/CountdownBanner";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { getOverviewStats } from "@/lib/queries";
 
@@ -142,12 +142,11 @@ export default async function HomePage() {
                       className={`flex flex-col items-center gap-1 animate-in cursor-pointer hover:scale-110 transition-transform ${player.name.length > 12 ? "w-32 lg:w-36" : player.name.length > 8 ? "w-28 lg:w-32" : "w-24 lg:w-28"}`}
                       style={{ animationDelay: `${0.35 + i * 0.08}s` }}
                     >
-                      <Image
+                      <PixelIcon
                         src={`https://mc-heads.net/avatar/${player.uuid}/100.png`}
                         alt={player.name}
-                        width={60}
-                        height={60}
-                        sizes="60px"
+                        size={60}
+                        imgClassName="rounded-md"
                         className="bg-gray-300 dark:bg-gray-700 rounded-md"
                       />
                       <div className="text-center">

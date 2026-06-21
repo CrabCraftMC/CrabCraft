@@ -1,4 +1,5 @@
 import Image from "next/image";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import type { Application } from "@/lib/types";
 
@@ -75,7 +76,12 @@ export default function AccountTab({
           <Squircle cornerRadius={20} className="bg-[var(--paper-2)] p-4">
             <p className="text-xs font-medium uppercase tracking-wider opacity-60 mb-2">Minecraft</p>
             <div className="flex items-center gap-3">
-              <Image src={`https://mc-heads.net/avatar/${minecraftUuid}/32.png`} alt="Minecraft skin" width={32} height={32} className="rounded" />
+              <PixelIcon
+                src={`https://mc-heads.net/avatar/${minecraftUuid}/32.png`}
+                alt="Minecraft skin"
+                size={32}
+                imgClassName="rounded"
+              />
               <p className="text-sm font-semibold truncate">{minecraftUsername ?? "Unknown"}</p>
             </div>
           </Squircle>
@@ -131,12 +137,11 @@ export default function AccountTab({
 
                   <div className="flex items-center gap-3 mb-3">
                     {app.minecraft_uuid && (
-                      <Image
+                      <PixelIcon
                         src={`https://mc-heads.net/avatar/${app.minecraft_uuid}/28.png`}
-                        alt={app.minecraft_username}
-                        width={28}
-                        height={28}
-                        className="rounded"
+                        alt={app.minecraft_username ?? ""}
+                        size={28}
+                        imgClassName="rounded"
                       />
                     )}
                     {app.minecraft_username && (
