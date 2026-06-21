@@ -4,14 +4,14 @@ import dynamic from "next/dynamic";
 const BeaconCalculator = dynamic(() => import("@/components/BeaconCalculator"));
 
 export const metadata: Metadata = {
-  title: "Minecraft Beacon Pyramid Planner",
+  title: "Minecraft Beacon Calculator",
   description:
     "Calculate Minecraft beacon pyramid blocks, items, layers, and range — free online tool.",
   alternates: {
     canonical: "https://crabcraft.net/tools/beacon-calculator",
   },
   openGraph: {
-    title: "Minecraft Beacon Pyramid Planner - CrabCraft",
+    title: "Minecraft Beacon Calculator - CrabCraft",
     description:
       "Calculate beacon pyramid blocks, items, layers, and range.",
     url: "https://crabcraft.net/tools/beacon-calculator",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Minecraft Beacon Pyramid Planner",
+  name: "Minecraft Beacon Calculator",
   description:
     "Calculate Minecraft beacon pyramid blocks, items, layers, and range.",
   url: "https://crabcraft.net/tools/beacon-calculator",

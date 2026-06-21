@@ -105,7 +105,7 @@ export default function BeaconCalculator() {
       <div className="container mx-auto px-4 max-w-5xl">
         <div className="text-center mb-10 animate-in">
           <h1 className="text-4xl lg:text-5xl font-bold text-orange-500 font-mc">
-            Beacon Pyramid
+            Beacon Calculator
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Plan beacon pyramid blocks, items, layers, and range

@@ -38,12 +38,12 @@
                 "icon": "Circle"
             },
             {
-                "name": "Stack & Shulker",
+                "name": "Stack Calculator",
                 "url": "/tools/stack-calculator",
                 "icon": "Boxes"
             },
             {
-                "name": "Beacon Pyramid",
+                "name": "Beacon Calculator",
                 "url": "/tools/beacon-calculator",
                 "icon": "Sparkles"
             },
