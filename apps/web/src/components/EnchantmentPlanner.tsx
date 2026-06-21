@@ -614,6 +614,17 @@ export default function EnchantmentPlanner() {
     enchantment: ENCHANTMENTS[id],
     level: selected[id],
   }));
+  const enchantmentColumns = useMemo(
+    () =>
+      item.enchantments.reduce<string[][]>(
+        (columns, id, index) => {
+          columns[index % columns.length].push(id);
+          return columns;
+        },
+        [[], []]
+      ),
+    [item.enchantments]
+  );
 
   const toggleEnchantment = useCallback((id: string) => {
     setSelected((prev) => {
@@ -661,6 +672,109 @@ export default function EnchantmentPlanner() {
       setCopiedCommand((current) => (current === command ? null : current));
     }, 1500);
   }, []);
+
+  const renderEnchantmentCard = (id: string) => {
+    const enchantment = ENCHANTMENTS[id];
+    const activeLevel = selected[id];
+    const replacing = selectedIds
+      .filter((selectedId) => conflictsWith(id, selectedId))
+      .map((selectedId) => ENCHANTMENTS[selectedId].name);
+    const hasBadges =
+      enchantment.treasure ||
+      enchantment.curse ||
+      (!activeLevel && replacing.length > 0);
+
+    return (
+      <div
+        key={id}
+        role="button"
+        tabIndex={0}
+        aria-pressed={Boolean(activeLevel)}
+        onClick={() => toggleEnchantment(id)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggleEnchantment(id);
+          }
+        }}
+        className={`rounded-2xl border p-4 cursor-pointer transition-colors ${
+          activeLevel
+            ? "bg-orange-500/10 border-orange-500/40"
+            : "bg-paper border-transparent hover:border-orange-500/30"
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <PixelIcon
+            src={BOOK_ICON}
+            size={32}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">
+                {enchantment.name}
+              </h3>
+              <span className="shrink-0 text-xs font-bold text-gray-400">
+                {enchantment.maxLevel === 1
+                  ? "Max"
+                  : `I-${toRoman(enchantment.maxLevel)}`}
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+              {enchantment.description}
+            </p>
+          </div>
+        </div>
+
+        {hasBadges && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {enchantment.treasure && (
+              <span className="rounded-lg bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-500">
+                Treasure
+              </span>
+            )}
+            {enchantment.curse && (
+              <span className="rounded-lg bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-500">
+                Curse
+              </span>
+            )}
+            {!activeLevel && replacing.length > 0 && (
+              <span className="rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                Replaces {replacing.join(", ")}
+              </span>
+            )}
+          </div>
+        )}
+
+        {activeLevel && enchantment.maxLevel > 1 && (
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                setLevel(id, activeLevel - 1);
+              }}
+              className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
+              aria-label={`Lower ${enchantment.name} level`}
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
+              Level {toRoman(activeLevel)}
+            </span>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                setLevel(id, activeLevel + 1);
+              }}
+              className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
+              aria-label={`Raise ${enchantment.name} level`}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="pt-24 pb-16">
@@ -796,109 +910,19 @@ export default function EnchantmentPlanner() {
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 items-start gap-3">
-                  {item.enchantments.map((id) => {
-                    const enchantment = ENCHANTMENTS[id];
-                    const activeLevel = selected[id];
-                    const replacing = selectedIds
-                      .filter((selectedId) => conflictsWith(id, selectedId))
-                      .map((selectedId) => ENCHANTMENTS[selectedId].name);
-                    const hasBadges =
-                      enchantment.treasure ||
-                      enchantment.curse ||
-                      (!activeLevel && replacing.length > 0);
+                <div className="grid grid-cols-1 gap-3 md:hidden">
+                  {item.enchantments.map(renderEnchantmentCard)}
+                </div>
 
-                    return (
-                      <div
-                        key={id}
-                        role="button"
-                        tabIndex={0}
-                        aria-pressed={Boolean(activeLevel)}
-                        onClick={() => toggleEnchantment(id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            toggleEnchantment(id);
-                          }
-                        }}
-                        className={`rounded-2xl border p-4 cursor-pointer transition-colors ${
-                          activeLevel
-                            ? "bg-orange-500/10 border-orange-500/40"
-                            : "bg-paper border-transparent hover:border-orange-500/30"
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <PixelIcon
-                            src={BOOK_ICON}
-                            size={32}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">
-                                {enchantment.name}
-                              </h3>
-                              <span className="shrink-0 text-xs font-bold text-gray-400">
-                                {enchantment.maxLevel === 1
-                                  ? "Max"
-                                  : `I-${toRoman(enchantment.maxLevel)}`}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                              {enchantment.description}
-                            </p>
-                          </div>
-                        </div>
-
-                        {hasBadges && (
-                          <div className="mt-3 flex flex-wrap gap-1.5">
-                            {enchantment.treasure && (
-                              <span className="rounded-lg bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-500">
-                                Treasure
-                              </span>
-                            )}
-                            {enchantment.curse && (
-                              <span className="rounded-lg bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-500">
-                                Curse
-                              </span>
-                            )}
-                            {!activeLevel && replacing.length > 0 && (
-                              <span className="rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                                Replaces {replacing.join(", ")}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {activeLevel && enchantment.maxLevel > 1 && (
-                          <div className="mt-4 flex items-center justify-between gap-3">
-                            <button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setLevel(id, activeLevel - 1);
-                              }}
-                              className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
-                              aria-label={`Lower ${enchantment.name} level`}
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
-                              Level {toRoman(activeLevel)}
-                            </span>
-                            <button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setLevel(id, activeLevel + 1);
-                              }}
-                              className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
-                              aria-label={`Raise ${enchantment.name} level`}
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="hidden md:grid md:grid-cols-2 items-start gap-3">
+                  {enchantmentColumns.map((column, columnIndex) => (
+                    <div
+                      key={columnIndex}
+                      className="space-y-3"
+                    >
+                      {column.map(renderEnchantmentCard)}
+                    </div>
+                  ))}
                 </div>
               </Squircle>
 
