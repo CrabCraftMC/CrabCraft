@@ -11,6 +11,13 @@ const iconPaths: Record<string, string> = {
     "M20.3 4.4A19.6 19.6 0 0 0 15.4 3c-.2.4-.5 1-.7 1.4a18.2 18.2 0 0 0-5.4 0C9.1 4 8.8 3.4 8.6 3A19.5 19.5 0 0 0 3.7 4.4 20.2 20.2 0 0 0 .2 17.2a19.7 19.7 0 0 0 6 3 14.3 14.3 0 0 0 1.2-2 12.8 12.8 0 0 1-2-.9l.5-.4a14 14 0 0 0 12.1 0l.5.4a12.8 12.8 0 0 1-2 .9 14.3 14.3 0 0 0 1.3 2 19.7 19.7 0 0 0 6-3A20.2 20.2 0 0 0 20.3 4.4zM8 14.7c-1.1 0-2-1-2-2.3s.9-2.3 2-2.3 2 1 2 2.3-.9 2.3-2 2.3zm8 0c-1.1 0-2-1-2-2.3s.9-2.3 2-2.3 2 1 2 2.3-.9 2.3-2 2.3z",
 };
 
+const socialLabels: Record<string, string> = {
+  youtube: "CrabCraft on YouTube",
+  tiktok: "CrabCraft on TikTok",
+  instagram: "CrabCraft on Instagram",
+  discord: "CrabCraft Discord",
+};
+
 export default function Footer() {
   return (
     <footer className="pt-16 pb-8 text-gray-900 dark:text-gray-100 relative overflow-hidden transition-colors">
@@ -38,6 +45,7 @@ export default function Footer() {
                     href={social.url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={socialLabels[social.platform] ?? social.platform}
                     className="text-gray-400 dark:text-gray-500 hover:text-orange-500 transition-colors"
                   >
                     <svg
@@ -45,6 +53,7 @@ export default function Footer() {
                       className="w-5 h-5"
                       viewBox="0 0 24 24"
                       fill="currentColor"
+                      aria-hidden="true"
                     >
                       <path d={iconPaths[social.platform] || ""} />
                     </svg>

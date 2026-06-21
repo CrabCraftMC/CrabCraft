@@ -693,7 +693,7 @@ export default function EnchantmentPlanner() {
                   onClick={() => chooseItem(entry.key)}
                   className={`min-h-[74px] rounded-2xl p-3 text-left cursor-pointer transition-colors ${
                     item.key === entry.key
-                      ? "bg-orange-500 text-white"
+                      ? "bg-orange-500 text-white hover:bg-orange-600"
                       : "bg-paper hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300"
                   }`}
                 >
@@ -752,7 +752,7 @@ export default function EnchantmentPlanner() {
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-5 flex min-h-[88px] max-h-28 flex-wrap content-start items-start gap-2 overflow-y-auto pr-1 themed-scrollbar">
                 {selectedEntries.length === 0 ? (
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     Pick enchantments below or start with the recommended set.
@@ -796,7 +796,7 @@ export default function EnchantmentPlanner() {
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 items-start gap-3">
                   {item.enchantments.map((id) => {
                     const enchantment = ENCHANTMENTS[id];
                     const activeLevel = selected[id];
@@ -817,7 +817,7 @@ export default function EnchantmentPlanner() {
                             toggleEnchantment(id);
                           }
                         }}
-                        className={`rounded-2xl border p-4 cursor-pointer transition-colors ${
+                        className={`flex min-h-[176px] flex-col rounded-2xl border p-4 cursor-pointer transition-colors ${
                           activeLevel
                             ? "bg-orange-500/10 border-orange-500/40"
                             : "bg-paper border-transparent hover:border-orange-500/30"
@@ -845,7 +845,7 @@ export default function EnchantmentPlanner() {
                           </div>
                         </div>
 
-                        <div className="mt-3 flex flex-wrap gap-1.5">
+                        <div className="mt-3 flex min-h-7 flex-wrap content-start gap-1.5">
                           {enchantment.treasure && (
                             <span className="rounded-lg bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-500">
                               Treasure
@@ -863,33 +863,41 @@ export default function EnchantmentPlanner() {
                           )}
                         </div>
 
-                        {activeLevel && enchantment.maxLevel > 1 && (
-                          <div className="mt-4 flex items-center justify-between gap-3">
-                            <button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setLevel(id, activeLevel - 1);
-                              }}
-                              className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
-                              aria-label={`Lower ${enchantment.name} level`}
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
-                              Level {toRoman(activeLevel)}
-                            </span>
-                            <button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setLevel(id, activeLevel + 1);
-                              }}
-                              className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
-                              aria-label={`Raise ${enchantment.name} level`}
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
+                        <div
+                          className={
+                            enchantment.maxLevel > 1
+                              ? "mt-auto min-h-11 pt-2"
+                              : "mt-auto"
+                          }
+                        >
+                          {activeLevel && enchantment.maxLevel > 1 && (
+                            <div className="flex items-center justify-between gap-3">
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setLevel(id, activeLevel - 1);
+                                }}
+                                className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
+                                aria-label={`Lower ${enchantment.name} level`}
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
+                                Level {toRoman(activeLevel)}
+                              </span>
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setLevel(id, activeLevel + 1);
+                                }}
+                                className="w-9 h-9 rounded-xl bg-paper hover:bg-line flex items-center justify-center text-gray-500 cursor-pointer transition-colors"
+                                aria-label={`Raise ${enchantment.name} level`}
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -960,9 +968,9 @@ export default function EnchantmentPlanner() {
                       {commands.map((command) => (
                         <div
                           key={command}
-                          className="flex items-start gap-2 rounded-xl bg-paper p-2"
+                          className="flex min-h-12 items-center gap-2 rounded-xl bg-paper p-2"
                         >
-                          <code className="min-w-0 flex-1 px-1 py-1 text-[11px] leading-relaxed text-gray-700 dark:text-gray-300 break-all">
+                          <code className="min-w-0 flex-1 px-1 py-0.5 text-[11px] leading-tight text-gray-700 dark:text-gray-300 break-all">
                             {command}
                           </code>
                           <button

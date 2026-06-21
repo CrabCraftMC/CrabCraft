@@ -81,7 +81,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                         <Link href="/" className="flex items-center gap-3">
                             <Image
                                 src="/logo.png"
-                                alt="Logo"
+                                alt="CrabCraft logo"
                                 width={44}
                                 height={44}
                                 loading="eager"
