@@ -24,10 +24,13 @@ import {
   TextDisplayBuilder,
   ThumbnailBuilder,
   MessageFlags,
+  ThreadAutoArchiveDuration,
+  type ThreadChannel,
 } from "discord.js";
 
 import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
+import type { ShopDeedApplication } from "../utils/appDb.js";
 import { storeRetry, getRetry } from "../utils/retryStore.js";
 import { resolveUsername } from "../utils/mojang.js";
 import { CHANNEL_DELETE_DELAY_MS } from "../utils/constants.js";
@@ -43,6 +46,17 @@ import {
   getCategoryMeta,
   getPlayerInfo,
 } from "../utils/ticket.js";
+import {
+  SHOP_DEED_FIELDS,
+  buildDisabledShopDeedStaffButtons,
+  buildShopDeedPanel,
+  buildShopDeedPanelButton,
+  buildShopDeedDecisionNotice,
+  buildShopDeedHeader,
+  buildShopDeedStaffButtons,
+  buildShopDeedThreadName,
+  type ShopDeedFeedbackDecision,
+} from "../utils/shopDeed.js";
 
 const ACCEPTED_VALUES = [
   "y",
@@ -71,6 +85,24 @@ const DENIED_VALUES = [
   "false",
   "negative",
 ];
+
+async function restickShopDeedPanel(
+  interaction: ModalSubmitInteraction,
+  channel: TextChannel,
+): Promise<void> {
+  try {
+    if (interaction.isFromMessage()) {
+      await interaction.message.delete().catch(() => null);
+    }
+
+    await channel.send({
+      components: [buildShopDeedPanel(), buildShopDeedPanelButton()],
+      flags: MessageFlags.IsComponentsV2,
+    });
+  } catch (e) {
+    logger.error("Shop deed: failed to refresh sticky panel:", e);
+  }
+}
 
 /** Build a retry button row for invalid usernames. */
 function retryButtonRow(customId: string) {
@@ -426,6 +458,280 @@ export default class ModalInteractionEvent extends Event {
         await interaction.reply({
           components: [primaryContainer("Your application has been updated.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+      }
+      return;
+    }
+
+    // ── Shop Deed Request Modal ─────────────────────────────────────
+    if (interaction.customId === "shop_deed_modal") {
+      if (!interaction.guild || !interaction.guildId) {
+        await interaction.reply({
+          components: [
+            errorContainer("Shop deed requests can only be created in a server."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const parentChannel = interaction.channel as TextChannel | null;
+      if (!parentChannel || parentChannel.type !== ChannelType.GuildText) {
+        await interaction.reply({
+          components: [
+            errorContainer("Shop deed requests must be created from a text channel."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const eligible = await appDb
+        .isWhitelistedForCurrentSeason(interaction.user.id)
+        .catch((e) => {
+          logger.error("Shop deed: eligibility check failed:", e);
+          return false;
+        });
+      if (!eligible) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "Shop deed requests are only available to players accepted for the current season.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      const intake: Record<string, string> = {};
+      for (const field of SHOP_DEED_FIELDS) {
+        try {
+          const value = interaction.fields.getTextInputValue(field.id).trim();
+          if (value.length > 0) intake[field.id] = value;
+        } catch {
+          // Field missing - handled by required field validation below.
+        }
+      }
+
+      const missingRequired = SHOP_DEED_FIELDS
+        .filter((field) => field.required && !intake[field.id])
+        .map((field) => field.display);
+      if (missingRequired.length > 0) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              `Missing required field: ${missingRequired.join(", ")}.`,
+            ),
+          ],
+        });
+        return;
+      }
+
+      let thread: ThreadChannel;
+      try {
+        thread = await parentChannel.threads.create({
+          name: buildShopDeedThreadName(
+            intake.shop_name,
+            interaction.user.username,
+          ),
+          autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+          type: ChannelType.PublicThread,
+          reason: `Shop deed request by ${interaction.user.tag}`,
+        });
+      } catch (e) {
+        logger.error("Shop deed: failed to create thread:", e);
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "Failed to create the shop deed thread. Please try again or contact a moderator.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      let application: ShopDeedApplication;
+      try {
+        application = await appDb.createShopDeedApplication({
+          threadId: thread.id,
+          channelId: parentChannel.id,
+          guildId: interaction.guildId,
+          applicantDiscordId: interaction.user.id,
+          applicantDiscordUsername: interaction.user.username,
+          shopName: intake.shop_name,
+          shopDescription: intake.shop_description,
+          goodsServices: intake.goods_services,
+          location: intake.location ?? null,
+        });
+      } catch (e) {
+        logger.error("Shop deed: failed to persist request:", e);
+        await thread.delete("Shop deed request persistence failed").catch(() => null);
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "Failed to save your shop deed request. Please try again in a moment.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      try {
+        await thread.send({
+          content: `<@${interaction.user.id}>`,
+          allowedMentions: {
+            parse: [],
+            users: [interaction.user.id],
+            roles: [],
+          },
+        });
+        await thread.send({
+          components: [
+            buildShopDeedHeader(application),
+            buildShopDeedStaffButtons(application.id),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } catch (e) {
+        logger.error("Shop deed: failed to send thread header:", e);
+        await thread.send({
+          content: `Shop deed request #${String(application.id).padStart(4, "0")} was opened by ${interaction.user.username}, but the rich summary could not be posted automatically.`,
+          allowedMentions: { parse: [] },
+        }).catch((fallbackError) => {
+          logger.error("Shop deed: failed to send fallback header:", fallbackError);
+        });
+      }
+
+      await interaction.editReply({
+        components: [
+          primaryContainer(
+            `Your shop deed request is ready in <#${thread.id}>.`,
+          ),
+        ],
+      });
+      await restickShopDeedPanel(interaction, parentChannel);
+      return;
+    }
+
+    // ── Shop Deed Decision Modal ────────────────────────────────────
+    if (interaction.customId.startsWith("shop_deed_decision:")) {
+      const [, rawDecision, rawId] = interaction.customId.split(":");
+      const decision = rawDecision as ShopDeedFeedbackDecision;
+      const applicationId = Number(rawId);
+      const member = interaction.member as GuildMember | null;
+
+      if (!member?.roles.cache.has(config.MOD_ROLE_ID)) {
+        await interaction.reply({
+          content: `You must have the <@&${config.MOD_ROLE_ID}> role to do this.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (
+        (decision !== "changes_requested" && decision !== "rejected") ||
+        !Number.isFinite(applicationId)
+      ) {
+        await interaction.reply({
+          components: [errorContainer("Shop deed request not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const reason = interaction.fields.getTextInputValue("reason").trim();
+      if (!reason) {
+        await interaction.reply({
+          components: [errorContainer("A decision reason is required.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (interaction.isFromMessage()) {
+        await interaction.deferUpdate();
+      } else {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      }
+
+      const application = await appDb.getShopDeedApplicationById(applicationId);
+      if (!application || application.thread_id !== interaction.channelId) {
+        await interaction.followUp({
+          components: [errorContainer("Shop deed request not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const resolved = await appDb.resolveShopDeedApplication(
+        application.id,
+        decision,
+        reason,
+        interaction.user.id,
+      );
+      if (!resolved) {
+        await interaction.followUp({
+          components: [
+            errorContainer("This shop deed request has already been processed."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (interaction.message) {
+        try {
+          await interaction.message.edit({
+            components: [
+              buildShopDeedHeader(resolved),
+              decision === "rejected"
+                ? buildDisabledShopDeedStaffButtons(resolved.id)
+                : buildShopDeedStaffButtons(resolved.id),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+        } catch (e) {
+          logger.error("Shop deed: failed to disable decision buttons:", e);
+        }
+      }
+
+      try {
+        await (interaction.channel as ThreadChannel | null)?.setName(
+          buildShopDeedThreadName(
+            resolved.shop_name,
+            resolved.applicant_discord_username,
+            resolved.status,
+          ),
+          `Shop deed ${resolved.status}`,
+        );
+      } catch (e) {
+        logger.error("Shop deed: failed to rename reviewed thread:", e);
+      }
+
+      const thread = interaction.channel as TextChannel | null;
+      if (thread) {
+        try {
+          await thread.send({
+            components: [
+              buildShopDeedDecisionNotice(
+                resolved,
+                decision,
+                interaction.user.username,
+                reason,
+              ),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+        } catch (e) {
+          logger.error("Shop deed: failed to send decision notice:", e);
+        }
+      }
+
+      if (!interaction.isFromMessage()) {
+        await interaction.editReply({
+          components: [primaryContainer("Shop deed request updated.")],
         });
       }
       return;
