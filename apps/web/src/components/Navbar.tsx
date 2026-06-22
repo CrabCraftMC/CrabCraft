@@ -76,6 +76,15 @@ export default function Navbar({ user }: { user?: UserData | null }) {
         return () => document.removeEventListener('click', handleClick);
     }, []);
 
+    useEffect(() => {
+        if (!isMenuOpen) return;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isMenuOpen]);
+
     const toggleDarkMode = () => {
         trigger();
         const newDark = !isDark;
@@ -318,7 +327,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
         )}
         {isMenuOpen && (
                 <div
-                    className="md:hidden mt-2 bg-paper-2/90 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl shadow-lg overflow-hidden absolute left-4 right-4 animate-[scaleIn_0.15s_ease-out]"
+                    className="md:hidden mt-2 bg-paper-2/90 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl shadow-lg overflow-y-auto overscroll-contain max-h-[calc(100dvh-6rem)] absolute left-4 right-4 animate-[scaleIn_0.15s_ease-out]"
                 >
                     <div className="p-4 space-y-1">
                         {/* Search */}
