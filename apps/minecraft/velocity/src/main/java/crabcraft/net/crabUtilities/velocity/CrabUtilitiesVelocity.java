@@ -118,7 +118,7 @@ public class CrabUtilitiesVelocity {
         this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
 
         this.loginStreakService = new LoginStreakService(
-                pgWriter.getDataSource(), logger, config.getLoginStreakBufferHours());
+                pgWriter.getDataSource(), logger, config.getLoginStreakResetHourUtc());
         this.loginStreakPublisher = new LoginStreakPublisher(this, config);
 
         try {
@@ -217,10 +217,10 @@ public class CrabUtilitiesVelocity {
         this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
 
         if (loginStreakService != null) {
-            this.loginStreakService.setBufferHours(config.getLoginStreakBufferHours());
+            this.loginStreakService.setResetHourUtc(config.getLoginStreakResetHourUtc());
         } else {
             this.loginStreakService = new LoginStreakService(
-                    pgWriter.getDataSource(), logger, config.getLoginStreakBufferHours());
+                    pgWriter.getDataSource(), logger, config.getLoginStreakResetHourUtc());
         }
         if (loginStreakPublisher != null) {
             loginStreakPublisher.shutdown();

@@ -1,5 +1,6 @@
 package crabcraft.net.crabUtilities.velocity;
 
+import crabcraft.net.crabUtilities.velocity.db.LoginStreakService;
 import org.slf4j.Logger;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.yaml.NodeStyle;
@@ -64,7 +65,7 @@ public class VelocityConfig {
     private final String updateGithubToken;
     private final boolean voicechatCrossServerEnabled;
     private final long voicechatPlayerHomeTtlSeconds;
-    private final long loginStreakBufferHours;
+    private final int loginStreakResetHourUtc;
 
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
                            String redisChannel, String staffChatFormat,
@@ -86,7 +87,7 @@ public class VelocityConfig {
                            String updateGithubRepo, String updateGithubToken,
                            boolean voicechatCrossServerEnabled,
                            long voicechatPlayerHomeTtlSeconds,
-                           long loginStreakBufferHours) {
+                           int loginStreakResetHourUtc) {
         this.redisHost = redisHost;
         this.redisPort = redisPort;
         this.redisPassword = redisPassword;
@@ -122,7 +123,7 @@ public class VelocityConfig {
         this.updateGithubToken = updateGithubToken;
         this.voicechatCrossServerEnabled = voicechatCrossServerEnabled;
         this.voicechatPlayerHomeTtlSeconds = voicechatPlayerHomeTtlSeconds;
-        this.loginStreakBufferHours = loginStreakBufferHours;
+        this.loginStreakResetHourUtc = loginStreakResetHourUtc;
     }
 
     public static VelocityConfig load(Path dataDirectory, Logger logger) {
@@ -152,6 +153,10 @@ public class VelocityConfig {
                             .build()
                             .load();
                     root.mergeFrom(defaults);
+                    // Older configs carried login-streaks.buffer-hours (now replaced
+                    // by reset-hour-utc); mergeFrom adds the new key but never prunes
+                    // the old one, so drop it explicitly to avoid a dead setting.
+                    root.node("login-streaks").removeChild("buffer-hours");
                     loader.save(root);
                 }
             }
@@ -218,7 +223,8 @@ public class VelocityConfig {
             boolean vcEnabled = voicechat.node("enabled").getBoolean(true);
             long vcHomeTtl = voicechat.node("player-home-ttl-seconds").getLong(300L);
 
-            long streakBuffer = root.node("login-streaks", "buffer-hours").getLong(36L);
+            int streakResetHour = root.node("login-streaks", "reset-hour-utc")
+                    .getInt(LoginStreakService.DEFAULT_RESET_HOUR_UTC);
 
             return new VelocityConfig(host, port, password, channel, format,
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
@@ -228,7 +234,7 @@ public class VelocityConfig {
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
                     updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken,
-                    vcEnabled, vcHomeTtl, streakBuffer);
+                    vcEnabled, vcHomeTtl, streakResetHour);
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT,
@@ -241,7 +247,7 @@ public class VelocityConfig {
                     "{name} joined the game for the first time!",
                     "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "",
                     true, 6L, false, "CrabCraftMC/CrabCraft", "",
-                    true, 300L, 36L);
+                    true, 300L, LoginStreakService.DEFAULT_RESET_HOUR_UTC);
         }
     }
 
@@ -280,5 +286,5 @@ public class VelocityConfig {
     public String getUpdateGithubToken() { return updateGithubToken; }
     public boolean isVoicechatCrossServerEnabled() { return voicechatCrossServerEnabled; }
     public long getVoicechatPlayerHomeTtlSeconds() { return voicechatPlayerHomeTtlSeconds; }
-    public long getLoginStreakBufferHours() { return loginStreakBufferHours; }
+    public int getLoginStreakResetHourUtc() { return loginStreakResetHourUtc; }
 }

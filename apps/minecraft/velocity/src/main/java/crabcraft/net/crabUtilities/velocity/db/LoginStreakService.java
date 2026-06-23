@@ -13,24 +13,26 @@ import java.sql.SQLException;
 /**
  * Tracks all-time login streaks per Minecraft account.
  *
- * <p>Streaks measure how many consecutive "play windows" a player has
- * logged in for. A play window is the gap between logins:
+ * <p>A streak counts the days a player has logged in, where a "day" is a
+ * fixed 24-hour window that rolls over at {@code resetHourUtc}:00 UTC
+ * (06:00 by default). The proxy records a login on every join and the
+ * streak updates by comparing the streak-day of this login to the last:
  * <ul>
- *   <li>Gap &lt; {@code MIN_INCREMENT_HOURS} (12h): same window, the
- *       streak is unchanged but {@code last_login_at} is bumped.</li>
- *   <li>Gap &le; {@code bufferHours} (default 36h): consecutive
- *       window — streak increments by one.</li>
- *   <li>Gap &gt; {@code bufferHours}: streak resets to 1.</li>
+ *   <li>Same UTC streak-day as the last login: no change (a relog).</li>
+ *   <li>The next day, or after a single missed day: the streak
+ *       increments by one. Missing one day is forgiven — the streak
+ *       holds and continues, but the missed day itself earns no point.</li>
+ *   <li>Two or more missed days in a row: the streak resets to 1.</li>
  * </ul>
  *
- * <p>The 12h floor prevents spam-rejoin from inflating streaks. The
- * 36h ceiling lets a player drift their schedule by half a day
- * without losing the run.
+ * <p>So logging in Mon, Tue, Wed gives a streak of 3; logging in Mon and
+ * Wed (missing Tue) gives 2; logging in Mon then Thu (missing both Tue
+ * and Wed) resets to 1.
  */
 public final class LoginStreakService {
 
-    public static final long MIN_INCREMENT_HOURS = 12L;
-    public static final long DEFAULT_BUFFER_HOURS = 36L;
+    public static final int DEFAULT_RESET_HOUR_UTC = 6;
+    private static final long DAY_SECONDS = 86_400L;
 
     private static final String CREATE_TABLE_SQL = """
             CREATE TABLE IF NOT EXISTS player_login_streaks (
@@ -67,27 +69,43 @@ public final class LoginStreakService {
 
     private final HikariDataSource dataSource;
     private final Logger logger;
-    private volatile long bufferHours;
+    private volatile int resetHourUtc;
 
-    public LoginStreakService(HikariDataSource dataSource, Logger logger, long bufferHours) {
+    public LoginStreakService(HikariDataSource dataSource, Logger logger, int resetHourUtc) {
         this.dataSource = dataSource;
         this.logger = logger;
-        this.bufferHours = clampBuffer(bufferHours);
+        this.resetHourUtc = clampResetHour(resetHourUtc);
         ensureSchema();
     }
 
-    public long getBufferHours() {
-        return bufferHours;
+    public int getResetHourUtc() {
+        return resetHourUtc;
     }
 
-    public void setBufferHours(long bufferHours) {
-        this.bufferHours = clampBuffer(bufferHours);
+    public void setResetHourUtc(int resetHourUtc) {
+        this.resetHourUtc = clampResetHour(resetHourUtc);
     }
 
-    private static long clampBuffer(long bufferHours) {
-        // Buffer must exceed the same-session floor, otherwise streaks
-        // can never increment.
-        return Math.max(MIN_INCREMENT_HOURS + 1L, bufferHours);
+    private static int clampResetHour(int resetHourUtc) {
+        if (resetHourUtc < 0) return 0;
+        if (resetHourUtc > 23) return 23;
+        return resetHourUtc;
+    }
+
+    /** The streak-day number a Unix timestamp falls in, given the reset hour. */
+    private static long dayNumber(long epochSeconds, int resetHourUtc) {
+        return Math.floorDiv(epochSeconds - resetHourUtc * 3600L, DAY_SECONDS);
+    }
+
+    /**
+     * Unix second at which a streak lapses: the start of the third
+     * streak-day after the last login. Logging in the next day (gap 1) or
+     * the day after (gap 2, one forgiven miss) keeps the streak alive;
+     * once this instant passes, the next login resets the streak to 1.
+     */
+    public static long expiryOf(long lastLoginAt, int resetHourUtc) {
+        long lastDay = dayNumber(lastLoginAt, resetHourUtc);
+        return (lastDay + 3) * DAY_SECONDS + resetHourUtc * 3600L;
     }
 
     private void ensureSchema() {
@@ -108,15 +126,17 @@ public final class LoginStreakService {
      */
     public StreakSnapshot recordLogin(String uuid) {
         long now = System.currentTimeMillis() / 1000L;
-        long bufferSeconds = bufferHours * 3600L;
-        long minIncrementSeconds = MIN_INCREMENT_HOURS * 3600L;
+        // Snapshot the volatile reset hour once so `today` and `lastDay`
+        // are computed against the same boundary even if /reload changes it.
+        int rh = resetHourUtc;
+        long today = dayNumber(now, rh);
 
         try (Connection conn = dataSource.getConnection()) {
             int currentStreak;
             int longestStreak;
-            long lastLoginAt;
             long streakStartedAt;
             boolean hadRow;
+            long lastDay;
 
             try (PreparedStatement stmt = conn.prepareStatement(SELECT_SQL)) {
                 stmt.setString(1, uuid);
@@ -125,35 +145,38 @@ public final class LoginStreakService {
                         hadRow = true;
                         currentStreak = rs.getInt("current_streak");
                         longestStreak = rs.getInt("longest_streak");
-                        lastLoginAt = rs.getLong("last_login_at");
+                        lastDay = dayNumber(rs.getLong("last_login_at"), rh);
                         streakStartedAt = rs.getLong("streak_started_at");
                     } else {
                         hadRow = false;
                         currentStreak = 0;
                         longestStreak = 0;
-                        lastLoginAt = 0L;
+                        lastDay = today; // unused on the first-login path; set for definite assignment
                         streakStartedAt = now;
                     }
                 }
             }
 
-            long gap = hadRow ? (now - lastLoginAt) : Long.MAX_VALUE;
             int newStreak;
             long newStartedAt;
             if (!hadRow || currentStreak == 0) {
                 newStreak = 1;
                 newStartedAt = now;
-            } else if (gap < minIncrementSeconds) {
-                // Same play window — keep the streak as-is.
-                newStreak = currentStreak;
-                newStartedAt = streakStartedAt;
-            } else if (gap <= bufferSeconds) {
-                newStreak = currentStreak + 1;
-                newStartedAt = streakStartedAt;
             } else {
-                // Gap exceeded buffer — start over.
-                newStreak = 1;
-                newStartedAt = now;
+                long gap = today - lastDay;
+                if (gap <= 0) {
+                    // Already logged in today — streak unchanged.
+                    newStreak = currentStreak;
+                    newStartedAt = streakStartedAt;
+                } else if (gap <= 2) {
+                    // Next day, or a single forgiven missed day — increment.
+                    newStreak = currentStreak + 1;
+                    newStartedAt = streakStartedAt;
+                } else {
+                    // Two or more days missed — start over.
+                    newStreak = 1;
+                    newStartedAt = now;
+                }
             }
             int newLongest = Math.max(longestStreak, newStreak);
 
@@ -196,8 +219,8 @@ public final class LoginStreakService {
         if (snap == null) return null;
 
         long now = System.currentTimeMillis() / 1000L;
-        long expiresAt = snap.lastLoginAt + bufferHours * 3600L;
-        boolean active = now <= expiresAt;
+        long expiresAt = expiryOf(snap.lastLoginAt, resetHourUtc);
+        boolean active = now < expiresAt;
 
         JsonObject obj = new JsonObject();
         obj.addProperty("uuid", uuid);
@@ -208,7 +231,6 @@ public final class LoginStreakService {
         obj.addProperty("streak_started_at", snap.streakStartedAt);
         obj.addProperty("expires_at", expiresAt);
         obj.addProperty("active", active);
-        obj.addProperty("buffer_hours", bufferHours);
         return obj;
     }
 
@@ -226,7 +248,6 @@ public final class LoginStreakService {
                 "LIMIT ? OFFSET ?";
         String countSql = "SELECT COUNT(*) FROM player_login_streaks WHERE " + column + " > 0";
 
-        long bufferSeconds = bufferHours * 3600L;
         long now = System.currentTimeMillis() / 1000L;
 
         JsonArray entries = new JsonArray();
@@ -246,7 +267,7 @@ public final class LoginStreakService {
                         rank++;
                         int currentStreak = rs.getInt("current_streak");
                         long lastLogin = rs.getLong("last_login_at");
-                        boolean active = (now - lastLogin) <= bufferSeconds;
+                        boolean active = now < expiryOf(lastLogin, resetHourUtc);
                         JsonObject entry = new JsonObject();
                         entry.addProperty("rank", rank);
                         entry.addProperty("uuid", rs.getString("minecraft_uuid"));
@@ -267,7 +288,6 @@ public final class LoginStreakService {
 
         JsonObject response = new JsonObject();
         response.addProperty("metric", longest ? "longest" : "current");
-        response.addProperty("buffer_hours", bufferHours);
         response.add("leaderboard", entries);
         response.addProperty("total", total);
         response.addProperty("offset", safeOffset);

@@ -61,12 +61,12 @@ public class LoginStreakPublisher {
         }
     }
 
-    public void publish(String uuid, LoginStreakService.StreakSnapshot snapshot, long bufferHours) {
+    public void publish(String uuid, LoginStreakService.StreakSnapshot snapshot, int resetHourUtc) {
         if (jedisPool == null || snapshot == null) return;
 
         long now = System.currentTimeMillis() / 1000L;
-        long expiresAt = snapshot.lastLoginAt + bufferHours * 3600L;
-        boolean active = now <= expiresAt;
+        long expiresAt = LoginStreakService.expiryOf(snapshot.lastLoginAt, resetHourUtc);
+        boolean active = now < expiresAt;
 
         JsonObject payload = new JsonObject();
         payload.addProperty("uuid", uuid);
@@ -77,7 +77,6 @@ public class LoginStreakPublisher {
         payload.addProperty("streak_started_at", snapshot.streakStartedAt);
         payload.addProperty("expires_at", expiresAt);
         payload.addProperty("active", active);
-        payload.addProperty("buffer_hours", bufferHours);
 
         String body = payload.toString();
         try (Jedis jedis = jedisPool.getResource()) {
