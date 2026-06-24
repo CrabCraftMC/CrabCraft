@@ -272,10 +272,6 @@ public final class CrabUtilities extends JavaPlugin {
         this.phantomManager = new PhantomManager(this, playerSettingsService);
         this.settingsDialog = new SettingsDialog(playerSettingsService);
 
-        // When a player's settings load (join) or change (toggle), re-apply the
-        // phantom preference immediately rather than waiting for the next sweep.
-        playerSettingsService.setUpdateListener(phantomManager::apply);
-
         Bukkit.getPluginManager().registerEvents(playerSettingsService, this);
         Bukkit.getPluginManager().registerEvents(phantomManager, this);
 
@@ -293,7 +289,6 @@ public final class CrabUtilities extends JavaPlugin {
         this.settingsDialog = null;
         if (phantomManager != null) {
             HandlerList.unregisterAll(phantomManager);
-            phantomManager.shutdown();
             phantomManager = null;
         }
         if (playerSettingsService != null) {

@@ -16,7 +16,6 @@ import redis.clients.jedis.JedisPoolConfig;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 /**
  * Network-wide store of per-player {@code /settings} preferences.
@@ -25,8 +24,8 @@ import java.util.function.Consumer;
  * with a small JSON value, so a player's choices follow them across every
  * backend on the proxy. The on-disk source of truth is Redis; this class
  * keeps an in-memory {@link ConcurrentHashMap} mirror for the players
- * currently online here so reads on the hot path (the phantom reset task,
- * the GUI) never touch Redis.
+ * currently online here so reads on the hot path (the phantom spawn/target
+ * guards and the settings dialog) never touch Redis.
  *
  * <p>Lifecycle mirrors {@link crabcraft.net.crabUtilities.LoginStreakCache}:
  * a {@link JedisPool} with a 2s timeout, an async HGET on join to warm the
@@ -46,13 +45,6 @@ public class PlayerSettingsService implements Listener {
     private final String redisPassword;
 
     private final ConcurrentHashMap<UUID, PlayerSettings> cache = new ConcurrentHashMap<>();
-
-    /**
-     * Invoked on the main thread whenever a player's settings become known
-     * (loaded on join) or change (toggled). Lets the phantom manager apply
-     * the effect promptly instead of waiting for its next sweep.
-     */
-    private volatile Consumer<UUID> updateListener;
 
     private volatile JedisPool jedisPool;
     private volatile boolean redisFailureLogged;
@@ -87,10 +79,6 @@ public class PlayerSettingsService implements Listener {
         cache.clear();
     }
 
-    public void setUpdateListener(Consumer<UUID> updateListener) {
-        this.updateListener = updateListener;
-    }
-
     /** Returns the cached settings for a player, or {@link PlayerSettings#DEFAULTS} if not loaded. */
     public PlayerSettings get(UUID uuid) {
         return cache.getOrDefault(uuid, PlayerSettings.DEFAULTS);
@@ -113,9 +101,8 @@ public class PlayerSettingsService implements Listener {
 
     /**
      * Updates a player's phantom preference: mutates the in-memory cache
-     * immediately, notifies the update listener so the effect applies now,
-     * and flushes the new value to Redis on an async task. Safe to call from
-     * the main thread (the command/GUI path).
+     * immediately and flushes the new value to Redis on an async task. Safe to
+     * call from the main thread (the command / dialog path).
      */
     public void setPhantomsEnabled(UUID uuid, boolean enabled) {
         // Atomic read-modify-write so a concurrent join-load (refreshOne) can't
@@ -123,7 +110,6 @@ public class PlayerSettingsService implements Listener {
         // their other values.
         PlayerSettings updated = cache.compute(uuid, (key, current) ->
                 (current == null ? PlayerSettings.DEFAULTS : current).withPhantomsEnabled(enabled));
-        notifyUpdate(uuid);
         persist(uuid, updated);
     }
 
@@ -165,9 +151,8 @@ public class PlayerSettingsService implements Listener {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) {
             // Redis not available: seed defaults so the cache has an entry
-            // and the update listener still fires (phantoms OFF by default).
+            // (isLoaded() becomes true) and reads get phantoms OFF by default.
             cache.putIfAbsent(uuid, PlayerSettings.DEFAULTS);
-            notifyUpdate(uuid);
             return;
         }
         PlayerSettings loaded = PlayerSettings.DEFAULTS;
@@ -192,7 +177,6 @@ public class PlayerSettingsService implements Listener {
         // slow) Redis round-trip is authoritative and must not be clobbered by
         // the stale loaded value. Matches the Redis-unavailable branch above.
         cache.putIfAbsent(uuid, loaded);
-        notifyUpdate(uuid);
     }
 
     /** Writes a player's settings back to Redis on an async task. */
@@ -214,17 +198,5 @@ public class PlayerSettingsService implements Listener {
                 plugin.getLogger().warning("Failed to save settings for " + uuid + ": " + e.getMessage());
             }
         });
-    }
-
-    private void notifyUpdate(UUID uuid) {
-        Consumer<UUID> listener = updateListener;
-        if (listener == null) {
-            return;
-        }
-        if (Bukkit.isPrimaryThread()) {
-            listener.accept(uuid);
-        } else {
-            Bukkit.getScheduler().runTask(plugin, () -> listener.accept(uuid));
-        }
     }
 }

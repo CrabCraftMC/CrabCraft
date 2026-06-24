@@ -1,139 +1,77 @@
 package crabcraft.net.crabUtilities.settings;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 
 import java.util.UUID;
 
 /**
- * Enforces each player's phantom preference.
+ * Enforces each player's phantom preference <em>without touching any
+ * statistic</em>.
  *
- * <p>Vanilla phantom spawning is strictly per-player: every spawn attempt the
- * game iterates over players and rolls a spawn only for those whose
- * {@code time_since_rest} statistic has reached 72000 ticks (3 in-game days).
- * To keep phantoms away from a player who has them disabled we simply hold
- * that player's {@code time_since_rest} below the threshold by resetting it to
- * zero on a short interval — exactly what a bed does. This is precise (only
- * the opted-out player is affected; nearby players who want phantoms keep
- * their own independent counter) and side-effect free (the statistic only
- * feeds the phantom mechanic).
+ * <p>Phantoms are kept away from opted-out players purely through events:
+ * <ul>
+ *   <li>a natural phantom spawn whose nearby players have all opted out is
+ *       cancelled, so phantoms never appear for them; and</li>
+ *   <li>any phantom that tries to target an opted-out player has that target
+ *       cancelled, so a phantom spawned for someone else can't harass them.</li>
+ * </ul>
  *
- * <p>Players who have phantoms <em>enabled</em> are left completely alone, so
- * vanilla behaviour applies to them.
+ * <p><b>Why not reset {@code time_since_rest}?</b> Vanilla gates phantom
+ * spawning on each player's {@code time_since_rest} statistic, so zeroing it is
+ * the most precise per-player off-switch — but that exact statistic also backs
+ * the <em>Night Owl</em> award ("longest time since last sleep",
+ * {@code minecraft:custom/minecraft:time_since_rest}). Resetting it would peg
+ * that award at zero for every opted-out player (i.e. everyone, since phantoms
+ * default OFF), making it unwinnable. Cancelling spawns/targets instead leaves
+ * the statistic — and the award — completely intact.
  *
- * <p>As a secondary guard (configurable, on by default) we also cancel any
- * natural phantom spawn whose nearby players have all opted out — this covers
- * the brief window between a player crossing the threshold and the next reset
- * sweep. It is deliberately conservative: if any player near the spawn wants
- * phantoms, the spawn is allowed.
- *
- * <p>Statistic writes happen on the main thread (the reset sweep is a sync
- * task and the update hook is dispatched on the main thread by
- * {@link PlayerSettingsService}). On Folia these would need to run on each
- * entity's region thread; this plugin targets Paper.
+ * <p>Players who have phantoms enabled are left entirely to vanilla behaviour.
+ * The spawn guard is conservative: a spawn is only cancelled when every nearby
+ * player has opted out, so a phantom that could belong to a player who wants
+ * them is never removed.
  */
 public class PhantomManager implements Listener {
 
-    /**
-     * Below the vanilla 72000-tick insomnia threshold there is no spawn, so
-     * resetting to 0 well within an hour of real time is always sufficient.
-     */
-    private static final int RESET_VALUE = 0;
+    private static final double H_RADIUS_SQ = 16.0 * 16.0;
+    private static final double V_RADIUS = 48.0;
 
     private final CrabUtilities plugin;
     private final PlayerSettingsService settingsService;
-    private final long resetIntervalTicks;
-    private final boolean cancelNaturalSpawns;
-
-    private BukkitTask resetTask;
+    private final boolean enabled;
 
     public PhantomManager(CrabUtilities plugin, PlayerSettingsService settingsService) {
         this.plugin = plugin;
         this.settingsService = settingsService;
-        // Clamp both ends: a floor avoids a busy loop, and a ceiling well under
-        // the 72000-tick (3600s) insomnia threshold guarantees the reset always
-        // lands before a player could become phantom-eligible.
-        long intervalSeconds = Math.min(1800L, Math.max(5L,
-                plugin.getConfig().getLong("phantoms.reset-interval-seconds", 30L)));
-        this.resetIntervalTicks = intervalSeconds * 20L;
-        this.cancelNaturalSpawns = plugin.getConfig().getBoolean("phantoms.cancel-natural-spawns", true);
+        this.enabled = plugin.getConfig().getBoolean("phantoms.suppress-for-opted-out", true);
     }
 
     public void start() {
-        // Periodic sweep keeps opted-out players' insomnia counter pinned low.
-        this.resetTask = Bukkit.getScheduler().runTaskTimer(
-                plugin, this::sweep, resetIntervalTicks, resetIntervalTicks);
-        plugin.getLogger().info("Phantom manager started: resetting time-since-rest every "
-                + (resetIntervalTicks / 20L) + "s for players with phantoms off"
-                + (cancelNaturalSpawns ? "; natural-spawn guard enabled." : "."));
+        plugin.getLogger().info("Phantom manager active: per-player phantom suppression "
+                + (enabled ? "enabled" : "disabled")
+                + " (time-since-rest is left untouched, so the Night Owl award is unaffected).");
     }
 
-    public void shutdown() {
-        if (resetTask != null) {
-            resetTask.cancel();
-            resetTask = null;
-        }
-    }
-
-    /** Resets the insomnia counter for every online player who has phantoms off. */
-    private void sweep() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            UUID uuid = player.getUniqueId();
-            // Only act on players whose settings are known. A not-yet-loaded
-            // player is handled by apply() the instant their record resolves,
-            // so we never reset a player who may actually want phantoms.
-            if (settingsService.isLoaded(uuid) && !settingsService.isPhantomsEnabled(uuid)) {
-                resetInsomnia(player);
-            }
-        }
+    /** True only when we positively know the player has phantoms turned off. */
+    private boolean optedOut(UUID uuid) {
+        return settingsService.isLoaded(uuid) && !settingsService.isPhantomsEnabled(uuid);
     }
 
     /**
-     * Applies a player's current preference immediately. Called on the main
-     * thread by {@link PlayerSettingsService} when settings are loaded on join
-     * or toggled, so disabling phantoms takes effect at once rather than on the
-     * next sweep. Enabling is a no-op (the counter then accrues naturally).
-     */
-    public void apply(UUID uuid) {
-        Player player = Bukkit.getPlayer(uuid);
-        if (player == null || !player.isOnline()) {
-            return;
-        }
-        if (!settingsService.isPhantomsEnabled(uuid)) {
-            resetInsomnia(player);
-        }
-    }
-
-    private void resetInsomnia(Player player) {
-        try {
-            if (player.getStatistic(Statistic.TIME_SINCE_REST) > RESET_VALUE) {
-                player.setStatistic(Statistic.TIME_SINCE_REST, RESET_VALUE);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().fine("Could not reset time-since-rest for " + player.getName() + ": " + e.getMessage());
-        }
-    }
-
-    /**
-     * Secondary guard: cancel a natural phantom spawn unless some player near
-     * the spawn point actually wants phantoms. The primary reset mechanism
-     * already stops opted-out players from triggering spawns, so this mostly
-     * catches the gap before the first sweep after a player crosses the
-     * threshold. Conservative by design — never cancels when a nearby player
-     * has phantoms enabled.
+     * Cancel a natural phantom spawn when every player near the spawn point has
+     * opted out. Phantoms spawn ~20-34 blocks above their target and within
+     * ~10 blocks horizontally, so the target is found within this search box.
      */
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onCreatureSpawn(CreatureSpawnEvent event) {
-        if (!cancelNaturalSpawns) {
+        if (!enabled) {
             return;
         }
         if (event.getEntityType() != EntityType.PHANTOM) {
@@ -148,19 +86,17 @@ public class PhantomManager implements Listener {
             return;
         }
 
-        // Phantoms spawn ~20-34 blocks above their target and within ~10 blocks
-        // horizontally, so look for the player they were spawned for nearby.
         boolean sawOptedOut = false;
         for (Player player : at.getWorld().getPlayers()) {
             Location loc = player.getLocation();
             double dx = loc.getX() - at.getX();
             double dz = loc.getZ() - at.getZ();
             double dy = Math.abs(loc.getY() - at.getY());
-            if (dx * dx + dz * dz <= 16.0 * 16.0 && dy <= 48.0) {
+            if (dx * dx + dz * dz <= H_RADIUS_SQ && dy <= V_RADIUS) {
                 UUID uuid = player.getUniqueId();
-                // Treat "wants phantoms" OR "not yet loaded" as a reason to
-                // allow the spawn, so we never cancel a spawn that might belong
-                // to a player who actually enabled phantoms.
+                // Allow the spawn if a nearby player wants phantoms — or whose
+                // preference isn't loaded yet — so we never cancel a spawn that
+                // might belong to a player who enabled phantoms.
                 if (!settingsService.isLoaded(uuid) || settingsService.isPhantomsEnabled(uuid)) {
                     return;
                 }
@@ -169,6 +105,20 @@ public class PhantomManager implements Listener {
         }
 
         if (sawOptedOut) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** Stop any phantom from acquiring an opted-out player as its target. */
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onPhantomTarget(EntityTargetLivingEntityEvent event) {
+        if (!enabled) {
+            return;
+        }
+        if (event.getEntityType() != EntityType.PHANTOM) {
+            return;
+        }
+        if (event.getTarget() instanceof Player target && optedOut(target.getUniqueId())) {
             event.setCancelled(true);
         }
     }

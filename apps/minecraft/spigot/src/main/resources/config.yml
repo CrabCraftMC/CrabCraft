@@ -101,16 +101,17 @@ voicechat:
 
 # Per-player phantom control, exposed to players via /settings.
 # Phantoms are OFF by default for everyone; a player opts back in from the
-# settings menu. Players who opt out have their "time since rest" counter
-# (the vanilla insomnia timer that triggers phantoms) periodically reset to
-# zero, exactly as sleeping in a bed would — so phantoms never target them,
-# while players who opted in keep their own independent counter.
+# settings menu. Players who opt out have natural phantom spawns near them
+# cancelled, and any phantom that tries to target them is stopped — so
+# phantoms never bother them, while players who opt in get vanilla phantoms.
+#
+# NOTE: we deliberately do NOT reset the "time since rest" statistic. That
+# statistic also backs the "Night Owl" award (longest time since last sleep),
+# so zeroing it would make that award unwinnable. Cancelling spawns/targets
+# leaves the statistic — and the award — untouched.
 phantoms:
-  # How often (seconds) to reset the insomnia counter for opted-out players.
-  # Phantoms only become eligible after 72000 ticks (~1 hour of no rest), so
-  # any interval comfortably under that is safe; 30s keeps it snappy and cheap.
-  reset-interval-seconds: 30
-  # Secondary guard: also cancel a natural phantom spawn when every player
-  # near the spawn point has opted out. Covers the brief gap before the next
-  # reset; never cancels when a nearby player wants phantoms.
-  cancel-natural-spawns: true
+  # Master switch for per-player phantom suppression. When true, opted-out
+  # players get no natural phantom spawns nearby and are never targeted by
+  # phantoms. Set false to disable the feature entirely (vanilla phantoms for
+  # everyone regardless of their /settings choice).
+  suppress-for-opted-out: true
