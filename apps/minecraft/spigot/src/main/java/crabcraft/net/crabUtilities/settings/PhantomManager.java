@@ -8,35 +8,33 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 
 import java.util.UUID;
 
 /**
- * Enforces each player's phantom preference <em>without touching any
- * statistic</em>.
+ * Enforces each player's {@link PhantomMode} <em>without touching any
+ * statistic</em>, so the Night Owl award (longest time since last sleep, backed
+ * by {@code time_since_rest}) keeps working.
  *
- * <p>Phantoms are kept away from opted-out players purely through events:
+ * <p>Three event guards, gated by the player's mode:
  * <ul>
- *   <li>a natural phantom spawn whose nearby players have all opted out is
- *       cancelled, so phantoms never appear for them; and</li>
- *   <li>any phantom that tries to target an opted-out player has that target
- *       cancelled, so a phantom spawned for someone else can't harass them.</li>
+ *   <li><b>Spawn</b> ({@link CreatureSpawnEvent}) — a natural phantom spawn is
+ *       cancelled only when <em>every</em> player near the spawn has phantoms
+ *       {@link PhantomMode#OFF}. If any nearby player allows spawns ({@code ON}
+ *       or {@code SAFE}) — or isn't loaded yet — the spawn is left alone, so a
+ *       phantom that could belong to someone who wants them is never removed.</li>
+ *   <li><b>Target</b> ({@link EntityTargetLivingEntityEvent}) — a phantom is
+ *       stopped from acquiring a player whose mode suppresses attacks
+ *       ({@code OFF} or {@code SAFE}).</li>
+ *   <li><b>Damage</b> ({@link EntityDamageByEntityEvent}) — a final backstop:
+ *       any phantom damage to such a player is cancelled, covering a phantom
+ *       that was already mid-swoop when the player changed mode.</li>
  * </ul>
  *
- * <p><b>Why not reset {@code time_since_rest}?</b> Vanilla gates phantom
- * spawning on each player's {@code time_since_rest} statistic, so zeroing it is
- * the most precise per-player off-switch — but that exact statistic also backs
- * the <em>Night Owl</em> award ("longest time since last sleep",
- * {@code minecraft:custom/minecraft:time_since_rest}). Resetting it would peg
- * that award at zero for every opted-out player (i.e. everyone, since phantoms
- * default OFF), making it unwinnable. Cancelling spawns/targets instead leaves
- * the statistic — and the award — completely intact.
- *
- * <p>Players who have phantoms enabled are left entirely to vanilla behaviour.
- * The spawn guard is conservative: a spawn is only cancelled when every nearby
- * player has opted out, so a phantom that could belong to a player who wants
- * them is never removed.
+ * <p>{@code SAFE} players still have phantoms spawn around them and keep
+ * accruing {@code time_since_rest}; they simply can't be attacked.
  */
 public class PhantomManager implements Listener {
 
@@ -54,19 +52,24 @@ public class PhantomManager implements Listener {
     }
 
     public void start() {
-        plugin.getLogger().info("Phantom manager active: per-player phantom suppression "
+        plugin.getLogger().info("Phantom manager active: per-player phantom modes "
                 + (enabled ? "enabled" : "disabled")
                 + " (time-since-rest is left untouched, so the Night Owl award is unaffected).");
     }
 
-    /** True only when we positively know the player has phantoms turned off. */
-    private boolean optedOut(UUID uuid) {
-        return settingsService.isLoaded(uuid) && !settingsService.isPhantomsEnabled(uuid);
+    /** True only when we positively know the player wants no phantom spawns (OFF). */
+    private boolean suppressesSpawn(UUID uuid) {
+        return settingsService.isLoaded(uuid) && settingsService.getPhantomMode(uuid).suppressesSpawn();
+    }
+
+    /** True only when we positively know the player wants no phantom attacks (OFF or SAFE). */
+    private boolean suppressesAttack(UUID uuid) {
+        return settingsService.isLoaded(uuid) && settingsService.getPhantomMode(uuid).suppressesAttack();
     }
 
     /**
      * Cancel a natural phantom spawn when every player near the spawn point has
-     * opted out. Phantoms spawn ~20-34 blocks above their target and within
+     * phantoms OFF. Phantoms spawn ~20-34 blocks above their target and within
      * ~10 blocks horizontally, so the target is found within this search box.
      */
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
@@ -86,30 +89,29 @@ public class PhantomManager implements Listener {
             return;
         }
 
-        boolean sawOptedOut = false;
+        boolean sawSuppressor = false;
         for (Player player : at.getWorld().getPlayers()) {
             Location loc = player.getLocation();
             double dx = loc.getX() - at.getX();
             double dz = loc.getZ() - at.getZ();
             double dy = Math.abs(loc.getY() - at.getY());
             if (dx * dx + dz * dz <= H_RADIUS_SQ && dy <= V_RADIUS) {
-                UUID uuid = player.getUniqueId();
-                // Allow the spawn if a nearby player wants phantoms — or whose
-                // preference isn't loaded yet — so we never cancel a spawn that
-                // might belong to a player who enabled phantoms.
-                if (!settingsService.isLoaded(uuid) || settingsService.isPhantomsEnabled(uuid)) {
+                // Allow the spawn if a nearby player permits spawns (ON or SAFE)
+                // or isn't loaded yet, so we never cancel a spawn that might
+                // belong to a player who wants phantoms.
+                if (!suppressesSpawn(player.getUniqueId())) {
                     return;
                 }
-                sawOptedOut = true;
+                sawSuppressor = true;
             }
         }
 
-        if (sawOptedOut) {
+        if (sawSuppressor) {
             event.setCancelled(true);
         }
     }
 
-    /** Stop any phantom from acquiring an opted-out player as its target. */
+    /** Stop any phantom from acquiring an attack-suppressed player as its target. */
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onPhantomTarget(EntityTargetLivingEntityEvent event) {
         if (!enabled) {
@@ -118,7 +120,21 @@ public class PhantomManager implements Listener {
         if (event.getEntityType() != EntityType.PHANTOM) {
             return;
         }
-        if (event.getTarget() instanceof Player target && optedOut(target.getUniqueId())) {
+        if (event.getTarget() instanceof Player target && suppressesAttack(target.getUniqueId())) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** Backstop: cancel any phantom damage to an attack-suppressed player. */
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onPhantomDamage(EntityDamageByEntityEvent event) {
+        if (!enabled) {
+            return;
+        }
+        if (event.getDamager().getType() != EntityType.PHANTOM) {
+            return;
+        }
+        if (event.getEntity() instanceof Player victim && suppressesAttack(victim.getUniqueId())) {
             event.setCancelled(true);
         }
     }

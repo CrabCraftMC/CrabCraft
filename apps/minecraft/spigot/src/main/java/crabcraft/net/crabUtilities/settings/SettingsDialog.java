@@ -7,30 +7,37 @@ import io.papermc.paper.registry.data.dialog.DialogBase;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
+import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * The {@code /settings} screen, built with Paper's server-side Dialog API
- * (Minecraft 1.21.6+ / Paper 1.21.7+) rather than a chest GUI.
+ * (Minecraft 1.21.6+ / Paper 1.21.7+).
  *
- * <p>The dialog shows one boolean toggle per configurable feature (currently
- * just phantoms), pre-filled with the player's current preference. Pressing
- * <em>Done</em> submits every toggle's value through a custom-click callback,
- * which writes the changes via {@link PlayerSettingsService}; pressing Escape
- * dismisses the screen without saving. More toggles can be added by appending
- * inputs and reading their keys in {@link #handleSubmit}.
+ * <p>Phantoms are configured with a single-option selector (On / Safe / Off)
+ * pre-filled with the player's current {@link PhantomMode}. Pressing
+ * <em>Done</em> submits the choice through a custom-click callback that writes
+ * it via {@link PlayerSettingsService}; Escape dismisses without saving. More
+ * settings can be added by appending inputs and reading their keys in
+ * {@link #handleSubmit}.
  */
 @SuppressWarnings("UnstableApiUsage") // Paper Dialog API is @ApiStatus.Experimental
 public class SettingsDialog {
 
     private static final String PHANTOMS_KEY = "phantoms";
+
+    /** Order shown in the selector (most phantoms → least). */
+    private static final PhantomMode[] ORDER = { PhantomMode.ON, PhantomMode.SAFE, PhantomMode.OFF };
 
     private final PlayerSettingsService settingsService;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
@@ -42,21 +49,28 @@ public class SettingsDialog {
     /** Builds a fresh dialog reflecting the player's current settings and shows it. */
     public void open(Player player) {
         UUID uuid = player.getUniqueId();
-        boolean phantomsEnabled = settingsService.isPhantomsEnabled(uuid);
+        PhantomMode current = settingsService.getPhantomMode(uuid);
 
-        DialogBase base = DialogBase.builder(miniMessage.deserialize("<dark_aqua><bold>Settings</bold></dark_aqua>"))
+        List<SingleOptionDialogInput.OptionEntry> options = new ArrayList<>(ORDER.length);
+        for (PhantomMode mode : ORDER) {
+            options.add(SingleOptionDialogInput.OptionEntry.create(
+                    mode.id(), optionLabel(mode), mode == current));
+        }
+
+        DialogBase base = DialogBase.builder(
+                        noItalic(miniMessage.deserialize("<dark_aqua><bold>Settings</bold></dark_aqua>")))
                 .canCloseWithEscape(true)
-                .body(List.of(DialogBody.plainMessage(miniMessage.deserialize(
-                        "<gray>Toggle features for yourself. Changes apply across the network.</gray>"))))
-                .inputs(List.of(DialogInput.bool(PHANTOMS_KEY, miniMessage.deserialize("<white>Phantoms</white>"))
-                        .initial(phantomsEnabled)
-                        .onTrue("Enabled")
-                        .onFalse("Disabled")
-                        .build()))
+                .body(List.of(DialogBody.plainMessage(noItalic(miniMessage.deserialize(
+                        "<gray>Phantoms — choose how they behave for you:</gray>"
+                                + "<newline><green>On</green><gray>: spawn and attack.</gray>"
+                                + "<newline><yellow>Safe</yellow><gray>: spawn, but never attack you.</gray>"
+                                + "<newline><red>Off</red><gray>: never spawn near or attack you.</gray>")))))
+                .inputs(List.of(DialogInput.singleOption(PHANTOMS_KEY,
+                        noItalic(miniMessage.deserialize("<white>Phantoms</white>")), options).build()))
                 .build();
 
-        ActionButton done = ActionButton.builder(miniMessage.deserialize("<green>Done</green>"))
-                .tooltip(miniMessage.deserialize("<gray>Save your settings</gray>"))
+        ActionButton done = ActionButton.builder(noItalic(miniMessage.deserialize("<green>Done</green>")))
+                .tooltip(noItalic(miniMessage.deserialize("<gray>Save your settings</gray>")))
                 .action(DialogAction.customClick(
                         (view, audience) -> handleSubmit(uuid, view, audience),
                         ClickCallback.Options.builder().uses(1).build()))
@@ -69,22 +83,37 @@ public class SettingsDialog {
         player.showDialog(dialog);
     }
 
+    private Component optionLabel(PhantomMode mode) {
+        return noItalic(miniMessage.deserialize(switch (mode) {
+            case ON -> "<green>On</green>";
+            case SAFE -> "<yellow>Safe</yellow>";
+            case OFF -> "<red>Off</red>";
+        }));
+    }
+
     /**
-     * Applies every toggle the player submitted. Reads each input from the
-     * response view (absent/unknown keys are skipped) and writes through the
-     * settings service, which mirrors the change to Redis and re-applies the
-     * phantom effect immediately.
+     * Applies the submitted phantom mode. Reads the selected option id from the
+     * response view (absent/unknown falls back to the safe default) and writes
+     * it through the settings service.
      */
     private void handleSubmit(UUID uuid, DialogResponseView view, Audience audience) {
         if (view == null) {
             return;
         }
-        Boolean phantoms = view.getBoolean(PHANTOMS_KEY);
-        if (phantoms != null) {
-            settingsService.setPhantomsEnabled(uuid, phantoms);
-            audience.sendMessage(miniMessage.deserialize(phantoms
-                    ? "<gray>Phantoms are now <green>enabled</green> for you.</gray>"
-                    : "<gray>Phantoms are now <red>disabled</red> for you.</gray>"));
+        String selected = view.getText(PHANTOMS_KEY);
+        if (selected == null) {
+            return;
         }
+        PhantomMode mode = PhantomMode.fromId(selected);
+        settingsService.setPhantomMode(uuid, mode);
+        audience.sendMessage(noItalic(miniMessage.deserialize(switch (mode) {
+            case ON -> "<gray>Phantoms are now <green>on</green> for you.</gray>";
+            case SAFE -> "<gray>Phantoms are now <yellow>safe</yellow> — they spawn but won't attack you.</gray>";
+            case OFF -> "<gray>Phantoms are now <red>off</red> for you.</gray>";
+        })));
+    }
+
+    private static Component noItalic(Component component) {
+        return component.decoration(TextDecoration.ITALIC, false);
     }
 }

@@ -84,8 +84,8 @@ public class PlayerSettingsService implements Listener {
         return cache.getOrDefault(uuid, PlayerSettings.DEFAULTS);
     }
 
-    public boolean isPhantomsEnabled(UUID uuid) {
-        return get(uuid).isPhantomsEnabled();
+    public PhantomMode getPhantomMode(UUID uuid) {
+        return get(uuid).getPhantomMode();
     }
 
     /**
@@ -100,16 +100,16 @@ public class PlayerSettingsService implements Listener {
     }
 
     /**
-     * Updates a player's phantom preference: mutates the in-memory cache
-     * immediately and flushes the new value to Redis on an async task. Safe to
-     * call from the main thread (the command / dialog path).
+     * Updates a player's phantom mode: mutates the in-memory cache immediately
+     * and flushes the new value to Redis on an async task. Safe to call from
+     * the main thread (the command / dialog path).
      */
-    public void setPhantomsEnabled(UUID uuid, boolean enabled) {
+    public void setPhantomMode(UUID uuid, PhantomMode mode) {
         // Atomic read-modify-write so a concurrent join-load (refreshOne) can't
         // interleave with the get/put, and so future multi-field settings keep
         // their other values.
         PlayerSettings updated = cache.compute(uuid, (key, current) ->
-                (current == null ? PlayerSettings.DEFAULTS : current).withPhantomsEnabled(enabled));
+                (current == null ? PlayerSettings.DEFAULTS : current).withPhantomMode(mode));
         persist(uuid, updated);
     }
 
