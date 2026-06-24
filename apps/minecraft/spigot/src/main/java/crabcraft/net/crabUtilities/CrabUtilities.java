@@ -4,6 +4,10 @@ import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
+import crabcraft.net.crabUtilities.settings.PhantomManager;
+import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
+import crabcraft.net.crabUtilities.settings.SettingsCommand;
+import crabcraft.net.crabUtilities.settings.SettingsDialog;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
@@ -30,6 +34,9 @@ public final class CrabUtilities extends JavaPlugin {
     private LoginStreakExpansion loginStreakExpansion;
     private GlobalChatService globalChatService;
     private GlobalChatListener globalChatListener;
+    private PlayerSettingsService playerSettingsService;
+    private PhantomManager phantomManager;
+    private SettingsDialog settingsDialog;
 
     @Override
     public void onEnable() {
@@ -92,6 +99,10 @@ public final class CrabUtilities extends JavaPlugin {
         // normal chat across the network over Redis. Disabled servers stay
         // fully local.
         startGlobalChatService();
+
+        // Per-player settings (/settings) and the phantom toggle they drive.
+        // Settings are stored network-wide in Redis; phantoms default OFF.
+        startPlayerSettings();
 
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
@@ -177,6 +188,10 @@ public final class CrabUtilities extends JavaPlugin {
         startGlobalChatService();
         messages.add("Global chat restarted with current Redis, format, and mention settings.");
 
+        stopPlayerSettings();
+        startPlayerSettings();
+        messages.add("Player settings + phantom manager restarted with current Redis and phantom settings.");
+
         if (updateService != null) {
             updateService.shutdown();
             if (getConfig().getBoolean("auto-update.enabled", true)) {
@@ -252,6 +267,42 @@ public final class CrabUtilities extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(globalChatListener, this);
     }
 
+    private void startPlayerSettings() {
+        this.playerSettingsService = new PlayerSettingsService(this);
+        this.phantomManager = new PhantomManager(this, playerSettingsService);
+        this.settingsDialog = new SettingsDialog(playerSettingsService);
+
+        // When a player's settings load (join) or change (toggle), re-apply the
+        // phantom preference immediately rather than waiting for the next sweep.
+        playerSettingsService.setUpdateListener(phantomManager::apply);
+
+        Bukkit.getPluginManager().registerEvents(playerSettingsService, this);
+        Bukkit.getPluginManager().registerEvents(phantomManager, this);
+
+        playerSettingsService.start();
+        phantomManager.start();
+
+        SettingsCommand settingsCommand = new SettingsCommand(playerSettingsService, settingsDialog);
+        if (getCommand("settings") != null) {
+            getCommand("settings").setExecutor(settingsCommand);
+            getCommand("settings").setTabCompleter(settingsCommand);
+        }
+    }
+
+    private void stopPlayerSettings() {
+        this.settingsDialog = null;
+        if (phantomManager != null) {
+            HandlerList.unregisterAll(phantomManager);
+            phantomManager.shutdown();
+            phantomManager = null;
+        }
+        if (playerSettingsService != null) {
+            HandlerList.unregisterAll(playerSettingsService);
+            playerSettingsService.shutdown();
+            playerSettingsService = null;
+        }
+    }
+
     private void stopGlobalChatService() {
         if (globalChatListener != null) {
             HandlerList.unregisterAll(globalChatListener);
@@ -275,5 +326,6 @@ public final class CrabUtilities extends JavaPlugin {
         }
         stopLoginStreakCache();
         stopGlobalChatService();
+        stopPlayerSettings();
     }
 }
