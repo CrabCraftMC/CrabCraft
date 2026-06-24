@@ -98,3 +98,19 @@ voicechat:
       - "Global #1"
       - "Global #2"
       - "Global #3"
+
+# Per-player phantom control, exposed to players via /settings. Each player
+# picks one of three modes:
+#   on   - vanilla phantoms (they spawn and attack)
+#   off  - no phantoms spawn near them and none may attack them (the default)
+#   safe - phantoms still spawn around them, but never attack them
+#
+# NOTE: this is done purely with events (cancelling phantom spawns, targeting
+# and damage). We deliberately do NOT reset the "time since rest" statistic,
+# because it also backs the "Night Owl" award (longest time since last sleep) —
+# zeroing it would make that award unwinnable. Leaving it untouched keeps the
+# award working for everyone (including 'safe' players, who keep accruing it).
+phantoms:
+  # Master switch for the whole feature. Set false to ignore players' /settings
+  # choices and give everyone vanilla phantoms.
+  suppress-for-opted-out: true
