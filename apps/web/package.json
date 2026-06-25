@@ -27,7 +27,7 @@
     "framer-motion": "^12.26.2",
     "gsap": "^3.13.0",
     "lucide-react": "^0.562.0",
-    "next": "^16.2.1",
+    "next": "^16.2.9",
     "next-auth": "5.0.0-beta.30",
     "postprocessing": "^6.38.3",
     "radix-ui": "^1.4.3",

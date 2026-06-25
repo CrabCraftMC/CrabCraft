@@ -315,7 +315,7 @@ async function pollTwitch(guild: Guild): Promise<void> {
 async function checkTikTokLive(username: string): Promise<boolean> {
   try {
     const { TikTokLiveConnection } = await import("tiktok-live-connector");
-    const connection = new TikTokLiveConnection(username);
+    const connection = new TikTokLiveConnection(username, {});
     return await connection.fetchIsLive();
   } catch {
     return false;

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 
+import PixelIcon from "./PixelIcon";
 import { Button } from "./ui/button";
 import Squircle from "./Squircle";
 import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings } from "lucide-react";
@@ -19,6 +20,20 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     instagram: Instagram,
     tiktok: FaTiktok,
     discord: FaDiscord
+};
+
+const featuredToolUrls = [
+    "/tools/rgb-nickname",
+    "/tools/block-gradient",
+    "/tools/enchantment-planner",
+    "/tools/portal-calculator"
+];
+
+const toolDescriptions: Record<string, string> = {
+    "/tools/rgb-nickname": "Create coloured nicknames",
+    "/tools/block-gradient": "Blend block palettes",
+    "/tools/enchantment-planner": "Build legal gear loadouts",
+    "/tools/portal-calculator": "Link Overworld and Nether"
 };
 
 interface UserData {
@@ -40,6 +55,10 @@ export default function Navbar({ user }: { user?: UserData | null }) {
     const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
     const currentPath = usePathname();
     const [isDark, setIsDark] = useState(false);
+    const featuredTools = featuredToolUrls
+        .map((url) => config.navbar.tools.find((tool) => tool.url === url))
+        .filter((tool): tool is (typeof config.navbar.tools)[number] => Boolean(tool));
+    const compactTools = config.navbar.tools.filter((tool) => !featuredToolUrls.includes(tool.url));
 
     useEffect(() => {
         setIsDark(document.documentElement.classList.contains("dark"));
@@ -57,6 +76,15 @@ export default function Navbar({ user }: { user?: UserData | null }) {
         return () => document.removeEventListener('click', handleClick);
     }, []);
 
+    useEffect(() => {
+        if (!isMenuOpen) return;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isMenuOpen]);
+
     const toggleDarkMode = () => {
         trigger();
         const newDark = !isDark;
@@ -72,7 +100,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
         <nav className="container mx-auto relative">
             <Squircle
                 cornerRadius={20}
-                className="absolute inset-0 z-0 bg-paper-2/80 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.10)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]"
+                className="absolute inset-0 z-0 bg-paper-2/80 backdrop-blur-2xl backdrop-saturate-150 shadow-lg shadow-black/5 dark:shadow-black/30"
             />
             <div className="relative z-10 px-6 lg:px-8">
                 <div className="flex items-center h-14 md:h-20">
@@ -80,14 +108,14 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                         <Link href="/" className="flex items-center gap-3">
                             <Image
                                 src="/logo.png"
-                                alt="Logo"
+                                alt="CrabCraft logo"
                                 width={44}
                                 height={44}
                                 loading="eager"
                                 unoptimized
                                 className="object-contain w-9 h-9 md:w-[44px] md:h-[44px]"
                             />
-                            <span className="font-mc text-lg md:text-xl text-orange-500 tracking-wide">CrabCraft</span>
+                            <span className="font-bold text-base text-orange-500 tracking-wide">CrabCraft</span>
                         </Link>
                     </div>
 
@@ -125,23 +153,59 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 {isToolsOpen ? <ChevronUp className="w-3 h-3 opacity-50" /> : <ChevronDown className="w-3 h-3 opacity-50" />}
                             </button>
                             {isToolsOpen && (
-                                <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50">
-                                    <div className="bg-paper-2 rounded-xl shadow-lg border border-gray-200 dark:border-[#3d3028] overflow-hidden min-w-[220px] animate-[scaleIn_0.15s_ease-out]">
-                                        {config.navbar.tools.map((tool) => {
-                                            const ToolIcon = iconMap[tool.icon];
-                                            const isToolActive = currentPath === tool.url;
-                                            return (
-                                                <Link
-                                                    key={tool.name}
-                                                    href={tool.url}
-                                                    onClick={() => setIsToolsOpen(false)}
-                                                    className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${isToolActive ? "bg-orange-500/10 text-orange-500" : "text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b]"}`}
-                                                >
-                                                    {ToolIcon && <ToolIcon className="w-4 h-4" />}
-                                                    {tool.name}
-                                                </Link>
-                                            );
-                                        })}
+                                <div className="absolute left-1/2 -translate-x-1/2 top-full pt-3 z-50">
+                                    <div className="w-[600px] max-w-[calc(100vw-2rem)] rounded-2xl bg-paper-2/95 backdrop-blur-2xl shadow-xl shadow-black/10 dark:shadow-black/30 p-3 animate-[scaleIn_0.15s_ease-out]">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {featuredTools.map((tool) => {
+                                                const ToolIcon = iconMap[tool.icon];
+                                                const isToolActive = currentPath === tool.url;
+                                                return (
+                                                    <Link
+                                                        key={tool.name}
+                                                        href={tool.url}
+                                                        onClick={() => setIsToolsOpen(false)}
+                                                        className={`group rounded-xl p-3 transition-colors ${isToolActive ? "bg-orange-500 text-white" : "bg-paper hover:bg-orange-500 hover:text-white text-gray-800 dark:text-gray-200"}`}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${isToolActive ? "bg-white/20" : "bg-orange-500/10 text-orange-500 group-hover:bg-white/20 group-hover:text-white"}`}>
+                                                                {ToolIcon && <ToolIcon className="w-4 h-4" />}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="text-sm font-bold leading-tight">
+                                                                    {tool.name}
+                                                                </div>
+                                                                <div className={`mt-1 text-xs leading-snug ${isToolActive ? "text-white/80" : "text-gray-500 dark:text-gray-400 group-hover:text-white/80"}`}>
+                                                                    {toolDescriptions[tool.url]}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="mt-3 border-t border-line/70 pt-3">
+                                            <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                                More tools
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                {compactTools.map((tool) => {
+                                                    const ToolIcon = iconMap[tool.icon];
+                                                    const isToolActive = currentPath === tool.url;
+                                                    return (
+                                                        <Link
+                                                            key={tool.name}
+                                                            href={tool.url}
+                                                            onClick={() => setIsToolsOpen(false)}
+                                                            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${isToolActive ? "bg-orange-500/10 text-orange-500" : "text-gray-600 dark:text-gray-300 hover:bg-paper"}`}
+                                                        >
+                                                            {ToolIcon && <ToolIcon className="w-4 h-4 shrink-0" />}
+                                                            <span className="truncate">{tool.name}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -152,7 +216,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                         <button
                             onClick={() => window.dispatchEvent(new Event("open-command-menu"))}
                             aria-label="Search"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200/50 dark:hover:bg-[#3d3028]/50 transition-colors cursor-pointer"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-paper transition-colors cursor-pointer"
                         >
                             <Search className="w-4 h-4 text-gray-400" />
                         </button>
@@ -169,20 +233,29 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                     }}
                                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                                 >
-                                    <Image
-                                        src={user.minecraftUuid ? `https://mc-heads.net/avatar/${user.minecraftUuid}/56.png` : user.avatarUrl}
-                                        alt={user.minecraftUsername || user.name}
-                                        width={28}
-                                        height={28}
-                                        className={user.minecraftUuid ? "rounded" : "rounded-full"}
-                                    />
+                                    {user.minecraftUuid ? (
+                                        <PixelIcon
+                                            src={`https://mc-heads.net/avatar/${user.minecraftUuid}/56.png`}
+                                            alt={user.minecraftUsername || user.name}
+                                            size={28}
+                                            imgClassName="rounded"
+                                        />
+                                    ) : (
+                                        <Image
+                                            src={user.avatarUrl}
+                                            alt={user.name}
+                                            width={28}
+                                            height={28}
+                                            className="rounded-full"
+                                        />
+                                    )}
                                     <span className="text-xs font-bold">{user.minecraftUsername || user.name}</span>
                                     {isUserMenuOpen ? <ChevronUp className="w-3 h-3 text-gray-400" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
                                 </button>
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <button onClick={toggleDarkMode} aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200/50 dark:hover:bg-[#3d3028]/50 transition-colors cursor-pointer">
+                                <button onClick={toggleDarkMode} aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-paper transition-colors cursor-pointer">
                                     {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                                 </button>
                                 <button onClick={() => signIn("discord")} className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-orange-500 transition-colors cursor-pointer">
@@ -210,11 +283,11 @@ export default function Navbar({ user }: { user?: UserData | null }) {
             </div>
         </nav>
         {isUserMenuOpen && user && (
-            <div className="hidden md:block fixed w-44 bg-paper-2 rounded-xl shadow-lg border border-gray-200 dark:border-[#3d3028] overflow-hidden z-50 animate-[scaleIn_0.15s_ease-out] user-menu-wrapper" style={{ top: dropdownPos.top, right: dropdownPos.right }}>
+            <div className="hidden md:block fixed w-44 bg-paper-2 rounded-xl shadow-lg overflow-hidden z-50 animate-[scaleIn_0.15s_ease-out] user-menu-wrapper" style={{ top: dropdownPos.top, right: dropdownPos.right }}>
                 {user.minecraftUuid && (
                     <Link
                         href={`/stats/${user.minecraftUuid}`}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper transition-colors"
                     >
                         <User className="w-4 h-4" />
                         Your Profile
@@ -222,14 +295,14 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                 )}
                 <Link
                     href="/wrapped"
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper transition-colors"
                 >
                     <Gift className="w-4 h-4" />
                     Wrapped
                 </Link>
                 <Link
                     href="/settings"
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-paper transition-colors"
                 >
                     <Settings className="w-4 h-4" />
                     Settings
@@ -237,7 +310,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                 {(user.role === "moderator" || user.role === "admin") && (
                     <Link
                         href="/admin"
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-orange-500 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-orange-500 hover:bg-paper transition-colors"
                     >
                         <Wrench className="w-4 h-4" />
                         Admin Panel
@@ -245,7 +318,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                 )}
                 <button
                     onClick={() => signOut()}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-paper dark:hover:bg-[#2a221b] transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-paper transition-colors cursor-pointer"
                 >
                     <LogOut className="w-4 h-4" />
                     Sign Out
@@ -254,7 +327,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
         )}
         {isMenuOpen && (
                 <div
-                    className="md:hidden mt-2 bg-paper-2/90 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-white/30 dark:border-white/10 overflow-hidden absolute left-4 right-4 animate-[scaleIn_0.15s_ease-out]"
+                    className="md:hidden mt-2 bg-paper-2/90 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl shadow-lg overflow-y-auto overscroll-contain max-h-[calc(100dvh-6rem)] absolute left-4 right-4 animate-[scaleIn_0.15s_ease-out]"
                 >
                     <div className="p-4 space-y-1">
                         {/* Search */}
@@ -308,15 +381,24 @@ export default function Navbar({ user }: { user?: UserData | null }) {
 
                         {/* User section */}
                         {user ? (
-                            <div className="pt-2 mt-2 border-t border-gray-200/50 dark:border-white/5 space-y-1">
+                            <div className="pt-2 mt-2 space-y-1">
                                 <div className="flex items-center gap-3 px-3 py-2">
-                                    <Image
-                                        src={user.minecraftUuid ? `https://mc-heads.net/avatar/${user.minecraftUuid}/64.png` : user.avatarUrl}
-                                        alt={user.minecraftUsername || user.name}
-                                        width={28}
-                                        height={28}
-                                        className={user.minecraftUuid ? "rounded" : "rounded-full"}
-                                    />
+                                    {user.minecraftUuid ? (
+                                        <PixelIcon
+                                            src={`https://mc-heads.net/avatar/${user.minecraftUuid}/64.png`}
+                                            alt={user.minecraftUsername || user.name}
+                                            size={28}
+                                            imgClassName="rounded"
+                                        />
+                                    ) : (
+                                        <Image
+                                            src={user.avatarUrl}
+                                            alt={user.name}
+                                            width={28}
+                                            height={28}
+                                            className="rounded-full"
+                                        />
+                                    )}
                                     <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex-1">{user.minecraftUsername || user.name}</span>
                                 </div>
                                 {user.minecraftUuid && (
@@ -345,7 +427,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 </button>
                             </div>
                         ) : (
-                            <div className="pt-2 mt-2 border-t border-gray-200/50 dark:border-white/5">
+                            <div className="pt-2 mt-2">
                                 <button
                                     onClick={() => { setIsMenuOpen(false); signIn("discord"); }}
                                     className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-colors cursor-pointer"

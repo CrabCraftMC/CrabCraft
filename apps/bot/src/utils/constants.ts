@@ -10,6 +10,13 @@ export const LEADERBOARD_REFRESH_MS = 5 * 60 * 1000;
 /** How long before an inactive applicant gets a reminder (1 day). */
 export const APPLICATION_REMINDER_DELAY_MS = 1 * 24 * 60 * 60 * 1000;
 
+/**
+ * How long an application channel can sit with no application submitted
+ * before it's deleted (5 days). The member stays in the server and can open
+ * a new channel from the application hub.
+ */
+export const APPLICATION_INACTIVE_DELETE_MS = 5 * 24 * 60 * 60 * 1000;
+
 /** Interval between application reminder scans (30 minutes). */
 export const APPLICATION_REMINDER_CHECK_MS = 30 * 60 * 1000;
 

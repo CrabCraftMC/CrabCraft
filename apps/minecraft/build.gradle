@@ -9,7 +9,7 @@ subprojects {
     // version sourced from apps/minecraft/gradle.properties; override in CI with -Pversion=<tag>
     version = rootProject.version
 
-    def targetJavaVersion = 21
+    def targetJavaVersion = 25
     java {
         def javaVersion = JavaVersion.toVersion(targetJavaVersion)
         sourceCompatibility = javaVersion

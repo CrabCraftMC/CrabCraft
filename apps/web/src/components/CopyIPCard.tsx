@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useWebHaptics } from "web-haptics/react";
 import Image from "next/image";
 import Link from "next/link";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { ColoredNickname } from "@/lib/parseMinecraftColors";
 
@@ -117,13 +118,11 @@ export default function CopyIPCard({
                   onMouseLeave={() => setTooltip(null)}
                   className="rounded transition-transform hover:scale-110 hover:z-10"
                 >
-                  <Image
+                  <PixelIcon
                     src={`https://mc-heads.net/avatar/${p.uuid}/16.png`}
                     alt={p.name}
-                    width={HEAD_SIZE}
-                    height={HEAD_SIZE}
-                    sizes={`${HEAD_SIZE}px`}
-                    className="rounded pixelated"
+                    size={HEAD_SIZE}
+                    imgClassName="rounded"
                   />
                 </Link>
               ))}

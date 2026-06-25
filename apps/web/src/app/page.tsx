@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import config from "@/data/site-config.json";
 import CopyIPCard from "@/components/CopyIPCard";
 import CountdownBanner from "@/components/CountdownBanner";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { getOverviewStats } from "@/lib/queries";
 
@@ -133,40 +133,51 @@ export default async function HomePage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center lg:justify-end gap-4 lg:gap-6 flex-shrink-0 max-w-full">
-              {topPlayers.map((player, i) => (
-                <Link
-                  key={player.uuid}
-                  href={`/stats/${player.uuid}`}
-                  className={`flex flex-col items-center gap-1 animate-in cursor-pointer hover:scale-110 transition-transform ${player.name.length > 12 ? "w-32 lg:w-36" : player.name.length > 8 ? "w-28 lg:w-32" : "w-24 lg:w-28"}`}
-                  style={{ animationDelay: `${0.35 + i * 0.08}s` }}
+              {topPlayers.length > 0 ? (
+                <>
+                  {topPlayers.map((player, i) => (
+                    <Link
+                      key={player.uuid}
+                      href={`/stats/${player.uuid}`}
+                      className={`flex flex-col items-center gap-1 animate-in cursor-pointer hover:scale-110 transition-transform ${player.name.length > 12 ? "w-32 lg:w-36" : player.name.length > 8 ? "w-28 lg:w-32" : "w-24 lg:w-28"}`}
+                      style={{ animationDelay: `${0.35 + i * 0.08}s` }}
+                    >
+                      <PixelIcon
+                        src={`https://mc-heads.net/avatar/${player.uuid}/100.png`}
+                        alt={player.name}
+                        size={60}
+                        imgClassName="rounded-md"
+                        className="bg-gray-300 dark:bg-gray-700 rounded-md"
+                      />
+                      <div className="text-center">
+                        <p className="font-bold text-sm lg:text-base text-gray-800 dark:text-gray-200 truncate">
+                          {player.name}
+                        </p>
+                        <p className="text-xs lg:text-sm text-orange-400 truncate">
+                          {player.points} pts
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                  <Link
+                    href="/leaderboard"
+                    className="animate-in w-full sm:w-auto text-center"
+                    style={{ animationDelay: "0.7s" }}
+                  >
+                    <button className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-5 rounded-2xl text-sm transition-colors cursor-pointer active:scale-95">
+                      View All
+                    </button>
+                  </Link>
+                </>
+              ) : (
+                <p
+                  className="animate-in max-w-md text-center lg:text-right text-sm lg:text-base text-gray-600 dark:text-gray-400"
+                  style={{ animationDelay: "0.35s" }}
                 >
-                  <Image
-                    src={`https://mc-heads.net/avatar/${player.uuid}/100.png`}
-                    alt={player.name}
-                    width={60}
-                    height={60}
-                    sizes="60px"
-                    className="bg-gray-300 dark:bg-gray-700 rounded-md"
-                  />
-                  <div className="text-center">
-                    <p className="font-bold text-sm lg:text-base text-gray-800 dark:text-gray-200 truncate">
-                      {player.name}
-                    </p>
-                    <p className="text-xs lg:text-sm text-orange-400 truncate">
-                      {player.points} pts
-                    </p>
-                  </div>
-                </Link>
-              ))}
-              <Link
-                href="/leaderboard"
-                className="animate-in w-full sm:w-auto text-center"
-                style={{ animationDelay: "0.7s" }}
-              >
-                <button className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-5 rounded-2xl text-sm transition-colors cursor-pointer active:scale-95">
-                  View All
-                </button>
-              </Link>
+                  No rankings yet. Once the new season gets going, top players
+                  will appear here.
+                </p>
+              )}
             </div>
           </div>
         </div>

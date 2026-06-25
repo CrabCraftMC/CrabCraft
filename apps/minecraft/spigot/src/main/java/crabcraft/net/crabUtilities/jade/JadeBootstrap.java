@@ -28,6 +28,11 @@ public final class JadeBootstrap {
     }
 
     public static void enable(@NotNull JavaPlugin plugin) {
+        if (!plugin.getConfig().getBoolean("mod-protocols.jade.enabled", true)) {
+            plugin.getLogger().info("Jade integration disabled in config.");
+            return;
+        }
+
         INSTANCE = plugin;
         LOGGER = plugin.getSLF4JLogger();
 

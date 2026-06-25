@@ -1,3 +1,5 @@
+import PixelIcon from "@/components/PixelIcon";
+
 interface McTextureProps {
   src: string;
   size?: number;
@@ -12,13 +14,11 @@ export default function McTexture({
   className,
 }: McTextureProps) {
   return (
-    <img
+    <PixelIcon
       src={`/minecraft/${src}`}
       alt={alt}
-      width={size}
-      height={size}
-      className={`pixelated ${className ?? ""}`}
-      draggable={false}
+      size={size}
+      className={className}
     />
   );
 }

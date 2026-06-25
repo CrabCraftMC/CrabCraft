@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 
 export const metadata: Metadata = {
@@ -130,12 +131,12 @@ export default async function LeaderboardPage() {
                       />
                     </div>
                     <div className="relative z-10 flex flex-col items-start text-left gap-3">
-                      <Image
+                      <PixelIcon
                         src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/100.png`}
                         alt={player.minecraft_username ?? ""}
-                        width={style.avatarSize}
-                        height={style.avatarSize}
-                        className="rounded-lg bg-white/20"
+                        size={style.avatarSize}
+                        imgClassName="rounded-lg"
+                        className="bg-white/20 rounded-lg"
                       />
                       <div>
                         <p className={`font-bold text-white ${style.nameSize}`}>
@@ -239,12 +240,12 @@ export default async function LeaderboardPage() {
                 </span>
               </div>
               <div className="col-span-5 flex items-center gap-3">
-                <Image
+                <PixelIcon
                   src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/64.png`}
                   alt={player.minecraft_username ?? ""}
-                  width={28}
-                  height={28}
-                  className="rounded bg-gray-200 dark:bg-gray-700"
+                  size={28}
+                  imgClassName="rounded"
+                  className="bg-gray-200 dark:bg-gray-700 rounded"
                 />
                 <span className="font-bold text-sm text-gray-700 dark:text-gray-300 truncate">
                   {player.minecraft_username ?? "Unknown"}
@@ -269,8 +270,10 @@ export default async function LeaderboardPage() {
 
           {players.length === 0 && (
             <div className="px-6 py-12 text-center text-gray-500 dark:text-gray-400 relative z-10">
-              <p className="text-lg font-bold">No player data available</p>
-              <p className="text-sm mt-1">Check back later</p>
+              <p className="text-lg font-bold">The new season is starting soon</p>
+              <p className="text-sm mt-1">
+                Rankings will appear here once players start earning awards.
+              </p>
             </div>
           )}
         </Squircle>

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { Fireworks } from "@fireworks-js/react";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import advancementRegistry from "@/data/advancements.json";
 import { CATEGORY_ORDER, CATEGORY_LABELS } from "@/lib/advancementCategories";
@@ -158,13 +159,10 @@ export default function PlayerAdvancements({
                       i % 2 === 1 ? "bg-paper/30 dark:bg-[#1a1412]/30" : ""
                     } ${isDone ? "bg-green-400/[0.02]" : "opacity-45"}`}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <PixelIcon
                       src={item.icon}
-                      alt=""
-                      width={32}
-                      height={32}
-                      className="flex-shrink-0 pixelated rounded"
+                      size={32}
+                      imgClassName="rounded"
                     />
                     <div className="flex-1 min-w-0">
                       <p

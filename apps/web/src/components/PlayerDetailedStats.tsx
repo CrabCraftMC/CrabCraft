@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Search } from "lucide-react";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { formatValue, type Units } from "@/lib/formatValue";
 import { categorise, getTitle, getDesc } from "@/lib/categories";
@@ -167,13 +167,10 @@ export default function PlayerDetailedStats({
                 )}
               </div>
               <div className="col-span-6 sm:col-span-7 min-w-0 flex items-center gap-3">
-                <Image
+                <PixelIcon
                   src={metaFor[key]?.icon ?? `/awards/icons/${key}.png`}
-                  alt=""
-                  width={32}
-                  height={32}
-                  unoptimized
-                  className="shrink-0 pixelated hidden sm:block"
+                  size={32}
+                  className="hidden sm:inline-flex"
                 />
                 <div className="min-w-0">
                   <p className="text-gray-800 dark:text-gray-200 font-bold truncate">

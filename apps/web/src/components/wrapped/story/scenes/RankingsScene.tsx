@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMemo, useRef } from "react";
 import { useGSAP } from "@gsap/react";
+import PixelIcon from "@/components/PixelIcon";
 import SceneShell from "./SceneShell";
 import { gsap } from "@/lib/gsap";
 import { useReducedMotion } from "../hooks/useReducedMotion";
@@ -156,12 +157,10 @@ export default function RankingsScene({ data }: { data: WrappedData }) {
           <div className="mt-10 flex items-end justify-center gap-4 sm:gap-8">
             {top3.map((cat, i) => (
               <div key={cat.key} className="rk-plinth flex flex-col items-center">
-                <img
+                <PixelIcon
                   src={cat.icon}
-                  alt=""
-                  width={36}
-                  height={36}
-                  className="pixelated mb-2"
+                  size={36}
+                  className="mb-2"
                 />
                 <p className="text-[10px] uppercase tracking-widest dark:text-white/60 text-stone-600">
                   {cat.label}
@@ -196,12 +195,9 @@ export default function RankingsScene({ data }: { data: WrappedData }) {
                   cornerRadius={16}
                   className="flex items-center gap-3 dark:bg-white/10 bg-black/10 px-4 py-3 backdrop-blur-sm"
                 >
-                  <img
+                  <PixelIcon
                     src={cat.icon}
-                    alt=""
-                    width={20}
-                    height={20}
-                    className="pixelated shrink-0"
+                    size={20}
                   />
                   <span className="flex-1 text-sm dark:text-white/70 text-stone-600">{cat.label}</span>
                   <span className="font-mc text-base font-bold tabular-nums dark:text-stone-100 text-stone-800">

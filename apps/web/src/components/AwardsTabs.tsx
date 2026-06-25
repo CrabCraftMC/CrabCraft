@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Search } from "lucide-react";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { formatValue, type Units } from "@/lib/formatValue";
 
@@ -91,60 +91,63 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
         cornerRadius={32}
         className="bg-paper-2 overflow-hidden"
       >
-        <div className="flex items-center gap-4 px-5 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028]">
-          <span className="flex-1">Award</span>
-          <span className="hidden sm:block w-32 text-right">Player</span>
-          <span className="shrink-0 text-right">Value</span>
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_8rem_7rem] items-center gap-4 px-5 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028]">
+          <span>Award</span>
+          <span className="hidden sm:block text-right">Player</span>
+          <span className="text-right">Value</span>
         </div>
         {items.map((award, i) => (
           <button
             type="button"
             key={award.key}
             onClick={() => router.push(`/awards/${award.key}`)}
-            className={`flex items-center gap-4 px-5 py-3 cursor-pointer transition-colors hover:bg-orange-50/60 dark:hover:bg-[#2a221b] w-full text-left ${
+            className={`grid grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_8rem_7rem] items-center gap-4 px-5 py-3 cursor-pointer transition-colors hover:bg-orange-50/60 dark:hover:bg-[#2a221b] w-full text-left ${
               i % 2 === 0
                 ? "bg-paper-2"
                 : "bg-paper/60 dark:bg-[#2a221b]/40"
             }`}
           >
-            <Image
-              src={`/awards/icons/${award.key}.png`}
-              alt=""
-              width={32}
-              height={32}
-              unoptimized
-              className="shrink-0 pixelated hidden sm:block"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">
-                {award.title}
-              </p>
-              {award.desc && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
-                  {award.desc}
+            <div className="min-w-0 flex items-center gap-3">
+              <PixelIcon
+                src={`/awards/icons/${award.key}.png`}
+                size={32}
+                className="hidden sm:inline-flex"
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">
+                  {award.title}
                 </p>
-              )}
+                {award.desc && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                    {award.desc}
+                  </p>
+                )}
+              </div>
             </div>
             {award.bestUuid && (
               <Link
                 href={`/stats/${award.bestUuid}`}
                 onClick={(e) => e.stopPropagation()}
-                className="hidden sm:flex items-center gap-2 shrink-0 hover:text-orange-500 transition-colors"
+                className="hidden sm:flex min-w-0 items-center justify-end gap-2 hover:text-orange-500 transition-colors"
               >
-                <Image
+                <PixelIcon
                   src={`https://mc-heads.net/avatar/${award.bestUuid}/32.png`}
                   alt={award.bestName || ""}
-                  width={24}
-                  height={24}
-                  className="rounded"
+                  size={24}
+                  imgClassName="rounded"
                 />
-                <span className="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-orange-500">
+                <span className="min-w-0 truncate text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-orange-500">
                   {award.bestName}
                 </span>
               </Link>
             )}
-            <div className="shrink-0 text-right">
-              <span className="text-sm font-bold text-orange-500">
+            {!award.bestUuid && (
+              <span className="hidden sm:block text-right text-xs font-bold text-gray-400 dark:text-gray-500">
+                Unclaimed
+              </span>
+            )}
+            <div className="min-w-0 text-right">
+              <span className="block truncate text-sm font-bold text-orange-500">
                 {formatValue(award.bestValue, award.key, units)}
               </span>
               {award.bestUuid && (
@@ -153,17 +156,21 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
                   onClick={(e) => e.stopPropagation()}
                   className="flex sm:hidden items-center gap-1.5 justify-end mt-1 hover:text-orange-500 transition-colors"
                 >
-                  <Image
+                  <PixelIcon
                     src={`https://mc-heads.net/avatar/${award.bestUuid}/32.png`}
                     alt={award.bestName || ""}
-                    width={16}
-                    height={16}
-                    className="rounded"
+                    size={16}
+                    imgClassName="rounded"
                   />
                   <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-orange-500">
                     {award.bestName}
                   </span>
                 </Link>
+              )}
+              {!award.bestUuid && (
+                <span className="flex sm:hidden justify-end mt-1 text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                  Unclaimed
+                </span>
               )}
             </div>
           </button>

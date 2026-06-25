@@ -6,10 +6,29 @@ import * as appDb from "../../utils/appDb.js";
 import { resolveUsername, fetchPlayerName } from "../../utils/mojang.js";
 import { deleteAllAltsForUser } from "../../utils/altDb.js";
 import {
+  buildApplicationHubButton,
+  buildApplicationHubContainer,
+  buildFastTrackButton,
+  buildFastTrackContainer,
+} from "../../utils/applicationChannel.js";
+import {
+  buildShopDeedPanel,
+  buildShopDeedPanelButton,
+} from "../../utils/shopDeed.js";
+import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
+import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
+import {
+  fetchLeaderboardData,
+  buildLeaderboardComponents,
+} from "../../utils/leaderboard.js";
+import { saveLeaderboardState } from "../../utils/leaderboardState.js";
+import { syncLeaderboardEmojis } from "../../utils/playerEmoji.js";
+import {
   type ChatInputCommandInteraction,
   type RESTPostAPIApplicationCommandsJSONBody,
   type SlashCommandBuilder,
   SlashCommandBuilder as Builder,
+  ChannelType,
   PermissionFlagsBits,
   MessageFlags,
   type GuildMember,
@@ -59,6 +78,10 @@ export default class AdminCommand extends SlashCommand {
 
       case "wipe-minecraft":
         await this.handleWipeMinecraft(interaction, executor);
+        break;
+
+      case "send":
+        await this.handleSend(interaction);
         break;
 
       default:
@@ -353,6 +376,153 @@ export default class AdminCommand extends SlashCommand {
     });
   }
 
+  /** Post one of the server panels/embeds in the current channel. */
+  private async handleSend(interaction: ChatInputCommandInteraction) {
+    const which = interaction.options.getString("message", true);
+
+    const channel = interaction.channel;
+    if (!channel || channel.type !== ChannelType.GuildText) {
+      await interaction.reply({
+        components: [
+          errorContainer("**Error!** This must be run in a text channel."),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    const textChannel = channel as TextChannel;
+
+    // The leaderboard is stateful (its message is tracked + auto-updated),
+    // so it has its own flow.
+    if (which === "leaderboard") {
+      await this.sendLeaderboard(interaction, textChannel);
+      return;
+    }
+
+    let label: string;
+    try {
+      switch (which) {
+        case "application_hub":
+          await textChannel.send({
+            components: [
+              buildApplicationHubContainer(),
+              buildApplicationHubButton(),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Application hub";
+          break;
+
+        case "fast_track": {
+          const season = await appDb.getCurrentSeason().catch(() => null);
+          const seasonName = season?.name ?? "the server";
+          await textChannel.send({
+            components: [
+              buildFastTrackContainer(seasonName),
+              buildFastTrackButton(seasonName),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Fast track panel";
+          break;
+        }
+
+        case "rules_info":
+          await textChannel.send({
+            components: buildRulesInfoComponents(),
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Rules & info";
+          break;
+
+        case "ticket_panel":
+          await textChannel.send({
+            components: [buildTriggerEmbed(), buildTriggerButtons()],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Ticket panel";
+          break;
+
+        case "shop_deed_panel":
+          await textChannel.send({
+            components: [buildShopDeedPanel(), buildShopDeedPanelButton()],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Shop deed panel";
+          break;
+
+        default:
+          await interaction.reply({
+            components: [errorContainer("**Error!** Unknown panel.")],
+            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          });
+          return;
+      }
+    } catch (e) {
+      await interaction.reply({
+        components: [
+          errorContainer(`**Error!** Failed to post the panel: ${(e as Error).message}`),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await interaction.reply({
+      components: [primaryContainer(`${label} posted.`)],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    });
+  }
+
+  /** Post a fresh leaderboard message and register it for auto-updates. */
+  private async sendLeaderboard(
+    interaction: ChatInputCommandInteraction,
+    channel: TextChannel,
+  ) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const data = await fetchLeaderboardData();
+    if (!data) {
+      await interaction.editReply({
+        components: [errorContainer("Failed to fetch leaderboard data.")],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
+    }
+
+    try {
+      const emojiMap = await syncLeaderboardEmojis(
+        interaction.client,
+        data.topPlayers,
+      );
+      const message = await channel.send({
+        components: buildLeaderboardComponents(data, emojiMap),
+        flags: MessageFlags.IsComponentsV2,
+      });
+      await saveLeaderboardState({
+        channelId: channel.id,
+        messageId: message.id,
+      });
+      await interaction.editReply({
+        components: [
+          primaryContainer(
+            `## Leaderboard Created\nLeaderboard posted in <#${channel.id}>. It will update every 5 minutes.`,
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
+    } catch {
+      await interaction.editReply({
+        components: [
+          errorContainer(
+            "Failed to send the leaderboard message. Check bot permissions.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
+    }
+  }
+
   async build(
     _command: SlashCommandBuilder,
   ): Promise<SlashCommandBuilder | RESTPostAPIApplicationCommandsJSONBody> {
@@ -396,6 +566,25 @@ export default class AdminCommand extends SlashCommand {
               .setName("username")
               .setDescription("The Minecraft Java username to wipe")
               .setRequired(true),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("send")
+          .setDescription("Post a panel/embed in this channel")
+          .addStringOption((opt) =>
+            opt
+              .setName("message")
+              .setDescription("Which panel to send")
+              .setRequired(true)
+              .addChoices(
+                { name: "Application Hub", value: "application_hub" },
+                { name: "Fast Track (Access)", value: "fast_track" },
+                { name: "Rules & Info", value: "rules_info" },
+                { name: "Ticket Panel", value: "ticket_panel" },
+                { name: "Shop Deed Panel", value: "shop_deed_panel" },
+                { name: "Leaderboard", value: "leaderboard" },
+              ),
           ),
       )
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)

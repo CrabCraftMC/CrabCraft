@@ -8,12 +8,15 @@ import {
   MessageFlags,
   ModalBuilder,
   TextChannel,
+  TextDisplayBuilder,
   TextInputBuilder,
   TextInputStyle,
+  type ThreadChannel,
 } from "discord.js";
 import { errorContainer, successContainer, primaryContainer, coloredContainer, logAccept } from "../utils/embeds.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
+import { createApplicationChannelFor } from "../utils/applicationChannel.js";
 
 import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
@@ -30,6 +33,13 @@ import {
   buildStaffButtons,
   getCategoryMeta,
 } from "../utils/ticket.js";
+import {
+  buildDisabledShopDeedStaffButtons,
+  buildShopDeedDecisionModal,
+  buildShopDeedHeader,
+  buildShopDeedModal,
+  buildShopDeedThreadName,
+} from "../utils/shopDeed.js";
 
 export default class ButtonInteractionEvent extends Event {
   constructor() {
@@ -41,6 +51,192 @@ export default class ButtonInteractionEvent extends Event {
 
     // I have no idea if bots can click buttons or not.. but this is here incase
     if (interaction.user.bot) return;
+
+    // Application Hub: open (or point to) the member's application channel.
+    if (interaction.customId === "app_hub_open") {
+      const member = interaction.member as GuildMember | null;
+      if (!member) {
+        await interaction.reply({
+          content: "Member information is missing. Please rejoin the server.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (member.roles.cache.has(config.MEMBER_ROLE_ID)) {
+        await interaction.reply({
+          content: "You're already a member of CrabCraft 🎉",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      // If they already have a live application channel, point them to it.
+      const existing = await appDb
+        .getApplicationChannelByApplicant(member.id)
+        .catch(() => null);
+      if (existing) {
+        const existingChannel = await interaction.guild?.channels
+          .fetch(existing.channel_id)
+          .catch(() => null);
+        if (existingChannel) {
+          await interaction.editReply({
+            components: [
+              primaryContainer(
+                `You already have an open application channel: <#${existing.channel_id}>`,
+              ),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          return;
+        }
+      }
+
+      const channel = await createApplicationChannelFor(member);
+      if (!channel) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "Sorry, I couldn't open an application channel. Please contact a moderator.",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+        return;
+      }
+
+      await interaction.editReply({
+        components: [
+          primaryContainer(`Your application channel is ready: <#${channel.id}>`),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
+    }
+
+    if (interaction.customId === "shop_deed_open") {
+      const eligible = await appDb
+        .isWhitelistedForCurrentSeason(interaction.user.id)
+        .catch((e) => {
+          logger.error("Shop deed: eligibility check failed:", e);
+          return false;
+        });
+      if (!eligible) {
+        await interaction.reply({
+          components: [
+            errorContainer(
+              "Shop deed requests are only available to players accepted for the current season.",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.showModal(buildShopDeedModal());
+      return;
+    }
+
+    if (
+      interaction.customId.startsWith("shop_deed_accept:") ||
+      interaction.customId.startsWith("shop_deed_changes:") ||
+      interaction.customId.startsWith("shop_deed_reject:")
+    ) {
+      const member = interaction.member as GuildMember | null;
+      if (!member?.roles.cache.has(config.MOD_ROLE_ID)) {
+        await interaction.reply({
+          content: `You must have the <@&${config.MOD_ROLE_ID}> role to do this.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const [action, rawId] = interaction.customId.split(":");
+      const applicationId = Number(rawId);
+      if (!Number.isFinite(applicationId)) {
+        await interaction.reply({
+          components: [errorContainer("Shop deed request not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const application = await appDb.getShopDeedApplicationById(applicationId);
+      if (!application || application.thread_id !== interaction.channelId) {
+        await interaction.reply({
+          components: [errorContainer("Shop deed request not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (
+        application.status !== "pending" &&
+        application.status !== "changes_requested"
+      ) {
+        await interaction.reply({
+          components: [errorContainer("This shop deed request has already been processed.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (action === "shop_deed_accept") {
+        await interaction.deferUpdate();
+
+        const resolved = await appDb.resolveShopDeedApplication(
+          application.id,
+          "accepted",
+          null,
+          interaction.user.id,
+        );
+        if (!resolved) {
+          await interaction.followUp({
+            components: [
+              errorContainer("This shop deed request has already been processed."),
+            ],
+            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        try {
+          await interaction.message.edit({
+            components: [
+              buildShopDeedHeader(resolved),
+              buildDisabledShopDeedStaffButtons(resolved.id),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+        } catch (e) {
+          logger.error("Shop deed: failed to update accepted request:", e);
+        }
+
+        try {
+          await (interaction.channel as ThreadChannel | null)?.setName(
+            buildShopDeedThreadName(
+              resolved.shop_name,
+              resolved.applicant_discord_username,
+              resolved.status,
+            ),
+            "Shop deed accepted",
+          );
+        } catch (e) {
+          logger.error("Shop deed: failed to rename accepted thread:", e);
+        }
+        return;
+      }
+
+      await interaction.showModal(
+        buildShopDeedDecisionModal(
+          application.id,
+          action === "shop_deed_changes" ? "changes_requested" : "rejected",
+        ),
+      );
+      return;
+    }
 
     if (interaction.customId == "apply") {
       // Only the channel's applicant can use the apply button
@@ -93,6 +289,10 @@ export default class ButtonInteractionEvent extends Event {
       const joinReason = new TextInputBuilder()
         .setCustomId("join-reason")
         .setLabel("Why do you want to join CrabCraft?")
+        .setPlaceholder(
+          "In a sentence or two, tell us why you want to join and what you'd like to do on the server.",
+        )
+        .setMinLength(50)
         .setRequired(true)
         .setStyle(TextInputStyle.Paragraph);
 
@@ -188,10 +388,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      await interaction.message.edit({
+      await interaction.update({
         components: [
           coloredContainer(
-            "## Success\nYou have **agreed** to **CrabCraft's Griefing & Stealing Policy**",
+            "You have **agreed** to **CrabCraft's Griefing & Stealing Policy**",
             "Green",
           ),
         ],
@@ -199,11 +399,6 @@ export default class ButtonInteractionEvent extends Event {
       });
 
       await appDb.setPolicyAgreed(interaction.user.id, true);
-
-      await interaction.reply({
-        content: "Policy agreed",
-        flags: MessageFlags.Ephemeral,
-      });
     }
 
     if (interaction.customId == "disagree") {
@@ -218,10 +413,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      await interaction.message.edit({
+      await interaction.update({
         components: [
           coloredContainer(
-            "## Policy Rejected\nYou have **disagreed** to **CrabCraft's Griefing & Stealing Policy**",
+            "You have **disagreed** to **CrabCraft's Griefing & Stealing Policy**",
             "Red",
           ),
         ],
@@ -229,11 +424,6 @@ export default class ButtonInteractionEvent extends Event {
       });
 
       await appDb.setPolicyAgreed(interaction.user.id, false);
-
-      await interaction.reply({
-        content: "Policy disagreed",
-        flags: MessageFlags.Ephemeral,
-      });
     }
 
     // On app_accept — supports both new V2 (app_accept:username) and legacy (app_accept) formats
@@ -244,11 +434,15 @@ export default class ButtonInteractionEvent extends Event {
         )
       ) {
         await interaction.reply({
-          components: [errorContainer("**Missing permissions**")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          content: `You must have the <@&${config.MOD_ROLE_ID}> role to do this.`,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
+
+      // Acknowledge up-front: the work below (Mojang lookup, MariaDB, role add)
+      // can exceed the 3s window, and we post no visible reply on success.
+      await interaction.deferUpdate();
 
       const logChannel = await (
         interaction.member as GuildMember
@@ -262,7 +456,7 @@ export default class ButtonInteractionEvent extends Event {
           )?.value;
 
       if (!minecraftUsername) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** Could not find the Minecraft username from the application.",
@@ -280,7 +474,7 @@ export default class ButtonInteractionEvent extends Event {
       const applicantId = appRecord?.applicant_id;
 
       if (!applicantId) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** Could not determine the applicant from the channel.",
@@ -296,7 +490,7 @@ export default class ButtonInteractionEvent extends Event {
         .catch(() => null);
 
       if (!applicant) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** The applicant is no longer in the server.",
@@ -309,7 +503,7 @@ export default class ButtonInteractionEvent extends Event {
 
       const application = await appDb.getLatestApplication(applicantId);
       if (!application || !application.policy_agreed) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** The applicant hasn't agreed to the policy yet.",
@@ -322,7 +516,7 @@ export default class ButtonInteractionEvent extends Event {
 
       const resolved = await resolveUsername(minecraftUsername);
       if (!resolved) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** Failed to look up the Minecraft account. Please try again later.",
@@ -342,7 +536,7 @@ export default class ButtonInteractionEvent extends Event {
         .acceptApplication(applicant.id, interaction.user.id)
         .catch(() => false);
       if (!won) {
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer("This application has already been processed."),
           ],
@@ -360,7 +554,7 @@ export default class ButtonInteractionEvent extends Event {
         logger.error("Failed to insert whitelist record:", error);
         // Undo the accept-time status flip so a moderator can retry.
         await appDb.revertApplicationToPending(applicant.id).catch(() => null);
-        await interaction.reply({
+        await interaction.followUp({
           components: [
             errorContainer(
               "**Error!** Failed to add the user to the whitelist database. Please try again.",
@@ -398,9 +592,9 @@ export default class ButtonInteractionEvent extends Event {
       // (application status was already flipped above as the race guard)
 
       try {
-        await appChannel.send({ content: `<@${applicant.id}>` });
         await appChannel.send({
           components: [
+            new TextDisplayBuilder().setContent(`<@${applicant.id}>`),
             successContainer(
               `## Application Accepted\n**Congratulations ${applicant.user.username}, your application has been accepted!**\n### Next Steps\nCheck out [our guide](https://wiki.crabcraft.net/Setup_Guide) for help installing **Simple Voice Chat**\n\nNeed anymore help? Let us know in this channel, or create a ticket <#1397191941782896670>\n-# Channel will be deleted in 12 hours`,
             ),
@@ -440,11 +634,9 @@ export default class ButtonInteractionEvent extends Event {
       } catch (e) {
         logger.error("Failed to disable accept/deny buttons:", e);
       }
-
-      await interaction.reply({
-        components: [primaryContainer("Successfully accepted application")],
-        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-      });
+      // No success reply — disabling the buttons + the acceptance message in
+      // the channel is the confirmation. The interaction was acked via
+      // deferUpdate above.
     }
 
     // On app_deny — supports both V2 and legacy formats
@@ -455,8 +647,8 @@ export default class ButtonInteractionEvent extends Event {
         )
       ) {
         await interaction.reply({
-          components: [errorContainer("**Missing permissions**")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          content: `You must have the <@&${config.MOD_ROLE_ID}> role to do this.`,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -721,8 +913,8 @@ export default class ButtonInteractionEvent extends Event {
       return;
     }
 
-    // Edit application button
-    if (interaction.customId.startsWith("edit_app:")) {
+    // Edit application button (lives on the application-submitted message)
+    if (interaction.customId === "edit_app") {
       const editRecord = await appDb
         .getApplicationChannelByChannelId(interaction.channelId ?? "")
         .catch(() => null);
@@ -743,10 +935,8 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      const appMessageId = interaction.customId.split(":")[1];
-
       const editModal = new ModalBuilder()
-        .setCustomId(`edit-application:${appMessageId}`)
+        .setCustomId("edit-application")
         .setTitle("Edit Application");
 
       const minecraftUsername = new TextInputBuilder()
@@ -776,6 +966,10 @@ export default class ButtonInteractionEvent extends Event {
       const joinReason = new TextInputBuilder()
         .setCustomId("join-reason")
         .setLabel("Why do you want to join CrabCraft?")
+        .setPlaceholder(
+          "In a sentence or two, tell us why you want to join and what you'd like to do on the server.",
+        )
+        .setMinLength(50)
         .setRequired(true)
         .setValue((application.join_reason as string) ?? "")
         .setStyle(TextInputStyle.Paragraph);

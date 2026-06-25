@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import AdvancementsCategoryTabs from "@/components/AdvancementsCategoryTabs";
 import CompletionFireworks from "@/components/CompletionFireworks";
@@ -208,12 +209,12 @@ export default async function AdvancementsLeaderboardPage({
                       />
                     </div>
                     <div className="relative z-10 flex flex-col items-start text-left gap-3">
-                      <Image
+                      <PixelIcon
                         src={`https://mc-heads.net/avatar/${player.uuid}/100.png`}
                         alt={player.username ?? ""}
-                        width={style.avatarSize}
-                        height={style.avatarSize}
-                        className="rounded-lg bg-white/20"
+                        size={style.avatarSize}
+                        imgClassName="rounded-lg"
+                        className="bg-white/20 rounded-lg"
                       />
                       <div>
                         <p className={`font-bold text-white ${style.nameSize}`}>
@@ -298,12 +299,12 @@ export default async function AdvancementsLeaderboardPage({
                   </span>
                 </div>
                 <div className="col-span-7 sm:col-span-4 flex items-center gap-2 min-w-0">
-                  <Image
+                  <PixelIcon
                     src={`https://mc-heads.net/avatar/${player.uuid}/64.png`}
                     alt={player.username ?? ""}
-                    width={28}
-                    height={28}
-                    className="rounded bg-gray-200 dark:bg-gray-700 shrink-0"
+                    size={28}
+                    imgClassName="rounded"
+                    className="bg-gray-200 dark:bg-gray-700 rounded"
                   />
                   <span className="font-bold text-sm text-gray-700 dark:text-gray-300 truncate">
                     {player.username ?? "Unknown"}

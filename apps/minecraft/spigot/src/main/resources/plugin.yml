@@ -9,16 +9,16 @@ softdepend:
   - voicechat
   - PlaceholderAPI
 commands:
-  pack:
-    description: Enable or disable the server resource pack for yourself.
-    usage: /pack <on|off>
-    aliases: [resourcepack, rp]
   crabutilities:
     description: CrabUtilities admin commands.
     usage: /crabutilities <reload|update check|update download|update status>
   jadehandshake:
     description: Resend the Jade server handshake to your client.
     permission: crabutilities.jade.handshake
+  settings:
+    description: Open your personal settings menu (e.g. phantoms).
+    usage: /settings [phantoms <on|off|safe>]
+    permission: crabutilities.settings
 permissions:
   crabutilities.reload:
     description: Reload CrabUtilities configuration.
@@ -28,4 +28,7 @@ permissions:
     default: op
   crabutilities.jade.handshake:
     description: Resend the Jade server handshake to your client.
+    default: true
+  crabutilities.settings:
+    description: Use the /settings menu to configure personal preferences.
     default: true

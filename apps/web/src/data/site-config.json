@@ -38,7 +38,27 @@
                 "icon": "Circle"
             },
             {
-                "name": "Portal Calculator",
+                "name": "Stack Calculator",
+                "url": "/tools/stack-calculator",
+                "icon": "Boxes"
+            },
+            {
+                "name": "Beacon Calculator",
+                "url": "/tools/beacon-calculator",
+                "icon": "Sparkles"
+            },
+            {
+                "name": "XP Levels",
+                "url": "/tools/xp-calculator",
+                "icon": "Trophy"
+            },
+            {
+                "name": "Enchantment Planner",
+                "url": "/tools/enchantment-planner",
+                "icon": "BookOpen"
+            },
+            {
+                "name": "Portal Coordinates",
                 "url": "/tools/portal-calculator",
                 "icon": "ArrowLeftRight"
             }

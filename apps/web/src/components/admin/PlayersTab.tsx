@@ -2,6 +2,7 @@
 
 import type { AdminUser } from "@crabcraft/shared/types";
 import { setRoleAction } from "@/app/admin/actions";
+import PixelIcon from "@/components/PixelIcon";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -68,10 +69,12 @@ export default function PlayersTab({
                 <td className="px-3 py-2.5 sm:px-4">
                   <div className="flex items-center gap-2">
                     {player.minecraft_uuid && (
-                      <img
+                      <PixelIcon
                         src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/24`}
                         alt=""
-                        className="hidden h-6 w-6 rounded sm:block"
+                        size={24}
+                        className="hidden sm:inline-flex"
+                        imgClassName="rounded"
                       />
                     )}
                     <span className="font-medium">

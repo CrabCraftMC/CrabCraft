@@ -6,14 +6,14 @@ const NetherPortalCalculator = dynamic(
 );
 
 export const metadata: Metadata = {
-  title: "Minecraft Nether Portal Calculator",
+  title: "Minecraft Nether Portal Coordinates",
   description:
     "Convert coordinates between the Overworld and Nether in Minecraft. Bidirectional calculator with portal linking guide — free online tool.",
   alternates: {
     canonical: "https://crabcraft.net/tools/portal-calculator",
   },
   openGraph: {
-    title: "Minecraft Nether Portal Calculator - CrabCraft",
+    title: "Minecraft Nether Portal Coordinates - CrabCraft",
     description:
       "Convert coordinates between the Overworld and Nether in Minecraft. Bidirectional calculator with portal linking guide.",
     url: "https://crabcraft.net/tools/portal-calculator",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Minecraft Nether Portal Calculator",
+  name: "Minecraft Nether Portal Coordinates",
   description:
     "Convert coordinates between the Overworld and Nether in Minecraft. Bidirectional calculator with portal linking guide.",
   url: "https://crabcraft.net/tools/portal-calculator",

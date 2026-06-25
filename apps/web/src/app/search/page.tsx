@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { Search } from "lucide-react";
+import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 
 interface PlayerResult {
@@ -92,13 +92,11 @@ export default function SearchPage() {
                       : "bg-paper/60 dark:bg-[#2a221b]/40"
                   }`}
                 >
-                  <Image
+                  <PixelIcon
                     src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/28`}
                     alt={player.minecraft_username}
-                    width={28}
-                    height={28}
-                    className="rounded shrink-0"
-                    unoptimized
+                    size={28}
+                    imgClassName="rounded"
                   />
                   <span className="text-foreground text-sm font-medium">
                     {player.minecraft_username}

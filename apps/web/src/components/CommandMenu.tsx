@@ -3,17 +3,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWebHaptics } from "web-haptics/react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
-  Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight,
-  Search, ExternalLink,
+  Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight, BookOpen,
+  Boxes, Sparkles, Search, ExternalLink,
 } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import { Instagram } from "lucide-react";
+import PixelIcon from "@/components/PixelIcon";
 import config from "@/data/site-config.json";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight,
+  Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight, BookOpen,
+  Boxes, Sparkles,
   youtube: FaYoutube, instagram: Instagram, tiktok: FaTiktok, discord: FaDiscord,
 };
 
@@ -253,12 +254,11 @@ export default function CommandMenu() {
                         }`}
                       >
                         {result.avatar ? (
-                          <Image
+                          <PixelIcon
                             src={result.avatar}
                             alt={result.label}
-                            width={20}
-                            height={20}
-                            className="rounded shrink-0"
+                            size={20}
+                            imgClassName="rounded"
                           />
                         ) : Icon ? (
                           <Icon className="w-4 h-4 shrink-0" />

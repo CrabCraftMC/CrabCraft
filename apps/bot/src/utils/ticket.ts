@@ -14,6 +14,9 @@ import mysql from "./database.js";
 import logger from "./logger.js";
 import * as appDb from "./appDb.js";
 import type { TicketCategory, Ticket } from "./appDb.js";
+import type { PublicInfraction, TicketInfractionInfo } from "./infractions.js";
+
+const INFRACTION_SUMMARY_CHAR_BUDGET = 3400;
 
 // ── Category metadata ──────────────────────────────────────────────
 
@@ -245,7 +248,7 @@ export async function getPlayerInfo(
 
 // ── Builders ──────────────────────────────────────────────────────
 
-/** The public-facing trigger embed posted by /ticket-embed. */
+/** The public-facing trigger embed posted via /admin send. */
 export function buildTriggerEmbed(): ContainerBuilder {
   const lines = [
     "## <:Crab:1397355651822256299> Open a Support Ticket",
@@ -307,6 +310,7 @@ export function buildTicketHeader(
   meta: CategoryMeta,
   player: PlayerInfo,
   intake: Record<string, string>,
+  infractionInfo?: TicketInfractionInfo | null,
 ): ContainerBuilder {
   const ticketLine = `**Ticket:** \`#${String(ticket.id).padStart(4, "0")}\``;
   const openerLine = `**Opened by:** <@${player.discordId}> (\`${player.discordTag}\`)`;
@@ -352,7 +356,93 @@ export function buildTicketHeader(
     );
   }
 
+  if (infractionInfo) {
+    container.addTextDisplayComponents((td) =>
+      td.setContent(formatInfractionInfo(infractionInfo)),
+    );
+  }
+
   return container;
+}
+
+function formatInfractionInfo(info: TicketInfractionInfo): string {
+  const lines = [
+    "## Past Infractions",
+    `**Appeal target:** \`${safeText(info.username, 32)}\``,
+    info.uuid ? `**UUID:** \`${info.uuid}\`` : "**UUID:** _not resolved_",
+  ];
+
+  if (info.error) {
+    lines.push(
+      "",
+      `_Could not load LiteBans history automatically: ${safeText(info.error, 160)}_`,
+    );
+    return lines.join("\n");
+  }
+
+  if (!info.infractions || info.infractions.length === 0) {
+    lines.push("", "_No LiteBans infractions found for this UUID._");
+    return lines.join("\n");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  let rendered = lines.join("\n");
+  let shown = 0;
+  for (const infraction of info.infractions.slice(0, 10)) {
+    const entry = `\n\n${formatInfractionLine(infraction, now)}`;
+    if (rendered.length + entry.length > INFRACTION_SUMMARY_CHAR_BUDGET) {
+      break;
+    }
+    rendered += entry;
+    shown += 1;
+  }
+
+  const remaining = info.infractions.length - shown;
+  if (remaining > 0) {
+    const suffix = `\n\n_${remaining} more infraction${remaining === 1 ? "" : "s"} omitted from this summary._`;
+    if (rendered.length + suffix.length <= INFRACTION_SUMMARY_CHAR_BUDGET) {
+      rendered += suffix;
+    }
+  }
+  return rendered;
+}
+
+function formatInfractionLine(infraction: PublicInfraction, now: number): string {
+  const id = Number.isFinite(infraction.id) ? `#${infraction.id}` : "#?";
+  const type = infraction.type.toUpperCase();
+  const status = infractionStatus(infraction, now);
+  const created = infraction.created_at > 0
+    ? `<t:${infraction.created_at}:f>`
+    : "unknown date";
+  const reason = safeText(infraction.reason ?? "No reason provided", 140);
+  const staff = safeText(infraction.staff ?? "Unknown", 48);
+  const extra = infraction.removed
+    ? `\nRemoved by: ${safeText(infraction.removed_by ?? "Unknown", 48)}`
+    : "";
+  return `**${type} ${id}** - ${status} - ${created}\nReason: ${reason}\nStaff: ${staff}${extra}`;
+}
+
+function infractionStatus(infraction: PublicInfraction, now: number): string {
+  if (infraction.removed) return "removed";
+  if (infraction.active === true) {
+    if (!infraction.expires_at) return "active, permanent";
+    return `active, expires <t:${infraction.expires_at}:R>`;
+  }
+  if (infraction.expires_at && infraction.expires_at <= now) return "expired";
+  if (infraction.active === false) return "inactive";
+  if (!infraction.expires_at) return "recorded";
+  return `expires <t:${infraction.expires_at}:R>`;
+}
+
+function safeText(value: string, maxLength: number): string {
+  const cleaned = value
+    .replace(/@/g, "@\u200b")
+    .replace(/`/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.length > maxLength
+    ? `${cleaned.slice(0, Math.max(0, maxLength - 1))}…`
+    : cleaned;
 }
 
 /** Action row for staff: just Close. */

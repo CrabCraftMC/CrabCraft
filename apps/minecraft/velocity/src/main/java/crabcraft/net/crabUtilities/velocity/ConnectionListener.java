@@ -55,7 +55,7 @@ public class ConnectionListener {
         var streakService = plugin.getLoginStreakService();
         var streakPublisher = plugin.getLoginStreakPublisher();
         if (streakService != null) {
-            CompletableFuture.runAsync(() -> {
+            plugin.runDatabaseTask("login-streak-record", () -> {
                 var snapshot = streakService.recordLogin(uuid);
                 if (snapshot != null && streakPublisher != null) {
                     streakPublisher.publish(uuid, snapshot, streakService.getResetHourUtc());
@@ -66,28 +66,41 @@ public class ConnectionListener {
         LuckPerms luckPerms = plugin.getLuckPerms();
         if (luckPerms == null) return; // LuckPerms not available
 
-        boolean isAlt = plugin.getAltQueryService().isAlt(uuid);
+        UUID playerId = player.getUniqueId();
+        String username = player.getUsername();
+        plugin.runDatabaseTask("alt-status-check", () -> {
+            var altQueryService = plugin.getAltQueryService();
+            if (altQueryService == null) return;
 
-        if (isAlt) {
-            luckPerms.getUserManager().modifyUser(player.getUniqueId(), user -> {
-                user.data().add(InheritanceNode.builder(ALT_GROUP).build());
-            }).exceptionally(e -> {
-                plugin.getLogger().error("Failed to assign '{}' group to alt {} ({})",
-                        ALT_GROUP, player.getUsername(), uuid, e);
-                return null;
-            });
-            plugin.getLogger().info("Alt account {} ({}) — assigned '{}' group",
-                    player.getUsername(), uuid, ALT_GROUP);
-        } else {
-            // Clean up stale alt group if the alt was removed from the database
-            luckPerms.getUserManager().modifyUser(player.getUniqueId(), user -> {
-                user.data().remove(InheritanceNode.builder(ALT_GROUP).build());
-            }).exceptionally(e -> {
-                plugin.getLogger().error("Failed to remove '{}' group from {} ({})",
-                        ALT_GROUP, player.getUsername(), uuid, e);
-                return null;
-            });
-        }
+            boolean isAlt = altQueryService.isAlt(uuid);
+            if (!isPlayerActive(playerId)) return;
+
+            if (isAlt) {
+                luckPerms.getUserManager().modifyUser(playerId, user -> {
+                    if (!isPlayerActive(playerId)) return;
+                    user.data().add(InheritanceNode.builder(ALT_GROUP).build());
+                }).whenComplete((ignored, e) -> {
+                    if (e != null) {
+                        plugin.getLogger().error("Failed to assign '{}' group to alt {} ({})",
+                                ALT_GROUP, username, uuid, e);
+                    } else if (isPlayerActive(playerId)) {
+                        plugin.getLogger().info("Alt account {} ({}) — assigned '{}' group",
+                                username, uuid, ALT_GROUP);
+                    }
+                });
+            } else {
+                // Clean up stale alt group if the alt was removed from the database
+                luckPerms.getUserManager().modifyUser(playerId, user -> {
+                    if (!isPlayerActive(playerId)) return;
+                    user.data().remove(InheritanceNode.builder(ALT_GROUP).build());
+                }).whenComplete((ignored, e) -> {
+                    if (e != null) {
+                        plugin.getLogger().error("Failed to remove '{}' group from {} ({})",
+                                ALT_GROUP, username, uuid, e);
+                    }
+                });
+            }
+        });
     }
 
     @Subscribe
@@ -175,7 +188,7 @@ public class ConnectionListener {
         final UUID playerId = player.getUniqueId();
         final String playerUuid = playerId.toString();
         final String playerName = player.getUsername();
-        CompletableFuture.runAsync(() -> {
+        plugin.runDatabaseTask("join-broadcast", () -> {
             boolean firstJoin = !plugin.getPgWriter().hasJoinedBefore(playerUuid);
 
             // Player may have disconnected during the lookup — skip the
@@ -255,6 +268,12 @@ public class ConnectionListener {
 
     private boolean isIgnored(String serverName) {
         return plugin.getConfig().getIgnoredServers().contains(serverName.toLowerCase());
+    }
+
+    private boolean isPlayerActive(UUID playerId) {
+        return plugin.getServer().getPlayer(playerId)
+                .map(Player::isActive)
+                .orElse(false);
     }
 
     private void broadcast(Component message) {

@@ -104,6 +104,7 @@
   {"id": "minecraft:husbandry/allay_deliver_item_to_player", "name": "You've Got a Friend in Me", "description": "Have an Allay deliver items to you", "category": "husbandry"},
   {"id": "minecraft:husbandry/ride_a_boat_with_a_goat", "name": "Whatever Floats Your Goat!", "description": "Get in a Boat and float with a Goat", "category": "husbandry"},
   {"id": "minecraft:husbandry/tame_an_animal", "name": "Best Friends Forever", "description": "Tame an animal", "category": "husbandry"},
+  {"id": "minecraft:husbandry/uh_oh", "name": "Uh Oh", "description": "Have a Sulfur Cube absorb a TNT block", "category": "husbandry"},
   {"id": "minecraft:husbandry/make_a_sign_glow", "name": "Glow and Behold!", "description": "Make the text of any kind of sign glow", "category": "husbandry"},
   {"id": "minecraft:husbandry/fishy_business", "name": "Fishy Business", "description": "Catch a fish", "category": "husbandry"},
   {"id": "minecraft:husbandry/silk_touch_nest", "name": "Total Beelocation", "description": "Move a Bee Nest or Beehive, with 3 Bees inside, using Silk Touch", "category": "husbandry"},

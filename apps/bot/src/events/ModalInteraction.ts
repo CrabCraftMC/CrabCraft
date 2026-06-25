@@ -21,16 +21,24 @@ import {
   ContainerBuilder,
   PermissionFlagsBits,
   SectionBuilder,
+  TextDisplayBuilder,
   ThumbnailBuilder,
   MessageFlags,
+  ThreadAutoArchiveDuration,
+  type ThreadChannel,
 } from "discord.js";
 
 import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
+import type { ShopDeedApplication } from "../utils/appDb.js";
 import { storeRetry, getRetry } from "../utils/retryStore.js";
 import { resolveUsername } from "../utils/mojang.js";
 import { CHANNEL_DELETE_DELAY_MS } from "../utils/constants.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
+import {
+  fetchPlayerInfractions,
+  type TicketInfractionInfo,
+} from "../utils/infractions.js";
 import {
   buildChannelName,
   buildStaffButtons,
@@ -38,6 +46,17 @@ import {
   getCategoryMeta,
   getPlayerInfo,
 } from "../utils/ticket.js";
+import {
+  SHOP_DEED_FIELDS,
+  buildDisabledShopDeedStaffButtons,
+  buildShopDeedPanel,
+  buildShopDeedPanelButton,
+  buildShopDeedDecisionNotice,
+  buildShopDeedHeader,
+  buildShopDeedStaffButtons,
+  buildShopDeedThreadName,
+  type ShopDeedFeedbackDecision,
+} from "../utils/shopDeed.js";
 
 const ACCEPTED_VALUES = [
   "y",
@@ -54,6 +73,37 @@ const ACCEPTED_VALUES = [
   "positive",
 ];
 
+// Explicitly negative answers to "Are you 17 or older?". These — together with
+// any number below 17 — are the only answers that trigger an automatic denial.
+// Anything else (e.g. "Yerp" or junk like "sdfjhgsdf") is left for a human to
+// review rather than auto-rejected.
+const DENIED_VALUES = [
+  "n",
+  "no",
+  "nope",
+  "nah",
+  "false",
+  "negative",
+];
+
+async function restickShopDeedPanel(
+  interaction: ModalSubmitInteraction,
+  channel: TextChannel,
+): Promise<void> {
+  try {
+    if (interaction.isFromMessage()) {
+      await interaction.message.delete().catch(() => null);
+    }
+
+    await channel.send({
+      components: [buildShopDeedPanel(), buildShopDeedPanelButton()],
+      flags: MessageFlags.IsComponentsV2,
+    });
+  } catch (e) {
+    logger.error("Shop deed: failed to refresh sticky panel:", e);
+  }
+}
+
 /** Build a retry button row for invalid usernames. */
 function retryButtonRow(customId: string) {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -61,6 +111,31 @@ function retryButtonRow(customId: string) {
       .setCustomId(customId)
       .setLabel("Retry Username")
       .setStyle(ButtonStyle.Primary),
+  );
+}
+
+/**
+ * Buttons shown on the application-submitted message: Accept / Deny (staff)
+ * and Edit Application (applicant). The MC username rides along on the
+ * accept/deny custom ids.
+ */
+function buildApplicationActionRow(
+  minecraftUsername: string,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`app_accept:${minecraftUsername}`)
+      .setLabel("Accept")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`app_deny:${minecraftUsername}`)
+      .setLabel("Deny")
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId("edit_app")
+      .setLabel("Edit Application")
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji("✏️"),
   );
 }
 
@@ -104,14 +179,15 @@ export default class ModalInteractionEvent extends Event {
 
       interaction.message?.delete().catch(() => null);
 
-      // Age gate: must affirmatively confirm 17+ (an affirmative answer, or a
-      // number ≥ 17). Anything else — "no", a number < 17, or junk — is an
-      // automatic denial.
+      // Age gate: only auto-deny when the applicant explicitly says no (a
+      // negative answer) or gives a number below 17. Anything else — including
+      // ambiguous or junk answers like "Yerp" or "sdfjhgsdf" — passes the gate
+      // and is left for a human to review.
       const ageNumber = parseInt(age, 10);
-      const meetsAge =
-        ACCEPTED_VALUES.includes(age) ||
-        (Number.isFinite(ageNumber) && ageNumber >= 17);
-      if (!meetsAge) {
+      const isUnderage =
+        DENIED_VALUES.includes(age) ||
+        (Number.isFinite(ageNumber) && ageNumber < 17);
+      if (isUnderage) {
         await interaction.reply({
           components: [
             errorContainer(
@@ -293,9 +369,7 @@ export default class ModalInteractionEvent extends Event {
     }
 
     // ── Edit Application ──────────────────────────────────────────────
-    if (interaction.customId.startsWith("edit-application:")) {
-      const appMessageId = interaction.customId.split(":")[1];
-
+    if (interaction.customId === "edit-application") {
       const minecraftUsername = interaction.fields.getTextInputValue("minecraft-username");
       const age = interaction.fields.getTextInputValue("age").toLocaleLowerCase();
       const ingameVoice = interaction.fields.getTextInputValue("ingame-voice").toLocaleLowerCase();
@@ -346,64 +420,320 @@ export default class ModalInteractionEvent extends Event {
         logger.error("Failed to update application in database:", e);
       }
 
-      // Edit the original application message
-      if (appMessageId && interaction.channel) {
+      // Re-render the application-submitted message (the one this modal was
+      // opened from) with the updated details. Editing it is the ack.
+      const fields = [
+        `**Are you 17 or older?**\n${age}`,
+        `**Are you willing to speak in game?**\n${ingameVoice}`,
+        `**Why do you want to join CrabCraft?**\n${joinReason}`,
+      ];
+      if (favouriteWood)
+        fields.push(`**What is your favourite type of wood?**\n${favouriteWood}`);
+
+      const updatedContainer = new ContainerBuilder()
+        .addSectionComponents(
+          new SectionBuilder()
+            .addTextDisplayComponents((td) =>
+              td.setContent(
+                `## Application Submitted (Edited)\n**Minecraft Username**\n${minecraftUsername}`,
+              ),
+            )
+            .setThumbnailAccessory(
+              new ThumbnailBuilder().setURL(
+                `https://api.mineatar.io/body/full/${resolved.uuid}?scale=12`,
+              ),
+            ),
+        )
+        .addTextDisplayComponents((td) => td.setContent(fields.join("\n\n")));
+
+      if (interaction.isFromMessage()) {
+        await interaction.update({
+          components: [
+            updatedContainer,
+            buildApplicationActionRow(minecraftUsername),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } else {
+        await interaction.reply({
+          components: [primaryContainer("Your application has been updated.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+      }
+      return;
+    }
+
+    // ── Shop Deed Request Modal ─────────────────────────────────────
+    if (interaction.customId === "shop_deed_modal") {
+      if (!interaction.guild || !interaction.guildId) {
+        await interaction.reply({
+          components: [
+            errorContainer("Shop deed requests can only be created in a server."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const parentChannel = interaction.channel as TextChannel | null;
+      if (!parentChannel || parentChannel.type !== ChannelType.GuildText) {
+        await interaction.reply({
+          components: [
+            errorContainer("Shop deed requests must be created from a text channel."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const eligible = await appDb
+        .isWhitelistedForCurrentSeason(interaction.user.id)
+        .catch((e) => {
+          logger.error("Shop deed: eligibility check failed:", e);
+          return false;
+        });
+      if (!eligible) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "Shop deed requests are only available to players accepted for the current season.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      const intake: Record<string, string> = {};
+      for (const field of SHOP_DEED_FIELDS) {
         try {
-          const appMessage = await interaction.channel.messages.fetch(appMessageId);
-          if (appMessage) {
-            const fields = [
-              `**Are you 17 or older?**\n${age}`,
-              `**Are you willing to speak in game?**\n${ingameVoice}`,
-              `**Why do you want to join CrabCraft?**\n${joinReason}`,
-            ];
-            if (favouriteWood)
-              fields.push(`**What is your favourite type of wood?**\n${favouriteWood}`);
-
-            const updatedContainer = new ContainerBuilder()
-              .addSectionComponents(
-                new SectionBuilder()
-                  .addTextDisplayComponents((td) =>
-                    td.setContent(
-                      `## Application Submitted (Edited)\n**Minecraft Username**\n${minecraftUsername}`,
-                    ),
-                  )
-                  .setThumbnailAccessory(
-                    new ThumbnailBuilder().setURL(
-                      `https://api.mineatar.io/body/full/${resolved.uuid}?scale=12`,
-                    ),
-                  ),
-              )
-              .addTextDisplayComponents((td) => td.setContent(fields.join("\n\n")));
-
-            const adminAcceptButton = new ButtonBuilder()
-              .setCustomId(`app_accept:${minecraftUsername}`)
-              .setLabel("Accept")
-              .setStyle(ButtonStyle.Success);
-
-            const adminRejectButton = new ButtonBuilder()
-              .setCustomId(`app_deny:${minecraftUsername}`)
-              .setLabel("Deny")
-              .setStyle(ButtonStyle.Danger);
-
-            const adminButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
-              adminAcceptButton,
-              adminRejectButton,
-            );
-
-            await appMessage.edit({
-              components: [updatedContainer, adminButtons],
-              flags: MessageFlags.IsComponentsV2,
-            });
-          }
-        } catch (e) {
-          logger.error("Failed to edit application message:", e);
+          const value = interaction.fields.getTextInputValue(field.id).trim();
+          if (value.length > 0) intake[field.id] = value;
+        } catch {
+          // Field missing - handled by required field validation below.
         }
       }
 
-      await interaction.reply({
-        components: [primaryContainer("Your application has been updated.")],
-        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      const missingRequired = SHOP_DEED_FIELDS
+        .filter((field) => field.required && !intake[field.id])
+        .map((field) => field.display);
+      if (missingRequired.length > 0) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              `Missing required field: ${missingRequired.join(", ")}.`,
+            ),
+          ],
+        });
+        return;
+      }
+
+      let thread: ThreadChannel;
+      try {
+        thread = await parentChannel.threads.create({
+          name: buildShopDeedThreadName(
+            intake.shop_name,
+            interaction.user.username,
+          ),
+          autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+          type: ChannelType.PublicThread,
+          reason: `Shop deed request by ${interaction.user.tag}`,
+        });
+      } catch (e) {
+        logger.error("Shop deed: failed to create thread:", e);
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "Failed to create the shop deed thread. Please try again or contact a moderator.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      let application: ShopDeedApplication;
+      try {
+        application = await appDb.createShopDeedApplication({
+          threadId: thread.id,
+          channelId: parentChannel.id,
+          guildId: interaction.guildId,
+          applicantDiscordId: interaction.user.id,
+          applicantDiscordUsername: interaction.user.username,
+          shopName: intake.shop_name,
+          shopDescription: intake.shop_description,
+          goodsServices: intake.goods_services,
+          location: intake.location ?? null,
+        });
+      } catch (e) {
+        logger.error("Shop deed: failed to persist request:", e);
+        await thread.delete("Shop deed request persistence failed").catch(() => null);
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "Failed to save your shop deed request. Please try again in a moment.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      try {
+        await thread.send({
+          content: `<@${interaction.user.id}>`,
+          allowedMentions: {
+            parse: [],
+            users: [interaction.user.id],
+            roles: [],
+          },
+        });
+        await thread.send({
+          components: [
+            buildShopDeedHeader(application),
+            buildShopDeedStaffButtons(application.id),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } catch (e) {
+        logger.error("Shop deed: failed to send thread header:", e);
+        await thread.send({
+          content: `Shop deed request #${String(application.id).padStart(4, "0")} was opened by ${interaction.user.username}, but the rich summary could not be posted automatically.`,
+          allowedMentions: { parse: [] },
+        }).catch((fallbackError) => {
+          logger.error("Shop deed: failed to send fallback header:", fallbackError);
+        });
+      }
+
+      await interaction.editReply({
+        components: [
+          primaryContainer(
+            `Your shop deed request is ready in <#${thread.id}>.`,
+          ),
+        ],
       });
+      await restickShopDeedPanel(interaction, parentChannel);
+      return;
+    }
+
+    // ── Shop Deed Decision Modal ────────────────────────────────────
+    if (interaction.customId.startsWith("shop_deed_decision:")) {
+      const [, rawDecision, rawId] = interaction.customId.split(":");
+      const decision = rawDecision as ShopDeedFeedbackDecision;
+      const applicationId = Number(rawId);
+      const member = interaction.member as GuildMember | null;
+
+      if (!member?.roles.cache.has(config.MOD_ROLE_ID)) {
+        await interaction.reply({
+          content: `You must have the <@&${config.MOD_ROLE_ID}> role to do this.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (
+        (decision !== "changes_requested" && decision !== "rejected") ||
+        !Number.isFinite(applicationId)
+      ) {
+        await interaction.reply({
+          components: [errorContainer("Shop deed request not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const reason = interaction.fields.getTextInputValue("reason").trim();
+      if (!reason) {
+        await interaction.reply({
+          components: [errorContainer("A decision reason is required.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (interaction.isFromMessage()) {
+        await interaction.deferUpdate();
+      } else {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      }
+
+      const application = await appDb.getShopDeedApplicationById(applicationId);
+      if (!application || application.thread_id !== interaction.channelId) {
+        await interaction.followUp({
+          components: [errorContainer("Shop deed request not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const resolved = await appDb.resolveShopDeedApplication(
+        application.id,
+        decision,
+        reason,
+        interaction.user.id,
+      );
+      if (!resolved) {
+        await interaction.followUp({
+          components: [
+            errorContainer("This shop deed request has already been processed."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (interaction.message) {
+        try {
+          await interaction.message.edit({
+            components: [
+              buildShopDeedHeader(resolved),
+              decision === "rejected"
+                ? buildDisabledShopDeedStaffButtons(resolved.id)
+                : buildShopDeedStaffButtons(resolved.id),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+        } catch (e) {
+          logger.error("Shop deed: failed to disable decision buttons:", e);
+        }
+      }
+
+      try {
+        await (interaction.channel as ThreadChannel | null)?.setName(
+          buildShopDeedThreadName(
+            resolved.shop_name,
+            resolved.applicant_discord_username,
+            resolved.status,
+          ),
+          `Shop deed ${resolved.status}`,
+        );
+      } catch (e) {
+        logger.error("Shop deed: failed to rename reviewed thread:", e);
+      }
+
+      const thread = interaction.channel as TextChannel | null;
+      if (thread) {
+        try {
+          await thread.send({
+            components: [
+              buildShopDeedDecisionNotice(
+                resolved,
+                decision,
+                interaction.user.username,
+                reason,
+              ),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+        } catch (e) {
+          logger.error("Shop deed: failed to send decision notice:", e);
+        }
+      }
+
+      if (!interaction.isFromMessage()) {
+        await interaction.editReply({
+          components: [primaryContainer("Shop deed request updated.")],
+        });
+      }
       return;
     }
 
@@ -450,6 +780,43 @@ export default class ModalInteractionEvent extends Event {
           if (value && value.trim().length > 0) intake[field.id] = value.trim();
         } catch {
           // Field missing — skip.
+        }
+      }
+
+      const missingRequired = meta.fields
+        .filter((field) => field.required && !intake[field.id])
+        .map((field) => field.display);
+      if (missingRequired.length > 0) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              `**Missing required field.** Please reopen the form and complete: ${missingRequired.join(", ")}.`,
+            ),
+          ],
+        });
+        return;
+      }
+
+      let ticketInfractionInfo: TicketInfractionInfo | null = null;
+      if (meta.category === "appeal" && intake.mc_username) {
+        const submittedUsername = intake.mc_username;
+        const resolved = await resolveUsername(submittedUsername);
+        if (resolved) {
+          intake.mc_username = resolved.name;
+          intake.resolved_minecraft_username = resolved.name;
+          intake.resolved_minecraft_uuid = resolved.uuid;
+          ticketInfractionInfo = await fetchPlayerInfractions(
+            resolved.name,
+            resolved.uuid,
+            10,
+          );
+        } else {
+          ticketInfractionInfo = {
+            username: submittedUsername,
+            uuid: null,
+            infractions: null,
+            error: "Could not resolve the submitted Minecraft username.",
+          };
         }
       }
 
@@ -552,16 +919,29 @@ export default class ModalInteractionEvent extends Event {
       }
 
       try {
-        await ticketChannel.send({ content: `<@${interaction.user.id}> <@&${config.MOD_ROLE_ID}>` });
+        await ticketChannel.send({
+          content: `<@${interaction.user.id}>`,
+          allowedMentions: {
+            parse: [],
+            users: [interaction.user.id],
+            roles: [],
+          },
+        });
         await ticketChannel.send({
           components: [
-            buildTicketHeader(ticket, meta, player, intake),
+            buildTicketHeader(ticket, meta, player, intake, ticketInfractionInfo),
             buildStaffButtons(ticket.id),
           ],
           flags: MessageFlags.IsComponentsV2,
         });
       } catch (e) {
         logger.error("Ticket: failed to send opening message:", e);
+        await ticketChannel.send({
+          content:
+            `Ticket #${String(ticket.id).padStart(4, "0")} was opened by <@${interaction.user.id}> for ${meta.label}, but the rich ticket summary could not be posted automatically.`,
+        }).catch((fallbackError) => {
+          logger.error("Ticket: failed to send fallback opening message:", fallbackError);
+        });
       }
 
       await interaction.editReply({
@@ -579,6 +959,11 @@ export default class ModalInteractionEvent extends Event {
       interaction.customId === "deny_modal" ||
       interaction.customId.startsWith("deny_modal:")
     ) {
+      // Acknowledge without a visible reply; disabling the buttons + the
+      // denial message in the channel is the confirmation. (The deny modal is
+      // always shown from the Deny button, so it is from a message.)
+      if (interaction.isFromMessage()) await interaction.deferUpdate();
+
       const reason =
         interaction.fields.getTextInputValue("deny_reason") ||
         "No reason provided";
@@ -629,21 +1014,18 @@ export default class ModalInteractionEvent extends Event {
 
       const applicantId = denyRecord?.applicant_id;
       try {
-        if (applicantId) {
-          await appChannel.send({ content: `<@${applicantId}>` });
-        }
         await appChannel.send({
-          components: [denyContainer],
+          components: [
+            ...(applicantId
+              ? [new TextDisplayBuilder().setContent(`<@${applicantId}>`)]
+              : []),
+            denyContainer,
+          ],
           flags: MessageFlags.IsComponentsV2,
         });
       } catch (e) {
         logger.error("Failed to send denial message:", e);
       }
-
-      await interaction.reply({
-        content: "Successfully denied application.",
-        flags: MessageFlags.Ephemeral,
-      });
 
       // Get MC username from modal customId (V2) or fallback to embed fields (legacy)
       const minecraftUsername = interaction.customId.includes(":")
@@ -704,6 +1086,12 @@ export default class ModalInteractionEvent extends Event {
     joinReason: string,
     favouriteWood: string,
   ) {
+    // Acknowledge the modal up-front (ephemeral). The submitted + policy
+    // messages are posted as fresh channel messages, then this ack is cleared.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const channel = interaction.channel as TextChannel;
+
     // Cancel any stale pending applications (e.g. user left and rejoined)
     try {
       await appDb.cancelPendingApplications(interaction.user.id);
@@ -727,7 +1115,7 @@ export default class ModalInteractionEvent extends Event {
     );
 
     if (mysqlRows.length > 0) {
-      await interaction.reply({
+      await interaction.editReply({
         components: [
           errorContainer("**Error!** You are already a member of CrabCraft."),
         ],
@@ -766,57 +1154,8 @@ export default class ModalInteractionEvent extends Event {
       )
       .addTextDisplayComponents((td) => td.setContent(fields.join("\n\n")));
 
-    const adminAcceptButton = new ButtonBuilder()
-      .setCustomId(`app_accept:${minecraftUsername}`)
-      .setLabel("Accept")
-      .setStyle(ButtonStyle.Success);
-
-    const adminRejectButton = new ButtonBuilder()
-      .setCustomId(`app_deny:${minecraftUsername}`)
-      .setLabel("Deny")
-      .setStyle(ButtonStyle.Danger);
-
-    const adminButtons = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      adminAcceptButton,
-      adminRejectButton,
-    );
-
-    await interaction.reply({
-      components: [submittedContainer, adminButtons],
-      flags: MessageFlags.IsComponentsV2,
-    });
-
-    // Get the application message ID so the edit button can reference it
-    const appMessage = await interaction.fetchReply().catch(() => null);
-    const appMessageId = appMessage?.id ?? "";
-
-    const agreeButton = new ButtonBuilder()
-      .setCustomId("agree")
-      .setEmoji("✅")
-      .setLabel("I Agree")
-      .setStyle(ButtonStyle.Success);
-
-    const disagreeButton = new ButtonBuilder()
-      .setCustomId("disagree")
-      .setEmoji("❎")
-      .setLabel("I Disagree")
-      .setStyle(ButtonStyle.Danger);
-
-    const editButton = new ButtonBuilder()
-      .setCustomId(`edit_app:${appMessageId}`)
-      .setLabel("Edit Application")
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji("✏️");
-
-    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      agreeButton,
-      disagreeButton,
-      editButton,
-    );
-
-    // Persist to database. The MC link in `players` is claimed at accept
-    // time only — submitting an application shouldn't yank another
-    // player's MC link out of the players table.
+    // Persist to database first; only post the application + policy if it
+    // saved. The MC link in `players` is claimed at accept time only.
     const currentSeason = await appDb.getCurrentSeason().catch(() => null);
     let persisted = false;
     try {
@@ -840,38 +1179,66 @@ export default class ModalInteractionEvent extends Event {
       logger.error("Failed to persist application to database:", e);
     }
 
-    // If we couldn't save the application, don't show the policy — the
-    // "I Agree" button would have no row to flip and staff would later
-    // see "applicant hasn't agreed to the policy yet" with no recourse.
     if (!persisted) {
-      try {
-        await interaction.followUp({
+      await channel
+        .send({
           components: [
             errorContainer(
               "**Error!** Failed to save your application. Please contact a moderator.",
             ),
           ],
           flags: MessageFlags.IsComponentsV2,
-        });
-      } catch (e) {
-        logger.error("Failed to send persist-failure notice:", e);
-      }
+        })
+        .catch((e) => logger.error("Failed to send persist-failure notice:", e));
+      await interaction.deleteReply().catch(() => null);
       return;
     }
 
-    // Policy message
+    // Application-submitted message (fresh) with Accept / Deny / Edit.
+    const submittedMessage = await channel
+      .send({
+        components: [
+          submittedContainer,
+          buildApplicationActionRow(minecraftUsername),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      })
+      .catch((e) => {
+        logger.error("Failed to send application message:", e);
+        return null;
+      });
+
+    // Policy message — sent as a reply to the application-submitted message.
     const policyContainer = primaryContainer(
       "## CrabCraft's Griefing & Stealing Policy\n**Just before we review your application, we need to ensure that you understand our policy on stealing.**\n\nWe have a zero tolerance policy towards stealing. If you steal from another player, you will be banned from the server.\nAll block interactions are logged, and all players are able to look into chest logs. This means any stealing will be traced back to the offending player.",
     );
+    const policyRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId("agree")
+        .setLabel("I Agree")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId("disagree")
+        .setLabel("I Disagree")
+        .setStyle(ButtonStyle.Danger),
+    );
 
-    try {
-      await interaction.followUp({
-        components: [policyContainer, actionRow],
+    await channel
+      .send({
+        components: [policyContainer, policyRow],
         flags: MessageFlags.IsComponentsV2,
-      });
-    } catch (e) {
-      logger.error("Failed to send policy message:", e);
-    }
+        ...(submittedMessage
+          ? {
+              reply: {
+                messageReference: submittedMessage.id,
+                failIfNotExists: false,
+              },
+            }
+          : {}),
+      })
+      .catch((e) => logger.error("Failed to send policy message:", e));
+
+    await interaction.deleteReply().catch(() => null);
   }
 
   // ── Shared: process a validated fast application ───────────────────

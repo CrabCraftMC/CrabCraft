@@ -114,7 +114,7 @@ export default function NetherPortalCalculator() {
         {/* Header */}
         <div className="text-center mb-10 animate-in">
           <h1 className="text-4xl lg:text-5xl font-bold text-orange-500 font-mc">
-            Portal Calculator
+            Portal Coordinates
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Convert coordinates between the Overworld and Nether
