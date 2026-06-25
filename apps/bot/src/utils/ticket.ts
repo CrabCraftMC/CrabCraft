@@ -13,7 +13,7 @@ import {
 import mysql from "./database.js";
 import logger from "./logger.js";
 import * as appDb from "./appDb.js";
-import type { TicketCategory, Ticket } from "./appDb.js";
+import type { TicketCategory } from "./appDb.js";
 import type { PublicInfraction, TicketInfractionInfo } from "./infractions.js";
 
 export const TICKET_INFRACTION_BUTTON_PREFIX = "ticket_infraction";
@@ -146,25 +146,10 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     accent: 0xc5a45d,
     modalTitle: "Punishment Appeal",
     headerTitle: "Punishment Appeal",
+    // We already know the appellant's Minecraft account from our database, and
+    // their punishment history is shown automatically below, so we only ask for
+    // the timing and their case.
     fields: [
-      {
-        id: "mc_username",
-        label: "Banned Minecraft username",
-        display: "Minecraft Username",
-        style: TextInputStyle.Short,
-        required: true,
-        placeholder: "Your in-game username",
-        maxLength: 32,
-      },
-      {
-        id: "ban_reason",
-        label: "Reason given for the punishment",
-        display: "Reason Given",
-        style: TextInputStyle.Short,
-        required: true,
-        placeholder: "What you were told when banned/muted",
-        maxLength: 200,
-      },
       {
         id: "ban_date",
         label: "When were you punished?",
@@ -180,7 +165,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
         display: "Appeal",
         style: TextInputStyle.Paragraph,
         required: true,
-        placeholder: "Explain in detail. Be honest — staff will check logs.",
+        placeholder: "Explain in detail. Be honest, staff will check the logs.",
         maxLength: 1500,
       },
     ],
@@ -306,24 +291,25 @@ export function buildIntakeModal(meta: CategoryMeta): ModalBuilder {
  * Shows player info + the intake answers so staff have context.
  */
 export function buildTicketHeader(
-  ticket: Ticket,
   meta: CategoryMeta,
   player: PlayerInfo,
   intake: Record<string, string>,
 ): ContainerBuilder {
-  const ticketLine = `**Ticket:** \`#${String(ticket.id).padStart(4, "0")}\``;
-  const openerLine = `**Opened by:** <@${player.discordId}> (\`${player.discordTag}\`)`;
-  const mcLine = player.minecraftUsername
-    ? `**Minecraft:** \`${player.minecraftUsername}\``
-    : "**Minecraft:** _not linked_";
-  const whitelistLine = `**Whitelist:** ${player.isWhitelisted ? "Verified" : "Not whitelisted"}`;
-  const playerCard = [
-    `## ${meta.headerTitle}`,
-    ticketLine,
-    openerLine,
-    mcLine,
-    whitelistLine,
-  ].join("\n");
+  // The opener is pinged in the message above this one and the channel is named
+  // after them, so the header intentionally omits the ticket id and "opened by".
+  const isAppeal = meta.category === "appeal";
+
+  const cardLines = [`## ${meta.headerTitle}`];
+  // Appeals carry the player in the infraction footer below, so keep it minimal.
+  if (!isAppeal) {
+    cardLines.push(
+      player.minecraftUsername
+        ? `**Minecraft:** \`${player.minecraftUsername}\``
+        : "**Minecraft:** _not linked_",
+      `**Whitelist:** ${player.isWhitelisted ? "Verified" : "Not whitelisted"}`,
+    );
+  }
+  const playerCard = cardLines.join("\n");
 
   // Build the intake summary from the modal fields, keeping submission order.
   const intakeLines: string[] = [];
@@ -360,6 +346,11 @@ type TicketOpeningComponent =
   | ContainerBuilder
   | ActionRowBuilder<ButtonBuilder>;
 
+/**
+ * The appeal punishment record, rendered as a quiet, footer-style panel:
+ * a colourless container of Discord subtext (`-#`) showing one punishment at a
+ * time. Prev/Next buttons page through the record when there's more than one.
+ */
 export function buildTicketInfractionComponents(
   ticketId: number,
   info: TicketInfractionInfo | null | undefined,
@@ -367,53 +358,29 @@ export function buildTicketInfractionComponents(
 ): TicketOpeningComponent[] {
   if (!info) return [];
 
-  const error = info.error;
-  if (error) {
+  const name = safeText(info.username, 24);
+
+  if (info.error) {
     return [
-      new ContainerBuilder()
-        .setAccentColor(0xc5a45d)
-        .addTextDisplayComponents((td) =>
-          td.setContent(
-            [
-              "## Past Infractions",
-              `**Player:** \`${safeText(info.username, 32)}\``,
-              "",
-              `Could not load LiteBans history automatically: ${safeText(error, 180)}`,
-            ].join("\n"),
-          ),
-        ),
+      footerContainer(
+        `-# 👤 \`${name}\` · could not load punishment history (${safeText(info.error, 120)})`,
+      ),
     ];
   }
 
   if (!info.infractions || info.infractions.length === 0) {
-    return [
-      new ContainerBuilder()
-        .setAccentColor(0x7b8794)
-        .addTextDisplayComponents((td) =>
-          td.setContent(
-            [
-              "## Past Infractions",
-              `**Player:** \`${safeText(info.username, 32)}\``,
-              "",
-              "No LiteBans infractions were found for this player.",
-            ].join("\n"),
-          ),
-        ),
-    ];
+    return [footerContainer(`-# 👤 \`${name}\` · no punishments on record`)];
   }
 
   const lastPage = info.infractions.length - 1;
   const safePage = Math.max(0, Math.min(page, lastPage));
   const infraction = info.infractions[safePage];
   if (!infraction) return [];
+
   const components: TicketOpeningComponent[] = [
-    new ContainerBuilder()
-      .setAccentColor(0xc5a45d)
-      .addTextDisplayComponents((td) =>
-        td.setContent(
-          formatInfractionPanel(info, infraction, safePage, info.infractions!.length),
-        ),
-      ),
+    footerContainer(
+      formatInfractionFooter(name, infraction, safePage, info.infractions.length),
+    ),
   ];
 
   if (info.infractions.length > 1) {
@@ -423,44 +390,37 @@ export function buildTicketInfractionComponents(
   return components;
 }
 
-function formatInfractionPanel(
-  info: TicketInfractionInfo,
+/** A colourless container holding the footer-style infraction text. */
+function footerContainer(content: string): ContainerBuilder {
+  return new ContainerBuilder().addTextDisplayComponents((td) =>
+    td.setContent(content),
+  );
+}
+
+function formatInfractionFooter(
+  name: string,
   infraction: PublicInfraction,
   page: number,
   total: number,
 ): string {
-  const id = Number.isFinite(infraction.id) ? `#${infraction.id}` : "#?";
   const type = formatInfractionType(infraction.type);
   const status = infractionStatus(infraction);
-  const created = infraction.created_at > 0
-    ? `<t:${infraction.created_at}:f>`
+  const when = infraction.created_at > 0
+    ? `<t:${infraction.created_at}:d>`
     : "unknown date";
-  const reason = safeText(infraction.reason ?? "No reason provided", 280);
   const staff = safeText(infraction.staff ?? "Unknown", 48);
-  const lines = [
-    "## Past Infractions",
-    `**Player:** \`${safeText(info.username, 32)}\``,
-    `**Record:** ${page + 1} of ${total}`,
-    "",
-    `### ${type} ${id}`,
-    `**Status:** ${status}`,
-    `**Issued:** ${created}`,
-    `**Reason:** ${reason}`,
-    `**Staff:** ${staff}`,
-  ];
+  const reason = safeText(infraction.reason ?? "No reason given", 160);
 
-  if (infraction.expires_at) {
-    lines.push(`**Expires:** <t:${infraction.expires_at}:f>`);
-  }
+  const lines = [
+    `-# 👤 \`${name}\` · punishment ${page + 1} of ${total}`,
+    `-# **${type}** · ${status} · ${when} · by ${staff}`,
+    `-# Reason: ${reason}`,
+  ];
   if (infraction.removed) {
     lines.push(
-      `**Removed by:** ${safeText(infraction.removed_by ?? "Unknown", 48)}`,
+      `-# Removed by ${safeText(infraction.removed_by ?? "Unknown", 48)}`,
     );
-    if (infraction.removed_at) {
-      lines.push(`**Removed:** <t:${infraction.removed_at}:f>`);
-    }
   }
-
   return lines.join("\n");
 }
 

@@ -492,7 +492,11 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      // Defer with the Components V2 flag so the follow-up editReply containers
+      // render. The flag is fixed at message creation and cannot be added later.
+      await interaction.deferReply({
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
 
       const eligible = await appDb
         .isWhitelistedForCurrentSeason(interaction.user.id)
@@ -659,7 +663,9 @@ export default class ModalInteractionEvent extends Event {
       if (interaction.isFromMessage()) {
         await interaction.deferUpdate();
       } else {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        });
       }
 
       const application = await appDb.getShopDeedApplicationById(applicationId);
@@ -776,7 +782,11 @@ export default class ModalInteractionEvent extends Event {
         logger.error("Ticket: rate-limit re-check failed:", e);
       }
 
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      // Defer with the Components V2 flag so the follow-up editReply containers
+      // render. The flag is fixed at message creation and cannot be added later.
+      await interaction.deferReply({
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
 
       // Collect intake field values.
       const intake: Record<string, string> = {};
@@ -803,25 +813,35 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
+      // Pull player context up-front: it provides the linked Minecraft account
+      // used for the appeal punishment lookup, and is reused for the ticket row
+      // and header below.
+      const player = await getPlayerInfo(
+        interaction.user.id,
+        interaction.user.tag,
+      );
+
+      // Appeals: look up the punishment history from the account we already have
+      // on file (we no longer ask the user for their username). Persist the
+      // resolved name + uuid on the ticket so the Prev/Next pager can re-fetch.
       let ticketInfractionInfo: TicketInfractionInfo | null = null;
-      if (meta.category === "appeal" && intake.mc_username) {
-        const submittedUsername = intake.mc_username;
-        const resolved = await resolveUsername(submittedUsername);
-        if (resolved) {
-          intake.mc_username = resolved.name;
-          intake.resolved_minecraft_username = resolved.name;
-          intake.resolved_minecraft_uuid = resolved.uuid;
+      if (meta.category === "appeal") {
+        if (player.minecraftUuid) {
+          const lookupName =
+            player.minecraftUsername ?? interaction.user.username;
+          intake.resolved_minecraft_username = lookupName;
+          intake.resolved_minecraft_uuid = player.minecraftUuid;
           ticketInfractionInfo = await fetchPlayerInfractions(
-            resolved.name,
-            resolved.uuid,
+            lookupName,
+            player.minecraftUuid,
             25,
           );
         } else {
           ticketInfractionInfo = {
-            username: submittedUsername,
+            username: player.minecraftUsername ?? interaction.user.username,
             uuid: null,
             infractions: null,
-            error: "Could not resolve the submitted Minecraft username.",
+            error: "no linked Minecraft account on file",
           };
         }
       }
@@ -894,9 +914,6 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
-      // Pull player context first so we can persist the MC link on the ticket row.
-      const player = await getPlayerInfo(interaction.user.id, interaction.user.tag);
-
       let ticket;
       try {
         ticket = await appDb.createTicket({
@@ -927,7 +944,7 @@ export default class ModalInteractionEvent extends Event {
       try {
         await ticketChannel.send({
           components: [
-            buildTicketHeader(ticket, meta, player, intake),
+            buildTicketHeader(meta, player, intake),
             ...buildTicketInfractionComponents(ticket.id, ticketInfractionInfo),
             buildStaffButtons(ticket.id),
           ],
