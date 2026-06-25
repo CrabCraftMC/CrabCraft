@@ -58,7 +58,7 @@ public class ConnectionListener {
             plugin.runDatabaseTask("login-streak-record", () -> {
                 var snapshot = streakService.recordLogin(uuid);
                 if (snapshot != null && streakPublisher != null) {
-                    streakPublisher.publish(uuid, snapshot, streakService.getBufferHours());
+                    streakPublisher.publish(uuid, snapshot, streakService.getResetHourUtc());
                 }
             });
         }

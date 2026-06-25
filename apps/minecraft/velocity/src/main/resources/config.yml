@@ -68,13 +68,15 @@ database:
   username: "crabcraft"
   password: ""
 
-# All-time login streaks. The proxy increments a player's streak on
-# join when the gap since their previous login is greater than 12h
-# (so a single play session doesn't double-count) and at most
-# `buffer-hours` (so a 30-hour gap still counts as consecutive).
-# Outside that window the streak resets to 1.
+# All-time login streaks. The streak counts the days a player logs in.
+# A "day" is a fixed 24-hour window that rolls over at reset-hour-utc:00
+# UTC (06:00 by default — a quiet hour for a UK-centric server). Each new
+# day a player logs in adds +1. Missing a single day is forgiven (the
+# streak holds but earns no point); missing two days in a row resets it
+# to 1. Example: logging in Mon/Tue/Wed gives 3; Mon/Wed (missing Tue)
+# gives 2; Mon then Thu (missing Tue and Wed) resets to 1.
 login-streaks:
-  buffer-hours: 36
+  reset-hour-utc: 6
 
 # Automatic updates — polls GitHub Releases and downloads the new proxy JAR to
 # plugins/CrabUtilities-Velocity.jar.staged. Stop the proxy, replace the live

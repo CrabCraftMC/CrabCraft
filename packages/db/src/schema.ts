@@ -262,10 +262,11 @@ export const mcLoginHistory = pgTable("mc_login_history", {
 
 // ── player_login_streaks ───────────────────────────────────────
 // All-time login streaks per Minecraft account. Updated by the
-// Velocity proxy on every join: the streak increments when the
-// gap since the previous login is between the "same session"
-// floor (12h) and the configurable buffer ceiling (default 36h).
-// Outside that window it resets to 1.
+// Velocity proxy on every join: the streak counts the days a player
+// has logged in, where a "day" is a fixed 24-hour window rolling over
+// at a configured hour (06:00 UTC by default). A new day's login adds
+// +1; a single missed day is forgiven (streak holds, no point); two
+// missed days in a row reset it to 1.
 export const playerLoginStreaks = pgTable(
   "player_login_streaks",
   {
