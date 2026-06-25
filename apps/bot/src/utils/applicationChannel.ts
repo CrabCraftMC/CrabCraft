@@ -59,7 +59,7 @@ export function buildApplyButton(): ActionRowBuilder<ButtonBuilder> {
 /** The Application Hub panel (posted via /admin send). */
 export function buildApplicationHubContainer() {
   return primaryContainer(
-    `## <:Crab:1397355651822256299> Application Hub\nWant to join CrabCraft, or did your application channel close due to inactivity?\n\nClick the button below to open a fresh application channel — only you and our staff can see it.`,
+    `## <:Crab:1397355651822256299> Welcome to CrabCraft\nIf you can see this message, it's because you are not yet whitelisted on our server.\n\nYou can get whitelisted by clicking the button below this message and filling out a short form. One of our moderators will get back to you as soon as possible.`,
   );
 }
 

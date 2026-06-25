@@ -43,6 +43,7 @@ import {
   buildShopDeedModal,
   buildShopDeedThreadName,
 } from "../utils/shopDeed.js";
+import { buildDenyModal } from "../utils/denyReasons.js";
 
 function intakeString(intake: unknown, key: string): string | null {
   if (typeof intake !== "object" || intake === null) return null;
@@ -76,8 +77,12 @@ export default class ButtonInteractionEvent extends Event {
 
       if (member.roles.cache.has(config.MEMBER_ROLE_ID)) {
         await interaction.reply({
-          content: "You're already a member of CrabCraft 🎉",
-          flags: MessageFlags.Ephemeral,
+          components: [
+            successContainer(
+              "## <:Crab:1397355651822256299> You're already in!\nYou're already a member of CrabCraft, so there's no need to apply again. Enjoy your stay!",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         });
         return;
       }
@@ -669,23 +674,7 @@ export default class ButtonInteractionEvent extends Event {
         ? interaction.customId.split(":")[1]
         : "";
 
-      const denyModal = new ModalBuilder()
-        .setCustomId(minecraftUsername ? `deny_modal:${minecraftUsername}` : "deny_modal")
-        .setTitle("Deny Application");
-
-      const reasonInput = new TextInputBuilder()
-        .setCustomId("deny_reason")
-        .setLabel("Reason (Optional)")
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(false);
-
-      const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
-        reasonInput,
-      );
-
-      denyModal.addComponents(actionRow);
-
-      await interaction.showModal(denyModal);
+      await interaction.showModal(buildDenyModal(minecraftUsername));
     }
 
     // ── Tickets ──────────────────────────────────────────────────

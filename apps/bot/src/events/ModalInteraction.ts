@@ -48,6 +48,11 @@ import {
   getPlayerInfo,
 } from "../utils/ticket.js";
 import {
+  DENY_REASON_CUSTOM_ID,
+  DENY_REASON_PRESET_SELECT_ID,
+  resolveDenyReason,
+} from "../utils/denyReasons.js";
+import {
   SHOP_DEED_FIELDS,
   buildDisabledShopDeedStaffButtons,
   buildShopDeedPanel,
@@ -968,9 +973,26 @@ export default class ModalInteractionEvent extends Event {
       // always shown from the Deny button, so it is from a message.)
       if (interaction.isFromMessage()) await interaction.deferUpdate();
 
-      const reason =
-        interaction.fields.getTextInputValue("deny_reason") ||
-        "No reason provided";
+      // The deny modal leads with a preset-reason dropdown and a custom-reason
+      // text box. Either may be absent (both are optional), so read each
+      // defensively and let resolveDenyReason combine them.
+      let presetValue: string | undefined;
+      try {
+        presetValue = interaction.fields.getStringSelectValues(
+          DENY_REASON_PRESET_SELECT_ID,
+        )[0];
+      } catch {
+        presetValue = undefined;
+      }
+      let customReason = "";
+      try {
+        customReason = interaction.fields.getTextInputValue(
+          DENY_REASON_CUSTOM_ID,
+        );
+      } catch {
+        customReason = "";
+      }
+      const reason = resolveDenyReason(presetValue, customReason);
 
       const denyContainer = errorContainer(
         `## Application Denied\nYour application has been **denied**.\n**Reason**\n\`\`\`${reason}\`\`\`\n-# Channel will be deleted in 12 hours`,
