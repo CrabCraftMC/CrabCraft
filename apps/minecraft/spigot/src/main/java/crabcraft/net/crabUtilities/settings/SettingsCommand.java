@@ -1,6 +1,5 @@
 package crabcraft.net.crabUtilities.settings;
 
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -42,7 +41,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(Component.text("Only players can use /settings."));
+            sender.sendMessage(miniMessage.deserialize("<#f77069>Only players can use /settings."));
             return true;
         }
 
@@ -50,7 +49,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
         // otherwise we could show/save the default over their real value.
         if (!settingsService.isLoaded(player.getUniqueId())) {
             player.sendMessage(miniMessage.deserialize(
-                    "<gray>Your settings are still loading — try again in a moment.</gray>"));
+                    "<#b0b0b0>Your settings are still loading, try again in a moment."));
             return true;
         }
 
@@ -63,23 +62,23 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
             UUID uuid = player.getUniqueId();
             if (args.length == 1) {
                 player.sendMessage(miniMessage.deserialize(
-                        "<gray>Phantoms are currently " + describe(settingsService.getPhantomMode(uuid)) + "</gray>"));
+                        "<#FC835C>Phantoms: " + settingsService.getPhantomMode(uuid).coloredLabel()));
                 return true;
             }
             PhantomMode mode = parseMode(args[1]);
             if (mode == null) {
                 player.sendMessage(miniMessage.deserialize(
-                        "<red>Usage: /settings phantoms <on|off|safe></red>"));
+                        "<#f77069>Usage: /settings phantoms <on|off|safe>"));
                 return true;
             }
             settingsService.setPhantomMode(uuid, mode);
             player.sendMessage(miniMessage.deserialize(
-                    "<gray>Phantoms are now " + describe(mode) + "</gray>"));
+                    "<#FC835C>Phantoms set to " + mode.coloredLabel() + "<#FC835C>."));
             return true;
         }
 
         player.sendMessage(miniMessage.deserialize(
-                "<red>Usage: /settings [phantoms <on|off|safe>]</red>"));
+                "<#f77069>Usage: /settings [phantoms <on|off|safe>]"));
         return true;
     }
 
@@ -88,17 +87,8 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
         return switch (token.toLowerCase(Locale.ROOT)) {
             case "on", "enable", "enabled", "true" -> PhantomMode.ON;
             case "off", "disable", "disabled", "false" -> PhantomMode.OFF;
-            case "safe" -> PhantomMode.SAFE;
+            case "safe", "dontattack", "dont-attack", "noattack", "no-attack" -> PhantomMode.SAFE;
             default -> null;
-        };
-    }
-
-    /** A short coloured MiniMessage fragment describing a mode and its effect. */
-    private static String describe(PhantomMode mode) {
-        return switch (mode) {
-            case ON -> "<green>on</green> <gray>(phantoms spawn and attack you).</gray>";
-            case OFF -> "<red>off</red> <gray>(no phantoms spawn near or attack you).</gray>";
-            case SAFE -> "<yellow>safe</yellow> <gray>(phantoms spawn but won't attack you).</gray>";
         };
     }
 
