@@ -16,7 +16,7 @@ import * as appDb from "./appDb.js";
 import type { TicketCategory, Ticket } from "./appDb.js";
 import type { PublicInfraction, TicketInfractionInfo } from "./infractions.js";
 
-const INFRACTION_SUMMARY_CHAR_BUDGET = 3400;
+export const TICKET_INFRACTION_BUTTON_PREFIX = "ticket_infraction";
 
 // ── Category metadata ──────────────────────────────────────────────
 
@@ -28,8 +28,8 @@ export interface CategoryMeta {
   prefix: string;
   /** Discord button style on the trigger embed. */
   buttonStyle: ButtonStyle;
-  /** Container accent colour name (resolveColor). */
-  accent: "Blurple" | "Red" | "Yellow";
+  /** Softer container accent colour. */
+  accent: number;
   modalTitle: string;
   fields: TicketField[];
   /** Heading shown at the top of the ticket thread once opened. */
@@ -56,7 +56,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     emoji: "❓",
     prefix: "gq",
     buttonStyle: ButtonStyle.Primary,
-    accent: "Blurple",
+    accent: 0x7584d6,
     modalTitle: "General Question",
     headerTitle: "General Question",
     fields: [
@@ -86,7 +86,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     emoji: "⚠️",
     prefix: "rg",
     buttonStyle: ButtonStyle.Danger,
-    accent: "Red",
+    accent: 0xc46f62,
     modalTitle: "Report Griefing / Stealing",
     headerTitle: "Griefing / Stealing Report",
     fields: [
@@ -143,7 +143,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     emoji: "📜",
     prefix: "pa",
     buttonStyle: ButtonStyle.Secondary,
-    accent: "Yellow",
+    accent: 0xc5a45d,
     modalTitle: "Punishment Appeal",
     headerTitle: "Punishment Appeal",
     fields: [
@@ -310,16 +310,15 @@ export function buildTicketHeader(
   meta: CategoryMeta,
   player: PlayerInfo,
   intake: Record<string, string>,
-  infractionInfo?: TicketInfractionInfo | null,
 ): ContainerBuilder {
   const ticketLine = `**Ticket:** \`#${String(ticket.id).padStart(4, "0")}\``;
   const openerLine = `**Opened by:** <@${player.discordId}> (\`${player.discordTag}\`)`;
   const mcLine = player.minecraftUsername
     ? `**Minecraft:** \`${player.minecraftUsername}\``
     : "**Minecraft:** _not linked_";
-  const whitelistLine = `**Whitelist:** ${player.isWhitelisted ? "✅ Verified" : "❌ Not whitelisted"}`;
+  const whitelistLine = `**Whitelist:** ${player.isWhitelisted ? "Verified" : "Not whitelisted"}`;
   const playerCard = [
-    `## ${meta.emoji} ${meta.headerTitle}`,
+    `## ${meta.headerTitle}`,
     ticketLine,
     openerLine,
     mcLine,
@@ -334,9 +333,7 @@ export function buildTicketHeader(
     intakeLines.push(`**${field.display}**\n${value}`);
   }
 
-  const container = new ContainerBuilder().setAccentColor(
-    resolveColor(meta.accent),
-  );
+  const container = new ContainerBuilder().setAccentColor(meta.accent);
 
   if (player.skinUrl) {
     container.addSectionComponents(
@@ -356,82 +353,165 @@ export function buildTicketHeader(
     );
   }
 
-  if (infractionInfo) {
-    container.addTextDisplayComponents((td) =>
-      td.setContent(formatInfractionInfo(infractionInfo)),
-    );
-  }
-
   return container;
 }
 
-function formatInfractionInfo(info: TicketInfractionInfo): string {
-  const lines = [
-    "## Past Infractions",
-    `**Appeal target:** \`${safeText(info.username, 32)}\``,
-    info.uuid ? `**UUID:** \`${info.uuid}\`` : "**UUID:** _not resolved_",
-  ];
+type TicketOpeningComponent =
+  | ContainerBuilder
+  | ActionRowBuilder<ButtonBuilder>;
 
-  if (info.error) {
-    lines.push(
-      "",
-      `_Could not load LiteBans history automatically: ${safeText(info.error, 160)}_`,
-    );
-    return lines.join("\n");
+export function buildTicketInfractionComponents(
+  ticketId: number,
+  info: TicketInfractionInfo | null | undefined,
+  page = 0,
+): TicketOpeningComponent[] {
+  if (!info) return [];
+
+  const error = info.error;
+  if (error) {
+    return [
+      new ContainerBuilder()
+        .setAccentColor(0xc5a45d)
+        .addTextDisplayComponents((td) =>
+          td.setContent(
+            [
+              "## Past Infractions",
+              `**Player:** \`${safeText(info.username, 32)}\``,
+              "",
+              `Could not load LiteBans history automatically: ${safeText(error, 180)}`,
+            ].join("\n"),
+          ),
+        ),
+    ];
   }
 
   if (!info.infractions || info.infractions.length === 0) {
-    lines.push("", "_No LiteBans infractions found for this UUID._");
-    return lines.join("\n");
+    return [
+      new ContainerBuilder()
+        .setAccentColor(0x7b8794)
+        .addTextDisplayComponents((td) =>
+          td.setContent(
+            [
+              "## Past Infractions",
+              `**Player:** \`${safeText(info.username, 32)}\``,
+              "",
+              "No LiteBans infractions were found for this player.",
+            ].join("\n"),
+          ),
+        ),
+    ];
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  let rendered = lines.join("\n");
-  let shown = 0;
-  for (const infraction of info.infractions.slice(0, 10)) {
-    const entry = `\n\n${formatInfractionLine(infraction, now)}`;
-    if (rendered.length + entry.length > INFRACTION_SUMMARY_CHAR_BUDGET) {
-      break;
-    }
-    rendered += entry;
-    shown += 1;
+  const lastPage = info.infractions.length - 1;
+  const safePage = Math.max(0, Math.min(page, lastPage));
+  const infraction = info.infractions[safePage];
+  if (!infraction) return [];
+  const components: TicketOpeningComponent[] = [
+    new ContainerBuilder()
+      .setAccentColor(0xc5a45d)
+      .addTextDisplayComponents((td) =>
+        td.setContent(
+          formatInfractionPanel(info, infraction, safePage, info.infractions!.length),
+        ),
+      ),
+  ];
+
+  if (info.infractions.length > 1) {
+    components.push(buildInfractionNavigation(ticketId, safePage, lastPage));
   }
 
-  const remaining = info.infractions.length - shown;
-  if (remaining > 0) {
-    const suffix = `\n\n_${remaining} more infraction${remaining === 1 ? "" : "s"} omitted from this summary._`;
-    if (rendered.length + suffix.length <= INFRACTION_SUMMARY_CHAR_BUDGET) {
-      rendered += suffix;
-    }
-  }
-  return rendered;
+  return components;
 }
 
-function formatInfractionLine(infraction: PublicInfraction, now: number): string {
+function formatInfractionPanel(
+  info: TicketInfractionInfo,
+  infraction: PublicInfraction,
+  page: number,
+  total: number,
+): string {
   const id = Number.isFinite(infraction.id) ? `#${infraction.id}` : "#?";
-  const type = infraction.type.toUpperCase();
-  const status = infractionStatus(infraction, now);
+  const type = formatInfractionType(infraction.type);
+  const status = infractionStatus(infraction);
   const created = infraction.created_at > 0
     ? `<t:${infraction.created_at}:f>`
     : "unknown date";
-  const reason = safeText(infraction.reason ?? "No reason provided", 140);
+  const reason = safeText(infraction.reason ?? "No reason provided", 280);
   const staff = safeText(infraction.staff ?? "Unknown", 48);
-  const extra = infraction.removed
-    ? `\nRemoved by: ${safeText(infraction.removed_by ?? "Unknown", 48)}`
-    : "";
-  return `**${type} ${id}** - ${status} - ${created}\nReason: ${reason}\nStaff: ${staff}${extra}`;
+  const lines = [
+    "## Past Infractions",
+    `**Player:** \`${safeText(info.username, 32)}\``,
+    `**Record:** ${page + 1} of ${total}`,
+    "",
+    `### ${type} ${id}`,
+    `**Status:** ${status}`,
+    `**Issued:** ${created}`,
+    `**Reason:** ${reason}`,
+    `**Staff:** ${staff}`,
+  ];
+
+  if (infraction.expires_at) {
+    lines.push(`**Expires:** <t:${infraction.expires_at}:f>`);
+  }
+  if (infraction.removed) {
+    lines.push(
+      `**Removed by:** ${safeText(infraction.removed_by ?? "Unknown", 48)}`,
+    );
+    if (infraction.removed_at) {
+      lines.push(`**Removed:** <t:${infraction.removed_at}:f>`);
+    }
+  }
+
+  return lines.join("\n");
 }
 
-function infractionStatus(infraction: PublicInfraction, now: number): string {
-  if (infraction.removed) return "removed";
-  if (infraction.active === true) {
-    if (!infraction.expires_at) return "active, permanent";
-    return `active, expires <t:${infraction.expires_at}:R>`;
+function buildInfractionNavigation(
+  ticketId: number,
+  page: number,
+  lastPage: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${TICKET_INFRACTION_BUTTON_PREFIX}:${ticketId}:${page - 1}`)
+      .setLabel("Previous")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === 0),
+    new ButtonBuilder()
+      .setCustomId(`${TICKET_INFRACTION_BUTTON_PREFIX}:${ticketId}:current`)
+      .setLabel(`${page + 1} of ${lastPage + 1}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`${TICKET_INFRACTION_BUTTON_PREFIX}:${ticketId}:${page + 1}`)
+      .setLabel("Next")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === lastPage),
+  );
+}
+
+function formatInfractionType(type: PublicInfraction["type"]): string {
+  switch (type) {
+    case "ban":
+      return "Ban";
+    case "mute":
+      return "Mute";
+    case "warning":
+      return "Warning";
+    case "kick":
+      return "Kick";
   }
-  if (infraction.expires_at && infraction.expires_at <= now) return "expired";
-  if (infraction.active === false) return "inactive";
-  if (!infraction.expires_at) return "recorded";
-  return `expires <t:${infraction.expires_at}:R>`;
+}
+
+function infractionStatus(infraction: PublicInfraction): string {
+  const now = Math.floor(Date.now() / 1000);
+  if (infraction.removed) return "Removed";
+  if (infraction.active === true) {
+    if (!infraction.expires_at) return "Active, permanent";
+    return `Active, expires <t:${infraction.expires_at}:R>`;
+  }
+  if (infraction.expires_at && infraction.expires_at <= now) return "Expired";
+  if (infraction.active === false) return "Inactive";
+  if (!infraction.expires_at) return "Recorded";
+  return `Expires <t:${infraction.expires_at}:R>`;
 }
 
 function safeText(value: string, maxLength: number): string {
@@ -453,7 +533,6 @@ export function buildStaffButtons(
     new ButtonBuilder()
       .setCustomId(`ticket_close:${ticketId}`)
       .setLabel("Close Ticket")
-      .setEmoji("🔒")
       .setStyle(ButtonStyle.Danger),
   );
 }
@@ -466,7 +545,6 @@ export function buildDisabledStaffButtons(
     new ButtonBuilder()
       .setCustomId(`ticket_close:${ticketId}`)
       .setLabel("Close Ticket")
-      .setEmoji("🔒")
       .setStyle(ButtonStyle.Danger)
       .setDisabled(true),
   );
@@ -481,7 +559,7 @@ export function buildClosedNotice(
     .setAccentColor(resolveColor("DarkButNotBlack"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `## 🔒 Ticket Closed\nClosed by ${closedByMention}.\n-# This channel will be deleted <t:${deleteAtEpochSeconds}:R>. Mods can reopen below to restore opener access.`,
+        `## Ticket Closed\nClosed by ${closedByMention}.\n-# This channel will be deleted <t:${deleteAtEpochSeconds}:R>. Mods can reopen below to restore opener access.`,
       ),
     );
 }
@@ -494,7 +572,6 @@ export function buildReopenButton(
     new ButtonBuilder()
       .setCustomId(`ticket_reopen:${ticketId}`)
       .setLabel("Reopen Ticket")
-      .setEmoji("🔓")
       .setStyle(ButtonStyle.Success),
   );
 }
@@ -507,7 +584,6 @@ export function buildDisabledReopenButton(
     new ButtonBuilder()
       .setCustomId(`ticket_reopen:${ticketId}`)
       .setLabel("Reopen Ticket")
-      .setEmoji("🔓")
       .setStyle(ButtonStyle.Success)
       .setDisabled(true),
   );
@@ -519,7 +595,7 @@ export function buildReopenedNotice(reopenedByMention: string): ContainerBuilder
     .setAccentColor(resolveColor("Green"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `## 🔓 Ticket Reopened\nReopened by ${reopenedByMention}. The opener has been restored to the channel.`,
+        `## Ticket Reopened\nReopened by ${reopenedByMention}. The opener has been restored to the channel.`,
       ),
     );
 }

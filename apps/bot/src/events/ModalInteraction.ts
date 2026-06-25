@@ -43,6 +43,7 @@ import {
   buildChannelName,
   buildStaffButtons,
   buildTicketHeader,
+  buildTicketInfractionComponents,
   getCategoryMeta,
   getPlayerInfo,
 } from "../utils/ticket.js";
@@ -808,7 +809,7 @@ export default class ModalInteractionEvent extends Event {
           ticketInfractionInfo = await fetchPlayerInfractions(
             resolved.name,
             resolved.uuid,
-            10,
+            25,
           );
         } else {
           ticketInfractionInfo = {
@@ -920,18 +921,16 @@ export default class ModalInteractionEvent extends Event {
 
       try {
         await ticketChannel.send({
-          content: `<@${interaction.user.id}>`,
+          components: [
+            buildTicketHeader(ticket, meta, player, intake),
+            ...buildTicketInfractionComponents(ticket.id, ticketInfractionInfo),
+            buildStaffButtons(ticket.id),
+          ],
           allowedMentions: {
             parse: [],
             users: [interaction.user.id],
             roles: [],
           },
-        });
-        await ticketChannel.send({
-          components: [
-            buildTicketHeader(ticket, meta, player, intake, ticketInfractionInfo),
-            buildStaffButtons(ticket.id),
-          ],
           flags: MessageFlags.IsComponentsV2,
         });
       } catch (e) {
@@ -939,6 +938,11 @@ export default class ModalInteractionEvent extends Event {
         await ticketChannel.send({
           content:
             `Ticket #${String(ticket.id).padStart(4, "0")} was opened by <@${interaction.user.id}> for ${meta.label}, but the rich ticket summary could not be posted automatically.`,
+          allowedMentions: {
+            parse: [],
+            users: [interaction.user.id],
+            roles: [],
+          },
         }).catch((fallbackError) => {
           logger.error("Ticket: failed to send fallback opening message:", fallbackError);
         });
@@ -947,7 +951,7 @@ export default class ModalInteractionEvent extends Event {
       await interaction.editReply({
         components: [
           primaryContainer(
-            `### ${meta.emoji} Ticket Opened\nYour **${meta.label}** ticket is ready in <#${ticketChannel.id}>.`,
+            `### Ticket Opened\nYour **${meta.label}** ticket is ready in <#${ticketChannel.id}>.`,
           ),
         ],
       });

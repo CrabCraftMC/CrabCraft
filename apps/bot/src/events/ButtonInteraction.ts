@@ -21,17 +21,20 @@ import { createApplicationChannelFor } from "../utils/applicationChannel.js";
 import mysql from "../utils/database.js";
 import * as appDb from "../utils/appDb.js";
 import { resolveUsername } from "../utils/mojang.js";
+import { fetchPlayerInfractions } from "../utils/infractions.js";
 import { CHANNEL_DELETE_DELAY_MS, TICKET_DELETE_DELAY_MS } from "../utils/constants.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
 import {
   buildClosedNotice,
   buildDisabledReopenButton,
   buildDisabledStaffButtons,
+  buildTicketInfractionComponents,
   buildIntakeModal,
   buildReopenButton,
   buildReopenedNotice,
   buildStaffButtons,
   getCategoryMeta,
+  TICKET_INFRACTION_BUTTON_PREFIX,
 } from "../utils/ticket.js";
 import {
   buildDisabledShopDeedStaffButtons,
@@ -40,6 +43,14 @@ import {
   buildShopDeedModal,
   buildShopDeedThreadName,
 } from "../utils/shopDeed.js";
+
+function intakeString(intake: unknown, key: string): string | null {
+  if (typeof intake !== "object" || intake === null) return null;
+  const value = (intake as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
 
 export default class ButtonInteractionEvent extends Event {
   constructor() {
@@ -712,6 +723,72 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       await interaction.showModal(buildIntakeModal(meta));
+      return;
+    }
+
+    // Appeal infraction navigation: update only the infraction panel in-place.
+    if (interaction.customId.startsWith(`${TICKET_INFRACTION_BUTTON_PREFIX}:`)) {
+      const [, ticketIdRaw, pageRaw] = interaction.customId.split(":");
+      const ticketId = Number(ticketIdRaw);
+      const page = Number(pageRaw);
+      if (!Number.isFinite(ticketId) || !Number.isFinite(page)) return;
+
+      await interaction.deferUpdate();
+
+      const ticket = await appDb.getTicketById(ticketId);
+      if (!ticket) {
+        await interaction.followUp({
+          components: [errorContainer("Ticket not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (ticket.channel_id !== interaction.channelId) {
+        await interaction.followUp({
+          components: [errorContainer("This button is not for this channel.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const username =
+        intakeString(ticket.intake, "resolved_minecraft_username") ??
+        intakeString(ticket.intake, "mc_username");
+      const uuid = intakeString(ticket.intake, "resolved_minecraft_uuid");
+      if (!username || !uuid) {
+        await interaction.followUp({
+          components: [errorContainer("Infraction history is unavailable for this ticket.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const infractionInfo = await fetchPlayerInfractions(username, uuid, 25);
+
+      const navIndex = interaction.message.components.findIndex((component) =>
+        component.type === ComponentType.ActionRow &&
+        component.components.some((child) =>
+          "customId" in child &&
+          typeof child.customId === "string" &&
+          child.customId.startsWith(`${TICKET_INFRACTION_BUTTON_PREFIX}:`),
+        ),
+      );
+      if (navIndex <= 0) {
+        await interaction.followUp({
+          components: [errorContainer("Could not update the infraction panel.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.editReply({
+        components: [
+          ...interaction.message.components.slice(0, navIndex - 1),
+          ...buildTicketInfractionComponents(ticket.id, infractionInfo, page),
+          ...interaction.message.components.slice(navIndex + 1),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
       return;
     }
 
