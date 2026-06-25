@@ -37,6 +37,19 @@ public enum PhantomMode {
     }
 
     /**
+     * Short, coloured player-facing label as a MiniMessage string, using the
+     * shared CrabCraft palette (green = on, gold = safe, red = off). Shown both
+     * in the settings dialog options and in chat feedback so they stay in sync.
+     */
+    public String coloredLabel() {
+        return switch (this) {
+            case ON -> "<#77dd77>On";
+            case SAFE -> "<#FCD05C>Don't attack";
+            case OFF -> "<#f77069>Off";
+        };
+    }
+
+    /**
      * Parses a mode id (case-insensitive), accepting a few friendly aliases.
      * Anything unknown, null, or empty falls back to {@link #OFF}, the safe
      * default.

@@ -24,19 +24,23 @@ import java.util.UUID;
  * The {@code /settings} screen, built with Paper's server-side Dialog API
  * (Minecraft 1.21.6+ / Paper 1.21.7+).
  *
- * <p>Phantoms are configured with a single-option selector (On / Safe / Off)
- * pre-filled with the player's current {@link PhantomMode}. Pressing
- * <em>Done</em> submits the choice through a custom-click callback that writes
- * it via {@link PlayerSettingsService}; Escape dismisses without saving. More
- * settings can be added by appending inputs and reading their keys in
- * {@link #handleSubmit}.
+ * <p>Phantoms are configured with a single-option selector whose options are
+ * self-describing (On / Don't attack / Off), so no per-option text is needed.
+ * Pressing <em>Done</em> submits the choice through a custom-click callback
+ * that writes it via {@link PlayerSettingsService}; <em>Cancel</em> or Escape
+ * dismisses without saving. More settings can be added by appending inputs and
+ * reading their keys in {@link #handleSubmit}.
+ *
+ * <p>Colours follow the shared CrabCraft palette (matching CustomDiscs): gold
+ * {@code #FCD05C} titles/labels, green {@code #77dd77} confirm, red
+ * {@code #f77069} cancel, grey {@code #b0b0b0} body.
  */
 @SuppressWarnings("UnstableApiUsage") // Paper Dialog API is @ApiStatus.Experimental
 public class SettingsDialog {
 
     private static final String PHANTOMS_KEY = "phantoms";
 
-    /** Order shown in the selector (most phantoms → least). */
+    /** Order shown in the selector (most phantoms to least). */
     private static final PhantomMode[] ORDER = { PhantomMode.ON, PhantomMode.SAFE, PhantomMode.OFF };
 
     private final PlayerSettingsService settingsService;
@@ -54,41 +58,25 @@ public class SettingsDialog {
         List<SingleOptionDialogInput.OptionEntry> options = new ArrayList<>(ORDER.length);
         for (PhantomMode mode : ORDER) {
             options.add(SingleOptionDialogInput.OptionEntry.create(
-                    mode.id(), optionLabel(mode), mode == current));
+                    mode.id(), mini(mode.coloredLabel()), mode == current));
         }
 
-        DialogBase base = DialogBase.builder(
-                        noItalic(miniMessage.deserialize("<dark_aqua><bold>Settings</bold></dark_aqua>")))
+        DialogBase base = DialogBase.builder(mini("<#FCD05C>Settings"))
+                .body(List.of(DialogBody.plainMessage(mini("<#b0b0b0>Choose how phantoms behave for you."))))
+                .inputs(List.of(DialogInput.singleOption(PHANTOMS_KEY, mini("<#FCD05C>Phantoms"), options).build()))
                 .canCloseWithEscape(true)
-                .body(List.of(DialogBody.plainMessage(noItalic(miniMessage.deserialize(
-                        "<gray>Phantoms — choose how they behave for you:</gray>"
-                                + "<newline><green>On</green><gray>: spawn and attack.</gray>"
-                                + "<newline><yellow>Safe</yellow><gray>: spawn, but never attack you.</gray>"
-                                + "<newline><red>Off</red><gray>: never spawn near or attack you.</gray>")))))
-                .inputs(List.of(DialogInput.singleOption(PHANTOMS_KEY,
-                        noItalic(miniMessage.deserialize("<white>Phantoms</white>")), options).build()))
                 .build();
 
-        ActionButton done = ActionButton.builder(noItalic(miniMessage.deserialize("<green>Done</green>")))
-                .tooltip(noItalic(miniMessage.deserialize("<gray>Save your settings</gray>")))
-                .action(DialogAction.customClick(
-                        (view, audience) -> handleSubmit(uuid, view, audience),
-                        ClickCallback.Options.builder().uses(1).build()))
-                .build();
-
-        Dialog dialog = Dialog.create(builder -> builder.empty()
+        Dialog dialog = Dialog.create(b -> b.empty()
                 .base(base)
-                .type(DialogType.notice(done)));
+                .type(DialogType.confirmation(
+                        ActionButton.create(mini("<#f77069>Cancel"), null, 100, null),
+                        ActionButton.create(mini("<#77dd77>Done"), null, 100,
+                                DialogAction.customClick(
+                                        (view, audience) -> handleSubmit(uuid, view, audience),
+                                        ClickCallback.Options.builder().uses(1).build())))));
 
         player.showDialog(dialog);
-    }
-
-    private Component optionLabel(PhantomMode mode) {
-        return noItalic(miniMessage.deserialize(switch (mode) {
-            case ON -> "<green>On</green>";
-            case SAFE -> "<yellow>Safe</yellow>";
-            case OFF -> "<red>Off</red>";
-        }));
     }
 
     /**
@@ -106,14 +94,11 @@ public class SettingsDialog {
         }
         PhantomMode mode = PhantomMode.fromId(selected);
         settingsService.setPhantomMode(uuid, mode);
-        audience.sendMessage(noItalic(miniMessage.deserialize(switch (mode) {
-            case ON -> "<gray>Phantoms are now <green>on</green> for you.</gray>";
-            case SAFE -> "<gray>Phantoms are now <yellow>safe</yellow> — they spawn but won't attack you.</gray>";
-            case OFF -> "<gray>Phantoms are now <red>off</red> for you.</gray>";
-        })));
+        audience.sendMessage(mini("<#FC835C>Phantoms set to " + mode.coloredLabel() + "<#FC835C>."));
     }
 
-    private static Component noItalic(Component component) {
-        return component.decoration(TextDecoration.ITALIC, false);
+    /** Deserialises a MiniMessage string with the default italic turned off. */
+    private Component mini(String text) {
+        return miniMessage.deserialize(text).decoration(TextDecoration.ITALIC, false);
     }
 }
