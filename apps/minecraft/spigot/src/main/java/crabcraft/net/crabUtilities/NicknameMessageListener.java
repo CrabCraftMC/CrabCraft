@@ -1,16 +1,12 @@
 package crabcraft.net.crabUtilities;
 
-import com.earth2me.essentials.Essentials;
-import com.earth2me.essentials.User;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.event.HoverEvent.ShowEntity;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,31 +14,16 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerAdvancementDoneEvent;
-import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class NicknameMessageListener implements Listener {
     private final CrabUtilities plugin;
-    private final LegacyComponentSerializer legacy;
-    private final MiniMessage mm;
-
-    private static final Pattern AMP_HEX_PATTERN = Pattern.compile("&[#]([0-9a-fA-F]{6})");
 
     public NicknameMessageListener(CrabUtilities plugin) {
         this.plugin = plugin;
-        // Legacy serializer supporting &-codes and hex (both &#RRGGBB and &x&R&R&G&G&B&B)
-        this.legacy = LegacyComponentSerializer.builder()
-                .character('&')
-                .hexColors()
-                .useUnusualXRepeatedCharacterHexFormat()
-                .build();
-        this.mm = MiniMessage.miniMessage();
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -152,51 +133,6 @@ public class NicknameMessageListener implements Listener {
     }
 
     private Component nicknameFor(Player player) {
-        Plugin ess = plugin.getEssentials();
-        if (!(ess instanceof Essentials essentials)) return null;
-        User user = essentials.getUser(player);
-        if (user == null) return null;
-        String raw = user.getNickname();
-        if (raw == null || raw.isBlank()) return null;
-
-        // 1) If the nickname looks like MiniMessage (e.g., contains <#RRGGBB> or gradient tags), parse with MiniMessage
-        if (looksLikeMiniMessage(raw)) {
-            try {
-                return mm.deserialize(raw);
-            } catch (Exception ignored) {
-                // Fall through to legacy if MiniMessage parsing fails
-            }
-        }
-
-        // 2) Fallback: legacy parsing with support for hex (&#RRGGBB and &x&... and §x§...)
-        String processed = raw
-                .replace('§', '&'); // normalize section sign to & for the serializer
-        processed = convertAmpersandHex(processed);
-        try {
-            return legacy.deserialize(processed);
-        } catch (Exception ex) {
-            // Final fallback to plain text
-            return Component.text(raw);
-        }
-    }
-
-    private static boolean looksLikeMiniMessage(String s) {
-        // Heuristic: contains <#RRGGBB> or <gradient:...> or other typical minimessage color tags
-        return s.contains("<#") || s.contains("</gradient>") || s.contains("<gradient:") || s.contains("<rainbow>") || s.contains("</rainbow>");
-    }
-
-    private static String convertAmpersandHex(String input) {
-        // Replace occurrences of &#RRGGBB with &x&R&R&G&G&B&B so our serializer can parse it
-        StringBuffer sb = new StringBuffer();
-        Matcher m = AMP_HEX_PATTERN.matcher(input);
-        while (m.find()) {
-            String hex = m.group(1).toUpperCase(Locale.ROOT);
-            String replacement = "&x&" + hex.charAt(0) + "&" + hex.charAt(1)
-                    + "&" + hex.charAt(2) + "&" + hex.charAt(3)
-                    + "&" + hex.charAt(4) + "&" + hex.charAt(5);
-            m.appendReplacement(sb, Matcher.quoteReplacement(replacement));
-        }
-        m.appendTail(sb);
-        return sb.toString();
+        return NicknameComponentResolver.forPlayer(plugin.getEssentials(), player);
     }
 }

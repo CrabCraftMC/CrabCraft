@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.chat;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import crabcraft.net.crabUtilities.CrabUtilities;
+import crabcraft.net.crabUtilities.NicknameComponentResolver;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
@@ -185,7 +186,13 @@ public class GlobalChatService {
             }
 
             String username = player.getName();
-            Component displayName = player.displayName();
+            // Resolve the nick from EssentialsX directly: player.displayName() does
+            // not reliably carry the nick's colours (especially hex) on this server.
+            // Fall back to the vanilla display name when no nick is set.
+            Component displayName = NicknameComponentResolver.forPlayer(plugin.getEssentials(), player);
+            if (displayName == null) {
+                displayName = player.displayName();
+            }
             RenderedLine rendered = renderLine(displayName, username, plainMessage, senderUuid);
 
             deliverLocally(rendered.line(), rendered.mentioned());
