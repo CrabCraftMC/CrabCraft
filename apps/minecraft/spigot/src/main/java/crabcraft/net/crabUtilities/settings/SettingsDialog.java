@@ -105,14 +105,7 @@ public class SettingsDialog {
         boolean acceptMessages = accept != null ? accept : current.isAcceptMessages();
 
         settingsService.setAll(uuid, mode, mentionPings, acceptMessages);
-        audience.sendMessage(mini("<#77dd77>Settings saved."
-                + " <#FC835C>Phantoms: " + mode.coloredLabel()
-                + "<#FC835C>, mention pings: " + onOff(mentionPings)
-                + "<#FC835C>, private messages: " + onOff(acceptMessages) + "<#FC835C>."));
-    }
-
-    private static String onOff(boolean value) {
-        return value ? "<#77dd77>On" : "<#f77069>Off";
+        audience.sendMessage(mini("<#FC835C>settings saved"));
     }
 
     /** Deserialises a MiniMessage string with the default italic turned off. */

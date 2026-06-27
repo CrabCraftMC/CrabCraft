@@ -88,7 +88,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
         }
         settingsService.setPhantomMode(uuid, mode);
         player.sendMessage(miniMessage.deserialize(
-                "<#FC835C>Phantoms set to " + mode.coloredLabel() + "<#FC835C>."));
+                "<#FC835C>settings saved"));
     }
 
     private void handleToggle(Player player, String[] args, String label, boolean currentValue,
@@ -104,7 +104,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         setter.accept(value);
-        player.sendMessage(miniMessage.deserialize("<#FC835C>" + label + " set to " + onOff(value) + "<#FC835C>."));
+        player.sendMessage(miniMessage.deserialize("<#FC835C>settings saved"));
     }
 
     /** Parses a phantom mode token strictly, returning null for unrecognised input. */
