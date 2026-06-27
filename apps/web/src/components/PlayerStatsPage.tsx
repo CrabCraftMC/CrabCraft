@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import Squircle from "@/components/Squircle";
 import PlayerDetailedStats from "@/components/PlayerDetailedStats";
 import PlayerAdvancements from "@/components/PlayerAdvancements";
@@ -13,6 +12,7 @@ interface PlayerProps {
     gold: number;
     silver: number;
     bronze: number;
+    currentStreak: number;
     found: boolean;
     role: string;
     joinedSeason: string | null;
@@ -44,7 +44,8 @@ export default function PlayerStatsPage(props: PlayerProps) {
         );
     }
 
-    const { nickname, uuid, rank, points, gold, silver, bronze, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile, advancements: advancementsData } = props;
+    const { nickname, uuid, rank, points, gold, silver, bronze, currentStreak, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile, advancements: advancementsData } = props;
+    const hasMeta = currentStreak > 0 || rank > 0 || joinedSeason;
 
     return (
         <div className="min-h-screen pt-16 lg:pt-24 pb-16">
@@ -52,8 +53,8 @@ export default function PlayerStatsPage(props: PlayerProps) {
                 {/* Header card */}
                 <div className="relative mt-0 lg:mt-12 animate-in">
                     {profile?.channels && profile.channels.length > 0 && (
-                        <div className="flex justify-end gap-3 mb-3 pr-2">
-                            {profile.channels.map((ch) => {
+                        <div className="flex justify-end items-center gap-3 mb-3 pr-2">
+                            {profile?.channels?.map((ch) => {
                                 const url = ch.platform === "twitch" ? `https://twitch.tv/${ch.channel_id}`
                                     : ch.platform === "youtube" ? `https://youtube.com/${ch.channel_id}`
                                     : `https://tiktok.com/${ch.channel_id}`;
@@ -82,10 +83,13 @@ export default function PlayerStatsPage(props: PlayerProps) {
                                 <h1 className="text-3xl lg:text-4xl font-bold text-white flex items-center flex-wrap">
                                     {nickname}
                                     {(role === "moderator" || role === "admin") && (
-                                        <span className="ml-2 inline-flex items-center group relative cursor-pointer" tabIndex={0} title="Moderator">
-                                            <svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                            </svg>
+                                        <span className="ml-3 inline-flex items-center group relative cursor-pointer" tabIndex={0} title="Moderator">
+                                            <img
+                                                src="/minecraft/item/mace.png"
+                                                alt=""
+                                                aria-hidden="true"
+                                                className="h-6 w-6 pixelated drop-shadow-[0_0_6px_rgba(96,165,250,0.55)]"
+                                            />
                                             <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Moderator</span>
                                         </span>
                                     )}
@@ -96,10 +100,39 @@ export default function PlayerStatsPage(props: PlayerProps) {
                                         {profile.discord_username}
                                     </p>
                                 )}
+                                {hasMeta && (
                                 <p className="text-white/70 text-sm mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                    <span>{rank > 0 ? `Rank #${rank}` : "Unranked"}</span>
-                                    {joinedSeason && <><span className="text-white/30">·</span><span>Season {joinedSeason}</span></>}
+                                    {currentStreak > 0 && (
+                                        <>
+                                            <span
+                                                className="group relative inline-flex items-center gap-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.35)]"
+                                                tabIndex={0}
+                                                aria-label={`${currentStreak} day streak`}
+                                            >
+                                                <img
+                                                    src="/icons/fire-minecraft.gif"
+                                                    alt=""
+                                                    aria-hidden="true"
+                                                    className="h-4 w-4 rounded-full object-cover"
+                                                />
+                                                <span className="font-bold leading-none text-white">
+                                                    {currentStreak}
+                                                </span>
+                                                <span className="absolute left-1/2 top-full mt-2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus:opacity-100 group-focus:visible transition-all duration-200 z-50 whitespace-nowrap pointer-events-none">
+                                                    <span className="absolute left-1/2 -top-1.5 h-3 w-3 -translate-x-1/2 rotate-45 bg-paper-2 dark:bg-[#2a221b] border-l border-t border-gray-200 dark:border-[#3d3028]" />
+                                                    <span className="relative block px-2.5 py-1.5 bg-paper-2 dark:bg-[#2a221b] rounded-lg shadow-lg border border-gray-200 dark:border-[#3d3028] text-xs font-bold text-gray-700 dark:text-gray-200">
+                                                        {currentStreak} day streak
+                                                    </span>
+                                                </span>
+                                            </span>
+                                            {(rank > 0 || joinedSeason) && <span className="text-white/30">·</span>}
+                                        </>
+                                    )}
+                                    {rank > 0 && <span>Rank #{rank}</span>}
+                                    {rank > 0 && joinedSeason && <span className="text-white/30">·</span>}
+                                    {joinedSeason && <span>Season {joinedSeason}</span>}
                                 </p>
+                                )}
                             </div>
                             <div className="hidden sm:block text-right shrink-0 ml-4">
                                 <p className="font-mc text-white text-4xl lg:text-5xl">{points}</p>
@@ -107,12 +140,12 @@ export default function PlayerStatsPage(props: PlayerProps) {
                             </div>
                         </div>
                     </Squircle>
-                    <Image
-                        src={`https://starlightskins.lunareclipse.studio/render/default/${uuid}/full`}
+                    <img
+                        src={`https://mc-api.io/render/full/${encodeURIComponent(nickname)}/java?size=256`}
                         alt={nickname}
                         width={140}
                         height={280}
-                        className="absolute bottom-0 -left-2 lg:left-2 h-[220px] lg:h-[280px] w-auto z-20"
+                        className="absolute bottom-0 left-3 lg:left-6 h-[147px] lg:h-[187px] w-auto z-20"
                     />
                 </div>
 

@@ -51,7 +51,8 @@ public class WebServer {
             + "\"nickname\":{\"type\":\"string\",\"nullable\":true,\"description\":\"Plain-text display name\"},"
             + "\"nickname_raw\":{\"type\":\"string\",\"nullable\":true,\"description\":\"Raw (formatted) display name\"},"
             + "\"ping\":{\"type\":\"integer\",\"description\":\"Player latency in milliseconds\"},"
-            + "\"server\":{\"type\":\"string\",\"nullable\":true,\"description\":\"Backend server the player is on\"}"
+            + "\"server\":{\"type\":\"string\",\"nullable\":true,\"description\":\"Backend server the player is on\"},"
+            + "\"current_streak\":{\"type\":\"integer\",\"description\":\"Live login streak. 0 if no streak has been recorded or the streak has lapsed.\"}"
             + "}"
             + "}";
 
@@ -589,6 +590,12 @@ public class WebServer {
         obj.addProperty("server", player.getCurrentServer()
                 .map(conn -> conn.getServerInfo().getName())
                 .orElse(null));
+        var streakService = plugin.getLoginStreakService();
+        JsonObject streak = streakService == null
+                ? null
+                : streakService.getPlayerStreakJson(player.getUniqueId().toString());
+        obj.addProperty("current_streak",
+                streak == null ? 0 : streak.get("current_streak").getAsInt());
         return obj;
     }
 

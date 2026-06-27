@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
 import { Fireworks } from "@fireworks-js/react";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
@@ -68,12 +67,9 @@ export default function PlayerAdvancements({
 
   return (
     <div className="flex flex-col gap-3 animate-in" style={{ animationDelay: "0.3s" }}>
-      <Link
-        href="/leaderboard/advancements"
-        className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-500 pl-1 hover:text-orange-500 dark:hover:text-orange-500 transition-colors"
-      >
-        Advancements &rarr;
-      </Link>
+      <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-500 pl-1">
+        Advancements
+      </p>
 
       {/* Progress summary card */}
       <div className="relative">

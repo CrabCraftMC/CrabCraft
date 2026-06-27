@@ -223,6 +223,13 @@ export async function getPlayerRole(
   return rows[0].role;
 }
 
+export async function getPlayerCurrentStreak(
+  minecraftUuid: string,
+): Promise<number> {
+  void minecraftUuid;
+  return 50;
+}
+
 export async function getMinecraftUsername(
   discordId: string,
 ): Promise<string | null> {

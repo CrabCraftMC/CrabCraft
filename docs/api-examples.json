@@ -29,7 +29,8 @@
         "nickname": "Max",
         "nickname_raw": "&bMax",
         "ping": 32,
-        "server": "survival"
+        "server": "survival",
+        "current_streak": 12
       },
       {
         "username": "IanTheOfficial",
@@ -37,7 +38,8 @@
         "nickname": null,
         "nickname_raw": null,
         "ping": 45,
-        "server": "survival"
+        "server": "survival",
+        "current_streak": 0
       }
     ]
   },
@@ -48,7 +50,8 @@
     "nickname": "Max",
     "nickname_raw": "&bMax",
     "ping": 32,
-    "server": "survival"
+    "server": "survival",
+    "current_streak": 12
   },
 
   "GET /awards": {

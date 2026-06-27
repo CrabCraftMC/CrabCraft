@@ -5,6 +5,7 @@ import {
   getJoinedSeason,
   getUserByIdentifier,
   getPlayerProfile,
+  getPlayerCurrentStreak,
 } from "@/lib/queries";
 
 interface ProxyAward {
@@ -120,6 +121,7 @@ export default async function StatsPage({ params }: Props) {
     found: Boolean(dbUser?.minecraft_uuid && dbUser?.minecraft_username),
     role: dbUser?.role ?? "unverified",
     joinedSeason: null as string | null,
+    currentStreak: 0,
   };
 
   const awardUnits: Record<string, string> = {};
@@ -149,11 +151,12 @@ export default async function StatsPage({ params }: Props) {
     );
   }
 
-  const [joinedSeason, playerAwards, profile, advancementsData] = await Promise.all([
+  const [joinedSeason, playerAwards, profile, advancementsData, currentStreak] = await Promise.all([
     getJoinedSeason(playerData.uuid).catch(() => null),
     fetchPlayerAwards(playerData.uuid),
     getPlayerProfile(playerData.uuid).catch(() => null),
     fetchPlayerAdvancements(playerData.uuid),
+    getPlayerCurrentStreak(playerData.uuid).catch(() => 0),
   ]);
 
   // Convert proxy scores format to what PlayerStatsPage expects
@@ -178,6 +181,7 @@ export default async function StatsPage({ params }: Props) {
     gold: playerAwards?.crown?.gold ?? 0,
     silver: playerAwards?.crown?.silver ?? 0,
     bronze: playerAwards?.crown?.bronze ?? 0,
+    currentStreak,
   };
 
   return (
