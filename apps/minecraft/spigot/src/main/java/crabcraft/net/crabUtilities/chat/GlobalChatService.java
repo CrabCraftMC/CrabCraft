@@ -8,6 +8,7 @@ import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
@@ -75,7 +76,8 @@ public class GlobalChatService {
         String prefix = plugin.getConfig().getString("global-chat.mentions.prefix", "@");
         String highlight = plugin.getConfig().getString("global-chat.mentions.highlight",
                 "<yellow><underlined><name></underlined></yellow>");
-        this.mentionProcessor = new MentionProcessor(mentionsEnabled, prefix, highlight, miniMessage);
+        this.mentionProcessor = new MentionProcessor(mentionsEnabled, prefix, highlight,
+                miniMessage, plugin.getEssentials());
 
         this.soundEnabled = plugin.getConfig().getBoolean("global-chat.mentions.sound.enabled", true);
         String soundKey = plugin.getConfig().getString("global-chat.mentions.sound.key",
@@ -168,12 +170,17 @@ public class GlobalChatService {
      */
     public RenderedLine renderLine(Component displayName, String username, String plainMessage, UUID senderUuid) {
         MentionProcessor.Result mention = mentionProcessor.process(plainMessage, senderUuid);
+        Component clickableDisplayName = displayName.clickEvent(ClickEvent.suggestCommand(messageCommand(username)));
         Component line = miniMessage.deserialize(format,
                 Placeholder.unparsed("server", serverName == null ? "" : serverName),
-                Placeholder.component("display_name", displayName),
+                Placeholder.component("display_name", clickableDisplayName),
                 Placeholder.unparsed("username", username),
                 Placeholder.component("message", mention.message()));
         return new RenderedLine(line, mention.mentioned());
+    }
+
+    private static String messageCommand(String username) {
+        return "/msg " + username + " ";
     }
 
     public void handleLocalChat(UUID senderUuid, String plainMessage) {

@@ -7,6 +7,7 @@ import crabcraft.net.crabUtilities.velocity.PlayerSettingsService;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -146,11 +147,16 @@ public class MessageManager {
     private Component nameComponentFor(CommandSource source) {
         if (source instanceof Player player) {
             String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
+            ClickEvent click = ClickEvent.suggestCommand(messageCommand(player.getUsername()));
             if (raw != null) {
-                return LEGACY_SERIALIZER.deserialize(raw.replace('&', '§'));
+                return LEGACY_SERIALIZER.deserialize(raw.replace('&', '§')).clickEvent(click);
             }
-            return Component.text(player.getUsername());
+            return Component.text(player.getUsername()).clickEvent(click);
         }
         return Component.text(CONSOLE_NAME);
+    }
+
+    private static String messageCommand(String username) {
+        return "/msg " + username + " ";
     }
 }

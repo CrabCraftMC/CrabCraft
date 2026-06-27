@@ -17,7 +17,7 @@ public class MsgCommand {
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
 
     public static void register(CrabUtilitiesVelocity plugin) {
-        register(plugin, "msg", "tell", "whisper", "w", "dm");
+        register(plugin, "msg", "message", "tell", "whisper", "w", "dm");
     }
 
     private static void register(CrabUtilitiesVelocity plugin, String primary, String... aliases) {

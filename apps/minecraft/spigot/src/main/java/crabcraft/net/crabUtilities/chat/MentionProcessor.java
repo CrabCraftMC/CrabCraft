@@ -1,11 +1,14 @@
 package crabcraft.net.crabUtilities.chat;
 
+import crabcraft.net.crabUtilities.NicknameComponentResolver;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -29,11 +32,14 @@ public class MentionProcessor {
     private final String highlightFormat;
     private final MiniMessage miniMessage;
     private final Pattern pattern;
+    private final Plugin essentialsPlugin;
 
-    public MentionProcessor(boolean enabled, String prefix, String highlightFormat, MiniMessage miniMessage) {
+    public MentionProcessor(boolean enabled, String prefix, String highlightFormat,
+                            MiniMessage miniMessage, Plugin essentialsPlugin) {
         this.enabled = enabled;
         this.highlightFormat = highlightFormat;
         this.miniMessage = miniMessage;
+        this.essentialsPlugin = essentialsPlugin;
         // \B before the (quoted) prefix so it isn't part of a longer word,
         // then capture a run of word chars as the name, ending on a word
         // boundary. Case-insensitive so @steve matches Steve.
@@ -76,7 +82,8 @@ public class MentionProcessor {
                     mentioned.add(target.getUniqueId());
                 }
                 message = message.append(miniMessage.deserialize(
-                        highlightFormat, Placeholder.unparsed("name", token)));
+                        highlightFormat, Placeholder.unparsed("name", token))
+                        .clickEvent(ClickEvent.suggestCommand(messageCommand(target.getName()))));
             } else {
                 // No match — leave the raw token as plain text.
                 message = message.append(Component.text(token));
@@ -98,11 +105,19 @@ public class MentionProcessor {
             if (p.getName().equalsIgnoreCase(name)) {
                 return p;
             }
+            Component nickname = NicknameComponentResolver.forPlayer(essentialsPlugin, p);
+            if (nickname != null && PlainTextComponentSerializer.plainText().serialize(nickname).equalsIgnoreCase(name)) {
+                return p;
+            }
             String display = PlainTextComponentSerializer.plainText().serialize(p.displayName());
             if (display.equalsIgnoreCase(name)) {
                 return p;
             }
         }
         return null;
+    }
+
+    private static String messageCommand(String username) {
+        return "/msg " + username + " ";
     }
 }
