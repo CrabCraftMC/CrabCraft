@@ -8,6 +8,7 @@ import {
   playerAwardScores,
   awards,
   streamChannels,
+  playerLoginStreaks,
 } from "../schema";
 import type {
   PlayerSeasonStats,
@@ -226,8 +227,25 @@ export async function getPlayerRole(
 export async function getPlayerCurrentStreak(
   minecraftUuid: string,
 ): Promise<number> {
-  void minecraftUuid;
-  return 50;
+  const rows = await db
+    .select({
+      current_streak: playerLoginStreaks.current_streak,
+      last_login_at: playerLoginStreaks.last_login_at,
+    })
+    .from(playerLoginStreaks)
+    .where(eq(playerLoginStreaks.minecraft_uuid, minecraftUuid))
+    .limit(1);
+
+  if (rows.length === 0) return 0;
+
+  const resetHourUtc = 6;
+  const daySeconds = 86_400;
+  const lastLoginAt = rows[0].last_login_at;
+  const lastDay = Math.floor((lastLoginAt - resetHourUtc * 3600) / daySeconds);
+  const expiresAt = (lastDay + 3) * daySeconds + resetHourUtc * 3600;
+  const now = Math.floor(Date.now() / 1000);
+
+  return now < expiresAt ? rows[0].current_streak : 0;
 }
 
 export async function getMinecraftUsername(

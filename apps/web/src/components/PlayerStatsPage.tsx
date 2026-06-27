@@ -45,7 +45,8 @@ export default function PlayerStatsPage(props: PlayerProps) {
     }
 
     const { nickname, uuid, rank, points, gold, silver, bronze, currentStreak, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile, advancements: advancementsData } = props;
-    const hasMeta = currentStreak > 0 || rank > 0 || joinedSeason;
+    const showStreak = currentStreak >= 3;
+    const hasMeta = showStreak || rank > 0 || joinedSeason;
 
     return (
         <div className="min-h-screen pt-16 lg:pt-24 pb-16">
@@ -102,7 +103,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                                 )}
                                 {hasMeta && (
                                 <p className="text-white/70 text-sm mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                    {currentStreak > 0 && (
+                                    {showStreak && (
                                         <>
                                             <span
                                                 className="group relative inline-flex items-center gap-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.35)]"
