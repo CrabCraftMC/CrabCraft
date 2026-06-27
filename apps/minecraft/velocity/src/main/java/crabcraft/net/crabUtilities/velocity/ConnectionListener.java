@@ -49,6 +49,13 @@ public class ConnectionListener {
         Player player = event.getPlayer();
         String uuid = player.getUniqueId().toString();
 
+        // Warm the player's settings (Postgres -> cache + Redis hash) so the
+        // backend sees them on join and proxy features (message DND) can read them.
+        var settingsService = plugin.getPlayerSettingsService();
+        if (settingsService != null) {
+            settingsService.onLogin(player.getUniqueId());
+        }
+
         // Seed the authoritative nickname from the database into the proxy
         // cache so it survives across (re)joins regardless of whether the
         // backend the player lands on still has it in EssentialsX. The proxy
@@ -171,6 +178,11 @@ public class ConnectionListener {
     @Subscribe(order = PostOrder.EARLY)
     public void onDisconnect(DisconnectEvent event) {
         Player player = event.getPlayer();
+
+        var settingsService = plugin.getPlayerSettingsService();
+        if (settingsService != null) {
+            settingsService.onDisconnect(player.getUniqueId());
+        }
 
         if (!announcedPlayers.remove(player.getUniqueId())) return;
 

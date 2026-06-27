@@ -18,16 +18,18 @@ import java.util.stream.Collectors;
  *
  * <ul>
  *   <li>{@code /settings} — opens the settings dialog (players only).</li>
- *   <li>{@code /settings phantoms} — shows the current phantom mode.</li>
- *   <li>{@code /settings phantoms <on|off|safe>} — changes it.</li>
+ *   <li>{@code /settings phantoms [on|off|safe]}</li>
+ *   <li>{@code /settings mentions [on|off]} — mention ping sound.</li>
+ *   <li>{@code /settings messages [on|off]} — accept private messages.</li>
  * </ul>
  *
  * <p>Settings are per-player, so every path requires a player sender.
  */
 public class SettingsCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> SUBCOMMANDS = List.of("phantoms");
+    private static final List<String> SUBCOMMANDS = List.of("phantoms", "mentions", "messages");
     private static final List<String> PHANTOM_VALUES = List.of("on", "off", "safe");
+    private static final List<String> TOGGLE_VALUES = List.of("on", "off");
 
     private final PlayerSettingsService settingsService;
     private final SettingsDialog dialog;
@@ -47,7 +49,8 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
 
         // Don't read or write settings until the player's record has resolved,
         // otherwise we could show/save the default over their real value.
-        if (!settingsService.isLoaded(player.getUniqueId())) {
+        UUID uuid = player.getUniqueId();
+        if (!settingsService.isLoaded(uuid)) {
             player.sendMessage(miniMessage.deserialize(
                     "<#b0b0b0>Your settings are still loading, try again in a moment."));
             return true;
@@ -58,31 +61,53 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (args[0].equalsIgnoreCase("phantoms")) {
-            UUID uuid = player.getUniqueId();
-            if (args.length == 1) {
-                player.sendMessage(miniMessage.deserialize(
-                        "<#FC835C>Phantoms: " + settingsService.getPhantomMode(uuid).coloredLabel()));
-                return true;
-            }
-            PhantomMode mode = parseMode(args[1]);
-            if (mode == null) {
-                player.sendMessage(miniMessage.deserialize(
-                        "<#f77069>Usage: /settings phantoms <on|off|safe>"));
-                return true;
-            }
-            settingsService.setPhantomMode(uuid, mode);
-            player.sendMessage(miniMessage.deserialize(
-                    "<#FC835C>Phantoms set to " + mode.coloredLabel() + "<#FC835C>."));
-            return true;
+        switch (args[0].toLowerCase(Locale.ROOT)) {
+            case "phantoms" -> handlePhantoms(player, uuid, args);
+            case "mentions" -> handleToggle(player, args, "Mention pings",
+                    settingsService.isMentionPingsEnabled(uuid),
+                    value -> settingsService.setMentionPings(uuid, value));
+            case "messages" -> handleToggle(player, args, "Private messages",
+                    settingsService.isAcceptingMessages(uuid),
+                    value -> settingsService.setAcceptingMessages(uuid, value));
+            default -> player.sendMessage(miniMessage.deserialize(
+                    "<#f77069>Usage: /settings [phantoms|mentions|messages] ..."));
         }
-
-        player.sendMessage(miniMessage.deserialize(
-                "<#f77069>Usage: /settings [phantoms <on|off|safe>]"));
         return true;
     }
 
-    /** Parses a mode token strictly, returning null for unrecognised input. */
+    private void handlePhantoms(Player player, UUID uuid, String[] args) {
+        if (args.length == 1) {
+            player.sendMessage(miniMessage.deserialize(
+                    "<#FC835C>Phantoms: " + settingsService.getPhantomMode(uuid).coloredLabel()));
+            return;
+        }
+        PhantomMode mode = parseMode(args[1]);
+        if (mode == null) {
+            player.sendMessage(miniMessage.deserialize("<#f77069>Usage: /settings phantoms <on|off|safe>"));
+            return;
+        }
+        settingsService.setPhantomMode(uuid, mode);
+        player.sendMessage(miniMessage.deserialize(
+                "<#FC835C>Phantoms set to " + mode.coloredLabel() + "<#FC835C>."));
+    }
+
+    private void handleToggle(Player player, String[] args, String label, boolean currentValue,
+                              java.util.function.Consumer<Boolean> setter) {
+        if (args.length == 1) {
+            player.sendMessage(miniMessage.deserialize("<#FC835C>" + label + ": " + onOff(currentValue)));
+            return;
+        }
+        Boolean value = parseToggle(args[1]);
+        if (value == null) {
+            player.sendMessage(miniMessage.deserialize(
+                    "<#f77069>Usage: /settings " + args[0].toLowerCase(Locale.ROOT) + " <on|off>"));
+            return;
+        }
+        setter.accept(value);
+        player.sendMessage(miniMessage.deserialize("<#FC835C>" + label + " set to " + onOff(value) + "<#FC835C>."));
+    }
+
+    /** Parses a phantom mode token strictly, returning null for unrecognised input. */
     private static PhantomMode parseMode(String token) {
         return switch (token.toLowerCase(Locale.ROOT)) {
             case "on", "enable", "enabled", "true" -> PhantomMode.ON;
@@ -92,6 +117,19 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
         };
     }
 
+    /** Parses an on/off token, returning null for unrecognised input. */
+    private static Boolean parseToggle(String token) {
+        return switch (token.toLowerCase(Locale.ROOT)) {
+            case "on", "enable", "enabled", "true", "yes" -> Boolean.TRUE;
+            case "off", "disable", "disabled", "false", "no" -> Boolean.FALSE;
+            default -> null;
+        };
+    }
+
+    private static String onOff(boolean value) {
+        return value ? "<#77dd77>On" : "<#f77069>Off";
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 1) {
@@ -99,8 +137,11 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
                     .filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT)))
                     .collect(Collectors.toList());
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("phantoms")) {
-            return PHANTOM_VALUES.stream()
+        if (args.length == 2) {
+            List<String> values = args[0].equalsIgnoreCase("phantoms") ? PHANTOM_VALUES
+                    : (args[0].equalsIgnoreCase("mentions") || args[0].equalsIgnoreCase("messages"))
+                        ? TOGGLE_VALUES : List.of();
+            return values.stream()
                     .filter(s -> s.startsWith(args[1].toLowerCase(Locale.ROOT)))
                     .collect(Collectors.toList());
         }

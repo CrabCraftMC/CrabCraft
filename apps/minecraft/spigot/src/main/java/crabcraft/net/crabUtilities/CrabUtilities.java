@@ -161,6 +161,11 @@ public final class CrabUtilities extends JavaPlugin {
         return essentials;
     }
 
+    /** The per-player settings mirror, or {@code null} before it has started. */
+    public PlayerSettingsService getPlayerSettingsService() {
+        return playerSettingsService;
+    }
+
     /**
      * Exposes the on-disk plugin jar so the updater can stage a replacement with
      * the same filename into {@code plugins/update/}.

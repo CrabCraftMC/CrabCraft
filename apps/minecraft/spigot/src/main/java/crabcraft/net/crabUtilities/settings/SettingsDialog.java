@@ -39,6 +39,8 @@ import java.util.UUID;
 public class SettingsDialog {
 
     private static final String PHANTOMS_KEY = "phantoms";
+    private static final String MENTION_PINGS_KEY = "mentionPings";
+    private static final String ACCEPT_MESSAGES_KEY = "acceptMessages";
 
     /** Order shown in the selector (most phantoms to least). */
     private static final PhantomMode[] ORDER = { PhantomMode.ON, PhantomMode.SAFE, PhantomMode.OFF };
@@ -53,17 +55,22 @@ public class SettingsDialog {
     /** Builds a fresh dialog reflecting the player's current settings and shows it. */
     public void open(Player player) {
         UUID uuid = player.getUniqueId();
-        PhantomMode current = settingsService.getPhantomMode(uuid);
+        PlayerSettings current = settingsService.get(uuid);
 
         List<SingleOptionDialogInput.OptionEntry> options = new ArrayList<>(ORDER.length);
         for (PhantomMode mode : ORDER) {
             options.add(SingleOptionDialogInput.OptionEntry.create(
-                    mode.id(), mini(mode.coloredLabel()), mode == current));
+                    mode.id(), mini(mode.coloredLabel()), mode == current.getPhantomMode()));
         }
 
         DialogBase base = DialogBase.builder(mini("<#FCD05C>Settings"))
-                .body(List.of(DialogBody.plainMessage(mini("<#b0b0b0>Choose how phantoms behave for you."))))
-                .inputs(List.of(DialogInput.singleOption(PHANTOMS_KEY, mini("<#FCD05C>Phantoms"), options).build()))
+                .body(List.of(DialogBody.plainMessage(mini("<#b0b0b0>Configure these just for you."))))
+                .inputs(List.of(
+                        DialogInput.singleOption(PHANTOMS_KEY, mini("<#FCD05C>Phantoms"), options).build(),
+                        DialogInput.bool(MENTION_PINGS_KEY, mini("<#FCD05C>Mention pings"))
+                                .initial(current.isMentionPings()).onTrue("On").onFalse("Off").build(),
+                        DialogInput.bool(ACCEPT_MESSAGES_KEY, mini("<#FCD05C>Private messages"))
+                                .initial(current.isAcceptMessages()).onTrue("On").onFalse("Off").build()))
                 .canCloseWithEscape(true)
                 .build();
 
@@ -80,21 +87,32 @@ public class SettingsDialog {
     }
 
     /**
-     * Applies the submitted phantom mode. Reads the selected option id from the
-     * response view (absent/unknown falls back to the safe default) and writes
-     * it through the settings service.
+     * Applies every submitted setting at once. Any value the client omits keeps
+     * the player's current value, so the dialog can never blank a setting out.
      */
     private void handleSubmit(UUID uuid, DialogResponseView view, Audience audience) {
         if (view == null) {
             return;
         }
+        PlayerSettings current = settingsService.get(uuid);
+
         String selected = view.getText(PHANTOMS_KEY);
-        if (selected == null) {
-            return;
-        }
-        PhantomMode mode = PhantomMode.fromId(selected);
-        settingsService.setPhantomMode(uuid, mode);
-        audience.sendMessage(mini("<#FC835C>Phantoms set to " + mode.coloredLabel() + "<#FC835C>."));
+        PhantomMode mode = selected != null ? PhantomMode.fromId(selected) : current.getPhantomMode();
+
+        Boolean pings = view.getBoolean(MENTION_PINGS_KEY);
+        Boolean accept = view.getBoolean(ACCEPT_MESSAGES_KEY);
+        boolean mentionPings = pings != null ? pings : current.isMentionPings();
+        boolean acceptMessages = accept != null ? accept : current.isAcceptMessages();
+
+        settingsService.setAll(uuid, mode, mentionPings, acceptMessages);
+        audience.sendMessage(mini("<#77dd77>Settings saved."
+                + " <#FC835C>Phantoms: " + mode.coloredLabel()
+                + "<#FC835C>, mention pings: " + onOff(mentionPings)
+                + "<#FC835C>, private messages: " + onOff(acceptMessages) + "<#FC835C>."));
+    }
+
+    private static String onOff(boolean value) {
+        return value ? "<#77dd77>On" : "<#f77069>Off";
     }
 
     /** Deserialises a MiniMessage string with the default italic turned off. */

@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import crabcraft.net.crabUtilities.CrabUtilities;
 import crabcraft.net.crabUtilities.NicknameComponentResolver;
+import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
@@ -211,7 +212,8 @@ public class GlobalChatService {
             }
             for (Player player : Bukkit.getOnlinePlayers()) {
                 player.sendMessage(line);
-                if (soundEnabled && mentioned.contains(player.getUniqueId())) {
+                if (soundEnabled && mentioned.contains(player.getUniqueId())
+                        && mentionPingsEnabled(player.getUniqueId())) {
                     player.playSound(mentionSound, Sound.Emitter.self());
                 }
             }
@@ -283,6 +285,15 @@ public class GlobalChatService {
             RenderedLine rendered = renderLine(displayName, username, message, senderUuid);
             deliverLocally(rendered.line(), rendered.mentioned());
         });
+    }
+
+    /**
+     * Whether this player should hear the mention ping. Defaults to true if the
+     * settings service isn't up yet, so pings work even before settings load.
+     */
+    private boolean mentionPingsEnabled(java.util.UUID uuid) {
+        PlayerSettingsService settings = plugin.getPlayerSettingsService();
+        return settings == null || settings.isMentionPingsEnabled(uuid);
     }
 
     private void runOnMain(Runnable task) {

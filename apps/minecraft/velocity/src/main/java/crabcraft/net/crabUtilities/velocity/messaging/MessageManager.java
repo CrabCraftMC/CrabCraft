@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.velocity.messaging;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
+import crabcraft.net.crabUtilities.velocity.PlayerSettingsService;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
@@ -20,7 +21,10 @@ public class MessageManager {
 
     public static final UUID CONSOLE_UUID = new UUID(0L, 0L);
     public static final String SOCIALSPY_PERMISSION = "crabutilities.socialspy";
+    public static final String BYPASS_DND_PERMISSION = "crabutilities.msg.bypassdnd";
     private static final String CONSOLE_NAME = "Console";
+    private static final String NOT_ACCEPTING_MESSAGE =
+            "<#f77069>That player isn't accepting private messages right now.";
 
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
@@ -41,6 +45,16 @@ public class MessageManager {
         UUID senderId = source instanceof Player p ? p.getUniqueId() : CONSOLE_UUID;
         if (senderId.equals(target.getUniqueId())) {
             source.sendMessage(MINI_MESSAGE.deserialize(plugin.getConfig().getMsgSelfError()));
+            return;
+        }
+
+        // Respect the target's "accept private messages" setting, unless the
+        // sender can bypass it (staff). Reads the proxy-side settings cache.
+        PlayerSettingsService settingsService = plugin.getPlayerSettingsService();
+        if (settingsService != null
+                && !settingsService.acceptsMessages(target.getUniqueId())
+                && !source.hasPermission(BYPASS_DND_PERMISSION)) {
+            source.sendMessage(MINI_MESSAGE.deserialize(NOT_ACCEPTING_MESSAGE));
             return;
         }
 

@@ -7,64 +7,95 @@ import com.google.gson.JsonPrimitive;
 /**
  * Immutable snapshot of one player's configurable preferences.
  *
- * <p>Currently the only setting is the player's {@link PhantomMode}. More
- * settings can be added here as the {@code /settings} dialog grows; the JSON
- * round-trip is forward-compatible (unknown keys are ignored, missing keys
- * fall back to the defaults below).
+ * <p>The JSON round-trip is forward-compatible (unknown keys are ignored,
+ * missing keys fall back to the defaults below) and is the on-the-wire shape
+ * shared with the Velocity proxy, which owns the canonical copy in Postgres.
  *
- * <p><b>Phantoms default {@link PhantomMode#OFF}.</b> A brand-new player — or
- * any player whose record is missing or unreadable — is treated as having
- * phantoms off (no spawn, no attack).
+ * <p>Defaults: phantoms {@link PhantomMode#OFF} (no spawn, no attack), mention
+ * pings ON, and private messages accepted.
  */
 public final class PlayerSettings {
 
-    /** Server-wide default applied when a player has no stored record. */
     public static final PhantomMode DEFAULT_PHANTOM_MODE = PhantomMode.OFF;
+    public static final boolean DEFAULT_MENTION_PINGS = true;
+    public static final boolean DEFAULT_ACCEPT_MESSAGES = true;
 
-    public static final PlayerSettings DEFAULTS = new PlayerSettings(DEFAULT_PHANTOM_MODE);
+    public static final PlayerSettings DEFAULTS =
+            new PlayerSettings(DEFAULT_PHANTOM_MODE, DEFAULT_MENTION_PINGS, DEFAULT_ACCEPT_MESSAGES);
 
     private final PhantomMode phantomMode;
+    private final boolean mentionPings;
+    private final boolean acceptMessages;
 
-    public PlayerSettings(PhantomMode phantomMode) {
+    public PlayerSettings(PhantomMode phantomMode, boolean mentionPings, boolean acceptMessages) {
         this.phantomMode = phantomMode == null ? DEFAULT_PHANTOM_MODE : phantomMode;
+        this.mentionPings = mentionPings;
+        this.acceptMessages = acceptMessages;
     }
 
     public PhantomMode getPhantomMode() {
         return phantomMode;
     }
 
-    /** Returns a copy of this settings object with the phantom mode changed. */
+    public boolean isMentionPings() {
+        return mentionPings;
+    }
+
+    public boolean isAcceptMessages() {
+        return acceptMessages;
+    }
+
     public PlayerSettings withPhantomMode(PhantomMode mode) {
-        return new PlayerSettings(mode);
+        return new PlayerSettings(mode, mentionPings, acceptMessages);
+    }
+
+    public PlayerSettings withMentionPings(boolean value) {
+        return new PlayerSettings(phantomMode, value, acceptMessages);
+    }
+
+    public PlayerSettings withAcceptMessages(boolean value) {
+        return new PlayerSettings(phantomMode, mentionPings, value);
     }
 
     public JsonObject toJson() {
         JsonObject obj = new JsonObject();
         obj.addProperty("phantoms", phantomMode.id());
+        obj.addProperty("mentionPings", mentionPings);
+        obj.addProperty("acceptMessages", acceptMessages);
         return obj;
     }
 
     /**
      * Parses a stored settings object, defaulting any absent field. Tolerant of
-     * the legacy boolean format ({@code {"phantoms": true|false}}, where
-     * {@code true} meant ON and {@code false} meant OFF) as well as the current
-     * string-mode format ({@code {"phantoms": "on"|"off"|"safe"}}). Never throws
-     * on missing keys.
+     * the legacy phantom boolean format ({@code {"phantoms": true|false}}) as
+     * well as the current string-mode format. Never throws on missing keys.
      */
     public static PlayerSettings fromJson(JsonObject obj) {
-        if (obj == null || !obj.has("phantoms")) {
-            return new PlayerSettings(DEFAULT_PHANTOM_MODE);
+        if (obj == null) {
+            return DEFAULTS;
         }
-        JsonElement element = obj.get("phantoms");
-        PhantomMode mode = DEFAULT_PHANTOM_MODE;
-        if (element != null && element.isJsonPrimitive()) {
-            JsonPrimitive primitive = element.getAsJsonPrimitive();
-            if (primitive.isBoolean()) {
-                mode = primitive.getAsBoolean() ? PhantomMode.ON : PhantomMode.OFF;
-            } else {
-                mode = PhantomMode.fromId(primitive.getAsString());
-            }
+        return new PlayerSettings(
+                parsePhantomMode(obj.get("phantoms")),
+                parseBool(obj.get("mentionPings"), DEFAULT_MENTION_PINGS),
+                parseBool(obj.get("acceptMessages"), DEFAULT_ACCEPT_MESSAGES));
+    }
+
+    private static PhantomMode parsePhantomMode(JsonElement element) {
+        if (element == null || !element.isJsonPrimitive()) {
+            return DEFAULT_PHANTOM_MODE;
         }
-        return new PlayerSettings(mode);
+        JsonPrimitive primitive = element.getAsJsonPrimitive();
+        if (primitive.isBoolean()) {
+            return primitive.getAsBoolean() ? PhantomMode.ON : PhantomMode.OFF;
+        }
+        return PhantomMode.fromId(primitive.getAsString());
+    }
+
+    private static boolean parseBool(JsonElement element, boolean fallback) {
+        if (element == null || !element.isJsonPrimitive()) {
+            return fallback;
+        }
+        JsonPrimitive primitive = element.getAsJsonPrimitive();
+        return primitive.isBoolean() ? primitive.getAsBoolean() : fallback;
     }
 }

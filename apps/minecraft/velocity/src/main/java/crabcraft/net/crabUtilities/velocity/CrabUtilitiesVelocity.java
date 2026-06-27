@@ -21,6 +21,7 @@ import crabcraft.net.crabUtilities.velocity.advancements.AdvancementDbWriter;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementQueryService;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementRegistry;
 import crabcraft.net.crabUtilities.velocity.awards.AwardSeeder;
+import crabcraft.net.crabUtilities.velocity.db.PlayerSettingsRepository;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
@@ -86,6 +87,8 @@ public class CrabUtilitiesVelocity {
     private AltQueryService altQueryService;
     private LoginStreakService loginStreakService;
     private LoginStreakPublisher loginStreakPublisher;
+    private PlayerSettingsRepository playerSettingsRepository;
+    private PlayerSettingsService playerSettingsService;
     private LiteBansInfractionService liteBansInfractionService;
     private LuckPerms luckPerms;
     private volatile ExecutorService databaseExecutor;
@@ -134,6 +137,10 @@ public class CrabUtilitiesVelocity {
                 pgWriter.getDataSource(), logger, config.getLoginStreakResetHourUtc());
         this.loginStreakPublisher = new LoginStreakPublisher(this, config);
         this.liteBansInfractionService = new LiteBansInfractionService(logger);
+
+        this.playerSettingsRepository = new PlayerSettingsRepository(pgWriter.getDataSource(), logger);
+        this.playerSettingsService = new PlayerSettingsService(this, playerSettingsRepository, config);
+        this.playerSettingsService.start();
 
         try {
             this.luckPerms = LuckPermsProvider.get();
@@ -235,6 +242,9 @@ public class CrabUtilitiesVelocity {
             }
 
             this.loginStreakPublisher = new LoginStreakPublisher(this, newConfig);
+            this.playerSettingsRepository = new PlayerSettingsRepository(newPgWriter.getDataSource(), logger);
+            this.playerSettingsService = new PlayerSettingsService(this, playerSettingsRepository, newConfig);
+            this.playerSettingsService.start();
             this.discordWebhook = new DiscordWebhook(newConfig.getDiscordWebhookUrl(), logger);
             this.staffChatDiscordWebhook = new DiscordWebhook(newConfig.getStaffChatDiscordWebhookUrl(), logger);
             this.databaseExecutor = createExecutor("CrabUtilities-DB", 4, 256);
@@ -288,6 +298,7 @@ public class CrabUtilitiesVelocity {
     public AltQueryService getAltQueryService() { return altQueryService; }
     public LoginStreakService getLoginStreakService() { return loginStreakService; }
     public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
+    public PlayerSettingsService getPlayerSettingsService() { return playerSettingsService; }
     public LiteBansInfractionService getLiteBansInfractionService() { return liteBansInfractionService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
 
@@ -331,6 +342,10 @@ public class CrabUtilitiesVelocity {
         if (updateService != null) {
             updateService.shutdown();
             updateService = null;
+        }
+        if (playerSettingsService != null) {
+            playerSettingsService.shutdown();
+            playerSettingsService = null;
         }
     }
 

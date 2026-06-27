@@ -12,32 +12,34 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.JedisPubSub;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Network-wide store of per-player {@code /settings} preferences.
+ * Backend (Spigot) mirror of the per-player {@code /settings} preferences.
  *
- * <p>Backed by a single Redis hash ({@link #HASH_KEY}) keyed by player UUID
- * with a small JSON value, so a player's choices follow them across every
- * backend on the proxy. The on-disk source of truth is Redis; this class
- * keeps an in-memory {@link ConcurrentHashMap} mirror for the players
- * currently online here so reads on the hot path (the phantom spawn/target
- * guards and the settings dialog) never touch Redis.
+ * <p>The Velocity proxy owns the canonical copy (Postgres), and exposes it
+ * over Redis: a hash ({@link #HASH_KEY}) keyed by UUID that this class HGETs to
+ * warm its in-memory {@link ConcurrentHashMap} on join, so hot-path reads (the
+ * phantom guards, the dialog, mention pings) never touch Redis. This class does
+ * not write the hash directly; a toggle updates the local cache immediately
+ * (optimistic) and publishes a change request on {@link #SET_CHANNEL}, which the
+ * proxy persists to Postgres and writes back to the hash.
  *
- * <p>Lifecycle mirrors {@link crabcraft.net.crabUtilities.LoginStreakCache}:
- * a {@link JedisPool} with a 2s timeout, an async HGET on join to warm the
- * cache, and eviction on quit. Writes (toggles) update the cache
- * synchronously and are flushed to Redis on an async task. If Redis is
- * unavailable the cache still serves the session from memory and absent
- * records fall back to {@link PlayerSettings#DEFAULTS} (phantoms OFF), which
- * is the safe default.
+ * <p>Lifecycle mirrors {@link crabcraft.net.crabUtilities.LoginStreakCache}: a
+ * {@link JedisPool} with a 2s timeout, an async HGET on join, and eviction on
+ * quit. If Redis is unavailable the cache still serves the session from memory
+ * and absent records fall back to {@link PlayerSettings#DEFAULTS} (phantoms OFF,
+ * mention pings on, messages accepted), which are the safe defaults.
  */
 public class PlayerSettingsService implements Listener {
 
     public static final String HASH_KEY = "crabutilities:settings";
+    public static final String SET_CHANNEL = "crabutilities:settings-set";
+    public static final String UPDATE_CHANNEL = "crabutilities:settings-updates";
 
     private final CrabUtilities plugin;
     private final String redisHost;
@@ -47,6 +49,7 @@ public class PlayerSettingsService implements Listener {
     private final ConcurrentHashMap<UUID, PlayerSettings> cache = new ConcurrentHashMap<>();
 
     private volatile JedisPool jedisPool;
+    private SubscriberThread subscriberThread;
     private volatile boolean redisFailureLogged;
 
     public PlayerSettingsService(CrabUtilities plugin) {
@@ -58,7 +61,9 @@ public class PlayerSettingsService implements Listener {
 
     public void start() {
         JedisPoolConfig poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxTotal(2);
+        // One connection is held by the persistent subscriber; leave headroom
+        // for concurrent join HGETs and change publishes.
+        poolConfig.setMaxTotal(4);
         if (redisPassword != null && !redisPassword.isEmpty()) {
             this.jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisPassword);
         } else {
@@ -68,15 +73,43 @@ public class PlayerSettingsService implements Listener {
         // Warm the cache for anyone already online (e.g. after a /reload).
         primeOnlinePlayers();
 
+        // Live updates from the proxy (the canonical owner) keep the cache in
+        // sync even when a join HGET races ahead of the proxy's load/seed.
+        subscriberThread = new SubscriberThread();
+        subscriberThread.setName("crabutilities-settings-subscriber");
+        subscriberThread.setDaemon(true);
+        subscriberThread.start();
+
         plugin.getLogger().info("Player settings service started; Redis will be retried asynchronously if unavailable.");
     }
 
     public void shutdown() {
+        if (subscriberThread != null) {
+            subscriberThread.cancelled = true;
+            try {
+                if (subscriberThread.subscriber != null && subscriberThread.subscriber.isSubscribed()) {
+                    subscriberThread.subscriber.unsubscribe();
+                }
+            } catch (Exception ignored) {}
+            subscriberThread.interrupt();
+            subscriberThread = null;
+        }
         if (jedisPool != null && !jedisPool.isClosed()) {
             try { jedisPool.close(); } catch (NoClassDefFoundError ignored) {}
             jedisPool = null;
         }
         cache.clear();
+    }
+
+    /** Applies a settings broadcast ({@code {uuid, ...fields}}) to the cache. */
+    private void ingest(String message) {
+        try {
+            JsonObject obj = JsonParser.parseString(message).getAsJsonObject();
+            UUID uuid = UUID.fromString(obj.get("uuid").getAsString());
+            cache.put(uuid, PlayerSettings.fromJson(obj));
+        } catch (Exception e) {
+            plugin.getLogger().fine("Bad settings update payload: " + e.getMessage());
+        }
     }
 
     /** Returns the cached settings for a player, or {@link PlayerSettings#DEFAULTS} if not loaded. */
@@ -86,6 +119,14 @@ public class PlayerSettingsService implements Listener {
 
     public PhantomMode getPhantomMode(UUID uuid) {
         return get(uuid).getPhantomMode();
+    }
+
+    public boolean isMentionPingsEnabled(UUID uuid) {
+        return get(uuid).isMentionPings();
+    }
+
+    public boolean isAcceptingMessages(UUID uuid) {
+        return get(uuid).isAcceptMessages();
     }
 
     /**
@@ -105,11 +146,30 @@ public class PlayerSettingsService implements Listener {
      * the main thread (the command / dialog path).
      */
     public void setPhantomMode(UUID uuid, PhantomMode mode) {
-        // Atomic read-modify-write so a concurrent join-load (refreshOne) can't
-        // interleave with the get/put, and so future multi-field settings keep
-        // their other values.
+        update(uuid, current -> current.withPhantomMode(mode));
+    }
+
+    public void setMentionPings(UUID uuid, boolean value) {
+        update(uuid, current -> current.withMentionPings(value));
+    }
+
+    public void setAcceptingMessages(UUID uuid, boolean value) {
+        update(uuid, current -> current.withAcceptMessages(value));
+    }
+
+    /** Replaces every setting at once (used by the dialog, which submits them together). */
+    public void setAll(UUID uuid, PhantomMode mode, boolean mentionPings, boolean acceptMessages) {
+        update(uuid, current -> new PlayerSettings(mode, mentionPings, acceptMessages));
+    }
+
+    /**
+     * Atomic read-modify-write of a player's settings, then publish the change.
+     * The compute keeps any other fields a concurrent join-load might have set,
+     * and never interleaves with the get/put.
+     */
+    private void update(UUID uuid, java.util.function.UnaryOperator<PlayerSettings> change) {
         PlayerSettings updated = cache.compute(uuid, (key, current) ->
-                (current == null ? PlayerSettings.DEFAULTS : current).withPhantomMode(mode));
+                change.apply(current == null ? PlayerSettings.DEFAULTS : current));
         persist(uuid, updated);
     }
 
@@ -179,12 +239,18 @@ public class PlayerSettingsService implements Listener {
         cache.putIfAbsent(uuid, loaded);
     }
 
-    /** Writes a player's settings back to Redis on an async task. */
+    /**
+     * Publishes a change request to the proxy on an async task. The proxy owns
+     * the canonical copy (Postgres) and the Redis hash; we only ask it to store
+     * the new value. The payload is the settings object plus the player's UUID.
+     */
     private void persist(UUID uuid, PlayerSettings settings) {
         if (jedisPool == null) {
             return;
         }
-        String payload = settings.toJson().toString();
+        JsonObject envelope = settings.toJson();
+        envelope.addProperty("uuid", uuid.toString());
+        String payload = envelope.toString();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             // Re-read the pool on the worker thread: shutdown() (e.g. a reload)
             // may have closed it between scheduling and running this task.
@@ -193,10 +259,56 @@ public class PlayerSettingsService implements Listener {
                 return;
             }
             try (Jedis jedis = pool.getResource()) {
-                jedis.hset(HASH_KEY, uuid.toString(), payload);
+                jedis.publish(SET_CHANNEL, payload);
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to save settings for " + uuid + ": " + e.getMessage());
+                plugin.getLogger().warning("Failed to publish settings for " + uuid + ": " + e.getMessage());
             }
         });
+    }
+
+    /**
+     * Persistent subscription to {@link #UPDATE_CHANNEL}, reconnecting with
+     * backoff for transient Redis outages. Mirrors
+     * {@link crabcraft.net.crabUtilities.LoginStreakCache}.
+     */
+    private final class SubscriberThread extends Thread {
+        volatile boolean cancelled = false;
+        volatile JedisPubSub subscriber;
+
+        @Override
+        public void run() {
+            long backoffMs = 1000L;
+            boolean warned = false;
+            while (!cancelled) {
+                JedisPool pool = jedisPool;
+                if (pool == null || pool.isClosed()) return;
+                try (Jedis jedis = pool.getResource()) {
+                    if (warned) {
+                        plugin.getLogger().info("Player settings Redis subscription reconnected.");
+                        warned = false;
+                        primeOnlinePlayers();
+                    }
+                    subscriber = new JedisPubSub() {
+                        @Override
+                        public void onMessage(String channel, String message) {
+                            if (UPDATE_CHANNEL.equals(channel)) ingest(message);
+                        }
+                    };
+                    backoffMs = 1000L;
+                    jedis.subscribe(subscriber, UPDATE_CHANNEL);
+                } catch (Exception e) {
+                    if (cancelled) return;
+                    if (!warned) {
+                        plugin.getLogger().warning("Player settings Redis subscription unavailable; retrying: "
+                                + e.getMessage());
+                        warned = true;
+                    } else {
+                        plugin.getLogger().fine("Settings subscription dropped: " + e.getMessage());
+                    }
+                    try { Thread.sleep(backoffMs); } catch (InterruptedException ie) { return; }
+                    backoffMs = Math.min(30_000L, backoffMs * 2L);
+                }
+            }
+        }
     }
 }
