@@ -32,8 +32,9 @@ export async function resolveUsername(
 /** Fetch a player's current name from their UUID via the Mojang session server. */
 export async function fetchPlayerName(uuid: string): Promise<string> {
   try {
+    const compactUuid = uuid.replace(/-/g, "");
     const res = await fetch(
-      `https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`,
+      `https://sessionserver.mojang.com/session/minecraft/profile/${compactUuid}`,
     );
     if (res.ok) {
       const player = (await res.json()) as Record<string, string>;

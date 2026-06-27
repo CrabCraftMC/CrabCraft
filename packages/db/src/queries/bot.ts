@@ -857,6 +857,76 @@ export async function getPlayerLink(
   return row ?? null;
 }
 
+// ── Identity sync ───────────────────────────────────────────────
+
+export interface SyncablePlayerIdentity {
+  discord_id: string;
+  discord_username: string;
+  minecraft_uuid: string | null;
+  minecraft_username: string | null;
+}
+
+export interface SyncablePlayerAltIdentity {
+  minecraft_uuid: string;
+  minecraft_username: string;
+}
+
+export async function getSyncablePlayerIdentities(): Promise<SyncablePlayerIdentity[]> {
+  return db
+    .select({
+      discord_id: players.discord_id,
+      discord_username: players.discord_username,
+      minecraft_uuid: players.minecraft_uuid,
+      minecraft_username: players.minecraft_username,
+    })
+    .from(players);
+}
+
+export async function getSyncablePlayerAltIdentities(): Promise<SyncablePlayerAltIdentity[]> {
+  return db
+    .select({
+      minecraft_uuid: playerAlts.minecraft_uuid,
+      minecraft_username: playerAlts.minecraft_username,
+    })
+    .from(playerAlts);
+}
+
+export async function updatePlayerDiscordUsername(
+  discordId: string,
+  discordUsername: string,
+): Promise<void> {
+  await db
+    .update(players)
+    .set({
+      discord_username: discordUsername,
+      updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+    })
+    .where(eq(players.discord_id, discordId));
+}
+
+export async function updatePlayerMinecraftUsername(
+  minecraftUuid: string,
+  minecraftUsername: string,
+): Promise<void> {
+  await db
+    .update(players)
+    .set({
+      minecraft_username: minecraftUsername,
+      updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+    })
+    .where(eq(players.minecraft_uuid, minecraftUuid));
+}
+
+export async function updateAltMinecraftUsername(
+  minecraftUuid: string,
+  minecraftUsername: string,
+): Promise<void> {
+  await db
+    .update(playerAlts)
+    .set({ minecraft_username: minecraftUsername })
+    .where(eq(playerAlts.minecraft_uuid, minecraftUuid));
+}
+
 // ── player profile card (/playerinfo) ───────────────────────────
 
 export interface PlayerIdentity {

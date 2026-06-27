@@ -7,6 +7,9 @@ export const CHANNEL_DELETE_DELAY_MS = 12 * 60 * 60 * 1000;
 /** Interval between leaderboard background refreshes (5 minutes). */
 export const LEADERBOARD_REFRESH_MS = 5 * 60 * 1000;
 
+/** Interval between Discord/Minecraft username syncs (24 hours). */
+export const IDENTITY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
 /** How long before an inactive applicant gets a reminder (1 day). */
 export const APPLICATION_REMINDER_DELAY_MS = 1 * 24 * 60 * 60 * 1000;
 

@@ -31,6 +31,7 @@ import {
 } from "../utils/applicationChannel.js";
 import { initWikiPoller } from "../utils/wiki.js";
 import { initStreamMonitor } from "../utils/streamMonitor.js";
+import { startIdentitySync } from "../utils/identitySync.js";
 
 export default class ReadyEvent extends Event {
   constructor() {
@@ -216,6 +217,9 @@ export default class ReadyEvent extends Event {
 
     // Wiki recent changes poller
     await initWikiPoller(client);
+
+    // Keep mutable Discord/Minecraft usernames current.
+    startIdentitySync(client);
 
     // Deploy slash commands on every startup
     if (!client.user) return;
