@@ -49,6 +49,19 @@ public class ConnectionListener {
         Player player = event.getPlayer();
         String uuid = player.getUniqueId().toString();
 
+        // Seed the authoritative nickname from the database into the proxy
+        // cache so it survives across (re)joins regardless of whether the
+        // backend the player lands on still has it in EssentialsX. The proxy
+        // cache — not the backend — is the source of truth.
+        plugin.runDatabaseTask("nickname-seed", () -> {
+            UUID id = player.getUniqueId();
+            if (plugin.getNicknameCache().getRawNickname(id) != null) return;
+            String raw = plugin.getPgWriter().loadRawNickname(uuid);
+            if (raw != null && !raw.isEmpty()) {
+                plugin.getNicknameCache().setNickname(id, raw);
+            }
+        });
+
         // Record the login streak first so it doesn't depend on
         // LuckPerms being installed and updates regardless of which
         // backend the player gets routed to (including ignored ones).

@@ -238,6 +238,31 @@ public class PostgresStatsWriter {
     }
 
     /**
+     * Loads the stored raw nickname for a player by minecraft_uuid, or
+     * {@code null} if the player has no nickname or isn't in the DB.
+     *
+     * Used to seed the proxy nickname cache on (re)join so the database is
+     * the source of truth, rather than whichever backend the player happens
+     * to land on. Without this, a backend whose local EssentialsX data has
+     * lost the nickname can silently revert it.
+     */
+    public String loadRawNickname(String uuid) {
+        String sql = "SELECT nickname_raw FROM players WHERE minecraft_uuid = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid);
+            try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to load nickname for {}", uuid, e);
+        }
+        return null;
+    }
+
+    /**
      * Shared HikariCP pool. Exposed so auxiliary writers (awards, crown
      * scores) can reuse the same connection pool rather than opening their
      * own.

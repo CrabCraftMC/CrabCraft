@@ -20,6 +20,13 @@ public class NicknameSync implements Listener, PluginMessageListener {
 
     private static final String CHANNEL = "crabutilities:nicknames";
 
+    // Distinguishes an explicit /nick change (authoritative) from a join-time
+    // report of whatever EssentialsX currently has locally (untrusted: may be
+    // stale or empty before the user is loaded). The proxy uses this so a join
+    // report can never wipe a nickname set elsewhere on the network.
+    private static final String ORIGIN_JOIN = "JOIN";
+    private static final String ORIGIN_CHANGE = "CHANGE";
+
     private final CrabUtilities plugin;
 
     public NicknameSync(CrabUtilities plugin) {
@@ -31,7 +38,7 @@ public class NicknameSync implements Listener, PluginMessageListener {
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             for (Player online : plugin.getServer().getOnlinePlayers()) {
                 String nickname = getNickname(online);
-                sendNickname(online, nickname);
+                sendNickname(online, nickname, ORIGIN_JOIN);
             }
         }, 20L);
     }
@@ -43,7 +50,7 @@ public class NicknameSync implements Listener, PluginMessageListener {
         // Delay so EssentialsX has loaded the user and the plugin channel is ready
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             String nickname = getNickname(player);
-            sendNickname(player, nickname);
+            sendNickname(player, nickname, ORIGIN_JOIN);
         }, 20L);
     }
 
@@ -57,7 +64,7 @@ public class NicknameSync implements Listener, PluginMessageListener {
         // Delay one tick so EssentialsX has finished updating internally
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             String newNick = event.getValue() != null ? event.getValue() : "";
-            sendNickname(player, newNick);
+            sendNickname(player, newNick, ORIGIN_CHANGE);
         }, 1L);
     }
 
@@ -110,7 +117,7 @@ public class NicknameSync implements Listener, PluginMessageListener {
         return nick != null ? nick : "";
     }
 
-    private void sendNickname(Player player, String nickname) {
+    private void sendNickname(Player player, String nickname, String origin) {
         if (!player.isOnline()) return;
 
         try {
@@ -118,6 +125,7 @@ public class NicknameSync implements Listener, PluginMessageListener {
             DataOutputStream out = new DataOutputStream(bytes);
             out.writeUTF(player.getUniqueId().toString());
             out.writeUTF(nickname);
+            out.writeUTF(origin);
             player.sendPluginMessage(plugin, CHANNEL, bytes.toByteArray());
         } catch (IOException e) {
             plugin.getLogger().warning("Failed to send nickname for " + player.getName());
