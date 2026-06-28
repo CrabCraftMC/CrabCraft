@@ -8,7 +8,6 @@ import {
   MessageFlags,
   ModalBuilder,
   TextChannel,
-  TextDisplayBuilder,
   TextInputBuilder,
   TextInputStyle,
   type ThreadChannel,
@@ -24,6 +23,7 @@ import { resolveUsername } from "../utils/mojang.js";
 import { fetchPlayerInfractions } from "../utils/infractions.js";
 import { CHANNEL_DELETE_DELAY_MS, TICKET_DELETE_DELAY_MS } from "../utils/constants.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
+import { applicationAcceptedMessage } from "../utils/applicationMessages.js";
 import {
   buildClosedNotice,
   buildDisabledReopenButton,
@@ -609,13 +609,7 @@ export default class ButtonInteractionEvent extends Event {
 
       try {
         await appChannel.send({
-          components: [
-            new TextDisplayBuilder().setContent(`<@${applicant.id}>`),
-            successContainer(
-              `## Application Accepted\n**Congratulations ${applicant.user.username}, your application has been accepted!**\n### Next Steps\nCheck out [our guide](https://wiki.crabcraft.net/Setup_Guide) for help installing **Simple Voice Chat**\n\nNeed anymore help? Let us know in this channel, or create a ticket <#1397191941782896670>\n-# Channel will be deleted in 12 hours`,
-            ),
-          ],
-          flags: MessageFlags.IsComponentsV2,
+          content: applicationAcceptedMessage(applicant.id),
         });
       } catch (e) {
         logger.error("Failed to send acceptance message:", e);

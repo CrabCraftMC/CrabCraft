@@ -3,7 +3,6 @@ import config from "../utils/config.js";
 import {
   errorContainer,
   primaryContainer,
-  primaryContainerWithThumbnail,
   logAutoReject,
   logDeny,
   logAccept,
@@ -21,7 +20,6 @@ import {
   ContainerBuilder,
   PermissionFlagsBits,
   SectionBuilder,
-  TextDisplayBuilder,
   ThumbnailBuilder,
   MessageFlags,
   ThreadAutoArchiveDuration,
@@ -35,6 +33,10 @@ import { storeRetry, getRetry } from "../utils/retryStore.js";
 import { resolveUsername } from "../utils/mojang.js";
 import { CHANNEL_DELETE_DELAY_MS } from "../utils/constants.js";
 import { saveTranscriptToLog } from "../utils/transcript.js";
+import {
+  applicationAcceptedMessage,
+  applicationDeniedMessage,
+} from "../utils/applicationMessages.js";
 import {
   fetchPlayerInfractions,
   type TicketInfractionInfo,
@@ -1011,10 +1013,6 @@ export default class ModalInteractionEvent extends Event {
       }
       const reason = resolveDenyReason(presetValue, customReason);
 
-      const denyContainer = errorContainer(
-        `## Application Denied\nYour application has been **denied**.\n**Reason**\n\`\`\`${reason}\`\`\`\n-# Channel will be deleted in 12 hours`,
-      );
-
       const appChannel = interaction.channel as TextChannel;
       const denyRecord = await appDb
         .getApplicationChannelByChannelId(interaction.channelId ?? "")
@@ -1058,13 +1056,7 @@ export default class ModalInteractionEvent extends Event {
       const applicantId = denyRecord?.applicant_id;
       try {
         await appChannel.send({
-          components: [
-            ...(applicantId
-              ? [new TextDisplayBuilder().setContent(`<@${applicantId}>`)]
-              : []),
-            denyContainer,
-          ],
-          flags: MessageFlags.IsComponentsV2,
+          content: applicationDeniedMessage(reason),
         });
       } catch (e) {
         logger.error("Failed to send denial message:", e);
@@ -1334,13 +1326,8 @@ export default class ModalInteractionEvent extends Event {
     }
 
     await interaction.reply({
-      components: [
-        primaryContainerWithThumbnail(
-          "## Username Whitelisted\nYour username has been **whitelisted**!\n\nDon't forget to setup Simple Voice Chat before the release! You can find a guide [here](https://wiki.crabcraft.net/Setup_Guide)",
-          `https://api.mineatar.io/body/full/${UUID}?scale=12`,
-        ),
-      ],
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      content: applicationAcceptedMessage(interaction.user.id),
+      flags: MessageFlags.Ephemeral,
     });
 
     try {
