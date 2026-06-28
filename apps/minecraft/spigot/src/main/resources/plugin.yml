@@ -16,8 +16,8 @@ commands:
     description: Resend the Jade server handshake to your client.
     permission: crabutilities.jade.handshake
   settings:
-    description: Open your personal settings menu (phantoms, mention pings, messages).
-    usage: /settings [phantoms <on|off|safe>|mentions <on|off>|messages <on|off>]
+    description: Open your personal settings menu (phantoms, mention pings, messages, locator bar).
+    usage: /settings [phantoms <on|off|safe>|mentions <on|off>|messages <on|off>|locatorbar <on|off>]
     permission: crabutilities.settings
 permissions:
   crabutilities.reload:

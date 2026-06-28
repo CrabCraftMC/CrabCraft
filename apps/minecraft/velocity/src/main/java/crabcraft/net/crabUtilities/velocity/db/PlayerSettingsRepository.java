@@ -13,8 +13,8 @@ import java.sql.Statement;
  * Postgres store for per-player {@code /settings} preferences — the canonical
  * source of truth. The settings value is the same small JSON object the backend
  * Spigot servers exchange over Redis (for example
- * {@code {"phantoms":"off","mentionPings":true,"acceptMessages":true}}), stored
- * verbatim as text so new settings can be added without a migration.
+ * {@code {"phantoms":"off","mentionPings":true,"acceptMessages":true,"locatorBar":false}}),
+ * stored verbatim as text so new settings can be added without a migration.
  */
 public final class PlayerSettingsRepository {
 

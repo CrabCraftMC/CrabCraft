@@ -5,6 +5,7 @@ import crabcraft.net.crabUtilities.chat.GlobalChatListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
+import crabcraft.net.crabUtilities.settings.LocatorBarManager;
 import crabcraft.net.crabUtilities.settings.PhantomManager;
 import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
 import crabcraft.net.crabUtilities.settings.SettingsCommand;
@@ -38,6 +39,7 @@ public final class CrabUtilities extends JavaPlugin {
     private MentionAutocompleteListener mentionAutocompleteListener;
     private PlayerSettingsService playerSettingsService;
     private PhantomManager phantomManager;
+    private LocatorBarManager locatorBarManager;
     private SettingsDialog settingsDialog;
 
     @Override
@@ -105,8 +107,8 @@ public final class CrabUtilities extends JavaPlugin {
         // fully local.
         startGlobalChatService();
 
-        // Per-player settings (/settings) and the phantom toggle they drive.
-        // Settings are stored network-wide in Redis; phantoms default OFF.
+        // Per-player settings (/settings) and the gameplay toggles they drive.
+        // Settings are stored network-wide in Redis; phantoms and locator bar default OFF.
         startPlayerSettings();
 
         // Simple Voice Chat integration: creates persistent open groups with
@@ -207,7 +209,7 @@ public final class CrabUtilities extends JavaPlugin {
 
         stopPlayerSettings();
         startPlayerSettings();
-        messages.add("Player settings + phantom manager restarted with current Redis and phantom settings.");
+        messages.add("Player settings, phantom manager, and locator bar manager restarted.");
 
         if (updateService != null) {
             updateService.shutdown();
@@ -287,11 +289,14 @@ public final class CrabUtilities extends JavaPlugin {
     private void startPlayerSettings() {
         this.playerSettingsService = new PlayerSettingsService(this);
         this.phantomManager = new PhantomManager(this, playerSettingsService);
+        this.locatorBarManager = new LocatorBarManager(this, playerSettingsService);
         this.settingsDialog = new SettingsDialog(playerSettingsService);
 
         Bukkit.getPluginManager().registerEvents(playerSettingsService, this);
         Bukkit.getPluginManager().registerEvents(phantomManager, this);
+        Bukkit.getPluginManager().registerEvents(locatorBarManager, this);
 
+        locatorBarManager.start();
         playerSettingsService.start();
         phantomManager.start();
 
@@ -304,6 +309,10 @@ public final class CrabUtilities extends JavaPlugin {
 
     private void stopPlayerSettings() {
         this.settingsDialog = null;
+        if (locatorBarManager != null) {
+            HandlerList.unregisterAll(locatorBarManager);
+            locatorBarManager = null;
+        }
         if (phantomManager != null) {
             HandlerList.unregisterAll(phantomManager);
             phantomManager = null;

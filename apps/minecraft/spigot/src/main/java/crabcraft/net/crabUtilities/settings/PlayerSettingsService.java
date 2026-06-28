@@ -17,6 +17,7 @@ import redis.clients.jedis.JedisPubSub;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Backend (Spigot) mirror of the per-player {@code /settings} preferences.
@@ -33,7 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link JedisPool} with a 2s timeout, an async HGET on join, and eviction on
  * quit. If Redis is unavailable the cache still serves the session from memory
  * and absent records fall back to {@link PlayerSettings#DEFAULTS} (phantoms OFF,
- * mention pings on, messages accepted), which are the safe defaults.
+ * mention pings on, messages accepted, locator bar off), which are the safe
+ * defaults.
  */
 public class PlayerSettingsService implements Listener {
 
@@ -47,6 +49,7 @@ public class PlayerSettingsService implements Listener {
     private final String redisPassword;
 
     private final ConcurrentHashMap<UUID, PlayerSettings> cache = new ConcurrentHashMap<>();
+    private final List<SettingsListener> listeners = new CopyOnWriteArrayList<>();
 
     private volatile JedisPool jedisPool;
     private SubscriberThread subscriberThread;
@@ -57,6 +60,15 @@ public class PlayerSettingsService implements Listener {
         this.redisHost = plugin.getConfig().getString("redis.host", "localhost");
         this.redisPort = plugin.getConfig().getInt("redis.port", 6379);
         this.redisPassword = plugin.getConfig().getString("redis.password", "");
+    }
+
+    @FunctionalInterface
+    public interface SettingsListener {
+        void onSettingsChanged(UUID uuid, PlayerSettings settings);
+    }
+
+    public void addListener(SettingsListener listener) {
+        listeners.add(listener);
     }
 
     public void start() {
@@ -98,6 +110,7 @@ public class PlayerSettingsService implements Listener {
             try { jedisPool.close(); } catch (NoClassDefFoundError ignored) {}
             jedisPool = null;
         }
+        listeners.clear();
         cache.clear();
     }
 
@@ -106,7 +119,9 @@ public class PlayerSettingsService implements Listener {
         try {
             JsonObject obj = JsonParser.parseString(message).getAsJsonObject();
             UUID uuid = UUID.fromString(obj.get("uuid").getAsString());
-            cache.put(uuid, PlayerSettings.fromJson(obj));
+            PlayerSettings settings = PlayerSettings.fromJson(obj);
+            cache.put(uuid, settings);
+            notifySettingsChanged(uuid, settings);
         } catch (Exception e) {
             plugin.getLogger().fine("Bad settings update payload: " + e.getMessage());
         }
@@ -127,6 +142,10 @@ public class PlayerSettingsService implements Listener {
 
     public boolean isAcceptingMessages(UUID uuid) {
         return get(uuid).isAcceptMessages();
+    }
+
+    public boolean isLocatorBarEnabled(UUID uuid) {
+        return get(uuid).isLocatorBar();
     }
 
     /**
@@ -157,9 +176,14 @@ public class PlayerSettingsService implements Listener {
         update(uuid, current -> current.withAcceptMessages(value));
     }
 
+    public void setLocatorBar(UUID uuid, boolean value) {
+        update(uuid, current -> current.withLocatorBar(value));
+    }
+
     /** Replaces every setting at once (used by the dialog, which submits them together). */
-    public void setAll(UUID uuid, PhantomMode mode, boolean mentionPings, boolean acceptMessages) {
-        update(uuid, current -> new PlayerSettings(mode, mentionPings, acceptMessages));
+    public void setAll(UUID uuid, PhantomMode mode, boolean mentionPings,
+                       boolean acceptMessages, boolean locatorBar) {
+        update(uuid, current -> new PlayerSettings(mode, mentionPings, acceptMessages, locatorBar));
     }
 
     /**
@@ -170,6 +194,7 @@ public class PlayerSettingsService implements Listener {
     private void update(UUID uuid, java.util.function.UnaryOperator<PlayerSettings> change) {
         PlayerSettings updated = cache.compute(uuid, (key, current) ->
                 change.apply(current == null ? PlayerSettings.DEFAULTS : current));
+        notifySettingsChanged(uuid, updated);
         persist(uuid, updated);
     }
 
@@ -212,7 +237,9 @@ public class PlayerSettingsService implements Listener {
         if (pool == null || pool.isClosed()) {
             // Redis not available: seed defaults so the cache has an entry
             // (isLoaded() becomes true) and reads get phantoms OFF by default.
-            cache.putIfAbsent(uuid, PlayerSettings.DEFAULTS);
+            if (cache.putIfAbsent(uuid, PlayerSettings.DEFAULTS) == null) {
+                notifySettingsChanged(uuid, PlayerSettings.DEFAULTS);
+            }
             return;
         }
         PlayerSettings loaded = PlayerSettings.DEFAULTS;
@@ -236,7 +263,19 @@ public class PlayerSettingsService implements Listener {
         // Seed only if absent: a setting the player toggled during the (possibly
         // slow) Redis round-trip is authoritative and must not be clobbered by
         // the stale loaded value. Matches the Redis-unavailable branch above.
-        cache.putIfAbsent(uuid, loaded);
+        if (cache.putIfAbsent(uuid, loaded) == null) {
+            notifySettingsChanged(uuid, loaded);
+        }
+    }
+
+    private void notifySettingsChanged(UUID uuid, PlayerSettings settings) {
+        for (SettingsListener listener : listeners) {
+            try {
+                listener.onSettingsChanged(uuid, settings);
+            } catch (Exception e) {
+                plugin.getLogger().fine("Settings listener failed for " + uuid + ": " + e.getMessage());
+            }
+        }
     }
 
     /**

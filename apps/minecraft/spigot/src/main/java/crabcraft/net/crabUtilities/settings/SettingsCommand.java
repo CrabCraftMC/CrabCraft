@@ -21,13 +21,14 @@ import java.util.stream.Collectors;
  *   <li>{@code /settings phantoms [on|off|safe]}</li>
  *   <li>{@code /settings mentions [on|off]} — mention ping sound.</li>
  *   <li>{@code /settings messages [on|off]} — accept private messages.</li>
+ *   <li>{@code /settings locatorbar [on|off]} — vanilla locator bar.</li>
  * </ul>
  *
  * <p>Settings are per-player, so every path requires a player sender.
  */
 public class SettingsCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> SUBCOMMANDS = List.of("phantoms", "mentions", "messages");
+    private static final List<String> SUBCOMMANDS = List.of("phantoms", "mentions", "messages", "locatorbar");
     private static final List<String> PHANTOM_VALUES = List.of("on", "off", "safe");
     private static final List<String> TOGGLE_VALUES = List.of("on", "off");
 
@@ -69,8 +70,11 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
             case "messages" -> handleToggle(player, args, "Private messages",
                     settingsService.isAcceptingMessages(uuid),
                     value -> settingsService.setAcceptingMessages(uuid, value));
+            case "locatorbar", "locator-bar", "locator" -> handleToggle(player, args, "Locator bar",
+                    settingsService.isLocatorBarEnabled(uuid),
+                    value -> settingsService.setLocatorBar(uuid, value));
             default -> player.sendMessage(miniMessage.deserialize(
-                    "<#f77069>Usage: /settings [phantoms|mentions|messages] ..."));
+                    "<#f77069>Usage: /settings [phantoms|mentions|messages|locatorbar] ..."));
         }
         return true;
     }
@@ -139,7 +143,9 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length == 2) {
             List<String> values = args[0].equalsIgnoreCase("phantoms") ? PHANTOM_VALUES
-                    : (args[0].equalsIgnoreCase("mentions") || args[0].equalsIgnoreCase("messages"))
+                    : (args[0].equalsIgnoreCase("mentions") || args[0].equalsIgnoreCase("messages")
+                            || args[0].equalsIgnoreCase("locatorbar") || args[0].equalsIgnoreCase("locator")
+                            || args[0].equalsIgnoreCase("locator-bar"))
                         ? TOGGLE_VALUES : List.of();
             return values.stream()
                     .filter(s -> s.startsWith(args[1].toLowerCase(Locale.ROOT)))

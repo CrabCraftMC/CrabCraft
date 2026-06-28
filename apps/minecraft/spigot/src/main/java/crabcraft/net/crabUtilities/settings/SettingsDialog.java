@@ -41,6 +41,7 @@ public class SettingsDialog {
     private static final String PHANTOMS_KEY = "phantoms";
     private static final String MENTION_PINGS_KEY = "mentionPings";
     private static final String ACCEPT_MESSAGES_KEY = "acceptMessages";
+    private static final String LOCATOR_BAR_KEY = "locatorBar";
 
     /** Order shown in the selector (most phantoms to least). */
     private static final PhantomMode[] ORDER = { PhantomMode.ON, PhantomMode.SAFE, PhantomMode.OFF };
@@ -70,7 +71,9 @@ public class SettingsDialog {
                         DialogInput.bool(MENTION_PINGS_KEY, mini("<#FCD05C>Mention pings"))
                                 .initial(current.isMentionPings()).onTrue("On").onFalse("Off").build(),
                         DialogInput.bool(ACCEPT_MESSAGES_KEY, mini("<#FCD05C>Private messages"))
-                                .initial(current.isAcceptMessages()).onTrue("On").onFalse("Off").build()))
+                                .initial(current.isAcceptMessages()).onTrue("On").onFalse("Off").build(),
+                        DialogInput.bool(LOCATOR_BAR_KEY, mini("<#FCD05C>Locator bar"))
+                                .initial(current.isLocatorBar()).onTrue("On").onFalse("Off").build()))
                 .canCloseWithEscape(true)
                 .build();
 
@@ -101,10 +104,12 @@ public class SettingsDialog {
 
         Boolean pings = view.getBoolean(MENTION_PINGS_KEY);
         Boolean accept = view.getBoolean(ACCEPT_MESSAGES_KEY);
+        Boolean locator = view.getBoolean(LOCATOR_BAR_KEY);
         boolean mentionPings = pings != null ? pings : current.isMentionPings();
         boolean acceptMessages = accept != null ? accept : current.isAcceptMessages();
+        boolean locatorBar = locator != null ? locator : current.isLocatorBar();
 
-        settingsService.setAll(uuid, mode, mentionPings, acceptMessages);
+        settingsService.setAll(uuid, mode, mentionPings, acceptMessages, locatorBar);
         audience.sendMessage(mini("<#FC835C>settings saved"));
     }
 
