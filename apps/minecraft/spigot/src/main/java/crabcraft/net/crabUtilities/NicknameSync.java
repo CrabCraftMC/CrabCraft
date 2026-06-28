@@ -96,9 +96,11 @@ public class NicknameSync implements Listener, PluginMessageListener {
                 // Only update if different and authoritative nick is not empty
                 if (!authoritative.isEmpty() && !authoritative.equals(localNick)) {
                     user.setNickname(authoritative);
+                    plugin.refreshMentionAutocomplete();
                     plugin.getLogger().info("Synced nickname for " + target.getName() + ": " + authoritative);
                 } else if (authoritative.isEmpty() && !localNick.isEmpty()) {
                     user.setNickname(null);
+                    plugin.refreshMentionAutocomplete();
                     plugin.getLogger().info("Cleared nickname for " + target.getName());
                 }
             }, 20L);

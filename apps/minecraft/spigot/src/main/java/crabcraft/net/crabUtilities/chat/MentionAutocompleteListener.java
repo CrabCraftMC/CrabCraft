@@ -1,62 +1,105 @@
 package crabcraft.net.crabUtilities.chat;
 
-import com.destroystokyo.paper.event.server.AsyncTabCompleteEvent;
 import crabcraft.net.crabUtilities.CrabUtilities;
 import crabcraft.net.crabUtilities.NicknameComponentResolver;
+import net.ess3.api.events.NickChangeEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public class MentionAutocompleteListener implements Listener {
 
     private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
 
     private final CrabUtilities plugin;
+    private final Map<UUID, Set<String>> sentCompletions = new HashMap<>();
 
     public MentionAutocompleteListener(CrabUtilities plugin) {
         this.plugin = plugin;
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onTabComplete(AsyncTabCompleteEvent event) {
-        if (event.isCommand()) {
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Bukkit.getScheduler().runTaskLater(plugin, this::refreshAll, 20L);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        sentCompletions.remove(event.getPlayer().getUniqueId());
+        Bukkit.getScheduler().runTask(plugin, this::refreshAll);
+    }
+
+    @EventHandler
+    public void onNickChange(NickChangeEvent event) {
+        Bukkit.getScheduler().runTaskLater(plugin, this::refreshAll, 2L);
+    }
+
+    public void refreshAll() {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(plugin, this::refreshAll);
             return;
         }
 
+        Set<String> completions = mentionCompletions();
+        Set<UUID> onlineIds = new LinkedHashSet<>();
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            onlineIds.add(viewer.getUniqueId());
+            syncCompletions(viewer, completions);
+        }
+        sentCompletions.keySet().retainAll(onlineIds);
+    }
+
+    private Set<String> mentionCompletions() {
         if (!plugin.getConfig().getBoolean("global-chat.mentions.enabled", true)) {
-            return;
+            return Set.of();
         }
 
         String prefix = plugin.getConfig().getString("global-chat.mentions.prefix", "@");
-        String token = lastToken(event.getBuffer());
-        if (prefix == null || prefix.isEmpty() || !token.startsWith(prefix)) {
-            return;
+        if (prefix == null || prefix.isEmpty()) {
+            return Set.of();
         }
 
-        String query = token.substring(prefix.length()).toLowerCase(Locale.ROOT);
-        List<String> completions = new ArrayList<>();
+        Set<String> completions = new LinkedHashSet<>();
         for (Player player : Bukkit.getOnlinePlayers()) {
             String name = mentionName(player);
-            if (name.toLowerCase(Locale.ROOT).startsWith(query)) {
+            if (!name.isEmpty()) {
                 completions.add(prefix + name);
             }
         }
-
-        event.setCompletions(completions);
-        event.setHandled(true);
+        return completions;
     }
 
-    private static String lastToken(String buffer) {
-        int start = Math.max(buffer.lastIndexOf(' '), buffer.lastIndexOf('\n')) + 1;
-        return buffer.substring(start);
+    private void syncCompletions(Player viewer, Set<String> completions) {
+        Set<String> previous = sentCompletions.getOrDefault(viewer.getUniqueId(), Set.of());
+        ArrayList<String> toRemove = new ArrayList<>(previous);
+        toRemove.removeAll(completions);
+        if (!toRemove.isEmpty()) {
+            viewer.removeCustomChatCompletions(toRemove);
+        }
+
+        ArrayList<String> toAdd = new ArrayList<>(completions);
+        toAdd.removeAll(previous);
+        if (!toAdd.isEmpty()) {
+            viewer.addCustomChatCompletions(toAdd);
+        }
+
+        if (completions.isEmpty()) {
+            sentCompletions.remove(viewer.getUniqueId());
+        } else {
+            sentCompletions.put(viewer.getUniqueId(), Set.copyOf(completions));
+        }
     }
 
     private String mentionName(Player player) {

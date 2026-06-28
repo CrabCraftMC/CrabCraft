@@ -35,6 +35,7 @@ public final class CrabUtilities extends JavaPlugin {
     private LoginStreakExpansion loginStreakExpansion;
     private GlobalChatService globalChatService;
     private GlobalChatListener globalChatListener;
+    private MentionAutocompleteListener mentionAutocompleteListener;
     private PlayerSettingsService playerSettingsService;
     private PhantomManager phantomManager;
     private SettingsDialog settingsDialog;
@@ -75,7 +76,9 @@ public final class CrabUtilities extends JavaPlugin {
 
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new MentionAutocompleteListener(this), this);
+        this.mentionAutocompleteListener = new MentionAutocompleteListener(this);
+        Bukkit.getPluginManager().registerEvents(mentionAutocompleteListener, this);
+        mentionAutocompleteListener.refreshAll();
         Bukkit.getPluginManager().registerEvents(nicknameSync, this);
         nicknameSync.syncAll();
 
@@ -163,6 +166,12 @@ public final class CrabUtilities extends JavaPlugin {
         return essentials;
     }
 
+    public void refreshMentionAutocomplete() {
+        if (mentionAutocompleteListener != null) {
+            mentionAutocompleteListener.refreshAll();
+        }
+    }
+
     /** The per-player settings mirror, or {@code null} before it has started. */
     public PlayerSettingsService getPlayerSettingsService() {
         return playerSettingsService;
@@ -193,6 +202,7 @@ public final class CrabUtilities extends JavaPlugin {
 
         stopGlobalChatService();
         startGlobalChatService();
+        refreshMentionAutocomplete();
         messages.add("Global chat restarted with current Redis, format, and mention settings.");
 
         stopPlayerSettings();
