@@ -36,6 +36,7 @@ import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
 import crabcraft.net.crabUtilities.velocity.db.AltQueryService;
 import crabcraft.net.crabUtilities.velocity.db.LoginStreakService;
 import crabcraft.net.crabUtilities.velocity.litebans.LiteBansInfractionService;
+import crabcraft.net.crabUtilities.velocity.litebans.PunishmentEventPublisher;
 import crabcraft.net.crabUtilities.velocity.update.UpdateService;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -90,6 +91,7 @@ public class CrabUtilitiesVelocity {
     private PlayerSettingsRepository playerSettingsRepository;
     private PlayerSettingsService playerSettingsService;
     private LiteBansInfractionService liteBansInfractionService;
+    private PunishmentEventPublisher punishmentEventPublisher;
     private LuckPerms luckPerms;
     private volatile ExecutorService databaseExecutor;
     private final Object lifecycleLock = new Object();
@@ -137,6 +139,8 @@ public class CrabUtilitiesVelocity {
                 pgWriter.getDataSource(), logger, config.getLoginStreakResetHourUtc());
         this.loginStreakPublisher = new LoginStreakPublisher(this, config);
         this.liteBansInfractionService = new LiteBansInfractionService(logger);
+        this.punishmentEventPublisher = new PunishmentEventPublisher(this, config);
+        this.punishmentEventPublisher.start();
 
         this.playerSettingsRepository = new PlayerSettingsRepository(pgWriter.getDataSource(), logger);
         this.playerSettingsService = new PlayerSettingsService(this, playerSettingsRepository, config);
@@ -236,6 +240,8 @@ public class CrabUtilitiesVelocity {
             this.loginStreakService = new LoginStreakService(
                     newPgWriter.getDataSource(), logger, newConfig.getLoginStreakResetHourUtc());
             this.liteBansInfractionService = new LiteBansInfractionService(logger);
+            this.punishmentEventPublisher = new PunishmentEventPublisher(this, newConfig);
+            this.punishmentEventPublisher.start();
 
             if (oldPgWriter != null) {
                 oldPgWriter.close();
@@ -338,6 +344,10 @@ public class CrabUtilitiesVelocity {
             playerLocationTracker.shutdown();
             server.getEventManager().unregisterListener(this, playerLocationTracker);
             playerLocationTracker = null;
+        }
+        if (punishmentEventPublisher != null) {
+            punishmentEventPublisher.shutdown();
+            punishmentEventPublisher = null;
         }
         if (updateService != null) {
             updateService.shutdown();

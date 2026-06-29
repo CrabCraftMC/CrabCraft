@@ -34,6 +34,8 @@ public class VelocityConfig {
     private final int redisPort;
     private final String redisPassword;
     private final String redisChannel;
+    private final String redisPunishmentStream;
+    private final long redisPunishmentWatchIntervalSeconds;
     private final String staffChatFormat;
     private final String staffChatDiscordWebhookUrl;
     private final String staffChatDiscordAvatarUrl;
@@ -68,7 +70,9 @@ public class VelocityConfig {
     private final int loginStreakResetHourUtc;
 
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
-                           String redisChannel, String staffChatFormat,
+                           String redisChannel, String redisPunishmentStream,
+                           long redisPunishmentWatchIntervalSeconds,
+                           String staffChatFormat,
                            String staffChatDiscordWebhookUrl, String staffChatDiscordAvatarUrl,
                            String msgOutgoingFormat, String msgIncomingFormat,
                            String msgSpyFormat,
@@ -92,6 +96,8 @@ public class VelocityConfig {
         this.redisPort = redisPort;
         this.redisPassword = redisPassword;
         this.redisChannel = redisChannel;
+        this.redisPunishmentStream = redisPunishmentStream;
+        this.redisPunishmentWatchIntervalSeconds = redisPunishmentWatchIntervalSeconds;
         this.staffChatFormat = staffChatFormat;
         this.staffChatDiscordWebhookUrl = staffChatDiscordWebhookUrl;
         this.staffChatDiscordAvatarUrl = staffChatDiscordAvatarUrl;
@@ -166,6 +172,9 @@ public class VelocityConfig {
             int port = redis.node("port").getInt(6379);
             String password = redis.node("password").getString("");
             String channel = redis.node("channel").getString("crabutilities:staffchat");
+            String punishmentStream = redis.node("punishment-stream").getString("crabcraft:punishments");
+            long punishmentWatchIntervalSeconds = Math.max(1L,
+                    redis.node("punishment-watch-interval-seconds").getLong(10L));
 
             String format = root.node("staff-chat", "format").getString(DEFAULT_FORMAT);
             ConfigurationNode staffChatDiscord = root.node("staff-chat", "discord");
@@ -226,7 +235,8 @@ public class VelocityConfig {
             int streakResetHour = root.node("login-streaks", "reset-hour-utc")
                     .getInt(LoginStreakService.DEFAULT_RESET_HOUR_UTC);
 
-            return new VelocityConfig(host, port, password, channel, format,
+            return new VelocityConfig(host, port, password, channel,
+                    punishmentStream, punishmentWatchIntervalSeconds, format,
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
                     msgOutgoing, msgIncoming, msgSpy, msgNotFound, msgNoReply, msgSelf,
                     soundEnabled, soundKey, soundVolume, soundPitch, apiPort,
@@ -237,7 +247,8 @@ public class VelocityConfig {
                     vcEnabled, vcHomeTtl, streakResetHour);
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
-            return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat", DEFAULT_FORMAT,
+            return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat",
+                    "crabcraft:punishments", 10L, DEFAULT_FORMAT,
                     "", "https://mc-heads.net/head/{uuid}",
                     DEFAULT_MSG_OUTGOING, DEFAULT_MSG_INCOMING, DEFAULT_MSG_SPY,
                     DEFAULT_MSG_PLAYER_NOT_FOUND, DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF,
@@ -255,6 +266,8 @@ public class VelocityConfig {
     public int getRedisPort() { return redisPort; }
     public String getRedisPassword() { return redisPassword; }
     public String getRedisChannel() { return redisChannel; }
+    public String getRedisPunishmentStream() { return redisPunishmentStream; }
+    public long getRedisPunishmentWatchIntervalSeconds() { return redisPunishmentWatchIntervalSeconds; }
     public String getStaffChatFormat() { return staffChatFormat; }
     public String getStaffChatDiscordWebhookUrl() { return staffChatDiscordWebhookUrl; }
     public String getStaffChatDiscordAvatarUrl() { return staffChatDiscordAvatarUrl; }

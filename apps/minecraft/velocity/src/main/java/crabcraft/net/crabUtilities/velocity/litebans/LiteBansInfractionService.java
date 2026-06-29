@@ -17,10 +17,14 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -35,6 +39,10 @@ public final class LiteBansInfractionService {
             new Source("mute", "mutes"),
             new Source("warning", "warnings"),
             new Source("kick", "kicks"),
+    };
+    private static final Source[] ACTIVE_PUNISHMENT_SOURCES = {
+            new Source("ban", "bans"),
+            new Source("mute", "mutes"),
     };
     private static final int QUERY_TIMEOUT_SECONDS = 5;
 
@@ -81,6 +89,46 @@ public final class LiteBansInfractionService {
         return response;
     }
 
+    public JsonObject getActivePunishmentsJson(Collection<String> normalizedUuids)
+            throws LiteBansUnavailableException, SQLException {
+        Set<String> punishedUuids = getActivePunishedUuids(normalizedUuids);
+
+        JsonArray out = new JsonArray();
+        for (String uuid : punishedUuids) {
+            out.add(uuid);
+        }
+
+        JsonObject response = new JsonObject();
+        response.addProperty("count", out.size());
+        response.add("punished_uuids", out);
+        return response;
+    }
+
+    public Set<String> getActivePunishedUuids(Collection<String> normalizedUuids)
+            throws LiteBansUnavailableException, SQLException {
+        Map<String, String> uuidLookup = buildUuidLookup(normalizedUuids);
+        Set<String> punishedUuids = new LinkedHashSet<>();
+
+        if (!uuidLookup.isEmpty()) {
+            Object database = getDatabase();
+            for (Source source : ACTIVE_PUNISHMENT_SOURCES) {
+                punishedUuids.addAll(queryActivePunishments(database, source, uuidLookup));
+            }
+        }
+
+        return punishedUuids;
+    }
+
+    public Set<String> getAllActivePunishedUuids()
+            throws LiteBansUnavailableException, SQLException {
+        Set<String> punishedUuids = new LinkedHashSet<>();
+        Object database = getDatabase();
+        for (Source source : ACTIVE_PUNISHMENT_SOURCES) {
+            punishedUuids.addAll(queryAllActivePunishments(database, source));
+        }
+        return punishedUuids;
+    }
+
     private List<Infraction> querySource(Object database, Source source, String uuid,
                                          String compactUuid, int limit)
             throws SQLException, LiteBansUnavailableException {
@@ -105,6 +153,94 @@ public final class LiteBansInfractionService {
                 }
                 return rows;
             }
+        }
+    }
+
+    private Set<String> queryActivePunishments(Object database, Source source,
+                                               Map<String, String> uuidLookup)
+            throws SQLException, LiteBansUnavailableException {
+        String sql = "SELECT uuid FROM {" + source.tableToken() + "} "
+                + "WHERE active = 1 AND uuid IN (" + placeholders(uuidLookup.size()) + ")";
+        try (PreparedStatement stmt = prepareStatement(database, sql)) {
+            try {
+                stmt.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
+            } catch (SQLException ignored) {
+                // Some JDBC drivers do not support per-statement timeouts.
+            }
+            int index = 1;
+            for (String uuid : uuidLookup.keySet()) {
+                stmt.setString(index++, uuid);
+            }
+            try (ResultSet rs = stmt.executeQuery()) {
+                Set<String> rows = new LinkedHashSet<>();
+                while (rs.next()) {
+                    String rawUuid = rs.getString("uuid");
+                    if (rawUuid == null) continue;
+                    String normalizedUuid = uuidLookup.get(rawUuid.toLowerCase(Locale.ROOT));
+                    if (normalizedUuid != null) {
+                        rows.add(normalizedUuid);
+                    }
+                }
+                return rows;
+            }
+        }
+    }
+
+    private Set<String> queryAllActivePunishments(Object database, Source source)
+            throws SQLException, LiteBansUnavailableException {
+        String sql = "SELECT uuid FROM {" + source.tableToken() + "} WHERE active = 1";
+        try (PreparedStatement stmt = prepareStatement(database, sql)) {
+            try {
+                stmt.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
+            } catch (SQLException ignored) {
+                // Some JDBC drivers do not support per-statement timeouts.
+            }
+            try (ResultSet rs = stmt.executeQuery()) {
+                Set<String> rows = new LinkedHashSet<>();
+                while (rs.next()) {
+                    String normalizedUuid = normalizeStoredUuid(rs.getString("uuid"));
+                    if (normalizedUuid != null) {
+                        rows.add(normalizedUuid);
+                    }
+                }
+                return rows;
+            }
+        }
+    }
+
+    private static Map<String, String> buildUuidLookup(Collection<String> normalizedUuids) {
+        Map<String, String> lookup = new LinkedHashMap<>();
+        for (String uuid : normalizedUuids) {
+            String normalized = UUID.fromString(uuid).toString();
+            lookup.put(normalized, normalized);
+            lookup.put(normalized.replace("-", ""), normalized);
+        }
+        return lookup;
+    }
+
+    private static String placeholders(int count) {
+        StringBuilder builder = new StringBuilder(count * 2);
+        for (int i = 0; i < count; i++) {
+            if (i > 0) builder.append(',');
+            builder.append('?');
+        }
+        return builder.toString();
+    }
+
+    private static String normalizeStoredUuid(String uuid) {
+        if (uuid == null) return null;
+        String value = uuid.trim();
+        try {
+            if (value.length() == 32) {
+                value = value.substring(0, 8) + "-"
+                        + value.substring(8, 12) + "-"
+                        + value.substring(12, 16) + "-"
+                        + value.substring(16, 20) + "-"
+                        + value.substring(20);
+            }
+            return UUID.fromString(value).toString();
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 

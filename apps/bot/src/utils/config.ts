@@ -9,7 +9,15 @@ interface IdConfig {
   roles: {
     member: string;
     mod: string;
+    punished: string;
     live?: string;
+  };
+  redis?: {
+    host?: string;
+    port?: number;
+    password?: string;
+    punishmentStream?: string;
+    punishmentGroup?: string;
   };
   channels: {
     applicationCategory: string;
@@ -47,6 +55,7 @@ if (missingEnv.length > 0) {
 const REQUIRED_IDS: Array<[string, string | undefined]> = [
   ["roles.member", ids.roles?.member],
   ["roles.mod", ids.roles?.mod],
+  ["roles.punished", ids.roles?.punished],
   ["channels.applicationCategory", ids.channels?.applicationCategory],
   ["channels.log", ids.channels?.log],
   ["channels.ticketCategory", ids.channels?.ticketCategory],
@@ -84,7 +93,13 @@ interface IConfig {
   // Discord IDs (config.json)
   MEMBER_ROLE_ID: string;
   MOD_ROLE_ID: string;
+  PUNISHED_ROLE_ID: string;
   LIVE_ROLE_ID: string;
+  REDIS_HOST: string;
+  REDIS_PORT: number;
+  REDIS_PASSWORD: string;
+  PUNISHMENT_REDIS_STREAM: string;
+  PUNISHMENT_REDIS_GROUP: string;
   APPLICATION_CATEGORY_ID: string;
   LOG_CHANNEL_ID: string;
   LEADERBOARD_CHANNEL_ID: string;
@@ -109,7 +124,13 @@ const config: IConfig = {
 
   MEMBER_ROLE_ID: ids.roles.member,
   MOD_ROLE_ID: ids.roles.mod,
+  PUNISHED_ROLE_ID: ids.roles.punished,
   LIVE_ROLE_ID: ids.roles.live ?? "",
+  REDIS_HOST: ids.redis?.host ?? "localhost",
+  REDIS_PORT: ids.redis?.port ?? 6379,
+  REDIS_PASSWORD: ids.redis?.password ?? "",
+  PUNISHMENT_REDIS_STREAM: ids.redis?.punishmentStream ?? "crabcraft:punishments",
+  PUNISHMENT_REDIS_GROUP: ids.redis?.punishmentGroup ?? "crabcraft-bot",
   APPLICATION_CATEGORY_ID: ids.channels.applicationCategory,
   LOG_CHANNEL_ID: ids.channels.log,
   LEADERBOARD_CHANNEL_ID: ids.channels.leaderboard ?? "",
