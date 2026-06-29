@@ -64,7 +64,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
 
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "phantoms" -> handlePhantoms(player, uuid, args);
-            case "mentions" -> handleToggle(player, args, "Chat mention pings",
+            case "mentions" -> handleToggle(player, args, "Chat pings",
                     settingsService.isMentionPingsEnabled(uuid),
                     value -> settingsService.setMentionPings(uuid, value));
             case "messages" -> handleToggle(player, args, "Private messages",

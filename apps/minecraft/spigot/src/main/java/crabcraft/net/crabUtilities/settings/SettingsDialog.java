@@ -68,7 +68,7 @@ public class SettingsDialog {
         DialogBase base = DialogBase.builder(mini("<#FCD05C>Settings"))
                 .inputs(List.of(
                         DialogInput.singleOption(PHANTOMS_KEY, mini("<#FCD05C>Phantoms"), options).build(),
-                        DialogInput.singleOption(MENTION_PINGS_KEY, mini("<#FCD05C>Chat mention pings"),
+                        DialogInput.singleOption(MENTION_PINGS_KEY, mini("<#FCD05C>Chat pings"),
                                 toggleOptions(current.isMentionPings())).build(),
                         DialogInput.singleOption(ACCEPT_MESSAGES_KEY, mini("<#FCD05C>Private messages"),
                                 toggleOptions(current.isAcceptMessages())).build(),
