@@ -1,8 +1,10 @@
 package crabcraft.net.crabUtilities;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TranslatableComponent;
+import net.kyori.adventure.text.TranslationArgument;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -61,14 +63,20 @@ public class NicknameMessageListener implements Listener {
 
         // Then, handle translatable arguments (death/advancement messages are translatable)
         if (afterChildren instanceof TranslatableComponent tc) {
-            List<Component> newArgs = new ArrayList<>(tc.args().size());
-            for (final net.kyori.adventure.text.ComponentLike like : tc.args()) {
+            List<ComponentLike> newArgs = new ArrayList<>(tc.arguments().size());
+            for (TranslationArgument arg : tc.arguments()) {
+                Object value = arg.value();
+                if (!(value instanceof ComponentLike like)) {
+                    newArgs.add(arg);
+                    continue;
+                }
+
                 Component argComp = like.asComponent();
                 argComp = transformComponent(argComp); // recurse in args too
                 argComp = maybeReplacePlayerNameComponent(argComp);
-                newArgs.add(argComp);
+                newArgs.add(TranslationArgument.component(argComp));
             }
-            afterChildren = tc.toBuilder().args(newArgs).build();
+            afterChildren = tc.toBuilder().arguments(newArgs).build();
         }
 
         // Finally, try replacing this exact component if it matches a player name component
