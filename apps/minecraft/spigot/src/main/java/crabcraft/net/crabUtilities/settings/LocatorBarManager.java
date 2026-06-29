@@ -4,14 +4,18 @@ import crabcraft.net.crabUtilities.CrabUtilities;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import io.papermc.paper.registry.keys.GameRuleKeys;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.waypoints.ServerWaypointManager;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 
@@ -65,6 +69,15 @@ public class LocatorBarManager implements Listener {
     }
 
     @EventHandler
+    public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        enableLocatorBarGameRule(player.getWorld());
+
+        UUID uuid = player.getUniqueId();
+        apply(player, settingsService.isLoaded(uuid) && settingsService.isLocatorBarEnabled(uuid));
+    }
+
+    @EventHandler
     public void onWorldLoad(WorldLoadEvent event) {
         enableLocatorBarGameRule(event.getWorld());
     }
@@ -94,6 +107,22 @@ public class LocatorBarManager implements Listener {
         double value = enabled ? receiveRange.getDefaultValue() : DISABLED_RECEIVE_RANGE;
         if (Double.compare(receiveRange.getBaseValue(), value) != 0) {
             receiveRange.setBaseValue(value);
+        }
+        if (!enabled) {
+            keepTransmittingWaypoint(player);
+        }
+    }
+
+    private void keepTransmittingWaypoint(Player player) {
+        ServerPlayer handle = ((CraftPlayer) player).getHandle();
+        ServerWaypointManager waypointManager = handle.level().getWaypointManager();
+
+        // ServerWaypointManager.removePlayer() is triggered when receive range
+        // becomes 0, and it also untracks the player as a waypoint transmitter.
+        // Re-track the player so opted-in viewers can still see normal players.
+        waypointManager.untrackWaypoint(handle);
+        if (handle.isTransmittingWaypoint()) {
+            waypointManager.trackWaypoint(handle);
         }
     }
 
