@@ -4,14 +4,11 @@ import crabcraft.net.crabUtilities.CrabUtilities;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import io.papermc.paper.registry.keys.GameRuleKeys;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.waypoints.ServerWaypointManager;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -26,13 +23,14 @@ import java.util.UUID;
  *
  * <p>The vanilla waypoint manager is gated by the world-level {@code locatorBar}
  * gamerule, so this feature keeps that gamerule enabled and controls visibility
- * per player with {@link Attribute#WAYPOINT_RECEIVE_RANGE}. A receive range of
- * {@code 0} means the player receives no locator bar waypoints; restoring the
- * attribute default gives them vanilla behaviour.
+ * per player with {@link Attribute#WAYPOINT_RECEIVE_RANGE} and
+ * {@link Attribute#WAYPOINT_TRANSMIT_RANGE}. Ranges of {@code 0} fully opt a
+ * player out; restoring the vanilla max range opts them back in.
  */
 public class LocatorBarManager implements Listener {
 
-    private static final double DISABLED_RECEIVE_RANGE = 0.0D;
+    private static final double ENABLED_RANGE = 60_000_000.0D;
+    private static final double DISABLED_RANGE = 0.0D;
 
     private final CrabUtilities plugin;
     private final PlayerSettingsService settingsService;
@@ -99,30 +97,19 @@ public class LocatorBarManager implements Listener {
     }
 
     private void apply(Player player, boolean enabled) {
-        AttributeInstance receiveRange = player.getAttribute(Attribute.WAYPOINT_RECEIVE_RANGE);
-        if (receiveRange == null) {
+        double value = enabled ? ENABLED_RANGE : DISABLED_RANGE;
+        setAttribute(player, Attribute.WAYPOINT_TRANSMIT_RANGE, value);
+        setAttribute(player, Attribute.WAYPOINT_RECEIVE_RANGE, value);
+    }
+
+    private void setAttribute(Player player, Attribute attribute, double value) {
+        AttributeInstance instance = player.getAttribute(attribute);
+        if (instance == null) {
             return;
         }
 
-        double value = enabled ? receiveRange.getDefaultValue() : DISABLED_RECEIVE_RANGE;
-        if (Double.compare(receiveRange.getBaseValue(), value) != 0) {
-            receiveRange.setBaseValue(value);
-        }
-        if (!enabled) {
-            keepTransmittingWaypoint(player);
-        }
-    }
-
-    private void keepTransmittingWaypoint(Player player) {
-        ServerPlayer handle = ((CraftPlayer) player).getHandle();
-        ServerWaypointManager waypointManager = handle.level().getWaypointManager();
-
-        // ServerWaypointManager.removePlayer() is triggered when receive range
-        // becomes 0, and it also untracks the player as a waypoint transmitter.
-        // Re-track the player so opted-in viewers can still see normal players.
-        waypointManager.untrackWaypoint(handle);
-        if (handle.isTransmittingWaypoint()) {
-            waypointManager.trackWaypoint(handle);
+        if (Double.compare(instance.getBaseValue(), value) != 0) {
+            instance.setBaseValue(value);
         }
     }
 
