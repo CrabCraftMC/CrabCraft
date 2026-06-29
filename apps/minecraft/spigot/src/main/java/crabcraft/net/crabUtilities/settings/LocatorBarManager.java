@@ -4,11 +4,14 @@ import crabcraft.net.crabUtilities.CrabUtilities;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import io.papermc.paper.registry.keys.GameRuleKeys;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.waypoints.ServerWaypointManager;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -23,14 +26,14 @@ import java.util.UUID;
  *
  * <p>The vanilla waypoint manager is gated by the world-level {@code locatorBar}
  * gamerule, so this feature keeps that gamerule enabled and controls visibility
- * per player with {@link Attribute#WAYPOINT_RECEIVE_RANGE} and
- * {@link Attribute#WAYPOINT_TRANSMIT_RANGE}. Ranges of {@code 0} fully opt a
- * player out; restoring the vanilla max range opts them back in.
+ * per player with {@link Attribute#WAYPOINT_RECEIVE_RANGE}. All players keep a
+ * high {@link Attribute#WAYPOINT_TRANSMIT_RANGE}, so opted-in players can see
+ * everyone while opted-out players do not receive locator bar waypoints.
  */
 public class LocatorBarManager implements Listener {
 
     private static final double ENABLED_RANGE = 60_000_000.0D;
-    private static final double DISABLED_RANGE = 0.0D;
+    private static final double DISABLED_RECEIVE_RANGE = 0.0D;
 
     private final CrabUtilities plugin;
     private final PlayerSettingsService settingsService;
@@ -48,7 +51,7 @@ public class LocatorBarManager implements Listener {
         for (Player player : Bukkit.getOnlinePlayers()) {
             apply(player, false);
         }
-        plugin.getLogger().info("Locator bar manager active: world gamerule enabled, players opt in via /settings.");
+        plugin.getLogger().info("Locator bar manager active: world gamerule enabled, players opt in to viewing via /settings.");
     }
 
     @EventHandler
@@ -56,8 +59,8 @@ public class LocatorBarManager implements Listener {
         Player player = event.getPlayer();
         enableLocatorBarGameRule(player.getWorld());
 
-        // Default to hidden immediately; the async settings load will re-apply
-        // the saved opt-in through the settings listener.
+        // Default to not receiving waypoints immediately; the async settings
+        // load will re-apply the saved opt-in through the settings listener.
         apply(player, false);
 
         UUID uuid = player.getUniqueId();
@@ -97,9 +100,11 @@ public class LocatorBarManager implements Listener {
     }
 
     private void apply(Player player, boolean enabled) {
-        double value = enabled ? ENABLED_RANGE : DISABLED_RANGE;
-        setAttribute(player, Attribute.WAYPOINT_TRANSMIT_RANGE, value);
-        setAttribute(player, Attribute.WAYPOINT_RECEIVE_RANGE, value);
+        setAttribute(player, Attribute.WAYPOINT_TRANSMIT_RANGE, ENABLED_RANGE);
+        setAttribute(player, Attribute.WAYPOINT_RECEIVE_RANGE, enabled ? ENABLED_RANGE : DISABLED_RECEIVE_RANGE);
+        if (!enabled) {
+            keepTransmittingWaypoint(player);
+        }
     }
 
     private void setAttribute(Player player, Attribute attribute, double value) {
@@ -110,6 +115,19 @@ public class LocatorBarManager implements Listener {
 
         if (Double.compare(instance.getBaseValue(), value) != 0) {
             instance.setBaseValue(value);
+        }
+    }
+
+    private void keepTransmittingWaypoint(Player player) {
+        ServerPlayer handle = ((CraftPlayer) player).getHandle();
+        ServerWaypointManager waypointManager = handle.level().getWaypointManager();
+
+        // Setting receive range to 0 removes the player as a receiver and also
+        // untracks their waypoint. Re-track it so opted-in viewers can still
+        // see players who have their own locator bar disabled.
+        waypointManager.untrackWaypoint(handle);
+        if (handle.isTransmittingWaypoint()) {
+            waypointManager.trackWaypoint(handle);
         }
     }
 
