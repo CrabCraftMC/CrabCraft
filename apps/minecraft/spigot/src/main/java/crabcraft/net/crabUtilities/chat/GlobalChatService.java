@@ -75,7 +75,7 @@ public class GlobalChatService {
         boolean mentionsEnabled = plugin.getConfig().getBoolean("global-chat.mentions.enabled", true);
         String prefix = plugin.getConfig().getString("global-chat.mentions.prefix", "@");
         String highlight = plugin.getConfig().getString("global-chat.mentions.highlight",
-                "<yellow><underlined><name></underlined></yellow>");
+                "<yellow><name></yellow>");
         this.mentionProcessor = new MentionProcessor(mentionsEnabled, prefix, highlight,
                 miniMessage, plugin.getEssentials());
 

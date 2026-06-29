@@ -66,7 +66,7 @@ global-chat:
     # Trigger character before a name, e.g. @Steve.
     prefix: "@"
     # MiniMessage wrapping applied to a matched @name token. <name> = the token.
-    highlight: "<yellow><underlined><name></underlined></yellow>"
+    highlight: "<yellow><name></yellow>"
     sound:
       enabled: true
       key: "minecraft:block.note_block.pling"

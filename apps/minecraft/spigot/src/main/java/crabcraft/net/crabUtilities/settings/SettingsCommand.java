@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>{@code /settings} — opens the settings dialog (players only).</li>
  *   <li>{@code /settings phantoms [on|off|safe]}</li>
- *   <li>{@code /settings mentions [on|off]} — mention ping sound.</li>
+ *   <li>{@code /settings mentions [on|off]} — chat mention ping sound.</li>
  *   <li>{@code /settings messages [on|off]} — accept private messages.</li>
  *   <li>{@code /settings locatorbar [on|off]} — vanilla locator bar.</li>
  * </ul>
@@ -64,7 +64,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
 
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "phantoms" -> handlePhantoms(player, uuid, args);
-            case "mentions" -> handleToggle(player, args, "Mention pings",
+            case "mentions" -> handleToggle(player, args, "Chat mention pings",
                     settingsService.isMentionPingsEnabled(uuid),
                     value -> settingsService.setMentionPings(uuid, value));
             case "messages" -> handleToggle(player, args, "Private messages",
@@ -92,7 +92,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
         }
         settingsService.setPhantomMode(uuid, mode);
         player.sendMessage(miniMessage.deserialize(
-                "<#FC835C>settings saved"));
+                "<#77dd77>Settings saved"));
     }
 
     private void handleToggle(Player player, String[] args, String label, boolean currentValue,
@@ -108,7 +108,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         setter.accept(value);
-        player.sendMessage(miniMessage.deserialize("<#FC835C>settings saved"));
+        player.sendMessage(miniMessage.deserialize("<#77dd77>Settings saved"));
     }
 
     /** Parses a phantom mode token strictly, returning null for unrecognised input. */

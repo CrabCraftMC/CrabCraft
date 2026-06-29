@@ -5,7 +5,6 @@ import io.papermc.paper.dialog.DialogResponseView;
 import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.DialogBase;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
-import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
 import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
@@ -42,6 +41,8 @@ public class SettingsDialog {
     private static final String MENTION_PINGS_KEY = "mentionPings";
     private static final String ACCEPT_MESSAGES_KEY = "acceptMessages";
     private static final String LOCATOR_BAR_KEY = "locatorBar";
+    private static final String TOGGLE_ON = "on";
+    private static final String TOGGLE_OFF = "off";
 
     /** Order shown in the selector (most phantoms to least). */
     private static final PhantomMode[] ORDER = { PhantomMode.ON, PhantomMode.SAFE, PhantomMode.OFF };
@@ -65,15 +66,14 @@ public class SettingsDialog {
         }
 
         DialogBase base = DialogBase.builder(mini("<#FCD05C>Settings"))
-                .body(List.of(DialogBody.plainMessage(mini("<#b0b0b0>Configure these just for you."))))
                 .inputs(List.of(
                         DialogInput.singleOption(PHANTOMS_KEY, mini("<#FCD05C>Phantoms"), options).build(),
-                        DialogInput.bool(MENTION_PINGS_KEY, mini("<#FCD05C>Mention pings"))
-                                .initial(current.isMentionPings()).onTrue("On").onFalse("Off").build(),
-                        DialogInput.bool(ACCEPT_MESSAGES_KEY, mini("<#FCD05C>Private messages"))
-                                .initial(current.isAcceptMessages()).onTrue("On").onFalse("Off").build(),
-                        DialogInput.bool(LOCATOR_BAR_KEY, mini("<#FCD05C>Locator bar"))
-                                .initial(current.isLocatorBar()).onTrue("On").onFalse("Off").build()))
+                        DialogInput.singleOption(MENTION_PINGS_KEY, mini("<#FCD05C>Chat mention pings"),
+                                toggleOptions(current.isMentionPings())).build(),
+                        DialogInput.singleOption(ACCEPT_MESSAGES_KEY, mini("<#FCD05C>Private messages"),
+                                toggleOptions(current.isAcceptMessages())).build(),
+                        DialogInput.singleOption(LOCATOR_BAR_KEY, mini("<#FCD05C>Locator bar"),
+                                toggleOptions(current.isLocatorBar())).build()))
                 .canCloseWithEscape(true)
                 .build();
 
@@ -102,19 +102,32 @@ public class SettingsDialog {
         String selected = view.getText(PHANTOMS_KEY);
         PhantomMode mode = selected != null ? PhantomMode.fromId(selected) : current.getPhantomMode();
 
-        Boolean pings = view.getBoolean(MENTION_PINGS_KEY);
-        Boolean accept = view.getBoolean(ACCEPT_MESSAGES_KEY);
-        Boolean locator = view.getBoolean(LOCATOR_BAR_KEY);
-        boolean mentionPings = pings != null ? pings : current.isMentionPings();
-        boolean acceptMessages = accept != null ? accept : current.isAcceptMessages();
-        boolean locatorBar = locator != null ? locator : current.isLocatorBar();
+        boolean mentionPings = selectedToggle(view.getText(MENTION_PINGS_KEY), current.isMentionPings());
+        boolean acceptMessages = selectedToggle(view.getText(ACCEPT_MESSAGES_KEY), current.isAcceptMessages());
+        boolean locatorBar = selectedToggle(view.getText(LOCATOR_BAR_KEY), current.isLocatorBar());
 
         settingsService.setAll(uuid, mode, mentionPings, acceptMessages, locatorBar);
-        audience.sendMessage(mini("<#FC835C>settings saved"));
+        audience.sendMessage(mini("<#77dd77>Settings saved"));
     }
 
     /** Deserialises a MiniMessage string with the default italic turned off. */
     private Component mini(String text) {
         return miniMessage.deserialize(text).decoration(TextDecoration.ITALIC, false);
+    }
+
+    private List<SingleOptionDialogInput.OptionEntry> toggleOptions(boolean enabled) {
+        return List.of(
+                SingleOptionDialogInput.OptionEntry.create(TOGGLE_ON, mini("<#77dd77>On"), enabled),
+                SingleOptionDialogInput.OptionEntry.create(TOGGLE_OFF, mini("<#f77069>Off"), !enabled));
+    }
+
+    private static boolean selectedToggle(String selected, boolean fallback) {
+        if (TOGGLE_ON.equals(selected)) {
+            return true;
+        }
+        if (TOGGLE_OFF.equals(selected)) {
+            return false;
+        }
+        return fallback;
     }
 }
