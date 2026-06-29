@@ -15,6 +15,10 @@ repositories {
         name = "luckperms"
         url = uri("https://repo.lucko.me/")
     }
+    maven {
+        name = "jitpack"
+        url = uri("https://jitpack.io")
+    }
 }
 
 dependencies {
@@ -23,6 +27,7 @@ dependencies {
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
     compileOnly("com.google.code.gson:gson:2.10.1")
     compileOnly("net.luckperms:api:5.5")
+    compileOnly("com.gitlab.ruany:LiteBansAPI:0.6.1")
 
     implementation("redis.clients:jedis:5.1.0")
     implementation("org.postgresql:postgresql:42.7.4")

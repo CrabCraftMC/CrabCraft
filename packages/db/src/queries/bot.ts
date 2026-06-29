@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, sql, lte, ne, ilike, isNull, or } from "drizzle-orm";
+import { eq, and, asc, desc, sql, lte, ne, ilike, isNull, isNotNull, or } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
@@ -889,6 +889,35 @@ export async function getSyncablePlayerAltIdentities(): Promise<SyncablePlayerAl
       minecraft_username: playerAlts.minecraft_username,
     })
     .from(playerAlts);
+}
+
+export interface PunishmentRoleSyncAccount {
+  discord_id: string;
+  minecraft_uuid: string;
+}
+
+export async function getPunishmentRoleSyncAccounts(): Promise<PunishmentRoleSyncAccount[]> {
+  const primaryRows = await db
+    .select({
+      discord_id: players.discord_id,
+      minecraft_uuid: players.minecraft_uuid,
+    })
+    .from(players)
+    .where(isNotNull(players.minecraft_uuid));
+
+  const altRows = await db
+    .select({
+      discord_id: playerAlts.discord_id,
+      minecraft_uuid: playerAlts.minecraft_uuid,
+    })
+    .from(playerAlts);
+
+  return [
+    ...primaryRows.filter(
+      (row): row is PunishmentRoleSyncAccount => row.minecraft_uuid !== null,
+    ),
+    ...altRows,
+  ];
 }
 
 export async function updatePlayerDiscordUsername(

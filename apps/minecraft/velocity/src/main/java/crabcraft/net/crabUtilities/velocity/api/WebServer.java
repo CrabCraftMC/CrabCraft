@@ -2,6 +2,7 @@ package crabcraft.net.crabUtilities.velocity.api;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -17,6 +18,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Optional;
+import java.util.LinkedHashSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -85,6 +87,7 @@ public class WebServer {
             + "\"tags\":["
             + "{\"name\":\"Server\",\"description\":\"Proxy server status, backend servers, and online player information. These endpoints return live data from the running proxy.\"},"
             + "{\"name\":\"Players\",\"description\":\"Player-specific data including online status, award scores, and advancement progress. Use a Minecraft UUID to look up a specific player.\"},"
+            + "{\"name\":\"Punishments\",\"description\":\"Punishment-state checks backed by LiteBans.\"},"
             + "{\"name\":\"Awards\",\"description\":\"Awards are competitive stat-tracking categories (e.g. distance walked, mobs killed, items crafted). Each award has a leaderboard. Players earn gold, silver, and bronze medals for placing in the top 3. The crown leaderboard ranks players by their total medal points.\"},"
             + "{\"name\":\"Advancements\",\"description\":\"Minecraft advancements (achievements) tracked per player per season. The leaderboard ranks players by how many advancements they have completed.\"},"
             + "{\"name\":\"Streaks\",\"description\":\"All-time login streaks. A streak counts the days a player logs in, where a day is a fixed 24-hour window rolling over at 06:00 UTC. A new day's login adds +1; a single missed day is forgiven (the streak holds but earns no point); missing two days in a row resets the streak to 1.\"}"
@@ -348,6 +351,30 @@ public class WebServer {
             + "\"500\":{\"description\":\"LiteBans query failed\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + "\"503\":{\"description\":\"LiteBans is not available on this proxy\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/punishments/active\":{"
+            + "\"post\":{"
+            + "\"tags\":[\"Punishments\"],"
+            + "\"summary\":\"Active ban or mute lookup\","
+            + "\"description\":\"Returns the submitted Minecraft UUIDs that currently have an active LiteBans ban or mute. Warning and kick records are ignored. The endpoint accepts at most 1000 UUIDs per request and does not expose a global punishment list.\","
+            + "\"operationId\":\"getActivePunishments\","
+            + "\"requestBody\":{\"required\":true,\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"required\":[\"uuids\"],\"properties\":{"
+            + "\"uuids\":{\"type\":\"array\",\"maxItems\":1000,\"items\":{\"type\":\"string\",\"description\":\"Minecraft player UUID, with or without dashes\"}}"
+            + "}}}}},"
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"Active punishment state retrieved\","
+            + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
+            + "\"count\":{\"type\":\"integer\"},"
+            + "\"punished_uuids\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"format\":\"uuid\"}}"
+            + "}}}}},"
+            + "\"400\":{\"description\":\"Request body or UUID format is invalid\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"405\":{\"description\":\"Method not allowed\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"429\":{\"description\":\"Rate limit exceeded\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"500\":{\"description\":\"LiteBans query failed\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"503\":{\"description\":\"LiteBans is not available on this proxy\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}}"
             + "}"
             + "}"
             + "},"
@@ -778,6 +805,64 @@ public class WebServer {
                 response.add("players", players);
 
                 sendJson(exchange, GSON.toJson(response));
+            });
+
+            httpServer.createContext("/punishments/active", exchange -> {
+                if (!"POST".equals(exchange.getRequestMethod())) {
+                    sendError(exchange, 405, "method not allowed");
+                    return;
+                }
+                if (isRateLimited(exchange)) {
+                    sendError(exchange, 429, "rate limit exceeded");
+                    return;
+                }
+
+                JsonObject body;
+                try {
+                    String rawBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                    body = GSON.fromJson(rawBody, JsonObject.class);
+                } catch (RuntimeException e) {
+                    sendError(exchange, 400, "request body must be a JSON object");
+                    return;
+                }
+                if (body == null || !body.has("uuids") || !body.get("uuids").isJsonArray()) {
+                    sendError(exchange, 400, "uuids must be an array");
+                    return;
+                }
+
+                JsonArray rawUuids = body.getAsJsonArray("uuids");
+                if (rawUuids.size() > 1000) {
+                    sendError(exchange, 400, "uuids must contain at most 1000 entries");
+                    return;
+                }
+
+                LinkedHashSet<String> uuids = new LinkedHashSet<>();
+                for (JsonElement element : rawUuids) {
+                    if (!element.isJsonPrimitive() || !element.getAsJsonPrimitive().isString()) {
+                        sendError(exchange, 400, "uuids must contain only strings");
+                        return;
+                    }
+                    String uuid = normalizeMinecraftUuid(element.getAsString());
+                    if (uuid == null) {
+                        sendError(exchange, 400, "invalid uuid format");
+                        return;
+                    }
+                    uuids.add(uuid);
+                }
+
+                var service = plugin.getLiteBansInfractionService();
+                if (service == null) {
+                    sendError(exchange, 503, "litebans service unavailable");
+                    return;
+                }
+                try {
+                    sendJson(exchange, GSON.toJson(service.getActivePunishmentsJson(uuids)));
+                } catch (crabcraft.net.crabUtilities.velocity.litebans.LiteBansInfractionService.LiteBansUnavailableException e) {
+                    sendError(exchange, 503, "litebans is not available");
+                } catch (SQLException e) {
+                    plugin.getLogger().warn("Failed to query active LiteBans punishments", e);
+                    sendError(exchange, 500, "failed to query active litebans punishments");
+                }
             });
 
             httpServer.createContext("/awards/crowns", exchange -> {
