@@ -7,7 +7,6 @@ import {
 } from "../../utils/playerListView.js";
 import {
   AttachmentBuilder,
-  EmbedBuilder,
   MessageFlags,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
@@ -45,12 +44,8 @@ export default class PlayerListCommand extends SlashCommand {
 
     const image = await generatePlayerListImage(players);
     const file = new AttachmentBuilder(image, { name: "Tablist.png" });
-    const embed = new EmbedBuilder()
-      .setImage("attachment://Tablist.png")
-      .setColor(0x55ff55);
 
     await interaction.editReply({
-      embeds: [embed],
       files: [file],
     });
   }
