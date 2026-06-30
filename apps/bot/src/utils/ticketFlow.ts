@@ -20,6 +20,7 @@ import {
   buildTicketHeader,
   buildTicketTopic,
   type CategoryMeta,
+  type EvidenceFile,
   type PlayerInfo,
 } from "./ticket.js";
 import { errorContainer, primaryContainer } from "./embeds.js";
@@ -68,8 +69,8 @@ export interface OpenTicketParams {
   player: PlayerInfo;
   /** Text intake answers keyed by field id. */
   intake: Record<string, string>;
-  /** CDN URLs of files uploaded in the modal (e.g. evidence). */
-  evidenceFileUrls?: string[];
+  /** Files uploaded in the modal (e.g. griefing evidence). */
+  evidenceFiles?: EvidenceFile[];
   /** Appeal punishment history, if any (rendered as a separate embed). */
   ticketInfractionInfo?: TicketInfractionInfo | null;
 }
@@ -82,7 +83,7 @@ export interface OpenTicketParams {
  */
 export async function openTicket(params: OpenTicketParams): Promise<void> {
   const { interaction, meta, player, intake } = params;
-  const evidenceFileUrls = params.evidenceFileUrls ?? [];
+  const evidenceFiles = params.evidenceFiles ?? [];
   const ticketInfractionInfo = params.ticketInfractionInfo ?? null;
 
   // Resolve the ticket category. Each ticket is its own text channel created
@@ -189,80 +190,78 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     )
     .catch((e) => logger.error("Ticket: failed to set channel topic:", e));
 
-  // Resolve the season the opener joined in (best-effort) for the header.
-  let seasonName: string | null = null;
-  try {
-    const application = await appDb.getLatestApplication(interaction.user.id);
-    if (application?.season) {
-      const season = await appDb.getSeasonById(application.season);
-      seasonName = season?.name ?? application.season;
-    }
-  } catch (e) {
-    logger.error("Ticket: failed to resolve opener season:", e);
-  }
-
   const headerPlayer = {
     minecraftUsername: player.minecraftUsername,
     minecraftUuid: player.minecraftUuid,
-    isWhitelisted: player.isWhitelisted,
-    seasonName,
   };
+  const mentions = { parse: [], users: [interaction.user.id], roles: [] };
 
+  let openingMessage: Awaited<ReturnType<typeof ticketChannel.send>> | null = null;
   try {
-    const openingMessage = await ticketChannel.send({
+    // Evidence (griefing reports) rides inside the header container itself.
+    openingMessage = await ticketChannel.send({
       components: [
-        buildTicketHeader(meta, ticket.id, interaction.user.id, intake, headerPlayer),
+        buildTicketHeader(
+          meta,
+          ticket.id,
+          interaction.user.id,
+          intake,
+          headerPlayer,
+          evidenceFiles,
+        ),
         buildStaffButtons(ticket.id),
       ],
-      allowedMentions: { parse: [], users: [interaction.user.id], roles: [] },
+      allowedMentions: mentions,
       flags: MessageFlags.IsComponentsV2,
     });
+  } catch (e) {
+    // Most likely an evidence URL Discord wouldn't render — retry without it and
+    // post the evidence as plain links so the ticket still opens.
+    logger.error("Ticket: failed to send opening message with evidence:", e);
+    openingMessage = await ticketChannel
+      .send({
+        components: [
+          buildTicketHeader(meta, ticket.id, interaction.user.id, intake, headerPlayer),
+          buildStaffButtons(ticket.id),
+        ],
+        allowedMentions: mentions,
+        flags: MessageFlags.IsComponentsV2,
+      })
+      .catch((e2) => {
+        logger.error("Ticket: failed to send fallback opening message:", e2);
+        return null;
+      });
+    if (openingMessage && evidenceFiles.length > 0) {
+      await ticketChannel
+        .send({
+          content: `**Evidence**\n${evidenceFiles.map((f) => f.url).join("\n")}`,
+          allowedMentions: { parse: [] },
+        })
+        .catch(() => null);
+    }
+  }
 
-    // Pin the main ticket message so it's easy to find in the channel.
+  if (openingMessage) {
     await openingMessage
       .pin()
       .catch((e) => logger.error("Ticket: failed to pin opening message:", e));
+  }
 
-    // Re-upload any evidence files into the channel so they persist (the modal
-    // upload URLs are short-lived). Fall back to posting the links on failure.
-    if (evidenceFileUrls.length > 0) {
-      await ticketChannel
-        .send({ content: "**Evidence**", files: evidenceFileUrls })
-        .catch(async (e) => {
-          logger.error("Ticket: failed to attach evidence files:", e);
-          await ticketChannel
-            .send({
-              content: `**Evidence**\n${evidenceFileUrls.join("\n")}`,
-              allowedMentions: { parse: [] },
-            })
-            .catch(() => null);
-        });
-    }
-
-    // Appeals get a standard embed of the appellant's punishment history. It's a
-    // separate message because a classic embed can't be mixed into the
-    // Components V2 header above.
-    const infractionMessage = buildInfractionEmbedMessage(
-      ticket.id,
-      ticketInfractionInfo,
-    );
-    if (infractionMessage) {
-      await ticketChannel.send({
+  // Appeals get a standard embed of the appellant's punishment history. It's a
+  // separate message because a classic embed can't be mixed into the
+  // Components V2 header above.
+  const infractionMessage = buildInfractionEmbedMessage(
+    ticket.id,
+    ticketInfractionInfo,
+  );
+  if (infractionMessage) {
+    await ticketChannel
+      .send({
         embeds: infractionMessage.embeds,
         components: infractionMessage.components,
         allowedMentions: { parse: [] },
-      });
-    }
-  } catch (e) {
-    logger.error("Ticket: failed to send opening message:", e);
-    await ticketChannel
-      .send({
-        content: `Ticket #${String(ticket.id).padStart(4, "0")} was opened by <@${interaction.user.id}> for ${meta.label}, but the rich ticket summary could not be posted automatically.`,
-        allowedMentions: { parse: [], users: [interaction.user.id], roles: [] },
       })
-      .catch((fallbackError) => {
-        logger.error("Ticket: failed to send fallback opening message:", fallbackError);
-      });
+      .catch((e) => logger.error("Ticket: failed to send infraction embed:", e));
   }
 
   await interaction.editReply({

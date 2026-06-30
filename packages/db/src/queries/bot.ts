@@ -1008,17 +1008,6 @@ export async function getCurrentSeason(): Promise<{ id: string; name: string } |
   return row ?? null;
 }
 
-export async function getSeasonById(
-  id: string,
-): Promise<{ id: string; name: string } | null> {
-  const [row] = await db
-    .select({ id: seasons.id, name: seasons.name })
-    .from(seasons)
-    .where(eq(seasons.id, id))
-    .limit(1);
-  return row ?? null;
-}
-
 /**
  * Search linked players by Minecraft username substring (case-insensitive) for
  * slash-command autocomplete. An empty query returns the first `limit` players

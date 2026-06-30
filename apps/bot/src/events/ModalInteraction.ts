@@ -45,6 +45,7 @@ import {
   getCategoryMeta,
   getPlayerInfo,
   TICKET_MANUAL_USERNAME_FIELD,
+  type EvidenceFile,
 } from "../utils/ticket.js";
 import {
   getLiveOpenTicketsForCategory,
@@ -822,12 +823,18 @@ export default class ModalInteractionEvent extends Event {
       }
 
       // Collect any uploaded evidence files (griefing reports).
-      const evidenceFileUrls: string[] = [];
+      const evidenceFiles: EvidenceFile[] = [];
       if (meta.fileField) {
         try {
           const files = interaction.fields.getUploadedFiles(meta.fileField.id);
           if (files) {
-            for (const file of files.values()) evidenceFileUrls.push(file.url);
+            for (const file of files.values()) {
+              evidenceFiles.push({
+                url: file.url,
+                name: file.name ?? "file",
+                contentType: file.contentType ?? null,
+              });
+            }
           }
         } catch {
           // No files uploaded — fine, the field is optional.
@@ -893,7 +900,7 @@ export default class ModalInteractionEvent extends Event {
         meta,
         player,
         intake,
-        evidenceFileUrls,
+        evidenceFiles,
         ticketInfractionInfo,
       });
       return;
