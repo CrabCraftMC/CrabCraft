@@ -18,7 +18,6 @@ import {
   ChannelType,
   ComponentType,
   ContainerBuilder,
-  PermissionFlagsBits,
   SectionBuilder,
   ThumbnailBuilder,
   MessageFlags,
@@ -42,16 +41,12 @@ import {
   type TicketInfractionInfo,
 } from "../utils/infractions.js";
 import {
-  buildChannelName,
-  buildInfractionEmbedMessage,
-  buildStaffButtons,
-  buildTicketHeader,
   buildTicketLimitNotice,
-  buildTicketTopic,
   getCategoryMeta,
   getPlayerInfo,
   TICKET_MANUAL_USERNAME_FIELD,
 } from "../utils/ticket.js";
+import { openTicket } from "../utils/ticketFlow.js";
 import {
   DENY_REASON_CUSTOM_ID,
   DENY_REASON_PRESET_SELECT_ID,
@@ -877,167 +872,12 @@ export default class ModalInteractionEvent extends Event {
         }
       }
 
-      const subject =
-        meta.category === "general" && intake.subject
-          ? intake.subject
-          : null;
-
-      // Resolve the ticket category. Each ticket is its own text channel
-      // created beneath this category.
-      const parentCategory = await interaction.guild?.channels
-        .fetch(config.TICKET_CATEGORY_ID)
-        .catch(() => null);
-      if (!parentCategory || parentCategory.type !== ChannelType.GuildCategory) {
-        await interaction.editReply({
-          components: [
-            errorContainer(
-              "**Configuration error.** The ticket category could not be found. Please contact an administrator.",
-            ),
-          ],
-        });
-        return;
-      }
-
-      // Create the dedicated text channel for this ticket. Permission overwrites
-      // hide the channel from @everyone, grant the opener access, and grant
-      // the moderator role full access.
-      let ticketChannel: TextChannel;
-      try {
-        ticketChannel = (await interaction.guild!.channels.create({
-          name: buildChannelName(interaction.user.username, meta),
-          type: ChannelType.GuildText,
-          parent: parentCategory.id,
-          topic: `Ticket opened by ${interaction.user.tag} — category: ${meta.category}`,
-          reason: `Ticket opened by ${interaction.user.tag} (${meta.category})`,
-          permissionOverwrites: [
-            {
-              id: interaction.guild!.roles.everyone,
-              deny: [PermissionFlagsBits.ViewChannel],
-            },
-            {
-              id: interaction.user.id,
-              allow: [
-                PermissionFlagsBits.ViewChannel,
-                PermissionFlagsBits.SendMessages,
-                PermissionFlagsBits.ReadMessageHistory,
-              ],
-            },
-            {
-              id: config.MOD_ROLE_ID,
-              allow: [
-                PermissionFlagsBits.ViewChannel,
-                PermissionFlagsBits.SendMessages,
-                PermissionFlagsBits.ReadMessageHistory,
-                PermissionFlagsBits.ManageMessages,
-              ],
-            },
-          ],
-        })) as TextChannel;
-      } catch (e) {
-        logger.error("Ticket: failed to create channel:", e);
-        await interaction.editReply({
-          components: [
-            errorContainer(
-              "**Error!** Failed to create the ticket channel. Please try again, or contact a moderator directly.",
-            ),
-          ],
-        });
-        return;
-      }
-
-      let ticket;
-      try {
-        ticket = await appDb.createTicket({
-          channelId: ticketChannel.id,
-          parentCategoryId: parentCategory.id,
-          guildId: interaction.guildId!,
-          openerDiscordId: interaction.user.id,
-          openerDiscordUsername: interaction.user.username,
-          openerMinecraftUuid: player.minecraftUuid,
-          openerMinecraftUsername: player.minecraftUsername,
-          category: meta.category,
-          subject,
-          intake,
-        });
-      } catch (e) {
-        logger.error("Ticket: failed to persist ticket:", e);
-        await ticketChannel.delete("Ticket persistence failed").catch(() => null);
-        await interaction.editReply({
-          components: [
-            errorContainer(
-              "**Error!** Failed to save your ticket. Please try again in a moment.",
-            ),
-          ],
-        });
-        return;
-      }
-
-      // Set the structured topic now that we have the ticket id.
-      await ticketChannel
-        .setTopic(
-          buildTicketTopic({
-            ticketId: ticket.id,
-            openerName: interaction.user.username,
-            meta,
-            openedAtEpochSeconds: ticket.created_at,
-          }),
-        )
-        .catch((e) => logger.error("Ticket: failed to set channel topic:", e));
-
-      try {
-        const openingMessage = await ticketChannel.send({
-          components: [
-            buildTicketHeader(meta, ticket.id, interaction.user.id, intake),
-            buildStaffButtons(ticket.id),
-          ],
-          allowedMentions: {
-            parse: [],
-            users: [interaction.user.id],
-            roles: [],
-          },
-          flags: MessageFlags.IsComponentsV2,
-        });
-
-        // Pin the main ticket message so it's easy to find in the channel.
-        await openingMessage
-          .pin()
-          .catch((e) => logger.error("Ticket: failed to pin opening message:", e));
-
-        // Appeals get a standard embed of the appellant's punishment history.
-        // It's a separate message because a classic embed can't be mixed into
-        // the Components V2 header above.
-        const infractionMessage = buildInfractionEmbedMessage(
-          ticket.id,
-          ticketInfractionInfo,
-        );
-        if (infractionMessage) {
-          await ticketChannel.send({
-            embeds: infractionMessage.embeds,
-            components: infractionMessage.components,
-            allowedMentions: { parse: [] },
-          });
-        }
-      } catch (e) {
-        logger.error("Ticket: failed to send opening message:", e);
-        await ticketChannel.send({
-          content:
-            `Ticket #${String(ticket.id).padStart(4, "0")} was opened by <@${interaction.user.id}> for ${meta.label}, but the rich ticket summary could not be posted automatically.`,
-          allowedMentions: {
-            parse: [],
-            users: [interaction.user.id],
-            roles: [],
-          },
-        }).catch((fallbackError) => {
-          logger.error("Ticket: failed to send fallback opening message:", fallbackError);
-        });
-      }
-
-      await interaction.editReply({
-        components: [
-          primaryContainer(
-            `### Ticket Opened\nYour **${meta.label}** ticket is ready in <#${ticketChannel.id}>.`,
-          ),
-        ],
+      await openTicket({
+        interaction,
+        meta,
+        player,
+        intake,
+        ticketInfractionInfo,
       });
       return;
     }

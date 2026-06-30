@@ -31,12 +31,14 @@ import {
   buildDisabledStaffButtons,
   buildInfractionEmbedMessage,
   buildIntakeModal,
+  buildReopenedNotice,
   buildStaffButtons,
   buildTicketLimitNotice,
   getCategoryMeta,
   getPlayerInfo,
   TICKET_INFRACTION_BUTTON_PREFIX,
 } from "../utils/ticket.js";
+import { openTicket } from "../utils/ticketFlow.js";
 import {
   buildDisabledShopDeedStaffButtons,
   buildShopDeedDecisionModal,
@@ -64,9 +66,9 @@ async function reEnableCloseButton(
   ticketId: number,
 ): Promise<void> {
   try {
-    const pins = await channel.messages.fetchPinned();
-    const header = pins.find((message) =>
-      message.components.some(
+    const { items } = await channel.messages.fetchPins();
+    const headerPin = items.find((pin) =>
+      pin.message.components.some(
         (row) =>
           row.type === ComponentType.ActionRow &&
           row.components.some(
@@ -76,12 +78,13 @@ async function reEnableCloseButton(
           ),
       ),
     );
-    if (!header) {
+    if (!headerPin) {
       logger.warn(
         `Ticket: could not find pinned header to re-enable close for #${ticketId}`,
       );
       return;
     }
+    const header = headerPin.message;
     const otherComponents = header.components.filter(
       (row) => row.type !== ComponentType.ActionRow,
     );
@@ -751,6 +754,20 @@ export default class ButtonInteractionEvent extends Event {
         logger.error("Ticket: rate-limit check failed:", e);
       }
 
+      // Categories with no intake questions (e.g. General Question) skip the
+      // modal entirely and open a ticket straight away.
+      if (meta.fields.length === 0) {
+        await interaction.deferReply({
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        });
+        const player = await getPlayerInfo(
+          interaction.user.id,
+          interaction.user.tag,
+        );
+        await openTicket({ interaction, meta, player, intake: {} });
+        return;
+      }
+
       // Appeals normally pull the appellant's Minecraft account from our
       // database. If they aren't linked, ask for their username in the modal so
       // we can still look up their punishment history.
@@ -768,9 +785,23 @@ export default class ButtonInteractionEvent extends Event {
         }
       }
 
-      await interaction.showModal(
-        buildIntakeModal(meta, { includeMinecraftUsername }),
-      );
+      try {
+        await interaction.showModal(
+          buildIntakeModal(meta, { includeMinecraftUsername }),
+        );
+      } catch (e) {
+        logger.error("Ticket: failed to show intake modal:", e);
+        await interaction
+          .reply({
+            components: [
+              errorContainer(
+                "**Error!** Couldn't open the ticket form. Please try again, or contact a moderator.",
+              ),
+            ],
+            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          })
+          .catch(() => null);
+      }
       return;
     }
 
@@ -928,6 +959,8 @@ export default class ButtonInteractionEvent extends Event {
               buildClosedNotice(`<@${interaction.user.id}>`, deleteAtSeconds),
               buildClosedTicketButtons(ticket.id),
             ],
+            // Render the closer's name without pinging them.
+            allowedMentions: { parse: [] },
             flags: MessageFlags.IsComponentsV2,
           });
         } catch (e) {
@@ -1016,6 +1049,15 @@ export default class ButtonInteractionEvent extends Event {
       // Re-enable the Close button on the main (pinned) ticket message.
       if (ticketChannel) {
         await reEnableCloseButton(ticketChannel, ticket.id);
+
+        // Announce the reopen (without pinging the reopener).
+        await ticketChannel
+          .send({
+            components: [buildReopenedNotice(`<@${interaction.user.id}>`)],
+            allowedMentions: { parse: [] },
+            flags: MessageFlags.IsComponentsV2,
+          })
+          .catch((e) => logger.error("Ticket: failed to send reopened notice:", e));
       }
       return;
     }
