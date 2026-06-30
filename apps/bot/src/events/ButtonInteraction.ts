@@ -37,6 +37,7 @@ import {
   getPlayerInfo,
   TICKET_INFRACTION_BUTTON_PREFIX,
 } from "../utils/ticket.js";
+import { openTicket } from "../utils/ticketFlow.js";
 import {
   buildDisabledShopDeedStaffButtons,
   buildShopDeedDecisionModal,
@@ -749,6 +750,20 @@ export default class ButtonInteractionEvent extends Event {
         }
       } catch (e) {
         logger.error("Ticket: rate-limit check failed:", e);
+      }
+
+      // Categories with no intake questions (e.g. General Question) skip the
+      // modal entirely and open a ticket straight away.
+      if (meta.fields.length === 0 && !meta.fileField) {
+        await interaction.deferReply({
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        });
+        const player = await getPlayerInfo(
+          interaction.user.id,
+          interaction.user.tag,
+        );
+        await openTicket({ interaction, meta, player, intake: {} });
+        return;
       }
 
       // Appeals normally pull the appellant's Minecraft account from our

@@ -4,6 +4,8 @@ import {
   ButtonStyle,
   ContainerBuilder,
   EmbedBuilder,
+  FileUploadBuilder,
+  LabelBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -31,6 +33,8 @@ export interface CategoryMeta {
   accent: number;
   modalTitle: string;
   fields: TicketField[];
+  /** Optional file-upload field appended to the modal (e.g. evidence). */
+  fileField?: TicketFileField;
   /** Heading shown at the top of the ticket thread once opened. */
   headerTitle: string;
   /** Max simultaneous open tickets a single user may have in this category. */
@@ -50,6 +54,18 @@ export interface TicketField {
   maxLength?: number;
 }
 
+export interface TicketFileField {
+  /** Modal customId for the file-upload component. */
+  id: string;
+  /** Label shown above the upload control in the modal. */
+  label: string;
+  /** Helper text shown under the label. */
+  description?: string;
+  required: boolean;
+  /** Max number of files (Discord allows up to 10). */
+  maxValues: number;
+}
+
 export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   general: {
     category: "general",
@@ -61,26 +77,8 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     modalTitle: "General Question",
     headerTitle: "General Question",
     maxOpen: 3,
-    fields: [
-      {
-        id: "subject",
-        label: "Subject",
-        display: "Subject",
-        style: TextInputStyle.Short,
-        required: true,
-        placeholder: "Short summary of your question",
-        maxLength: 100,
-      },
-      {
-        id: "description",
-        label: "What can we help you with?",
-        display: "Description",
-        style: TextInputStyle.Paragraph,
-        required: true,
-        placeholder: "Provide as much detail as possible…",
-        maxLength: 1500,
-      },
-    ],
+    // No intake questions — clicking the button opens a ticket straight away.
+    fields: [],
   },
   grief: {
     category: "grief",
@@ -129,16 +127,14 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
         placeholder: "Describe what was griefed/stolen and any context…",
         maxLength: 1500,
       },
-      {
-        id: "evidence",
-        label: "Evidence (links to screenshots/clips)",
-        display: "Evidence",
-        style: TextInputStyle.Paragraph,
-        required: false,
-        placeholder: "Imgur, YouTube, etc. You can also upload in the ticket.",
-        maxLength: 1000,
-      },
     ],
+    fileField: {
+      id: "evidence",
+      label: "Evidence (screenshots / clips)",
+      description: "Optional — upload images or video clips of what happened.",
+      required: false,
+      maxValues: 10,
+    },
   },
   appeal: {
     category: "appeal",
@@ -311,14 +307,26 @@ export function buildIntakeModal(
   for (const field of fields) {
     const input = new TextInputBuilder()
       .setCustomId(field.id)
-      .setLabel(field.label)
       .setStyle(field.style)
       .setRequired(field.required);
     if (field.placeholder) input.setPlaceholder(field.placeholder);
     if (field.maxLength) input.setMaxLength(field.maxLength);
-    modal.addComponents(
-      new ActionRowBuilder<TextInputBuilder>().addComponents(input),
+    modal.addLabelComponents(
+      new LabelBuilder().setLabel(field.label).setTextInputComponent(input),
     );
+  }
+
+  if (meta.fileField) {
+    const upload = new FileUploadBuilder()
+      .setCustomId(meta.fileField.id)
+      .setRequired(meta.fileField.required)
+      .setMinValues(meta.fileField.required ? 1 : 0)
+      .setMaxValues(meta.fileField.maxValues);
+    const label = new LabelBuilder()
+      .setLabel(meta.fileField.label)
+      .setFileUploadComponent(upload);
+    if (meta.fileField.description) label.setDescription(meta.fileField.description);
+    modal.addLabelComponents(label);
   }
 
   return modal;
