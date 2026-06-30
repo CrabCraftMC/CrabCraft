@@ -208,13 +208,10 @@ export default class ModalInteractionEvent extends Event {
         });
         if (logChannel) {
           await logChannel.send({
-            components: [
-              logAutoReject(
-                interaction.user.id,
-                "Age requirement not met (must be 17+)",
-              ),
-            ],
-            flags: MessageFlags.IsComponentsV2,
+            content: logAutoReject(
+              interaction.user.id,
+              "Age requirement not met (must be 17+)",
+            ),
           }).catch(() => null);
         }
         return;
@@ -995,8 +992,7 @@ export default class ModalInteractionEvent extends Event {
 
       if (logChannel) {
         await logChannel.send({
-          components: [logDeny(applicantId ?? "unknown", minecraftUsername, reason, `${interaction.user}`)],
-          flags: MessageFlags.IsComponentsV2,
+          content: logDeny(applicantId ?? "unknown", minecraftUsername, reason, `${interaction.user}`),
         }).catch(() => null);
       }
 
@@ -1082,8 +1078,7 @@ export default class ModalInteractionEvent extends Event {
       });
       if (logChannel) {
         await logChannel.send({
-          components: [logAutoReject(interaction.user.id, "Already a member")],
-          flags: MessageFlags.IsComponentsV2,
+          content: logAutoReject(interaction.user.id, "Already a member"),
         }).catch(() => null);
       }
       return;
@@ -1233,8 +1228,7 @@ export default class ModalInteractionEvent extends Event {
       });
       if (logChannel) {
         await logChannel.send({
-          components: [logAutoReject(interaction.user.id, "Already a member")],
-          flags: MessageFlags.IsComponentsV2,
+          content: logAutoReject(interaction.user.id, "Already a member"),
         }).catch(() => null);
       }
       return;
@@ -1265,8 +1259,7 @@ export default class ModalInteractionEvent extends Event {
 
     if (logChannel) {
       await logChannel.send({
-        components: [logAccept(interaction.user.id, minecraftUsername, UUID)],
-        flags: MessageFlags.IsComponentsV2,
+        content: logAccept(interaction.user.id, minecraftUsername, UUID),
       }).catch(() => null);
     }
 
