@@ -33,6 +33,8 @@ import { initWikiPoller } from "../utils/wiki.js";
 import { initStreamMonitor } from "../utils/streamMonitor.js";
 import { startIdentitySync } from "../utils/identitySync.js";
 import { startPunishmentRoleSync } from "../utils/punishmentRoleSync.js";
+import config from "../utils/config.js";
+import { startBotPlayerStatus } from "../utils/botStatus.js";
 
 export default class ReadyEvent extends Event {
   constructor() {
@@ -224,6 +226,9 @@ export default class ReadyEvent extends Event {
 
     // Keep the Discord punishment role aligned with active Minecraft bans/mutes.
     startPunishmentRoleSync(client);
+
+    // Show the current online player count in the bot status.
+    startBotPlayerStatus(client, config.CRABCRAFT_API_URL);
 
     // Deploy slash commands on every startup
     if (!client.user) return;
