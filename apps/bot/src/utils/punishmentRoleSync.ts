@@ -98,9 +98,11 @@ export function startPunishmentRoleSync(client: Client): void {
     );
     const stats = await applyRoleChanges(guild, plan, holders);
 
-    logger.info(
-      `Punishment role reconcile complete: ${stats.added}/${plan.add.length} added, ${stats.removed}/${plan.remove.length} removed, ${stats.failed} failed`,
-    );
+    if (hasRoleApplyActivity(stats)) {
+      logger.info(
+        `Punishment role reconcile complete: ${stats.added}/${plan.add.length} added, ${stats.removed}/${plan.remove.length} removed, ${stats.failed} failed`,
+      );
+    }
   };
 
   const reconcileDiscordIds = async (
@@ -127,9 +129,11 @@ export function startPunishmentRoleSync(client: Client): void {
     );
     const stats = await applyRoleChanges(guild, plan, holders);
 
-    logger.info(
-      `Punishment role ${reason}: ${stats.added}/${plan.add.length} added, ${stats.removed}/${plan.remove.length} removed, ${stats.failed} failed`,
-    );
+    if (hasRoleApplyActivity(stats)) {
+      logger.info(
+        `Punishment role ${reason}: ${stats.added}/${plan.add.length} added, ${stats.removed}/${plan.remove.length} removed, ${stats.failed} failed`,
+      );
+    }
   };
 
   const handleStreamEvent = async (event: PunishmentStreamEvent) => {
@@ -152,9 +156,11 @@ export function startPunishmentRoleSync(client: Client): void {
         { add: Array.from(discordIds), remove: [] },
         holders,
       );
-      logger.info(
-        `Punishment role stream event ${event.id}: ${stats.added}/${discordIds.size} role additions applied for ${event.uuid}`,
-      );
+      if (hasRoleApplyActivity(stats)) {
+        logger.info(
+          `Punishment role stream event ${event.id}: ${stats.added}/${discordIds.size} role additions applied for ${event.uuid}`,
+        );
+      }
       return;
     }
 
@@ -200,6 +206,10 @@ function buildAccountCache(accounts: LinkedPunishmentAccount[]): AccountCache {
     }
   }
   return { accounts, byUuid, byDiscordId };
+}
+
+function hasRoleApplyActivity(stats: RoleApplyStats): boolean {
+  return stats.added > 0 || stats.removed > 0 || stats.failed > 0;
 }
 
 async function fetchCurrentRoleHolders(guild: Guild): Promise<Set<string>> {
