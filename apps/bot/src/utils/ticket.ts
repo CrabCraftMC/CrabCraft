@@ -6,6 +6,8 @@ import {
   EmbedBuilder,
   FileUploadBuilder,
   LabelBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -70,8 +72,13 @@ export interface TicketFileField {
 export interface TicketHeaderPlayer {
   minecraftUsername: string | null;
   minecraftUuid: string | null;
-  isWhitelisted: boolean;
-  seasonName: string | null;
+}
+
+/** A file uploaded with a ticket (e.g. griefing evidence). */
+export interface EvidenceFile {
+  url: string;
+  name: string;
+  contentType: string | null;
 }
 
 export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
@@ -353,6 +360,7 @@ export function buildTicketHeader(
   openerDiscordId: string,
   intake: Record<string, string>,
   player?: TicketHeaderPlayer,
+  evidence: EvidenceFile[] = [],
 ): ContainerBuilder {
   const lines = [
     `## ${meta.emoji}  〉${meta.headerTitle}`,
@@ -360,7 +368,7 @@ export function buildTicketHeader(
     `**Opened by:** <@${openerDiscordId}>`,
   ];
 
-  // Player details we have on file for linked openers, after a blank line.
+  // Minecraft account we have on file for linked openers, after a blank line.
   if (player && (player.minecraftUsername || player.minecraftUuid)) {
     lines.push("");
     if (player.minecraftUsername) {
@@ -369,22 +377,59 @@ export function buildTicketHeader(
     if (player.minecraftUuid) {
       lines.push(`**Minecraft UUID:** \`${player.minecraftUuid}\``);
     }
-    if (player.seasonName) {
-      lines.push(`**Season joined:** ${player.seasonName}`);
-    }
-    lines.push(`**Whitelisted:** ${player.isWhitelisted ? "Yes" : "No"}`);
   }
 
-  // One question/answer block per submitted field, keeping modal order.
+  // One question/answer block per submitted field. Kept tightly packed: a single
+  // blank line before the section, none between the individual question blocks.
+  const qa: string[] = [];
   for (const field of meta.fields) {
     const value = intake[field.id];
     if (!value) continue;
-    lines.push("", `**${field.label}**`, codeBlock(value));
+    qa.push(`**${field.label}**`, codeBlock(value));
   }
+  if (qa.length > 0) lines.push("", ...qa);
 
-  return new ContainerBuilder()
+  const container = new ContainerBuilder()
     .setAccentColor(meta.accent)
     .addTextDisplayComponents((td) => td.setContent(lines.join("\n")));
+
+  appendEvidence(container, evidence);
+  return container;
+}
+
+/**
+ * Append uploaded evidence to a ticket header container so it rides in the same
+ * message: images/videos as an inline media gallery, anything else as links.
+ */
+function appendEvidence(
+  container: ContainerBuilder,
+  evidence: EvidenceFile[],
+): void {
+  if (evidence.length === 0) return;
+
+  const isMedia = (f: EvidenceFile) =>
+    f.contentType?.startsWith("image/") || f.contentType?.startsWith("video/");
+  const media = evidence.filter(isMedia);
+  const other = evidence.filter((f) => !isMedia(f));
+
+  container.addTextDisplayComponents((td) => td.setContent("**Evidence**"));
+
+  if (media.length > 0) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        ...media.map((f) =>
+          new MediaGalleryItemBuilder()
+            .setURL(f.url)
+            .setDescription(f.name.slice(0, 256)),
+        ),
+      ),
+    );
+  }
+
+  if (other.length > 0) {
+    const links = other.map((f) => `[${f.name}](${f.url})`).join("\n");
+    container.addTextDisplayComponents((td) => td.setContent(links));
+  }
 }
 
 /** Wrap a value in a fenced code block, neutralising any closing fence. */
