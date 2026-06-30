@@ -985,6 +985,30 @@ export async function getPlayerByMinecraftUsername(
   return row as PlayerIdentity;
 }
 
+/** The linked Discord id for a Minecraft UUID, if any. */
+export async function getDiscordIdByMinecraftUuid(
+  uuid: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ discord_id: players.discord_id })
+    .from(players)
+    .where(eq(players.minecraft_uuid, uuid))
+    .limit(1);
+  return row?.discord_id ?? null;
+}
+
+/** The linked Discord id for a Minecraft username (case-insensitive), if any. */
+export async function getDiscordIdByMinecraftUsername(
+  username: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ discord_id: players.discord_id })
+    .from(players)
+    .where(ilike(players.minecraft_username, username))
+    .limit(1);
+  return row?.discord_id ?? null;
+}
+
 /** Resolve a linked player by Minecraft UUID. */
 export async function getPlayerByMinecraftUuid(
   uuid: string,
