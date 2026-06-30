@@ -28,12 +28,13 @@ import {
   buildClosedNotice,
   buildDisabledReopenButton,
   buildDisabledStaffButtons,
-  buildTicketInfractionComponents,
+  buildInfractionEmbedMessage,
   buildIntakeModal,
   buildReopenButton,
   buildReopenedNotice,
   buildStaffButtons,
   getCategoryMeta,
+  getPlayerInfo,
   TICKET_INFRACTION_BUTTON_PREFIX,
 } from "../utils/ticket.js";
 import {
@@ -705,7 +706,26 @@ export default class ButtonInteractionEvent extends Event {
         logger.error("Ticket: rate-limit check failed:", e);
       }
 
-      await interaction.showModal(buildIntakeModal(meta));
+      // Appeals normally pull the appellant's Minecraft account from our
+      // database. If they aren't linked, ask for their username in the modal so
+      // we can still look up their punishment history.
+      let includeMinecraftUsername = false;
+      if (meta.category === "appeal") {
+        try {
+          const player = await getPlayerInfo(
+            interaction.user.id,
+            interaction.user.tag,
+          );
+          includeMinecraftUsername = !player.minecraftUuid;
+        } catch (e) {
+          logger.error("Ticket: appeal link check failed:", e);
+          includeMinecraftUsername = true;
+        }
+      }
+
+      await interaction.showModal(
+        buildIntakeModal(meta, { includeMinecraftUsername }),
+      );
       return;
     }
 
@@ -747,16 +767,12 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       const infractionInfo = await fetchPlayerInfractions(username, uuid, 25);
-
-      const navIndex = interaction.message.components.findIndex((component) =>
-        component.type === ComponentType.ActionRow &&
-        component.components.some((child) =>
-          "customId" in child &&
-          typeof child.customId === "string" &&
-          child.customId.startsWith(`${TICKET_INFRACTION_BUTTON_PREFIX}:`),
-        ),
+      const infractionMessage = buildInfractionEmbedMessage(
+        ticket.id,
+        infractionInfo,
+        page,
       );
-      if (navIndex <= 0) {
+      if (!infractionMessage) {
         await interaction.followUp({
           components: [errorContainer("Could not update the infraction panel.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -764,13 +780,11 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
+      // The nav buttons live on the infraction embed message itself, so the
+      // deferred update edits exactly that message in place.
       await interaction.editReply({
-        components: [
-          ...interaction.message.components.slice(0, navIndex - 1),
-          ...buildTicketInfractionComponents(ticket.id, infractionInfo, page),
-          ...interaction.message.components.slice(navIndex + 1),
-        ],
-        flags: MessageFlags.IsComponentsV2,
+        embeds: infractionMessage.embeds,
+        components: infractionMessage.components,
       });
       return;
     }

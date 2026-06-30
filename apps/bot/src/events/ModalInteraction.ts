@@ -43,11 +43,12 @@ import {
 } from "../utils/infractions.js";
 import {
   buildChannelName,
+  buildInfractionEmbedMessage,
   buildStaffButtons,
   buildTicketHeader,
-  buildTicketInfractionComponents,
   getCategoryMeta,
   getPlayerInfo,
+  TICKET_MANUAL_USERNAME_FIELD,
 } from "../utils/ticket.js";
 import {
   DENY_REASON_CUSTOM_ID,
@@ -823,27 +824,48 @@ export default class ModalInteractionEvent extends Event {
         interaction.user.tag,
       );
 
-      // Appeals: look up the punishment history from the account we already have
-      // on file (we no longer ask the user for their username). Persist the
-      // resolved name + uuid on the ticket so the Prev/Next pager can re-fetch.
+      // Appeals: look up the punishment history. We prefer the account on file,
+      // but if the user isn't linked the modal asked them for their Minecraft
+      // username — resolve that to a UUID instead. Persist the resolved name +
+      // uuid on the ticket so the Prev/Next pager can re-fetch.
       let ticketInfractionInfo: TicketInfractionInfo | null = null;
       if (meta.category === "appeal") {
-        if (player.minecraftUuid) {
-          const lookupName =
-            player.minecraftUsername ?? interaction.user.username;
+        let uuid = player.minecraftUuid;
+        let name = player.minecraftUsername;
+
+        if (!uuid) {
+          let manualName = "";
+          try {
+            manualName = interaction.fields
+              .getTextInputValue(TICKET_MANUAL_USERNAME_FIELD)
+              .trim();
+          } catch {
+            // Field absent (user was linked when the modal opened) — ignore.
+          }
+          if (manualName) {
+            name = manualName;
+            const resolved = await resolveUsername(manualName);
+            if (resolved) uuid = resolved.uuid;
+          }
+        }
+
+        if (uuid) {
+          const lookupName = name ?? interaction.user.username;
           intake.resolved_minecraft_username = lookupName;
-          intake.resolved_minecraft_uuid = player.minecraftUuid;
+          intake.resolved_minecraft_uuid = uuid;
           ticketInfractionInfo = await fetchPlayerInfractions(
             lookupName,
-            player.minecraftUuid,
+            uuid,
             25,
           );
         } else {
           ticketInfractionInfo = {
-            username: player.minecraftUsername ?? interaction.user.username,
+            username: name ?? interaction.user.username,
             uuid: null,
             infractions: null,
-            error: "no linked Minecraft account on file",
+            error: name
+              ? `Couldn't resolve the Minecraft username \`${name}\`.`
+              : "no linked Minecraft account on file",
           };
         }
       }
@@ -946,8 +968,7 @@ export default class ModalInteractionEvent extends Event {
       try {
         await ticketChannel.send({
           components: [
-            buildTicketHeader(meta, player, intake),
-            ...buildTicketInfractionComponents(ticket.id, ticketInfractionInfo),
+            buildTicketHeader(meta, ticket.id, interaction.user.id, intake),
             buildStaffButtons(ticket.id),
           ],
           allowedMentions: {
@@ -957,6 +978,21 @@ export default class ModalInteractionEvent extends Event {
           },
           flags: MessageFlags.IsComponentsV2,
         });
+
+        // Appeals get a standard embed of the appellant's punishment history.
+        // It's a separate message because a classic embed can't be mixed into
+        // the Components V2 header above.
+        const infractionMessage = buildInfractionEmbedMessage(
+          ticket.id,
+          ticketInfractionInfo,
+        );
+        if (infractionMessage) {
+          await ticketChannel.send({
+            embeds: infractionMessage.embeds,
+            components: infractionMessage.components,
+            allowedMentions: { parse: [] },
+          });
+        }
       } catch (e) {
         logger.error("Ticket: failed to send opening message:", e);
         await ticketChannel.send({
