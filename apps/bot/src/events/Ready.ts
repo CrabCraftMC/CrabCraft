@@ -204,7 +204,7 @@ export default class ReadyEvent extends Event {
               // Save the transcript before the channel disappears.
               if (channel instanceof TextChannel) {
                 const logChannel = await client.channels
-                  .fetch(config.LOG_CHANNEL_ID)
+                  .fetch(config.TICKET_LOG_CHANNEL_ID)
                   .catch(() => null);
                 if (logChannel instanceof TextChannel) {
                   await saveTranscriptToLog(
