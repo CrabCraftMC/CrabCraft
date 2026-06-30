@@ -29,8 +29,6 @@ export interface OpenTicketParams {
   player: PlayerInfo;
   /** Text intake answers keyed by field id. */
   intake: Record<string, string>;
-  /** CDN URLs of any files uploaded in the modal (e.g. evidence). */
-  evidenceFileUrls?: string[];
   /** Appeal punishment history, if any (rendered as a separate embed). */
   ticketInfractionInfo?: TicketInfractionInfo | null;
 }
@@ -43,7 +41,6 @@ export interface OpenTicketParams {
  */
 export async function openTicket(params: OpenTicketParams): Promise<void> {
   const { interaction, meta, player, intake } = params;
-  const evidenceFileUrls = params.evidenceFileUrls ?? [];
   const ticketInfractionInfo = params.ticketInfractionInfo ?? null;
 
   // Resolve the ticket category. Each ticket is its own text channel created
@@ -161,22 +158,6 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     await openingMessage
       .pin()
       .catch((e) => logger.error("Ticket: failed to pin opening message:", e));
-
-    // Re-upload any evidence files into the channel so they persist (the modal
-    // upload URLs are short-lived). Fall back to posting the links on failure.
-    if (evidenceFileUrls.length > 0) {
-      await ticketChannel
-        .send({ content: "**Evidence**", files: evidenceFileUrls })
-        .catch(async (e) => {
-          logger.error("Ticket: failed to attach evidence files:", e);
-          await ticketChannel
-            .send({
-              content: `**Evidence**\n${evidenceFileUrls.join("\n")}`,
-              allowedMentions: { parse: [] },
-            })
-            .catch(() => null);
-        });
-    }
 
     // Appeals get a standard embed of the appellant's punishment history. It's a
     // separate message because a classic embed can't be mixed into the

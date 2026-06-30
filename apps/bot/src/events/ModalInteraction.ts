@@ -872,25 +872,11 @@ export default class ModalInteractionEvent extends Event {
         }
       }
 
-      // Collect any uploaded evidence files (griefing reports).
-      const evidenceFileUrls: string[] = [];
-      if (meta.fileField) {
-        try {
-          const files = interaction.fields.getUploadedFiles(meta.fileField.id);
-          if (files) {
-            for (const file of files.values()) evidenceFileUrls.push(file.url);
-          }
-        } catch {
-          // No files uploaded — fine, the field is optional.
-        }
-      }
-
       await openTicket({
         interaction,
         meta,
         player,
         intake,
-        evidenceFileUrls,
         ticketInfractionInfo,
       });
       return;
