@@ -184,10 +184,10 @@ export function buildTicketLimitNotice(
   meta: CategoryMeta,
   openChannelIds: string[],
 ): string {
-  const single = openChannelIds.length === 1;
   const links = openChannelIds.map((id) => `<#${id}>`).join("\n");
   return [
-    `**You already have ${openChannelIds.length} open ${meta.label} ticket${single ? "" : "s"}.** Please use ${single ? "it" : "one of these"} before opening any new tickets:`,
+    `**You've reached the maximum tickets that can be opened at one time for ${meta.label}.**`,
+    "Please use one of your open tickets before making another:",
     links,
   ].join("\n");
 }
