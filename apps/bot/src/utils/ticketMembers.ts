@@ -1,13 +1,11 @@
 import {
   MessageFlags,
-  PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
   type RESTPostAPIApplicationCommandsJSONBody,
   type TextChannel,
 } from "discord.js";
 
-import config from "./config.js";
 import logger from "./logger.js";
 import * as appDb from "./appDb.js";
 import { resolveUsername } from "./mojang.js";
@@ -36,7 +34,6 @@ export function buildTicketMemberCommand(
         )
         .setRequired(false),
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .setDMPermission(false)
     .toJSON();
 }
@@ -93,15 +90,9 @@ export async function runTicketMemberCommand(
     return;
   }
 
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-  const executor = await interaction.guild.members
-    .fetch(interaction.user.id)
-    .catch(() => null);
-  if (!executor?.roles.cache.has(config.MOD_ROLE_ID)) {
-    await reply(interaction, errorContainer("**Missing permissions** — staff only."));
-    return;
-  }
+  // Public reply so the add/remove is visible to everyone in the ticket. Anyone
+  // who can use the command here already has access to this private channel.
+  await interaction.deferReply();
 
   // Must be run inside a ticket channel.
   const ticket = await appDb.getTicketByChannelId(interaction.channelId);
@@ -151,6 +142,13 @@ export async function runTicketMemberCommand(
   }
 
   // Remove
+  if (target.id === interaction.user.id) {
+    await reply(
+      interaction,
+      errorContainer("**Error!** You can't remove yourself from the ticket."),
+    );
+    return;
+  }
   if (target.id === ticket.opener_discord_id) {
     await reply(
       interaction,
