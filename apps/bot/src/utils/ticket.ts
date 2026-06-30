@@ -344,8 +344,8 @@ export function buildTicketHeader(
   intake: Record<string, string>,
 ): ContainerBuilder {
   const lines = [
-    `${meta.emoji} 〉${meta.headerTitle}`,
-    `**Ticket ID:** #${String(ticketId).padStart(4, "0")}`,
+    `## ${meta.emoji}  〉${meta.headerTitle}`,
+    `**Ticket ID:** \`#${String(ticketId).padStart(4, "0")}\``,
     `**Opened by:** <@${openerDiscordId}>`,
   ];
 
@@ -416,41 +416,23 @@ export function buildInfractionEmbedMessage(
   const infraction = info.infractions[safePage];
   if (!infraction) return null;
 
+  const date =
+    infraction.created_at > 0 ? `<t:${infraction.created_at}:f>` : "Unknown";
+
   const embed = baseEmbed()
-    .setColor(infractionColor(infraction))
-    .addFields(
-      { name: "Type", value: formatInfractionType(infraction.type), inline: true },
-      { name: "Status", value: infractionStatus(infraction), inline: true },
-      {
-        name: "Date",
-        value:
-          infraction.created_at > 0
-            ? `<t:${infraction.created_at}:f>`
-            : "Unknown",
-        inline: true,
-      },
-      {
-        name: "Staff",
-        value: safeText(infraction.staff ?? "Unknown", 256),
-        inline: true,
-      },
-      {
-        name: "Reason",
-        value: safeText(infraction.reason ?? "No reason given", 1024),
-        inline: false,
-      },
-    )
+    .setColor(0xf77069)
+    .addFields({
+      name: `#${infraction.id} ${formatInfractionType(infraction.type)}`,
+      value: [
+        `**Status:** ${infractionStatus(infraction)}`,
+        `**Moderator:** \`${safeText(infraction.staff ?? "Unknown", 200)}\``,
+        `**Reason:** \`${safeText(infraction.reason ?? "No reason given", 900)}\``,
+        `**Date:** ${date}`,
+      ].join("\n"),
+    })
     .setFooter({
       text: `Punishment ${safePage + 1} of ${info.infractions.length}`,
     });
-
-  if (infraction.removed) {
-    embed.addFields({
-      name: "Removed by",
-      value: safeText(infraction.removed_by ?? "Unknown", 256),
-      inline: true,
-    });
-  }
 
   const components =
     info.infractions.length > 1
@@ -458,13 +440,6 @@ export function buildInfractionEmbedMessage(
       : [];
 
   return { embeds: [embed], components };
-}
-
-/** Embed accent colour reflecting an infraction's state. */
-function infractionColor(infraction: PublicInfraction): number {
-  if (infraction.removed) return 0x95a5a6; // grey — lifted
-  if (infraction.active === true) return 0xed4245; // red — active
-  return 0xe67e22; // orange — expired/inactive
 }
 
 function buildInfractionNavigation(
@@ -507,14 +482,13 @@ function formatInfractionType(type: PublicInfraction["type"]): string {
 function infractionStatus(infraction: PublicInfraction): string {
   const now = Math.floor(Date.now() / 1000);
   if (infraction.removed) return "Removed";
-  if (infraction.active === true) {
-    if (!infraction.expires_at) return "Active, permanent";
-    return `Active, expires <t:${infraction.expires_at}:R>`;
+  // An expiry in the past means the punishment has lapsed, regardless of the
+  // stored `active` flag (which can lag behind).
+  if (infraction.expires_at != null && infraction.expires_at <= now) {
+    return "Expired";
   }
-  if (infraction.expires_at && infraction.expires_at <= now) return "Expired";
   if (infraction.active === false) return "Inactive";
-  if (!infraction.expires_at) return "Recorded";
-  return `Expires <t:${infraction.expires_at}:R>`;
+  return "Active";
 }
 
 function safeText(value: string, maxLength: number): string {
