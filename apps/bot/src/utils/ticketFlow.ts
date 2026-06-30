@@ -1,6 +1,7 @@
 import {
   ButtonInteraction,
   ChannelType,
+  type Client,
   MessageFlags,
   ModalSubmitInteraction,
   PermissionFlagsBits,
@@ -10,6 +11,7 @@ import {
 import config from "./config.js";
 import logger from "./logger.js";
 import * as appDb from "./appDb.js";
+import type { Ticket, TicketCategory } from "./appDb.js";
 import type { TicketInfractionInfo } from "./infractions.js";
 import {
   buildChannelName,
@@ -21,6 +23,43 @@ import {
   type PlayerInfo,
 } from "./ticket.js";
 import { errorContainer, primaryContainer } from "./embeds.js";
+
+/**
+ * Open tickets the user has in a category whose channels still exist. Any row
+ * whose channel was deleted outside the bot (e.g. a mod deleting it directly in
+ * Discord) is pruned here so it stops counting against the open-ticket limit.
+ */
+export async function getLiveOpenTicketsForCategory(
+  client: Client,
+  userId: string,
+  category: TicketCategory,
+): Promise<Ticket[]> {
+  const open = await appDb.listOpenTicketsForUser(userId);
+  const sameCategory = open.filter((t) => t.category === category);
+
+  const live: Ticket[] = [];
+  for (const ticket of sameCategory) {
+    const channel = await client.channels
+      .fetch(ticket.channel_id)
+      .catch(() => null);
+    if (channel) {
+      live.push(ticket);
+      continue;
+    }
+    // Orphaned row — the channel no longer exists. Clean it up.
+    await appDb
+      .deleteTicketRow(ticket.id)
+      .then(() =>
+        logger.info(
+          `Ticket: pruned orphaned row #${ticket.id} (channel ${ticket.channel_id} missing)`,
+        ),
+      )
+      .catch((e) =>
+        logger.error(`Ticket: failed to prune orphaned row #${ticket.id}:`, e),
+      );
+  }
+  return live;
+}
 
 export interface OpenTicketParams {
   /** The interaction to reply on. Must already be deferred (ephemeral + V2). */

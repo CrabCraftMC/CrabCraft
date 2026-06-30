@@ -230,18 +230,18 @@ export async function getPlayerInfo(
 /** The public-facing trigger embed posted via /admin send. */
 export function buildTriggerEmbed(): ContainerBuilder {
   const lines = [
-    "## <:Crab:1397355651822256299> Open a Support Ticket",
+    "## Open a Support Ticket",
     "Need help? Pick the option that best describes your issue and a private thread will be opened with the staff team.",
     "",
-    "**<:Crab:1397355651822256299> Categories**",
+    "**Categories**",
     `${TICKET_CATEGORIES.general.emoji} **General Question** — ask about the server, voice chat, or anything else.`,
     `${TICKET_CATEGORIES.grief.emoji} **Report Griefing / Stealing** — report a player who griefed or stole from you.`,
     `${TICKET_CATEGORIES.appeal.emoji} **Punishment Appeal** — appeal a ban, mute, or warning.`,
     "",
-    "-# Tickets are private. Only you and staff can see them.",
+    "-# Tickets are private. Only you and moderators can see them.",
   ];
   return new ContainerBuilder()
-    .setAccentColor(resolveColor("Blurple"))
+    .setAccentColor(0xf96039)
     .addTextDisplayComponents((td) => td.setContent(lines.join("\n")));
 }
 
