@@ -29,6 +29,7 @@ import {
   buildApplyButton,
   finalizeApplicationChannel,
 } from "../utils/applicationChannel.js";
+import { saveTranscriptToLog } from "../utils/transcript.js";
 import { initWikiPoller } from "../utils/wiki.js";
 import { initStreamMonitor } from "../utils/streamMonitor.js";
 import { startIdentitySync } from "../utils/identitySync.js";
@@ -200,6 +201,19 @@ export default class ReadyEvent extends Event {
               .fetch(ticket.channel_id)
               .catch(() => null);
             if (channel) {
+              // Save the transcript before the channel disappears.
+              if (channel instanceof TextChannel) {
+                const logChannel = await client.channels
+                  .fetch(config.LOG_CHANNEL_ID)
+                  .catch(() => null);
+                if (logChannel instanceof TextChannel) {
+                  await saveTranscriptToLog(
+                    channel,
+                    logChannel,
+                    `ticket #${ticket.id} expired`,
+                  ).catch(() => null);
+                }
+              }
               await channel.delete(`Ticket #${ticket.id} expired`).catch(() => null);
             }
           } catch (e) {

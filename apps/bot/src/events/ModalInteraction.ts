@@ -46,6 +46,8 @@ import {
   buildInfractionEmbedMessage,
   buildStaffButtons,
   buildTicketHeader,
+  buildTicketLimitNotice,
+  buildTicketTopic,
   getCategoryMeta,
   getPlayerInfo,
   TICKET_MANUAL_USERNAME_FIELD,
@@ -766,15 +768,20 @@ export default class ModalInteractionEvent extends Event {
 
       // Re-check the rate limit (the user might have opened another since clicking).
       try {
-        const openCount = await appDb.countOpenTicketsForUserAndCategory(
+        const openTickets = await appDb.listOpenTicketsForUser(
           interaction.user.id,
-          meta.category,
         );
-        if (openCount >= appDb.MAX_OPEN_TICKETS_PER_CATEGORY) {
+        const sameCategory = openTickets.filter(
+          (t) => t.category === meta.category,
+        );
+        if (sameCategory.length >= meta.maxOpen) {
           await interaction.reply({
             components: [
               errorContainer(
-                `**You already have an open ${meta.label} ticket.** Please use your existing ticket or close it first.`,
+                buildTicketLimitNotice(
+                  meta,
+                  sameCategory.map((t) => t.channel_id),
+                ),
               ),
             ],
             flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -965,8 +972,20 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
+      // Set the structured topic now that we have the ticket id.
+      await ticketChannel
+        .setTopic(
+          buildTicketTopic({
+            ticketId: ticket.id,
+            openerName: interaction.user.username,
+            meta,
+            openedAtEpochSeconds: ticket.created_at,
+          }),
+        )
+        .catch((e) => logger.error("Ticket: failed to set channel topic:", e));
+
       try {
-        await ticketChannel.send({
+        const openingMessage = await ticketChannel.send({
           components: [
             buildTicketHeader(meta, ticket.id, interaction.user.id, intake),
             buildStaffButtons(ticket.id),
@@ -978,6 +997,11 @@ export default class ModalInteractionEvent extends Event {
           },
           flags: MessageFlags.IsComponentsV2,
         });
+
+        // Pin the main ticket message so it's easy to find in the channel.
+        await openingMessage
+          .pin()
+          .catch((e) => logger.error("Ticket: failed to pin opening message:", e));
 
         // Appeals get a standard embed of the appellant's punishment history.
         // It's a separate message because a classic embed can't be mixed into

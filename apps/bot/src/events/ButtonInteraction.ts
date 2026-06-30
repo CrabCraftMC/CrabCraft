@@ -26,13 +26,13 @@ import { saveTranscriptToLog } from "../utils/transcript.js";
 import { applicationAcceptedMessage } from "../utils/applicationMessages.js";
 import {
   buildClosedNotice,
-  buildDisabledReopenButton,
+  buildClosedTicketButtons,
+  buildDisabledClosedTicketButtons,
   buildDisabledStaffButtons,
   buildInfractionEmbedMessage,
   buildIntakeModal,
-  buildReopenButton,
-  buildReopenedNotice,
   buildStaffButtons,
+  buildTicketLimitNotice,
   getCategoryMeta,
   getPlayerInfo,
   TICKET_INFRACTION_BUTTON_PREFIX,
@@ -52,6 +52,46 @@ function intakeString(intake: unknown, key: string): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null;
+}
+
+/**
+ * Re-enable the Close button on a ticket's main (pinned) message. Used when a
+ * ticket is reopened — the closed notice carries the Reopen/Delete buttons, but
+ * the Close button lives on the original pinned header message.
+ */
+async function reEnableCloseButton(
+  channel: TextChannel,
+  ticketId: number,
+): Promise<void> {
+  try {
+    const pins = await channel.messages.fetchPinned();
+    const header = pins.find((message) =>
+      message.components.some(
+        (row) =>
+          row.type === ComponentType.ActionRow &&
+          row.components.some(
+            (child) =>
+              "customId" in child &&
+              child.customId === `ticket_close:${ticketId}`,
+          ),
+      ),
+    );
+    if (!header) {
+      logger.warn(
+        `Ticket: could not find pinned header to re-enable close for #${ticketId}`,
+      );
+      return;
+    }
+    const otherComponents = header.components.filter(
+      (row) => row.type !== ComponentType.ActionRow,
+    );
+    await header.edit({
+      components: [...otherComponents, buildStaffButtons(ticketId)],
+      flags: MessageFlags.IsComponentsV2,
+    });
+  } catch (e) {
+    logger.error("Ticket: failed to re-enable close button:", e);
+  }
 }
 
 export default class ButtonInteractionEvent extends Event {
@@ -687,15 +727,20 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       try {
-        const openCount = await appDb.countOpenTicketsForUserAndCategory(
+        const openTickets = await appDb.listOpenTicketsForUser(
           interaction.user.id,
-          meta.category,
         );
-        if (openCount >= appDb.MAX_OPEN_TICKETS_PER_CATEGORY) {
+        const sameCategory = openTickets.filter(
+          (t) => t.category === meta.category,
+        );
+        if (sameCategory.length >= meta.maxOpen) {
           await interaction.reply({
             components: [
               errorContainer(
-                `**You already have an open ${meta.label} ticket.** Please use your existing ticket or close it before opening a new one.`,
+                buildTicketLimitNotice(
+                  meta,
+                  sameCategory.map((t) => t.channel_id),
+                ),
               ),
             ],
             flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -858,21 +903,9 @@ export default class ButtonInteractionEvent extends Event {
         logger.error("Ticket: failed to disable staff buttons:", e);
       }
 
-      // Save HTML transcript to the log channel.
-      try {
-        const logChannel = await interaction.guild?.channels
-          .fetch(config.LOG_CHANNEL_ID)
-          .catch(() => null) as TextChannel | null;
-        if (logChannel && ticketChannel) {
-          await saveTranscriptToLog(
-            ticketChannel,
-            logChannel,
-            `ticket #${ticket.id} closed by ${interaction.user.tag}`,
-          ).catch(() => null);
-        }
-      } catch (e) {
-        logger.error("Ticket: transcript failed:", e);
-      }
+      // Note: the transcript is intentionally NOT saved here. It's generated
+      // only when the ticket is actually deleted (manual Delete button or the
+      // 24-hour cleanup scan), so a reopened ticket isn't transcribed early.
 
       // Revoke the opener's per-channel ViewChannel grant so the channel
       // disappears from their sidebar. Mods retain access via MOD_ROLE_ID.
@@ -887,13 +920,13 @@ export default class ButtonInteractionEvent extends Event {
         }
       }
 
-      // Post the closed panel + Re-open button at the bottom.
+      // Post the closed panel + Reopen / Delete buttons at the bottom.
       if (ticketChannel) {
         try {
           await ticketChannel.send({
             components: [
               buildClosedNotice(`<@${interaction.user.id}>`, deleteAtSeconds),
-              buildReopenButton(ticket.id),
+              buildClosedTicketButtons(ticket.id),
             ],
             flags: MessageFlags.IsComponentsV2,
           });
@@ -903,7 +936,7 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       await interaction.editReply({
-        components: [primaryContainer("Ticket closed. Transcript saved to logs.")],
+        components: [primaryContainer("Ticket closed.")],
       });
       return;
     }
@@ -949,6 +982,9 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
+      // Acknowledge the button without posting a follow-up message.
+      await interaction.deferUpdate();
+
       const ticketChannel = interaction.channel as TextChannel | null;
 
       // Restore the opener's per-channel ViewChannel grant.
@@ -964,26 +1000,86 @@ export default class ButtonInteractionEvent extends Event {
         }
       }
 
-      // Disable the Re-open button on the closed notice that was just clicked.
+      // Grey out the Reopen / Delete buttons on the closed notice just clicked.
       try {
         const otherComponents = interaction.message.components.filter(
           (row) => row.type !== ComponentType.ActionRow,
         );
         await interaction.message.edit({
-          components: [...otherComponents, buildDisabledReopenButton(ticket.id)],
+          components: [...otherComponents, buildDisabledClosedTicketButtons(ticket.id)],
           flags: MessageFlags.IsComponentsV2,
         });
       } catch (e) {
-        logger.error("Ticket: failed to disable reopen button:", e);
+        logger.error("Ticket: failed to disable closed-notice buttons:", e);
       }
 
-      await interaction.reply({
-        components: [
-          buildReopenedNotice(`<@${interaction.user.id}>`),
-          buildStaffButtons(ticket.id),
-        ],
-        flags: MessageFlags.IsComponentsV2,
-      });
+      // Re-enable the Close button on the main (pinned) ticket message.
+      if (ticketChannel) {
+        await reEnableCloseButton(ticketChannel, ticket.id);
+      }
+      return;
+    }
+
+    // Delete: mods only. Saves the transcript, then removes the channel + row.
+    if (interaction.customId.startsWith("ticket_delete:")) {
+      const ticketId = Number(interaction.customId.split(":")[1]);
+      if (!Number.isFinite(ticketId)) return;
+
+      const member = interaction.member as GuildMember | null;
+      if (!member?.roles.cache.has(config.MOD_ROLE_ID)) {
+        await interaction.reply({
+          components: [errorContainer("**Missing permissions** — only staff can delete tickets.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const ticket = await appDb.getTicketById(ticketId);
+      if (!ticket) {
+        await interaction.reply({
+          components: [errorContainer("Ticket not found.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (ticket.channel_id !== interaction.channelId) {
+        await interaction.reply({
+          components: [errorContainer("This button is not for this channel.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      // Transcript generation reads the whole channel, so ack first.
+      await interaction.deferUpdate();
+
+      const ticketChannel = interaction.channel as TextChannel | null;
+
+      // Save the transcript to the log channel before deletion.
+      try {
+        const logChannel = await interaction.guild?.channels
+          .fetch(config.LOG_CHANNEL_ID)
+          .catch(() => null) as TextChannel | null;
+        if (logChannel && ticketChannel) {
+          await saveTranscriptToLog(
+            ticketChannel,
+            logChannel,
+            `ticket #${ticket.id} deleted by ${interaction.user.tag}`,
+          ).catch(() => null);
+        }
+      } catch (e) {
+        logger.error("Ticket: transcript failed:", e);
+      }
+
+      try {
+        await appDb.deleteTicketRow(ticket.id);
+      } catch (e) {
+        logger.error("Ticket: failed to delete row:", e);
+      }
+
+      await ticketChannel
+        ?.delete(`Ticket #${ticket.id} deleted by ${interaction.user.tag}`)
+        .catch((e) => logger.error("Ticket: failed to delete channel:", e));
       return;
     }
 

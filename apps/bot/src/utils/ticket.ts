@@ -33,6 +33,8 @@ export interface CategoryMeta {
   fields: TicketField[];
   /** Heading shown at the top of the ticket thread once opened. */
   headerTitle: string;
+  /** Max simultaneous open tickets a single user may have in this category. */
+  maxOpen: number;
 }
 
 export interface TicketField {
@@ -58,6 +60,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     accent: 0x7584d6,
     modalTitle: "General Question",
     headerTitle: "General Question",
+    maxOpen: 3,
     fields: [
       {
         id: "subject",
@@ -88,6 +91,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     accent: 0xc46f62,
     modalTitle: "Report Griefing / Stealing",
     headerTitle: "Griefing / Stealing Report",
+    maxOpen: 3,
     fields: [
       {
         id: "offender",
@@ -145,6 +149,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     accent: 0xc5a45d,
     modalTitle: "Punishment Appeal",
     headerTitle: "Punishment Appeal",
+    maxOpen: 1,
     // We already know the appellant's Minecraft account from our database, and
     // their punishment history is shown automatically below, so the only thing
     // we ask for is their case. (If they aren't linked, the modal additionally
@@ -165,6 +170,22 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
 
 export function getCategoryMeta(category: string): CategoryMeta | null {
   return TICKET_CATEGORIES[category as TicketCategory] ?? null;
+}
+
+/**
+ * The "you've hit the open-ticket limit for this category" notice, listing the
+ * user's existing ticket channels so they can jump straight to them.
+ */
+export function buildTicketLimitNotice(
+  meta: CategoryMeta,
+  openChannelIds: string[],
+): string {
+  const single = openChannelIds.length === 1;
+  const links = openChannelIds.map((id) => `<#${id}>`).join("\n");
+  return [
+    `**You already have ${openChannelIds.length} open ${meta.label} ticket${single ? "" : "s"}.** Please use ${single ? "it" : "one of these"} before opening any new tickets:`,
+    links,
+  ].join("\n");
 }
 
 // ── Player info helper ────────────────────────────────────────────
@@ -524,6 +545,9 @@ export function buildDisabledStaffButtons(
   );
 }
 
+/** Custom emoji shown on the closed-ticket notice. */
+const TICKET_CLOSED_EMOJI = "<:hourglass:1521560454189809886>";
+
 /** Container shown once a ticket is closed; references the delete countdown. */
 export function buildClosedNotice(
   closedByMention: string,
@@ -533,13 +557,13 @@ export function buildClosedNotice(
     .setAccentColor(resolveColor("DarkButNotBlack"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `## Ticket Closed\nClosed by ${closedByMention}.\n-# This channel will be deleted <t:${deleteAtEpochSeconds}:R>. Mods can reopen below to restore opener access.`,
+        `${TICKET_CLOSED_EMOJI} 〉Ticket closed\nThis ticket was closed by ${closedByMention}. It will be automatically deleted <t:${deleteAtEpochSeconds}:R>.`,
       ),
     );
 }
 
-/** Reopen button shown alongside the closed notice. */
-export function buildReopenButton(
+/** Reopen + Delete buttons shown alongside the closed notice. */
+export function buildClosedTicketButtons(
   ticketId: number,
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -547,11 +571,15 @@ export function buildReopenButton(
       .setCustomId(`ticket_reopen:${ticketId}`)
       .setLabel("Reopen Ticket")
       .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`ticket_delete:${ticketId}`)
+      .setLabel("Delete Ticket")
+      .setStyle(ButtonStyle.Danger),
   );
 }
 
-/** Same Reopen button, disabled — used to grey the row after reopen. */
-export function buildDisabledReopenButton(
+/** Same Reopen + Delete row, both disabled — used to grey it after reopen. */
+export function buildDisabledClosedTicketButtons(
   ticketId: number,
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -560,18 +588,27 @@ export function buildDisabledReopenButton(
       .setLabel("Reopen Ticket")
       .setStyle(ButtonStyle.Success)
       .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`ticket_delete:${ticketId}`)
+      .setLabel("Delete Ticket")
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(true),
   );
 }
 
-/** Container shown when a ticket is reopened. */
-export function buildReopenedNotice(reopenedByMention: string): ContainerBuilder {
-  return new ContainerBuilder()
-    .setAccentColor(resolveColor("Green"))
-    .addTextDisplayComponents((td) =>
-      td.setContent(
-        `## Ticket Reopened\nReopened by ${reopenedByMention}. The opener has been restored to the channel.`,
-      ),
-    );
+/** The structured topic set on a ticket channel. */
+export function buildTicketTopic(opts: {
+  ticketId: number;
+  openerName: string;
+  meta: CategoryMeta;
+  openedAtEpochSeconds: number;
+}): string {
+  return [
+    `- **Ticket ID**: #${String(opts.ticketId).padStart(4, "0")}`,
+    `- **Ticket opened**: ${opts.openerName}`,
+    `- **Category**: ${opts.meta.label}`,
+    `- **Opened At**: <t:${opts.openedAtEpochSeconds}:f>`,
+  ].join("\n");
 }
 
 /**

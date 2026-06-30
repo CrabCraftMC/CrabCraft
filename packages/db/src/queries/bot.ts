@@ -603,7 +603,7 @@ export async function setCountingState(
 // ── Tickets ────────────────────────────────────────────────────
 
 /** Max simultaneous open tickets per category per user. */
-export const MAX_OPEN_TICKETS_PER_CATEGORY = 1;
+export const MAX_OPEN_TICKETS_PER_CATEGORY = 3;
 
 export interface CreateTicketData {
   channelId: string;
