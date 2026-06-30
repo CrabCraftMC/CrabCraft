@@ -14,6 +14,7 @@ import * as appDb from "./appDb.js";
 import type { Ticket, TicketCategory } from "./appDb.js";
 import type { TicketInfractionInfo } from "./infractions.js";
 import {
+  appendEvidence,
   buildChannelName,
   buildInfractionEmbedMessage,
   buildStaffButtons,
@@ -196,21 +197,22 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   };
   const mentions = { parse: [], users: [interaction.user.id], roles: [] };
 
+  // Evidence (griefing reports) rides inside the header container itself: media
+  // in an inline gallery, other files as native File components (re-attached).
+  const header = buildTicketHeader(
+    meta,
+    ticket.id,
+    interaction.user.id,
+    intake,
+    headerPlayer,
+  );
+  const evidenceAttachments = appendEvidence(header, evidenceFiles);
+
   let openingMessage: Awaited<ReturnType<typeof ticketChannel.send>> | null = null;
   try {
-    // Evidence (griefing reports) rides inside the header container itself.
     openingMessage = await ticketChannel.send({
-      components: [
-        buildTicketHeader(
-          meta,
-          ticket.id,
-          interaction.user.id,
-          intake,
-          headerPlayer,
-          evidenceFiles,
-        ),
-        buildStaffButtons(ticket.id),
-      ],
+      components: [header, buildStaffButtons(ticket.id)],
+      files: evidenceAttachments.length > 0 ? evidenceAttachments : undefined,
       allowedMentions: mentions,
       flags: MessageFlags.IsComponentsV2,
     });
