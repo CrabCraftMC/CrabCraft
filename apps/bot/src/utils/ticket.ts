@@ -53,7 +53,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   general: {
     category: "general",
     label: "General Question",
-    emoji: "<:general:1521557009936158883>",
+    emoji: "<:dialogue:1521557009936158883>",
     prefix: "gq",
     buttonStyle: ButtonStyle.Secondary,
     accent: 0x7584d6,
@@ -83,7 +83,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   grief: {
     category: "grief",
     label: "Report Griefing / Stealing",
-    emoji: "<:grief:1521557150919299325>",
+    emoji: "<:chest:1521557150919299325>",
     prefix: "rg",
     buttonStyle: ButtonStyle.Secondary,
     accent: 0xc46f62,
@@ -140,7 +140,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   appeal: {
     category: "appeal",
     label: "Punishment Appeal",
-    emoji: "<:appeal:1521556773641650358>",
+    emoji: "<:judge_gavel:1521556773641650358>",
     prefix: "pa",
     buttonStyle: ButtonStyle.Secondary,
     accent: 0xc5a45d,
