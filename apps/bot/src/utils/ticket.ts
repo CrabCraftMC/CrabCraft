@@ -4,6 +4,8 @@ import {
   ButtonStyle,
   ContainerBuilder,
   EmbedBuilder,
+  FileUploadBuilder,
+  LabelBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -31,6 +33,8 @@ export interface CategoryMeta {
   accent: number;
   modalTitle: string;
   fields: TicketField[];
+  /** Optional file-upload field appended to the modal (e.g. evidence). */
+  fileField?: TicketFileField;
   /** Heading shown at the top of the ticket thread once opened. */
   headerTitle: string;
   /** Max simultaneous open tickets a single user may have in this category. */
@@ -48,6 +52,26 @@ export interface TicketField {
   required: boolean;
   placeholder?: string;
   maxLength?: number;
+}
+
+export interface TicketFileField {
+  /** Modal customId for the file-upload component. */
+  id: string;
+  /** Label shown above the upload control in the modal. */
+  label: string;
+  /** Helper text shown under the label. */
+  description?: string;
+  required: boolean;
+  /** Max number of files (Discord allows up to 10). */
+  maxValues: number;
+}
+
+/** Player context shown in the ticket header for linked openers. */
+export interface TicketHeaderPlayer {
+  minecraftUsername: string | null;
+  minecraftUuid: string | null;
+  isWhitelisted: boolean;
+  seasonName: string | null;
 }
 
 export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
@@ -111,16 +135,14 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
         placeholder: "Describe what was griefed/stolen and any context…",
         maxLength: 1500,
       },
-      {
-        id: "evidence",
-        label: "Evidence (links to screenshots/clips)",
-        display: "Evidence",
-        style: TextInputStyle.Paragraph,
-        required: false,
-        placeholder: "Imgur, YouTube, etc. You can also upload in the ticket.",
-        maxLength: 1000,
-      },
     ],
+    fileField: {
+      id: "evidence",
+      label: "Evidence (screenshots / clips)",
+      description: "Optional — upload images or video clips of what happened.",
+      required: false,
+      maxValues: 10,
+    },
   },
   appeal: {
     category: "appeal",
@@ -162,10 +184,10 @@ export function buildTicketLimitNotice(
   meta: CategoryMeta,
   openChannelIds: string[],
 ): string {
-  const single = openChannelIds.length === 1;
   const links = openChannelIds.map((id) => `<#${id}>`).join("\n");
   return [
-    `**You already have ${openChannelIds.length} open ${meta.label} ticket${single ? "" : "s"}.** Please use ${single ? "it" : "one of these"} before opening any new tickets:`,
+    `**You've reached the maximum tickets that can be opened at one time for ${meta.label}.**`,
+    "Please use one of your open tickets before making another:",
     links,
   ].join("\n");
 }
@@ -293,14 +315,28 @@ export function buildIntakeModal(
   for (const field of fields) {
     const input = new TextInputBuilder()
       .setCustomId(field.id)
-      .setLabel(field.label)
       .setStyle(field.style)
       .setRequired(field.required);
     if (field.placeholder) input.setPlaceholder(field.placeholder);
     if (field.maxLength) input.setMaxLength(field.maxLength);
-    modal.addComponents(
-      new ActionRowBuilder<TextInputBuilder>().addComponents(input),
+    modal.addLabelComponents(
+      new LabelBuilder().setLabel(field.label).setTextInputComponent(input),
     );
+  }
+
+  if (meta.fileField) {
+    const upload = new FileUploadBuilder()
+      .setCustomId(meta.fileField.id)
+      .setRequired(meta.fileField.required)
+      .setMinValues(meta.fileField.required ? 1 : 0)
+      .setMaxValues(meta.fileField.maxValues);
+    const label = new LabelBuilder()
+      .setLabel(meta.fileField.label)
+      .setFileUploadComponent(upload);
+    if (meta.fileField.description) {
+      label.setDescription(meta.fileField.description);
+    }
+    modal.addLabelComponents(label);
   }
 
   return modal;
@@ -316,12 +352,28 @@ export function buildTicketHeader(
   ticketId: number,
   openerDiscordId: string,
   intake: Record<string, string>,
+  player?: TicketHeaderPlayer,
 ): ContainerBuilder {
   const lines = [
     `## ${meta.emoji}  〉${meta.headerTitle}`,
     `**Ticket ID:** \`#${String(ticketId).padStart(4, "0")}\``,
     `**Opened by:** <@${openerDiscordId}>`,
   ];
+
+  // Player details we have on file for linked openers, after a blank line.
+  if (player && (player.minecraftUsername || player.minecraftUuid)) {
+    lines.push("");
+    if (player.minecraftUsername) {
+      lines.push(`**Minecraft username:** \`${player.minecraftUsername}\``);
+    }
+    if (player.minecraftUuid) {
+      lines.push(`**Minecraft UUID:** \`${player.minecraftUuid}\``);
+    }
+    if (player.seasonName) {
+      lines.push(`**Season joined:** ${player.seasonName}`);
+    }
+    lines.push(`**Whitelisted:** ${player.isWhitelisted ? "Yes" : "No"}`);
+  }
 
   // One question/answer block per submitted field, keeping modal order.
   for (const field of meta.fields) {
@@ -361,7 +413,7 @@ export function buildInfractionEmbedMessage(
 
   const name = safeText(info.username, 32);
   const baseEmbed = () =>
-    new EmbedBuilder().setTitle(`${name}'s Infractions`);
+    new EmbedBuilder().setTitle(`${name}'s punishment history`);
 
   if (info.error) {
     return {
@@ -390,22 +442,29 @@ export function buildInfractionEmbedMessage(
   const infraction = info.infractions[safePage];
   if (!infraction) return null;
 
-  const date =
+  const createdAt =
     infraction.created_at > 0 ? `<t:${infraction.created_at}:f>` : "Unknown";
 
+  const valueLines = [
+    `**Status:** ${infractionStatus(infraction)}`,
+    `**Moderator:** \`${safeText(infraction.staff ?? "Unknown", 200)}\``,
+  ];
+  if (infraction.removed) {
+    valueLines.push(
+      `**Removed by:** \`${safeText(infraction.removed_by ?? "Unknown", 200)}\``,
+    );
+  }
+  valueLines.push(
+    `**Reason:** \`${safeText(infraction.reason ?? "No reason given", 900)}\``,
+    `**Created at:** ${createdAt}`,
+  );
+
+  // Footer intentionally omitted — the page count is shown on the pager button.
   const embed = baseEmbed()
     .setColor(0xf77069)
     .addFields({
       name: `#${infraction.id} ${formatInfractionType(infraction.type)}`,
-      value: [
-        `**Status:** ${infractionStatus(infraction)}`,
-        `**Moderator:** \`${safeText(infraction.staff ?? "Unknown", 200)}\``,
-        `**Reason:** \`${safeText(infraction.reason ?? "No reason given", 900)}\``,
-        `**Date:** ${date}`,
-      ].join("\n"),
-    })
-    .setFooter({
-      text: `Punishment ${safePage + 1} of ${info.infractions.length}`,
+      value: valueLines.join("\n"),
     });
 
   const components =
@@ -455,11 +514,15 @@ function formatInfractionType(type: PublicInfraction["type"]): string {
 
 function infractionStatus(infraction: PublicInfraction): string {
   const now = Math.floor(Date.now() / 1000);
-  if (infraction.removed) return "Removed";
+  if (infraction.removed) {
+    return infraction.removed_at
+      ? `Removed (<t:${infraction.removed_at}:R>)`
+      : "Removed";
+  }
   // An expiry in the past means the punishment has lapsed, regardless of the
   // stored `active` flag (which can lag behind).
   if (infraction.expires_at != null && infraction.expires_at <= now) {
-    return "Expired";
+    return `Expired (<t:${infraction.expires_at}:R>)`;
   }
   if (infraction.active === false) return "Inactive";
   return "Active";

@@ -758,7 +758,7 @@ export default class ButtonInteractionEvent extends Event {
 
       // Categories with no intake questions (e.g. General Question) skip the
       // modal entirely and open a ticket straight away.
-      if (meta.fields.length === 0) {
+      if (meta.fields.length === 0 && !meta.fileField) {
         await interaction.deferReply({
           flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
         });
