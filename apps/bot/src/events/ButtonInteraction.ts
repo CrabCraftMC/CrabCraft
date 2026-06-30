@@ -27,8 +27,6 @@ import { applicationAcceptedMessage } from "../utils/applicationMessages.js";
 import {
   buildClosedNotice,
   buildClosedTicketButtons,
-  buildDisabledClosedTicketButtons,
-  buildDisabledStaffButtons,
   buildInfractionEmbedMessage,
   buildIntakeModal,
   buildReopenedNotice,
@@ -57,47 +55,6 @@ function intakeString(intake: unknown, key: string): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null;
-}
-
-/**
- * Re-enable the Close button on a ticket's main (pinned) message. Used when a
- * ticket is reopened — the closed notice carries the Reopen/Delete buttons, but
- * the Close button lives on the original pinned header message.
- */
-async function reEnableCloseButton(
-  channel: TextChannel,
-  ticketId: number,
-): Promise<void> {
-  try {
-    const { items } = await channel.messages.fetchPins();
-    const headerPin = items.find((pin) =>
-      pin.message.components.some(
-        (row) =>
-          row.type === ComponentType.ActionRow &&
-          row.components.some(
-            (child) =>
-              "customId" in child &&
-              child.customId === `ticket_close:${ticketId}`,
-          ),
-      ),
-    );
-    if (!headerPin) {
-      logger.warn(
-        `Ticket: could not find pinned header to re-enable close for #${ticketId}`,
-      );
-      return;
-    }
-    const header = headerPin.message;
-    const otherComponents = header.components.filter(
-      (row) => row.type !== ComponentType.ActionRow,
-    );
-    await header.edit({
-      components: [...otherComponents, buildStaffButtons(ticketId)],
-      flags: MessageFlags.IsComponentsV2,
-    });
-  } catch (e) {
-    logger.error("Ticket: failed to re-enable close button:", e);
-  }
 }
 
 export default class ButtonInteractionEvent extends Event {
@@ -919,22 +876,11 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      // Acknowledge the button. The controls message (where this button lives)
+      // is transformed into the closed notice below.
+      await interaction.deferUpdate();
 
       const ticketChannel = interaction.channel as TextChannel | null;
-
-      // Disable the Close button on the staff row that was just clicked.
-      try {
-        const otherComponents = interaction.message.components.filter(
-          (row) => row.type !== ComponentType.ActionRow,
-        );
-        await interaction.message.edit({
-          components: [...otherComponents, buildDisabledStaffButtons(ticket.id)],
-          flags: MessageFlags.IsComponentsV2,
-        });
-      } catch (e) {
-        logger.error("Ticket: failed to disable staff buttons:", e);
-      }
 
       // Note: the transcript is intentionally NOT saved here. It's generated
       // only when the ticket is actually deleted (manual Delete button or the
@@ -953,26 +899,20 @@ export default class ButtonInteractionEvent extends Event {
         }
       }
 
-      // Post the closed panel + Reopen / Delete buttons at the bottom.
-      if (ticketChannel) {
-        try {
-          await ticketChannel.send({
-            components: [
-              buildClosedNotice(`<@${interaction.user.id}>`, deleteAtSeconds),
-              buildClosedTicketButtons(ticket.id),
-            ],
-            // Render the closer's name without pinging them.
-            allowedMentions: { parse: [] },
-            flags: MessageFlags.IsComponentsV2,
-          });
-        } catch (e) {
-          logger.error("Ticket: failed to send closed notice:", e);
-        }
+      // Turn the controls message into the closed notice + Reopen / Delete.
+      try {
+        await interaction.message.edit({
+          components: [
+            buildClosedNotice(`<@${interaction.user.id}>`, deleteAtSeconds),
+            buildClosedTicketButtons(ticket.id),
+          ],
+          // Render the closer's name without pinging them.
+          allowedMentions: { parse: [] },
+          flags: MessageFlags.IsComponentsV2,
+        });
+      } catch (e) {
+        logger.error("Ticket: failed to render closed notice:", e);
       }
-
-      await interaction.editReply({
-        components: [primaryContainer("Ticket closed.")],
-      });
       return;
     }
 
@@ -1035,24 +975,18 @@ export default class ButtonInteractionEvent extends Event {
         }
       }
 
-      // Grey out the Reopen / Delete buttons on the closed notice just clicked.
+      // Revert the controls message back to just the Close button.
       try {
-        const otherComponents = interaction.message.components.filter(
-          (row) => row.type !== ComponentType.ActionRow,
-        );
         await interaction.message.edit({
-          components: [...otherComponents, buildDisabledClosedTicketButtons(ticket.id)],
+          components: [buildStaffButtons(ticket.id)],
           flags: MessageFlags.IsComponentsV2,
         });
       } catch (e) {
-        logger.error("Ticket: failed to disable closed-notice buttons:", e);
+        logger.error("Ticket: failed to restore close button:", e);
       }
 
-      // Re-enable the Close button on the main (pinned) ticket message.
+      // Announce the reopen (without pinging the reopener).
       if (ticketChannel) {
-        await reEnableCloseButton(ticketChannel, ticket.id);
-
-        // Announce the reopen (without pinging the reopener).
         await ticketChannel
           .send({
             components: [buildReopenedNotice(`<@${interaction.user.id}>`)],
