@@ -9,6 +9,7 @@ import {
 import Event from "../structures/Event.js";
 import { start } from "../index.js";
 import { commands } from "../index.js";
+import config from "../utils/config.js";
 import { loadLeaderboardState } from "../utils/leaderboardState.js";
 import {
   fetchLeaderboardData,
@@ -34,7 +35,6 @@ import { initWikiPoller } from "../utils/wiki.js";
 import { initStreamMonitor } from "../utils/streamMonitor.js";
 import { startIdentitySync } from "../utils/identitySync.js";
 import { startPunishmentRoleSync } from "../utils/punishmentRoleSync.js";
-import config from "../utils/config.js";
 import { startBotPlayerStatus } from "../utils/botStatus.js";
 
 export default class ReadyEvent extends Event {

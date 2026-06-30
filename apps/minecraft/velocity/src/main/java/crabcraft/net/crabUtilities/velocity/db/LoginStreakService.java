@@ -9,30 +9,34 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 
 /**
  * Tracks all-time login streaks per Minecraft account.
  *
- * <p>A streak counts the days a player has logged in, where a "day" is a
- * fixed 24-hour window that rolls over at {@code resetHourUtc}:00 UTC
- * (06:00 by default). The proxy records a login on every join and the
- * streak updates by comparing the streak-day of this login to the last:
+ * <p>A streak counts the days a player has been online long enough to
+ * qualify, where a "day" is a fixed 24-hour window that rolls over at
+ * {@code resetHourUtc}:00 UTC (06:00 by default). The proxy accumulates
+ * online seconds across sessions and records the streak only once the
+ * configured daily requirement is reached:
  * <ul>
- *   <li>Same UTC streak-day as the last login: no change (a relog).</li>
+ *   <li>Same UTC streak-day as the last qualified day: no change.</li>
  *   <li>The next day, or after a single missed day: the streak
  *       increments by one. Missing one day is forgiven — the streak
  *       holds and continues, but the missed day itself earns no point.</li>
  *   <li>Two or more missed days in a row: the streak resets to 1.</li>
  * </ul>
  *
- * <p>So logging in Mon, Tue, Wed gives a streak of 3; logging in Mon and
- * Wed (missing Tue) gives 2; logging in Mon then Thu (missing both Tue
+ * <p>So qualifying Mon, Tue, Wed gives a streak of 3; qualifying Mon and
+ * Wed (missing Tue) gives 2; qualifying Mon then Thu (missing both Tue
  * and Wed) resets to 1.
  */
 public final class LoginStreakService {
 
     public static final int DEFAULT_RESET_HOUR_UTC = 6;
+    public static final int DEFAULT_REQUIRED_PLAY_MINUTES = 10;
     private static final long DAY_SECONDS = 86_400L;
+    private static final int SECONDS_PER_MINUTE = 60;
 
     private static final String CREATE_TABLE_SQL = """
             CREATE TABLE IF NOT EXISTS player_login_streaks (
@@ -50,9 +54,42 @@ public final class LoginStreakService {
     private static final String CREATE_LONGEST_IDX_SQL =
             "CREATE INDEX IF NOT EXISTS pls_longest_streak_idx ON player_login_streaks (longest_streak)";
 
+    private static final String CREATE_PROGRESS_TABLE_SQL = """
+            CREATE TABLE IF NOT EXISTS player_login_streak_progress (
+                minecraft_uuid TEXT NOT NULL,
+                streak_day BIGINT NOT NULL,
+                accumulated_seconds INTEGER NOT NULL DEFAULT 0,
+                qualified_at INTEGER,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (minecraft_uuid, streak_day)
+            )
+            """;
+
     private static final String SELECT_SQL =
             "SELECT current_streak, longest_streak, last_login_at, streak_started_at " +
             "FROM player_login_streaks WHERE minecraft_uuid = ?";
+
+    private static final String SELECT_PROGRESS_SQL =
+            "SELECT accumulated_seconds, qualified_at " +
+            "FROM player_login_streak_progress WHERE minecraft_uuid = ? AND streak_day = ?";
+
+    private static final String SELECT_PROGRESS_FOR_UPDATE_SQL =
+            SELECT_PROGRESS_SQL + " FOR UPDATE";
+
+    private static final String INSERT_PROGRESS_ROW_SQL = """
+            INSERT INTO player_login_streak_progress
+                (minecraft_uuid, streak_day, accumulated_seconds, updated_at)
+            VALUES (?, ?, 0, EXTRACT(EPOCH FROM NOW())::INTEGER)
+            ON CONFLICT (minecraft_uuid, streak_day) DO NOTHING
+            """;
+
+    private static final String UPDATE_PROGRESS_SQL = """
+            UPDATE player_login_streak_progress SET
+                accumulated_seconds = ?,
+                qualified_at = ?,
+                updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER
+            WHERE minecraft_uuid = ? AND streak_day = ?
+            """;
 
     private static final String UPSERT_SQL = """
             INSERT INTO player_login_streaks
@@ -70,11 +107,14 @@ public final class LoginStreakService {
     private final HikariDataSource dataSource;
     private final Logger logger;
     private volatile int resetHourUtc;
+    private volatile int requiredPlaySeconds;
 
-    public LoginStreakService(HikariDataSource dataSource, Logger logger, int resetHourUtc) {
+    public LoginStreakService(HikariDataSource dataSource, Logger logger,
+                              int resetHourUtc, int requiredPlaySeconds) {
         this.dataSource = dataSource;
         this.logger = logger;
         this.resetHourUtc = clampResetHour(resetHourUtc);
+        this.requiredPlaySeconds = Math.max(1, requiredPlaySeconds);
         ensureSchema();
     }
 
@@ -84,6 +124,18 @@ public final class LoginStreakService {
 
     public void setResetHourUtc(int resetHourUtc) {
         this.resetHourUtc = clampResetHour(resetHourUtc);
+    }
+
+    public int getRequiredPlaySeconds() {
+        return requiredPlaySeconds;
+    }
+
+    public void setRequiredPlaySeconds(int requiredPlaySeconds) {
+        this.requiredPlaySeconds = Math.max(1, requiredPlaySeconds);
+    }
+
+    public static int minutesToSeconds(int minutes) {
+        return Math.max(1, minutes) * SECONDS_PER_MINUTE;
     }
 
     private static int clampResetHour(int resetHourUtc) {
@@ -97,9 +149,19 @@ public final class LoginStreakService {
         return Math.floorDiv(epochSeconds - resetHourUtc * 3600L, DAY_SECONDS);
     }
 
+    private static long startOfDay(long streakDay, int resetHourUtc) {
+        return streakDay * DAY_SECONDS + resetHourUtc * 3600L;
+    }
+
+    public long secondsUntilNextStreakDay(long epochSeconds) {
+        int rh = resetHourUtc;
+        long today = dayNumber(epochSeconds, rh);
+        return Math.max(0L, startOfDay(today + 1, rh) - epochSeconds);
+    }
+
     /**
      * Unix second at which a streak lapses: the start of the third
-     * streak-day after the last login. Logging in the next day (gap 1) or
+     * streak-day after the last qualified day. Qualifying the next day (gap 1) or
      * the day after (gap 2, one forgiven miss) keeps the streak alive;
      * once this instant passes, the next login resets the streak to 1.
      */
@@ -110,90 +172,263 @@ public final class LoginStreakService {
 
     private void ensureSchema() {
         try (Connection conn = dataSource.getConnection();
-             java.sql.Statement stmt = conn.createStatement()) {
+            java.sql.Statement stmt = conn.createStatement()) {
             stmt.execute(CREATE_TABLE_SQL);
             stmt.execute(CREATE_CURRENT_IDX_SQL);
             stmt.execute(CREATE_LONGEST_IDX_SQL);
+            stmt.execute(CREATE_PROGRESS_TABLE_SQL);
         } catch (SQLException e) {
             logger.error("Failed to ensure player_login_streaks schema", e);
         }
     }
 
     /**
-     * Computes and persists the new streak for a player who just logged
-     * in. Returns the resulting snapshot, or {@code null} on DB error
+     * Computes and persists the new streak for a player who qualified
+     * for a streak day. Returns the resulting snapshot, or {@code null} on DB error
      * (so callers can skip Redis fan-out cleanly).
      */
     public StreakSnapshot recordLogin(String uuid) {
-        long now = System.currentTimeMillis() / 1000L;
-        // Snapshot the volatile reset hour once so `today` and `lastDay`
-        // are computed against the same boundary even if /reload changes it.
-        int rh = resetHourUtc;
-        long today = dayNumber(now, rh);
+        return recordLoginAt(uuid, System.currentTimeMillis() / 1000L);
+    }
 
+    public StreakSnapshot recordLoginAt(String uuid, long loginAt) {
         try (Connection conn = dataSource.getConnection()) {
-            int currentStreak;
-            int longestStreak;
-            long streakStartedAt;
-            boolean hadRow;
-            long lastDay;
-
-            try (PreparedStatement stmt = conn.prepareStatement(SELECT_SQL)) {
-                stmt.setString(1, uuid);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        hadRow = true;
-                        currentStreak = rs.getInt("current_streak");
-                        longestStreak = rs.getInt("longest_streak");
-                        lastDay = dayNumber(rs.getLong("last_login_at"), rh);
-                        streakStartedAt = rs.getLong("streak_started_at");
-                    } else {
-                        hadRow = false;
-                        currentStreak = 0;
-                        longestStreak = 0;
-                        lastDay = today; // unused on the first-login path; set for definite assignment
-                        streakStartedAt = now;
-                    }
-                }
-            }
-
-            int newStreak;
-            long newStartedAt;
-            if (!hadRow || currentStreak == 0) {
-                newStreak = 1;
-                newStartedAt = now;
-            } else {
-                long gap = today - lastDay;
-                if (gap <= 0) {
-                    // Already logged in today — streak unchanged.
-                    newStreak = currentStreak;
-                    newStartedAt = streakStartedAt;
-                } else if (gap <= 2) {
-                    // Next day, or a single forgiven missed day — increment.
-                    newStreak = currentStreak + 1;
-                    newStartedAt = streakStartedAt;
-                } else {
-                    // Two or more days missed — start over.
-                    newStreak = 1;
-                    newStartedAt = now;
-                }
-            }
-            int newLongest = Math.max(longestStreak, newStreak);
-
-            try (PreparedStatement stmt = conn.prepareStatement(UPSERT_SQL)) {
-                stmt.setString(1, uuid);
-                stmt.setInt(2, newStreak);
-                stmt.setInt(3, newLongest);
-                stmt.setLong(4, now);
-                stmt.setLong(5, newStartedAt);
-                stmt.executeUpdate();
-            }
-
-            return new StreakSnapshot(newStreak, newLongest, now, newStartedAt);
+            return recordLoginAt(conn, uuid, loginAt);
         } catch (SQLException e) {
             logger.error("Failed to update login streak for {}", uuid, e);
             return null;
         }
+    }
+
+    private StreakSnapshot recordLoginAt(Connection conn, String uuid, long loginAt) throws SQLException {
+        // Snapshot the volatile reset hour once so `today` and `lastDay`
+        // are computed against the same boundary even if /reload changes it.
+        int rh = resetHourUtc;
+        long today = dayNumber(loginAt, rh);
+
+        int currentStreak;
+        int longestStreak;
+        long streakStartedAt;
+        boolean hadRow;
+        long lastDay;
+        long storedLastLoginAt;
+
+        try (PreparedStatement stmt = conn.prepareStatement(SELECT_SQL)) {
+            stmt.setString(1, uuid);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    hadRow = true;
+                    currentStreak = rs.getInt("current_streak");
+                    longestStreak = rs.getInt("longest_streak");
+                    storedLastLoginAt = rs.getLong("last_login_at");
+                    lastDay = dayNumber(storedLastLoginAt, rh);
+                    streakStartedAt = rs.getLong("streak_started_at");
+                } else {
+                    hadRow = false;
+                    currentStreak = 0;
+                    longestStreak = 0;
+                    storedLastLoginAt = 0L;
+                    lastDay = today; // unused on the first-login path; set for definite assignment
+                    streakStartedAt = loginAt;
+                }
+            }
+        }
+
+        int newStreak;
+        long newStartedAt;
+        long newLastLoginAt = loginAt;
+        if (!hadRow || currentStreak == 0) {
+            newStreak = 1;
+            newStartedAt = loginAt;
+        } else {
+            long gap = today - lastDay;
+            if (gap < 0) {
+                // A delayed write for an older streak day should never
+                // rewind the authoritative latest qualified day.
+                return new StreakSnapshot(currentStreak, longestStreak, storedLastLoginAt, streakStartedAt);
+            } else if (gap == 0) {
+                // Already qualified today — streak unchanged.
+                newStreak = currentStreak;
+                newStartedAt = streakStartedAt;
+                newLastLoginAt = Math.max(storedLastLoginAt, loginAt);
+            } else if (gap <= 2) {
+                // Next day, or a single forgiven missed day — increment.
+                newStreak = currentStreak + 1;
+                newStartedAt = streakStartedAt;
+            } else {
+                // Two or more days missed — start over.
+                newStreak = 1;
+                newStartedAt = loginAt;
+            }
+        }
+        int newLongest = Math.max(longestStreak, newStreak);
+
+        try (PreparedStatement stmt = conn.prepareStatement(UPSERT_SQL)) {
+            stmt.setString(1, uuid);
+            stmt.setInt(2, newStreak);
+            stmt.setInt(3, newLongest);
+            stmt.setLong(4, newLastLoginAt);
+            stmt.setLong(5, newStartedAt);
+            stmt.executeUpdate();
+        }
+
+        return new StreakSnapshot(newStreak, newLongest, newLastLoginAt, newStartedAt);
+    }
+
+    public PlaytimeCreditResult recordPlaytime(String uuid, long from, long to) {
+        if (to <= from) {
+            return new PlaytimeCreditResult(null, getQualificationProgress(uuid, to));
+        }
+
+        StreakSnapshot latestSnapshot = null;
+        QualificationProgress progress = null;
+        try (Connection conn = dataSource.getConnection()) {
+            boolean oldAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+            try {
+                int rh = resetHourUtc;
+                long cursor = from;
+                while (cursor < to) {
+                    long day = dayNumber(cursor, rh);
+                    long segmentEnd = Math.min(to, startOfDay(day + 1, rh));
+                    DayCredit credit = creditDay(conn, uuid, day, cursor, segmentEnd);
+                    if (credit.qualifiedAt > 0L) {
+                        latestSnapshot = recordLoginAt(conn, uuid, credit.qualifiedAt);
+                    }
+                    cursor = segmentEnd;
+                }
+                progress = loadQualificationProgress(conn, uuid, to);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(oldAutoCommit);
+            }
+            return new PlaytimeCreditResult(latestSnapshot, progress);
+        } catch (SQLException e) {
+            logger.error("Failed to record login streak playtime for {}", uuid, e);
+            return null;
+        }
+    }
+
+    public QualificationProgress getQualificationProgress(String uuid) {
+        long now = System.currentTimeMillis() / 1000L;
+        return getQualificationProgress(uuid, now);
+    }
+
+    public QualificationProgress getQualificationProgress(String uuid, long at) {
+        try (Connection conn = dataSource.getConnection()) {
+            return loadQualificationProgress(conn, uuid, at);
+        } catch (SQLException e) {
+            logger.error("Failed to read login streak progress for {}", uuid, e);
+            return null;
+        }
+    }
+
+    private DayCredit creditDay(Connection conn, String uuid, long streakDay,
+                                long segmentStart, long segmentEnd) throws SQLException {
+        long seconds = segmentEnd - segmentStart;
+        if (seconds <= 0L) return DayCredit.NONE;
+
+        ensureProgressRow(conn, uuid, streakDay);
+
+        int accumulated;
+        long qualifiedAt;
+        try (PreparedStatement stmt = conn.prepareStatement(SELECT_PROGRESS_FOR_UPDATE_SQL)) {
+            stmt.setString(1, uuid);
+            stmt.setLong(2, streakDay);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    throw new SQLException("Missing progress row after insert");
+                }
+                accumulated = rs.getInt("accumulated_seconds");
+                qualifiedAt = nullableLong(rs, "qualified_at");
+            }
+        }
+
+        if (qualifiedAt > 0L) return DayCredit.NONE;
+
+        Long recordedAt = recordedLoginAtForDay(conn, uuid, streakDay);
+        if (recordedAt != null) {
+            updateProgress(conn, uuid, streakDay, accumulated, recordedAt);
+            return DayCredit.NONE;
+        }
+
+        int required = requiredPlaySeconds;
+        int newAccumulated = (int) Math.min(Integer.MAX_VALUE, accumulated + seconds);
+        long newQualifiedAt = 0L;
+        if (accumulated < required && newAccumulated >= required) {
+            long crossedAt = segmentStart + (required - accumulated);
+            newQualifiedAt = Math.min(crossedAt, segmentEnd - 1L);
+        }
+
+        updateProgress(conn, uuid, streakDay, newAccumulated, newQualifiedAt);
+        return newQualifiedAt > 0L ? new DayCredit(newQualifiedAt) : DayCredit.NONE;
+    }
+
+    private void ensureProgressRow(Connection conn, String uuid, long streakDay) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(INSERT_PROGRESS_ROW_SQL)) {
+            stmt.setString(1, uuid);
+            stmt.setLong(2, streakDay);
+            stmt.executeUpdate();
+        }
+    }
+
+    private void updateProgress(Connection conn, String uuid, long streakDay,
+                                int accumulated, long qualifiedAt) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(UPDATE_PROGRESS_SQL)) {
+            stmt.setInt(1, accumulated);
+            if (qualifiedAt > 0L) {
+                stmt.setLong(2, qualifiedAt);
+            } else {
+                stmt.setNull(2, Types.INTEGER);
+            }
+            stmt.setString(3, uuid);
+            stmt.setLong(4, streakDay);
+            stmt.executeUpdate();
+        }
+    }
+
+    private QualificationProgress loadQualificationProgress(Connection conn, String uuid, long at) throws SQLException {
+        int rh = resetHourUtc;
+        long day = dayNumber(at, rh);
+        int accumulated = 0;
+        long qualifiedAt = 0L;
+
+        try (PreparedStatement stmt = conn.prepareStatement(SELECT_PROGRESS_SQL)) {
+            stmt.setString(1, uuid);
+            stmt.setLong(2, day);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    accumulated = rs.getInt("accumulated_seconds");
+                    qualifiedAt = nullableLong(rs, "qualified_at");
+                }
+            }
+        }
+
+        Long recordedAt = recordedLoginAtForDay(conn, uuid, day);
+        if (recordedAt != null && qualifiedAt == 0L) {
+            qualifiedAt = recordedAt;
+        }
+
+        return new QualificationProgress(day, accumulated, requiredPlaySeconds, qualifiedAt);
+    }
+
+    private Long recordedLoginAtForDay(Connection conn, String uuid, long streakDay) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(SELECT_SQL)) {
+            stmt.setString(1, uuid);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) return null;
+                long lastLoginAt = rs.getLong("last_login_at");
+                return dayNumber(lastLoginAt, resetHourUtc) == streakDay ? lastLoginAt : null;
+            }
+        }
+    }
+
+    private static long nullableLong(ResultSet rs, String column) throws SQLException {
+        long value = rs.getLong(column);
+        return rs.wasNull() ? 0L : value;
     }
 
     public StreakSnapshot get(String uuid) {
@@ -307,6 +542,48 @@ public final class LoginStreakService {
             this.longestStreak = longestStreak;
             this.lastLoginAt = lastLoginAt;
             this.streakStartedAt = streakStartedAt;
+        }
+    }
+
+    private static final class DayCredit {
+        private static final DayCredit NONE = new DayCredit(0L);
+
+        private final long qualifiedAt;
+
+        private DayCredit(long qualifiedAt) {
+            this.qualifiedAt = qualifiedAt;
+        }
+    }
+
+    public static final class QualificationProgress {
+        public final long streakDay;
+        public final int accumulatedSeconds;
+        public final int requiredSeconds;
+        public final long qualifiedAt;
+        public final boolean qualified;
+
+        public QualificationProgress(long streakDay, int accumulatedSeconds,
+                                     int requiredSeconds, long qualifiedAt) {
+            this.streakDay = streakDay;
+            this.accumulatedSeconds = accumulatedSeconds;
+            this.requiredSeconds = requiredSeconds;
+            this.qualifiedAt = qualifiedAt;
+            this.qualified = qualifiedAt > 0L;
+        }
+
+        public int remainingSeconds() {
+            if (qualified) return 0;
+            return Math.max(0, requiredSeconds - accumulatedSeconds);
+        }
+    }
+
+    public static final class PlaytimeCreditResult {
+        public final StreakSnapshot streakSnapshot;
+        public final QualificationProgress progress;
+
+        public PlaytimeCreditResult(StreakSnapshot streakSnapshot, QualificationProgress progress) {
+            this.streakSnapshot = streakSnapshot;
+            this.progress = progress;
         }
     }
 }

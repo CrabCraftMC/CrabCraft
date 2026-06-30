@@ -70,15 +70,17 @@ database:
   username: "crabcraft"
   password: ""
 
-# All-time login streaks. The streak counts the days a player logs in.
+# All-time login streaks. The streak counts the days a player plays long
+# enough to qualify.
 # A "day" is a fixed 24-hour window that rolls over at reset-hour-utc:00
-# UTC (06:00 by default — a quiet hour for a UK-centric server). Each new
-# day a player logs in adds +1. Missing a single day is forgiven (the
-# streak holds but earns no point); missing two days in a row resets it
-# to 1. Example: logging in Mon/Tue/Wed gives 3; Mon/Wed (missing Tue)
-# gives 2; Mon then Thu (missing Tue and Wed) resets to 1.
+# UTC (06:00 by default — a quiet hour for a UK-centric server).
+# Players must be online for required-play-minutes total within that
+# streak day before it adds +1. The required time can be split across
+# multiple sessions. Missing a single day is forgiven (the streak holds
+# but earns no point); missing two days in a row resets it to 1.
 login-streaks:
   reset-hour-utc: 6
+  required-play-minutes: 10
 
 # Automatic updates — polls GitHub Releases and downloads the new proxy JAR to
 # plugins/CrabUtilities-Velocity.jar.staged. Stop the proxy, replace the live

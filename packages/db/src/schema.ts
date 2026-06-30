@@ -3,12 +3,14 @@ import {
   pgEnum,
   text,
   integer,
+  bigint,
   boolean,
   serial,
   real,
   jsonb,
   uniqueIndex,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 export const playerRoleEnum = pgEnum("player_role", [
@@ -262,11 +264,11 @@ export const mcLoginHistory = pgTable("mc_login_history", {
 
 // ── player_login_streaks ───────────────────────────────────────
 // All-time login streaks per Minecraft account. Updated by the
-// Velocity proxy on every join: the streak counts the days a player
-// has logged in, where a "day" is a fixed 24-hour window rolling over
-// at a configured hour (06:00 UTC by default). A new day's login adds
-// +1; a single missed day is forgiven (streak holds, no point); two
-// missed days in a row reset it to 1.
+// Velocity proxy after a player has been online long enough to qualify
+// for the streak day. A "day" is a fixed 24-hour window rolling over at
+// a configured hour (06:00 UTC by default). A qualified day adds +1; a
+// single missed day is forgiven (streak holds, no point); two missed
+// days in a row reset it to 1.
 export const playerLoginStreaks = pgTable(
   "player_login_streaks",
   {
@@ -286,6 +288,29 @@ export const playerLoginStreaks = pgTable(
   (table) => [
     index("pls_current_streak_idx").on(table.current_streak),
     index("pls_longest_streak_idx").on(table.longest_streak),
+  ],
+);
+
+// ── player_login_streak_progress ────────────────────────────────
+// Cumulative online seconds toward qualifying for a login streak day.
+// The Velocity proxy records each session segment here and only updates
+// player_login_streaks when accumulated_seconds reaches the configured
+// daily requirement.
+export const playerLoginStreakProgress = pgTable(
+  "player_login_streak_progress",
+  {
+    minecraft_uuid: text("minecraft_uuid").notNull(),
+    streak_day: bigint("streak_day", { mode: "number" }).notNull(),
+    accumulated_seconds: integer("accumulated_seconds").notNull().default(0),
+    qualified_at: integer("qualified_at"),
+    updated_at: integer("updated_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.minecraft_uuid, table.streak_day],
+    }),
   ],
 );
 
