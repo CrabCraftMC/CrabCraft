@@ -272,7 +272,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   await interaction.editReply({
     components: [
       primaryContainer(
-        `### Ticket Opened\nYour **${meta.label}** ticket is ready in <#${ticketChannel.id}>.`,
+        `Your **${meta.emoji} ${meta.label}** ticket has been created: <#${ticketChannel.id}>`,
       ),
     ],
     flags: MessageFlags.IsComponentsV2,
