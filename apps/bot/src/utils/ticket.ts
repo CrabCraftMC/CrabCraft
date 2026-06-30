@@ -3,11 +3,10 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ContainerBuilder,
+  EmbedBuilder,
   ModalBuilder,
-  SectionBuilder,
   TextInputBuilder,
   TextInputStyle,
-  ThumbnailBuilder,
   resolveColor,
 } from "discord.js";
 import mysql from "./database.js";
@@ -34,6 +33,8 @@ export interface CategoryMeta {
   fields: TicketField[];
   /** Heading shown at the top of the ticket thread once opened. */
   headerTitle: string;
+  /** Max simultaneous open tickets a single user may have in this category. */
+  maxOpen: number;
 }
 
 export interface TicketField {
@@ -53,12 +54,13 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   general: {
     category: "general",
     label: "General Question",
-    emoji: "❓",
+    emoji: "<:dialogue:1521557009936158883>",
     prefix: "gq",
-    buttonStyle: ButtonStyle.Primary,
+    buttonStyle: ButtonStyle.Secondary,
     accent: 0x7584d6,
     modalTitle: "General Question",
     headerTitle: "General Question",
+    maxOpen: 3,
     fields: [
       {
         id: "subject",
@@ -83,19 +85,20 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   grief: {
     category: "grief",
     label: "Report Griefing / Stealing",
-    emoji: "⚠️",
+    emoji: "<:chest:1521557150919299325>",
     prefix: "rg",
-    buttonStyle: ButtonStyle.Danger,
+    buttonStyle: ButtonStyle.Secondary,
     accent: 0xc46f62,
     modalTitle: "Report Griefing / Stealing",
     headerTitle: "Griefing / Stealing Report",
+    maxOpen: 3,
     fields: [
       {
         id: "offender",
         label: "Offender's Minecraft username",
         display: "Offender",
         style: TextInputStyle.Short,
-        required: true,
+        required: false,
         placeholder: "Steve",
         maxLength: 32,
       },
@@ -140,28 +143,21 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   appeal: {
     category: "appeal",
     label: "Punishment Appeal",
-    emoji: "📜",
+    emoji: "<:judge_gavel:1521556773641650358>",
     prefix: "pa",
     buttonStyle: ButtonStyle.Secondary,
     accent: 0xc5a45d,
     modalTitle: "Punishment Appeal",
     headerTitle: "Punishment Appeal",
+    maxOpen: 1,
     // We already know the appellant's Minecraft account from our database, and
-    // their punishment history is shown automatically below, so we only ask for
-    // the timing and their case.
+    // their punishment history is shown automatically below, so the only thing
+    // we ask for is their case. (If they aren't linked, the modal additionally
+    // asks for their Minecraft username — see buildIntakeModal.)
     fields: [
       {
-        id: "ban_date",
-        label: "When were you punished?",
-        display: "When",
-        style: TextInputStyle.Short,
-        required: false,
-        placeholder: "Approximate date/time",
-        maxLength: 100,
-      },
-      {
         id: "appeal",
-        label: "Why should we unban you?",
+        label: "Why should your infraction be removed?",
         display: "Appeal",
         style: TextInputStyle.Paragraph,
         required: true,
@@ -174,6 +170,22 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
 
 export function getCategoryMeta(category: string): CategoryMeta | null {
   return TICKET_CATEGORIES[category as TicketCategory] ?? null;
+}
+
+/**
+ * The "you've hit the open-ticket limit for this category" notice, listing the
+ * user's existing ticket channels so they can jump straight to them.
+ */
+export function buildTicketLimitNotice(
+  meta: CategoryMeta,
+  openChannelIds: string[],
+): string {
+  const single = openChannelIds.length === 1;
+  const links = openChannelIds.map((id) => `<#${id}>`).join("\n");
+  return [
+    `**You already have ${openChannelIds.length} open ${meta.label} ticket${single ? "" : "s"}.** Please use ${single ? "it" : "one of these"} before opening any new tickets:`,
+    links,
+  ].join("\n");
 }
 
 // ── Player info helper ────────────────────────────────────────────
@@ -264,13 +276,39 @@ export function buildTriggerButtons(): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
+/** customId of the optional "your Minecraft username" field on the appeal modal. */
+export const TICKET_MANUAL_USERNAME_FIELD = "mc_username";
+
+/** The Minecraft-username field injected into the appeal modal for unlinked users. */
+const MANUAL_USERNAME_FIELD: TicketField = {
+  id: TICKET_MANUAL_USERNAME_FIELD,
+  label: "Your Minecraft username",
+  display: "Minecraft username",
+  style: TextInputStyle.Short,
+  required: true,
+  placeholder: "We couldn't find a linked account — enter it here",
+  maxLength: 32,
+};
+
+export interface IntakeModalOptions {
+  /** Prepend a required Minecraft-username field (used for unlinked appeals). */
+  includeMinecraftUsername?: boolean;
+}
+
 /** The intake modal shown when a user clicks a category button. */
-export function buildIntakeModal(meta: CategoryMeta): ModalBuilder {
+export function buildIntakeModal(
+  meta: CategoryMeta,
+  opts: IntakeModalOptions = {},
+): ModalBuilder {
   const modal = new ModalBuilder()
     .setCustomId(`ticket_modal:${meta.category}`)
     .setTitle(meta.modalTitle);
 
-  for (const field of meta.fields) {
+  const fields = opts.includeMinecraftUsername
+    ? [MANUAL_USERNAME_FIELD, ...meta.fields]
+    : meta.fields;
+
+  for (const field of fields) {
     const input = new TextInputBuilder()
       .setCustomId(field.id)
       .setLabel(field.label)
@@ -287,141 +325,138 @@ export function buildIntakeModal(meta: CategoryMeta): ModalBuilder {
 }
 
 /**
- * The header container posted in the thread when a ticket opens.
- * Shows player info + the intake answers so staff have context.
+ * The header container posted in the channel when a ticket opens. Leads with the
+ * category (custom emoji + `〉` + title), the ticket id and opener, then each
+ * intake question with its answer in a code block.
  */
 export function buildTicketHeader(
   meta: CategoryMeta,
-  player: PlayerInfo,
+  ticketId: number,
+  openerDiscordId: string,
   intake: Record<string, string>,
 ): ContainerBuilder {
-  // The opener is pinged in the message above this one and the channel is named
-  // after them, so the header intentionally omits the ticket id and "opened by".
-  const isAppeal = meta.category === "appeal";
+  const lines = [
+    `${meta.emoji} 〉${meta.headerTitle}`,
+    `**Ticket ID:** #${String(ticketId).padStart(4, "0")}`,
+    `**Opened by:** <@${openerDiscordId}>`,
+  ];
 
-  const cardLines = [`## ${meta.headerTitle}`];
-  // Appeals carry the player in the infraction footer below, so keep it minimal.
-  if (!isAppeal) {
-    cardLines.push(
-      player.minecraftUsername
-        ? `**Minecraft:** \`${player.minecraftUsername}\``
-        : "**Minecraft:** _not linked_",
-      `**Whitelist:** ${player.isWhitelisted ? "Verified" : "Not whitelisted"}`,
-    );
-  }
-  const playerCard = cardLines.join("\n");
-
-  // Build the intake summary from the modal fields, keeping submission order.
-  const intakeLines: string[] = [];
+  // One question/answer block per submitted field, keeping modal order.
   for (const field of meta.fields) {
     const value = intake[field.id];
     if (!value) continue;
-    intakeLines.push(`**${field.display}**\n${value}`);
+    lines.push("", `**${field.label}**`, codeBlock(value));
   }
 
-  const container = new ContainerBuilder().setAccentColor(meta.accent);
-
-  if (player.skinUrl) {
-    container.addSectionComponents(
-      new SectionBuilder()
-        .addTextDisplayComponents((td) => td.setContent(playerCard))
-        .setThumbnailAccessory(
-          new ThumbnailBuilder().setURL(player.skinUrl),
-        ),
-    );
-  } else {
-    container.addTextDisplayComponents((td) => td.setContent(playerCard));
-  }
-
-  if (intakeLines.length > 0) {
-    container.addTextDisplayComponents((td) =>
-      td.setContent(intakeLines.join("\n\n")),
-    );
-  }
-
-  return container;
+  return new ContainerBuilder()
+    .setAccentColor(meta.accent)
+    .addTextDisplayComponents((td) => td.setContent(lines.join("\n")));
 }
 
-type TicketOpeningComponent =
-  | ContainerBuilder
-  | ActionRowBuilder<ButtonBuilder>;
+/** Wrap a value in a fenced code block, neutralising any closing fence. */
+function codeBlock(value: string): string {
+  return `\`\`\`\n${value.replace(/```/g, "ʼʼʼ")}\n\`\`\``;
+}
+
+/** A ready-to-send message payload: a standard embed plus optional pager row. */
+export interface InfractionEmbedMessage {
+  embeds: EmbedBuilder[];
+  components: ActionRowBuilder<ButtonBuilder>[];
+}
 
 /**
- * The appeal punishment record, rendered as a quiet, footer-style panel:
- * a colourless container of Discord subtext (`-#`) showing one punishment at a
- * time. Prev/Next buttons page through the record when there's more than one.
+ * The appeal punishment record, rendered as a standard Discord embed titled
+ * "{username}'s Infractions". One punishment is shown at a time with embed
+ * fields; Prev/Next buttons page through the record when there's more than one.
+ * Returns null when there's nothing to render (non-appeal tickets).
  */
-export function buildTicketInfractionComponents(
+export function buildInfractionEmbedMessage(
   ticketId: number,
   info: TicketInfractionInfo | null | undefined,
   page = 0,
-): TicketOpeningComponent[] {
-  if (!info) return [];
+): InfractionEmbedMessage | null {
+  if (!info) return null;
 
-  const name = safeText(info.username, 24);
+  const name = safeText(info.username, 32);
+  const baseEmbed = () =>
+    new EmbedBuilder().setTitle(`${name}'s Infractions`);
 
   if (info.error) {
-    return [
-      footerContainer(
-        `-# 👤 \`${name}\` · could not load punishment history (${safeText(info.error, 120)})`,
-      ),
-    ];
+    return {
+      embeds: [
+        baseEmbed()
+          .setColor(0x95a5a6)
+          .setDescription(
+            `Could not load punishment history.\n${safeText(info.error, 240)}`,
+          ),
+      ],
+      components: [],
+    };
   }
 
   if (!info.infractions || info.infractions.length === 0) {
-    return [footerContainer(`-# 👤 \`${name}\` · no punishments on record`)];
+    return {
+      embeds: [
+        baseEmbed().setColor(0x57f287).setDescription("No punishments on record."),
+      ],
+      components: [],
+    };
   }
 
   const lastPage = info.infractions.length - 1;
   const safePage = Math.max(0, Math.min(page, lastPage));
   const infraction = info.infractions[safePage];
-  if (!infraction) return [];
+  if (!infraction) return null;
 
-  const components: TicketOpeningComponent[] = [
-    footerContainer(
-      formatInfractionFooter(name, infraction, safePage, info.infractions.length),
-    ),
-  ];
+  const embed = baseEmbed()
+    .setColor(infractionColor(infraction))
+    .addFields(
+      { name: "Type", value: formatInfractionType(infraction.type), inline: true },
+      { name: "Status", value: infractionStatus(infraction), inline: true },
+      {
+        name: "Date",
+        value:
+          infraction.created_at > 0
+            ? `<t:${infraction.created_at}:f>`
+            : "Unknown",
+        inline: true,
+      },
+      {
+        name: "Staff",
+        value: safeText(infraction.staff ?? "Unknown", 256),
+        inline: true,
+      },
+      {
+        name: "Reason",
+        value: safeText(infraction.reason ?? "No reason given", 1024),
+        inline: false,
+      },
+    )
+    .setFooter({
+      text: `Punishment ${safePage + 1} of ${info.infractions.length}`,
+    });
 
-  if (info.infractions.length > 1) {
-    components.push(buildInfractionNavigation(ticketId, safePage, lastPage));
-  }
-
-  return components;
-}
-
-/** A colourless container holding the footer-style infraction text. */
-function footerContainer(content: string): ContainerBuilder {
-  return new ContainerBuilder().addTextDisplayComponents((td) =>
-    td.setContent(content),
-  );
-}
-
-function formatInfractionFooter(
-  name: string,
-  infraction: PublicInfraction,
-  page: number,
-  total: number,
-): string {
-  const type = formatInfractionType(infraction.type);
-  const status = infractionStatus(infraction);
-  const when = infraction.created_at > 0
-    ? `<t:${infraction.created_at}:d>`
-    : "unknown date";
-  const staff = safeText(infraction.staff ?? "Unknown", 48);
-  const reason = safeText(infraction.reason ?? "No reason given", 160);
-
-  const lines = [
-    `-# 👤 \`${name}\` · punishment ${page + 1} of ${total}`,
-    `-# **${type}** · ${status} · ${when} · by ${staff}`,
-    `-# Reason: ${reason}`,
-  ];
   if (infraction.removed) {
-    lines.push(
-      `-# Removed by ${safeText(infraction.removed_by ?? "Unknown", 48)}`,
-    );
+    embed.addFields({
+      name: "Removed by",
+      value: safeText(infraction.removed_by ?? "Unknown", 256),
+      inline: true,
+    });
   }
-  return lines.join("\n");
+
+  const components =
+    info.infractions.length > 1
+      ? [buildInfractionNavigation(ticketId, safePage, lastPage)]
+      : [];
+
+  return { embeds: [embed], components };
+}
+
+/** Embed accent colour reflecting an infraction's state. */
+function infractionColor(infraction: PublicInfraction): number {
+  if (infraction.removed) return 0x95a5a6; // grey — lifted
+  if (infraction.active === true) return 0xed4245; // red — active
+  return 0xe67e22; // orange — expired/inactive
 }
 
 function buildInfractionNavigation(
@@ -510,6 +545,9 @@ export function buildDisabledStaffButtons(
   );
 }
 
+/** Custom emoji shown on the closed-ticket notice. */
+const TICKET_CLOSED_EMOJI = "<:hourglass:1521560454189809886>";
+
 /** Container shown once a ticket is closed; references the delete countdown. */
 export function buildClosedNotice(
   closedByMention: string,
@@ -519,13 +557,13 @@ export function buildClosedNotice(
     .setAccentColor(resolveColor("DarkButNotBlack"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `## Ticket Closed\nClosed by ${closedByMention}.\n-# This channel will be deleted <t:${deleteAtEpochSeconds}:R>. Mods can reopen below to restore opener access.`,
+        `${TICKET_CLOSED_EMOJI} 〉Ticket closed\nThis ticket was closed by ${closedByMention}. It will be automatically deleted <t:${deleteAtEpochSeconds}:R>.`,
       ),
     );
 }
 
-/** Reopen button shown alongside the closed notice. */
-export function buildReopenButton(
+/** Reopen + Delete buttons shown alongside the closed notice. */
+export function buildClosedTicketButtons(
   ticketId: number,
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -533,11 +571,15 @@ export function buildReopenButton(
       .setCustomId(`ticket_reopen:${ticketId}`)
       .setLabel("Reopen Ticket")
       .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`ticket_delete:${ticketId}`)
+      .setLabel("Delete Ticket")
+      .setStyle(ButtonStyle.Danger),
   );
 }
 
-/** Same Reopen button, disabled — used to grey the row after reopen. */
-export function buildDisabledReopenButton(
+/** Same Reopen + Delete row, both disabled — used to grey it after reopen. */
+export function buildDisabledClosedTicketButtons(
   ticketId: number,
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -546,18 +588,27 @@ export function buildDisabledReopenButton(
       .setLabel("Reopen Ticket")
       .setStyle(ButtonStyle.Success)
       .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`ticket_delete:${ticketId}`)
+      .setLabel("Delete Ticket")
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(true),
   );
 }
 
-/** Container shown when a ticket is reopened. */
-export function buildReopenedNotice(reopenedByMention: string): ContainerBuilder {
-  return new ContainerBuilder()
-    .setAccentColor(resolveColor("Green"))
-    .addTextDisplayComponents((td) =>
-      td.setContent(
-        `## Ticket Reopened\nReopened by ${reopenedByMention}. The opener has been restored to the channel.`,
-      ),
-    );
+/** The structured topic set on a ticket channel. */
+export function buildTicketTopic(opts: {
+  ticketId: number;
+  openerName: string;
+  meta: CategoryMeta;
+  openedAtEpochSeconds: number;
+}): string {
+  return [
+    `- **Ticket ID**: #${String(opts.ticketId).padStart(4, "0")}`,
+    `- **Ticket opened**: ${opts.openerName}`,
+    `- **Category**: ${opts.meta.label}`,
+    `- **Opened At**: <t:${opts.openedAtEpochSeconds}:f>`,
+  ].join("\n");
 }
 
 /**
