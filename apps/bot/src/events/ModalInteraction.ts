@@ -46,7 +46,10 @@ import {
   getPlayerInfo,
   TICKET_MANUAL_USERNAME_FIELD,
 } from "../utils/ticket.js";
-import { openTicket } from "../utils/ticketFlow.js";
+import {
+  getLiveOpenTicketsForCategory,
+  openTicket,
+} from "../utils/ticketFlow.js";
 import {
   DENY_REASON_CUSTOM_ID,
   DENY_REASON_PRESET_SELECT_ID,
@@ -763,11 +766,10 @@ export default class ModalInteractionEvent extends Event {
 
       // Re-check the rate limit (the user might have opened another since clicking).
       try {
-        const openTickets = await appDb.listOpenTicketsForUser(
+        const sameCategory = await getLiveOpenTicketsForCategory(
+          interaction.client,
           interaction.user.id,
-        );
-        const sameCategory = openTickets.filter(
-          (t) => t.category === meta.category,
+          meta.category,
         );
         if (sameCategory.length >= meta.maxOpen) {
           await interaction.reply({

@@ -38,7 +38,10 @@ import {
   getPlayerInfo,
   TICKET_INFRACTION_BUTTON_PREFIX,
 } from "../utils/ticket.js";
-import { openTicket } from "../utils/ticketFlow.js";
+import {
+  getLiveOpenTicketsForCategory,
+  openTicket,
+} from "../utils/ticketFlow.js";
 import {
   buildDisabledShopDeedStaffButtons,
   buildShopDeedDecisionModal,
@@ -730,11 +733,10 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       try {
-        const openTickets = await appDb.listOpenTicketsForUser(
+        const sameCategory = await getLiveOpenTicketsForCategory(
+          interaction.client,
           interaction.user.id,
-        );
-        const sameCategory = openTickets.filter(
-          (t) => t.category === meta.category,
+          meta.category,
         );
         if (sameCategory.length >= meta.maxOpen) {
           await interaction.reply({
