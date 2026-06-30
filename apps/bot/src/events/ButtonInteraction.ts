@@ -852,17 +852,7 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      const member = interaction.member as GuildMember | null;
-      const isMod = member?.roles.cache.has(config.MOD_ROLE_ID) ?? false;
-      const isOpener = ticket.opener_discord_id === interaction.user.id;
-      if (!isMod && !isOpener) {
-        await interaction.reply({
-          components: [errorContainer("**Missing permissions** — only the opener or staff can close.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
+      // Anyone with access to this (private) ticket channel may close it.
       const deleteAtSeconds = Math.floor((Date.now() + TICKET_DELETE_DELAY_MS) / 1000);
 
       try {
