@@ -1,9 +1,11 @@
 import {
   ActionRowBuilder,
+  AttachmentBuilder,
   ButtonBuilder,
   ButtonStyle,
   ContainerBuilder,
   EmbedBuilder,
+  FileBuilder,
   FileUploadBuilder,
   LabelBuilder,
   MediaGalleryBuilder,
@@ -360,7 +362,6 @@ export function buildTicketHeader(
   openerDiscordId: string,
   intake: Record<string, string>,
   player?: TicketHeaderPlayer,
-  evidence: EvidenceFile[] = [],
 ): ContainerBuilder {
   const lines = [
     `## ${meta.emoji}  〉${meta.headerTitle}`,
@@ -389,23 +390,22 @@ export function buildTicketHeader(
   }
   if (qa.length > 0) lines.push("", ...qa);
 
-  const container = new ContainerBuilder()
+  return new ContainerBuilder()
     .setAccentColor(meta.accent)
     .addTextDisplayComponents((td) => td.setContent(lines.join("\n")));
-
-  appendEvidence(container, evidence);
-  return container;
 }
 
 /**
  * Append uploaded evidence to a ticket header container so it rides in the same
- * message: images/videos as an inline media gallery, anything else as links.
+ * message: images/videos as an inline media gallery, and any other file as a
+ * native File component. Returns the attachments that must be sent alongside the
+ * message (File components reference re-uploaded `attachment://` files).
  */
-function appendEvidence(
+export function appendEvidence(
   container: ContainerBuilder,
   evidence: EvidenceFile[],
-): void {
-  if (evidence.length === 0) return;
+): AttachmentBuilder[] {
+  if (evidence.length === 0) return [];
 
   const isMedia = (f: EvidenceFile) =>
     f.contentType?.startsWith("image/") || f.contentType?.startsWith("video/");
@@ -426,10 +426,21 @@ function appendEvidence(
     );
   }
 
-  if (other.length > 0) {
-    const links = other.map((f) => `[${f.name}](${f.url})`).join("\n");
-    container.addTextDisplayComponents((td) => td.setContent(links));
-  }
+  // File components can only reference uploaded attachments, so re-attach the
+  // non-media files and point each File component at its attachment:// name.
+  const attachments: AttachmentBuilder[] = [];
+  other.forEach((f, index) => {
+    const name = sanitizeAttachmentName(f.name, index);
+    attachments.push(new AttachmentBuilder(f.url, { name }));
+    container.addFileComponents(new FileBuilder().setURL(`attachment://${name}`));
+  });
+  return attachments;
+}
+
+/** A unique, Discord-safe attachment filename (must match the attachment:// ref). */
+function sanitizeAttachmentName(name: string, index: number): string {
+  const cleaned = name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "file";
+  return `${index}-${cleaned}`;
 }
 
 /** Wrap a value in a fenced code block, neutralising any closing fence. */
