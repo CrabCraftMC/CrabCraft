@@ -88,6 +88,7 @@ public class CrabUtilitiesVelocity {
     private AltQueryService altQueryService;
     private LoginStreakService loginStreakService;
     private LoginStreakPublisher loginStreakPublisher;
+    private ConnectionListener connectionListener;
     private PlayerSettingsRepository playerSettingsRepository;
     private PlayerSettingsService playerSettingsService;
     private LiteBansInfractionService liteBansInfractionService;
@@ -136,7 +137,9 @@ public class CrabUtilitiesVelocity {
         this.altQueryService = new AltQueryService(pgWriter.getDataSource(), logger);
 
         this.loginStreakService = new LoginStreakService(
-                pgWriter.getDataSource(), logger, config.getLoginStreakResetHourUtc());
+                pgWriter.getDataSource(), logger,
+                config.getLoginStreakResetHourUtc(),
+                config.getLoginStreakRequiredPlaySeconds());
         this.loginStreakPublisher = new LoginStreakPublisher(this, config);
         this.liteBansInfractionService = new LiteBansInfractionService(logger);
         this.punishmentEventPublisher = new PunishmentEventPublisher(this, config);
@@ -181,7 +184,8 @@ public class CrabUtilitiesVelocity {
         ReloadCommand.register(this);
 
         server.getEventManager().register(this, new StaffChatListener(this));
-        server.getEventManager().register(this, new ConnectionListener(this));
+        this.connectionListener = new ConnectionListener(this);
+        server.getEventManager().register(this, connectionListener);
 
         if (config.isVoicechatCrossServerEnabled()) {
             this.playerLocationTracker = new PlayerLocationTracker(this, config);
@@ -196,6 +200,9 @@ public class CrabUtilitiesVelocity {
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
         synchronized (lifecycleLock) {
+            if (connectionListener != null) {
+                connectionListener.shutdown();
+            }
             stopRuntimeConsumers();
             shutdownDatabaseExecutor("shutdown");
             stopLoginStreakPublisher();
@@ -238,7 +245,9 @@ public class CrabUtilitiesVelocity {
                     newPgWriter.getDataSource(), logger, newAdvancementRegistry);
             this.altQueryService = new AltQueryService(newPgWriter.getDataSource(), logger);
             this.loginStreakService = new LoginStreakService(
-                    newPgWriter.getDataSource(), logger, newConfig.getLoginStreakResetHourUtc());
+                    newPgWriter.getDataSource(), logger,
+                    newConfig.getLoginStreakResetHourUtc(),
+                    newConfig.getLoginStreakRequiredPlaySeconds());
             this.liteBansInfractionService = new LiteBansInfractionService(logger);
             this.punishmentEventPublisher = new PunishmentEventPublisher(this, newConfig);
             this.punishmentEventPublisher.start();

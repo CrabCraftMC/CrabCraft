@@ -6,9 +6,9 @@ import {
 
 describe("formatPlayerStatus", () => {
   test("formats the Discord activity text", () => {
-    expect(formatPlayerStatus(0)).toBe("with 0 others connected");
-    expect(formatPlayerStatus(1)).toBe("with 1 other connected");
-    expect(formatPlayerStatus(12)).toBe("with 12 others connected");
+    expect(formatPlayerStatus(0)).toBe("0 players connected");
+    expect(formatPlayerStatus(1)).toBe("1 player connected");
+    expect(formatPlayerStatus(12)).toBe("12 players connected");
   });
 });
 

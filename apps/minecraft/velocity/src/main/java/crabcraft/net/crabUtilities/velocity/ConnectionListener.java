@@ -5,6 +5,7 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.player.ServerPostConnectEvent;
+import com.velocitypowered.api.scheduler.ScheduledTask;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.node.types.InheritanceNode;
 import com.velocitypowered.api.proxy.Player;
@@ -19,6 +20,7 @@ import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -39,6 +41,7 @@ public class ConnectionListener {
 
     private final CrabUtilitiesVelocity plugin;
     private final Set<UUID> announcedPlayers = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<UUID, ActiveStreakSession> activeStreakSessions = new ConcurrentHashMap<>();
 
     public ConnectionListener(CrabUtilitiesVelocity plugin) {
         this.plugin = plugin;
@@ -69,19 +72,10 @@ public class ConnectionListener {
             }
         });
 
-        // Record the login streak first so it doesn't depend on
-        // LuckPerms being installed and updates regardless of which
-        // backend the player gets routed to (including ignored ones).
-        var streakService = plugin.getLoginStreakService();
-        var streakPublisher = plugin.getLoginStreakPublisher();
-        if (streakService != null) {
-            plugin.runDatabaseTask("login-streak-record", () -> {
-                var snapshot = streakService.recordLogin(uuid);
-                if (snapshot != null && streakPublisher != null) {
-                    streakPublisher.publish(uuid, snapshot, streakService.getResetHourUtc());
-                }
-            });
-        }
+        // Start tracking cumulative online time for today's streak credit.
+        // The streak itself is only recorded once the player reaches the
+        // configured play-time requirement for the current streak day.
+        startLoginStreakSession(player);
 
         LuckPerms luckPerms = plugin.getLuckPerms();
         if (luckPerms == null) return; // LuckPerms not available
@@ -178,6 +172,7 @@ public class ConnectionListener {
     @Subscribe(order = PostOrder.EARLY)
     public void onDisconnect(DisconnectEvent event) {
         Player player = event.getPlayer();
+        finishLoginStreakSession(player.getUniqueId());
 
         var settingsService = plugin.getPlayerSettingsService();
         if (settingsService != null) {
@@ -201,6 +196,121 @@ public class ConnectionListener {
 
         String discordMsg = formatDiscord(plugin.getConfig().getDiscordLeaveFormat(), player, null);
         plugin.getDiscordWebhook().send(discordMsg);
+    }
+
+    public void shutdown() {
+        long now = epochSeconds();
+        for (var entry : activeStreakSessions.entrySet()) {
+            UUID playerId = entry.getKey();
+            ActiveStreakSession session = entry.getValue();
+            if (!activeStreakSessions.remove(playerId, session)) continue;
+
+            CreditSegment segment = session.close(now);
+            if (segment != null) {
+                recordLoginStreakPlaytime(session, segment, false);
+            }
+        }
+    }
+
+    private void startLoginStreakSession(Player player) {
+        UUID playerId = player.getUniqueId();
+        long now = epochSeconds();
+        ActiveStreakSession session = new ActiveStreakSession(playerId, now);
+        ActiveStreakSession previous = activeStreakSessions.put(playerId, session);
+        if (previous != null) {
+            CreditSegment previousSegment = previous.close(now);
+            if (previousSegment != null) {
+                recordLoginStreakPlaytime(previous, previousSegment, false);
+            }
+        }
+
+        var streakService = plugin.getLoginStreakService();
+        if (streakService == null) return;
+        plugin.runDatabaseTask("login-streak-progress-load", () -> {
+            var progress = streakService.getQualificationProgress(playerId.toString());
+            if (progress == null) return;
+            if (!isCurrentStreakSession(session) || !isPlayerActive(playerId)) return;
+            scheduleNextQualificationCheck(session, progress);
+        });
+    }
+
+    private void finishLoginStreakSession(UUID playerId) {
+        ActiveStreakSession session = activeStreakSessions.remove(playerId);
+        if (session == null) return;
+
+        CreditSegment segment = session.close(epochSeconds());
+        if (segment != null) {
+            recordLoginStreakPlaytime(session, segment, false);
+        }
+    }
+
+    private void creditActiveLoginStreakSession(ActiveStreakSession session) {
+        UUID playerId = session.playerId;
+        if (!isCurrentStreakSession(session) || !isPlayerActive(playerId)) return;
+
+        CreditSegment segment = session.takeSegment(epochSeconds());
+        if (segment != null) {
+            recordLoginStreakPlaytime(session, segment, true);
+        } else {
+            ScheduledTask retry = plugin.getServer().getScheduler()
+                    .buildTask(plugin, () -> creditActiveLoginStreakSession(session))
+                    .delay(Duration.ofSeconds(1))
+                    .schedule();
+            session.setTask(retry);
+        }
+    }
+
+    private void recordLoginStreakPlaytime(ActiveStreakSession session, CreditSegment segment, boolean reschedule) {
+        var streakService = plugin.getLoginStreakService();
+        if (streakService == null) return;
+
+        var streakPublisher = plugin.getLoginStreakPublisher();
+        UUID playerId = session.playerId;
+        String uuid = playerId.toString();
+        plugin.runDatabaseTask("login-streak-playtime", () -> {
+            var result = streakService.recordPlaytime(uuid, segment.from, segment.to);
+            if (result == null) return;
+            if (result.streakSnapshot != null && streakPublisher != null) {
+                streakPublisher.publish(uuid, result.streakSnapshot, streakService.getResetHourUtc());
+            }
+            if (reschedule && result.progress != null
+                    && isCurrentStreakSession(session)
+                    && isPlayerActive(playerId)) {
+                scheduleNextQualificationCheck(session, result.progress);
+            }
+        });
+    }
+
+    private void scheduleNextQualificationCheck(
+            ActiveStreakSession session,
+            crabcraft.net.crabUtilities.velocity.db.LoginStreakService.QualificationProgress progress) {
+        var streakService = plugin.getLoginStreakService();
+        if (streakService == null) return;
+
+        long now = epochSeconds();
+        long delaySeconds;
+        if (progress.qualified) {
+            delaySeconds = streakService.secondsUntilNextStreakDay(now)
+                    + streakService.getRequiredPlaySeconds();
+        } else {
+            delaySeconds = progress.remainingSeconds() - session.secondsSinceLastCredit(now);
+        }
+
+        Runnable taskBody = () -> creditActiveLoginStreakSession(session);
+        ScheduledTask task = delaySeconds <= 0L
+                ? plugin.getServer().getScheduler().buildTask(plugin, taskBody).schedule()
+                : plugin.getServer().getScheduler().buildTask(plugin, taskBody)
+                        .delay(Duration.ofSeconds(delaySeconds))
+                        .schedule();
+        session.setTask(task);
+    }
+
+    private boolean isCurrentStreakSession(ActiveStreakSession session) {
+        return activeStreakSessions.get(session.playerId) == session;
+    }
+
+    private static long epochSeconds() {
+        return System.currentTimeMillis() / 1000L;
     }
 
     private void broadcastJoin(Player player) {
@@ -304,6 +414,63 @@ public class ConnectionListener {
     private void broadcast(Component message) {
         for (Player p : plugin.getServer().getAllPlayers()) {
             p.sendMessage(message);
+        }
+    }
+
+    private static final class ActiveStreakSession {
+        private final UUID playerId;
+        private long lastCreditedAt;
+        private boolean closed;
+        private ScheduledTask qualificationTask;
+
+        private ActiveStreakSession(UUID playerId, long startedAt) {
+            this.playerId = playerId;
+            this.lastCreditedAt = startedAt;
+        }
+
+        private synchronized CreditSegment takeSegment(long now) {
+            if (closed || now <= lastCreditedAt) return null;
+            long from = lastCreditedAt;
+            lastCreditedAt = now;
+            return new CreditSegment(from, now);
+        }
+
+        private synchronized CreditSegment close(long now) {
+            if (closed) return null;
+            closed = true;
+            if (qualificationTask != null) {
+                qualificationTask.cancel();
+                qualificationTask = null;
+            }
+            if (now <= lastCreditedAt) return null;
+            long from = lastCreditedAt;
+            lastCreditedAt = now;
+            return new CreditSegment(from, now);
+        }
+
+        private synchronized void setTask(ScheduledTask task) {
+            if (closed) {
+                task.cancel();
+                return;
+            }
+            if (qualificationTask != null) {
+                qualificationTask.cancel();
+            }
+            qualificationTask = task;
+        }
+
+        private synchronized long secondsSinceLastCredit(long now) {
+            return Math.max(0L, now - lastCreditedAt);
+        }
+    }
+
+    private static final class CreditSegment {
+        private final long from;
+        private final long to;
+
+        private CreditSegment(long from, long to) {
+            this.from = from;
+            this.to = to;
         }
     }
 }

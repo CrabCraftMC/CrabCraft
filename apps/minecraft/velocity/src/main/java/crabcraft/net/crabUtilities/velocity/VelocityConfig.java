@@ -68,6 +68,7 @@ public class VelocityConfig {
     private final boolean voicechatCrossServerEnabled;
     private final long voicechatPlayerHomeTtlSeconds;
     private final int loginStreakResetHourUtc;
+    private final int loginStreakRequiredPlaySeconds;
 
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
                            String redisChannel, String redisPunishmentStream,
@@ -91,7 +92,8 @@ public class VelocityConfig {
                            String updateGithubRepo, String updateGithubToken,
                            boolean voicechatCrossServerEnabled,
                            long voicechatPlayerHomeTtlSeconds,
-                           int loginStreakResetHourUtc) {
+                           int loginStreakResetHourUtc,
+                           int loginStreakRequiredPlaySeconds) {
         this.redisHost = redisHost;
         this.redisPort = redisPort;
         this.redisPassword = redisPassword;
@@ -130,6 +132,7 @@ public class VelocityConfig {
         this.voicechatCrossServerEnabled = voicechatCrossServerEnabled;
         this.voicechatPlayerHomeTtlSeconds = voicechatPlayerHomeTtlSeconds;
         this.loginStreakResetHourUtc = loginStreakResetHourUtc;
+        this.loginStreakRequiredPlaySeconds = loginStreakRequiredPlaySeconds;
     }
 
     public static VelocityConfig load(Path dataDirectory, Logger logger) {
@@ -234,6 +237,8 @@ public class VelocityConfig {
 
             int streakResetHour = root.node("login-streaks", "reset-hour-utc")
                     .getInt(LoginStreakService.DEFAULT_RESET_HOUR_UTC);
+            int streakRequiredMinutes = root.node("login-streaks", "required-play-minutes")
+                    .getInt(LoginStreakService.DEFAULT_REQUIRED_PLAY_MINUTES);
 
             return new VelocityConfig(host, port, password, channel,
                     punishmentStream, punishmentWatchIntervalSeconds, format,
@@ -244,7 +249,8 @@ public class VelocityConfig {
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
                     updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken,
-                    vcEnabled, vcHomeTtl, streakResetHour);
+                    vcEnabled, vcHomeTtl, streakResetHour,
+                    LoginStreakService.minutesToSeconds(streakRequiredMinutes));
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat",
@@ -258,7 +264,8 @@ public class VelocityConfig {
                     "{name} joined the game for the first time!",
                     "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "",
                     true, 6L, false, "CrabCraftMC/CrabCraft", "",
-                    true, 300L, LoginStreakService.DEFAULT_RESET_HOUR_UTC);
+                    true, 300L, LoginStreakService.DEFAULT_RESET_HOUR_UTC,
+                    LoginStreakService.minutesToSeconds(LoginStreakService.DEFAULT_REQUIRED_PLAY_MINUTES));
         }
     }
 
@@ -300,4 +307,5 @@ public class VelocityConfig {
     public boolean isVoicechatCrossServerEnabled() { return voicechatCrossServerEnabled; }
     public long getVoicechatPlayerHomeTtlSeconds() { return voicechatPlayerHomeTtlSeconds; }
     public int getLoginStreakResetHourUtc() { return loginStreakResetHourUtc; }
+    public int getLoginStreakRequiredPlaySeconds() { return loginStreakRequiredPlaySeconds; }
 }

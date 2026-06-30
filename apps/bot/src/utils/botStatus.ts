@@ -10,8 +10,8 @@ interface PlayersResponse {
 }
 
 export function formatPlayerStatus(playerCount: number): string {
-  const noun = playerCount === 1 ? "other" : "others";
-  return `with ${playerCount} ${noun} connected`;
+  const noun = playerCount === 1 ? "player" : "players";
+  return `${playerCount} ${noun} connected`;
 }
 
 export function getOnlinePlayerCount(data: PlayersResponse): number | null {
@@ -58,7 +58,11 @@ export function startBotPlayerStatus(
     const activity = formatPlayerStatus(playerCount);
     if (activity === currentActivity) return;
 
-    client.user?.setActivity(activity, { type: ActivityType.Playing });
+    client.user?.setActivity({
+      name: "custom",
+      state: activity,
+      type: ActivityType.Custom,
+    });
     currentActivity = activity;
   };
 
