@@ -44,85 +44,48 @@ export function primaryContainerWithThumbnail(text: string, imageUrl: string) {
     );
 }
 
-// ── Log channel embeds ──────────────────────────────────────────────
+// ── Log channel messages ────────────────────────────────────────────
 
-/** Log embed for an accepted application (green accent + player skin). */
+/** Log message for an accepted application. */
 export function logAccept(
   userId: string,
   mcUsername: string,
-  uuid: string,
+  _uuid: string,
   moderator?: string,
 ) {
-  const byLine = moderator ? `\n**By:** ${moderator}` : "";
-  return new ContainerBuilder()
-    .setAccentColor(resolveColor("Green"))
-    .addSectionComponents(
-      new SectionBuilder()
-        .addTextDisplayComponents((td) =>
-          td.setContent(
-            `### <:PlayerJoined:1251574077186113606> Application Accepted\n**User:** <@${userId}>\n**Minecraft:** \`${mcUsername}\`${byLine}`,
-          ),
-        )
-        .setThumbnailAccessory(
-          new ThumbnailBuilder().setURL(
-            `https://api.mineatar.io/body/full/${uuid}?scale=12`,
-          ),
-        ),
-    );
+  const approvedBy = moderator ? ` by **${moderator}**` : "";
+  return `<:PlayerJoined:1251574077186113606> **<@${userId}>**'s application was approved${approvedBy}. \`${mcUsername}\` was added to the whitelist.`;
 }
 
-/** Log embed for a denied application (red accent). */
+/** Log message for a denied application. */
 export function logDeny(
   userId: string,
   mcUsername: string | undefined,
   reason: string,
   moderator?: string,
 ) {
-  const mcLine = mcUsername ? `\n**Minecraft:** \`${mcUsername}\`` : "";
-  const byLine = moderator ? `\n**Denied by:** ${moderator}` : "";
-  return new ContainerBuilder()
-    .setAccentColor(resolveColor("Red"))
-    .addTextDisplayComponents((td) =>
-      td.setContent(
-        `### <:PlayerDeath:1251574756600316057> Application Denied\n**User:** <@${userId}>${mcLine}\n**Reason:** ${reason}${byLine}`,
-      ),
-    );
+  const deniedBy = moderator ? ` by **${moderator}**` : "";
+  const username = mcUsername ? ` \`${mcUsername}\` was not added to the whitelist.` : "";
+  return `<:PlayerDeath:1251574756600316057> **<@${userId}>**'s application was denied${deniedBy}.${username} **Reason:** ${reason}`;
 }
 
-/** Log embed for an automatic rejection (red accent, no moderator). */
+/** Log message for an automatic rejection. */
 export function logAutoReject(userId: string, reason: string) {
-  return new ContainerBuilder()
-    .setAccentColor(resolveColor("Red"))
-    .addTextDisplayComponents((td) =>
-      td.setContent(
-        `### <:PlayerDeath:1251574756600316057> Auto-Rejected\n**User:** <@${userId}>\n**Reason:** ${reason}`,
-      ),
-    );
+  return `<:PlayerDeath:1251574756600316057> **<@${userId}>**'s application was automatically rejected. **Reason:** ${reason}`;
 }
 
-/** Log embed for a member leaving the server. */
-export function logMemberLeft(userTag: string, mcUsername: string) {
-  return new ContainerBuilder()
-    .addTextDisplayComponents((td) =>
-      td.setContent(
-        `### <:PlayerLeft:1251574076061913179> Member Left\n**User:** ${userTag}\n**Minecraft:** \`${mcUsername}\`\nRemoved from whitelist.`,
-      ),
-    );
+/** Log message for a member leaving the server. */
+export function logMemberLeft(user: string, mcUsername: string) {
+  return `<:PlayerLeft:1251574076061913179> **${user}** left the server. \`${mcUsername}\` was removed from the whitelist.`;
 }
 
-/** Log embed for an admin wipe action (orange accent). */
+/** Log message for an admin wipe action. */
 export function logAdminWipe(
   target: string,
   mcUsername: string,
   moderator: string,
   extra?: string,
 ) {
-  const extraLine = extra ? `\n${extra}` : "";
-  return new ContainerBuilder()
-    .setAccentColor(resolveColor("Orange"))
-    .addTextDisplayComponents((td) =>
-      td.setContent(
-        `### <:PlayerLeft:1251574076061913179> Data Wiped\n**Target:** ${target}\n**Minecraft:** \`${mcUsername}\`\n**By:** ${moderator}${extraLine}`,
-      ),
-    );
+  const extraLine = extra ? ` ${extra}` : "";
+  return `<:PlayerLeft:1251574076061913179> **${target}** was wiped by **${moderator}**. \`${mcUsername}\` was removed from the whitelist.${extraLine}`;
 }

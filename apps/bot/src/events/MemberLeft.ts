@@ -1,7 +1,7 @@
 import Event from "../structures/Event.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
-import { TextChannel, MessageFlags, type GuildMember } from "discord.js";
+import { TextChannel, type GuildMember } from "discord.js";
 import { logMemberLeft } from "../utils/embeds.js";
 
 import mysql from "../utils/database.js";
@@ -18,22 +18,17 @@ export default class MemberLeftEvent extends Event {
   async execute(member: GuildMember) {
     if (member.user.bot) return;
 
-    // 1. Tear down the applicant's application channel (save a transcript
-    //    first, then delete the channel). Skip the transcript if the
-    //    application was already resolved (accept/deny already saved one).
+    // 1. Find the applicant's application channel. Teardown happens after the
+    //    departure log so any transcript file appears beneath the log message.
+    let applicationChannelRow: Awaited<
+      ReturnType<typeof appDb.getApplicationChannelByApplicant>
+    > | null = null;
     try {
-      const row = await appDb
+      applicationChannelRow = await appDb
         .getApplicationChannelByApplicant(member.id)
         .catch(() => null);
-      if (row) {
-        await finalizeApplicationChannel(
-          member.guild,
-          row,
-          row.delete_after ? null : `member ${member.user.tag} left`,
-        );
-      }
     } catch (error) {
-      logger.error("Failed to tear down application channel for departing member:", error);
+      logger.error("Failed to find application channel for departing member:", error);
     }
 
     // 2. Remove whitelist entry from MariaDB
@@ -66,8 +61,7 @@ export default class MemberLeftEvent extends Event {
 
         if (logChannel) {
           await logChannel.send({
-            components: [logMemberLeft(member.user.tag, playerName)],
-            flags: MessageFlags.IsComponentsV2,
+            content: logMemberLeft(`<@${member.id}>`, playerName),
           });
         }
       } catch (error) {
@@ -75,14 +69,24 @@ export default class MemberLeftEvent extends Event {
       }
     }
 
-    // 4. Cancel any pending applications
+    // 4. Tear down the applicant's application channel. Skip the transcript if
+    //    the application was already resolved (accept/deny already saved one).
+    if (applicationChannelRow) {
+      await finalizeApplicationChannel(
+        member.guild,
+        applicationChannelRow,
+        applicationChannelRow.delete_after ? null : `member ${member.user.tag} left`,
+      );
+    }
+
+    // 5. Cancel any pending applications
     try {
       await appDb.cancelPendingApplications(member.user.id);
     } catch (error) {
       logger.error("Failed to cancel pending applications for departing member:", error);
     }
 
-    // 5. Remove alt accounts
+    // 6. Remove alt accounts
     try {
       await deleteAllAltsForUser(member.user.id);
     } catch (error) {

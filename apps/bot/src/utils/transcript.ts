@@ -17,7 +17,7 @@ import logger from "./logger.js";
 export async function saveTranscriptToLog(
   channel: TextChannel,
   logChannel: TextChannel,
-  description: string,
+  _description: string,
 ): Promise<void> {
   try {
     const html = await generateTranscript(channel);
@@ -26,7 +26,6 @@ export async function saveTranscriptToLog(
     });
 
     await logChannel.send({
-      content: `**Transcript** — #${channel.name} (${description})`,
       files: [attachment],
     });
   } catch (error) {

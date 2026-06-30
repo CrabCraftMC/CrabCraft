@@ -188,8 +188,7 @@ export default class AdminCommand extends SlashCommand {
       .catch(() => null) as TextChannel | null;
     if (logChannel) {
       await logChannel.send({
-        components: [logAccept(applicant.id, minecraftUsername, UUID, `${executor}`)],
-        flags: MessageFlags.IsComponentsV2,
+        content: logAccept(applicant.id, minecraftUsername, UUID, `${executor}`),
       });
     }
 
@@ -266,8 +265,7 @@ export default class AdminCommand extends SlashCommand {
       .catch(() => null) as TextChannel | null;
     if (logChannel) {
       await logChannel.send({
-        components: [logAdminWipe(`<@${targetUser.id}>`, playerName, `${executor}`)],
-        flags: MessageFlags.IsComponentsV2,
+        content: logAdminWipe(`<@${targetUser.id}>`, playerName, `${executor}`),
       });
     }
 
@@ -356,13 +354,12 @@ export default class AdminCommand extends SlashCommand {
       .catch(() => null) as TextChannel | null;
     if (logChannel) {
       await logChannel.send({
-        components: [logAdminWipe(
+        content: logAdminWipe(
           linkedDiscordId ? `<@${linkedDiscordId}>` : `\`${minecraftUsername}\``,
           minecraftUsername,
           `${executor}`,
           linkedDiscordId ? `Linked Discord <@${linkedDiscordId}> removed.` : undefined,
-        )],
-        flags: MessageFlags.IsComponentsV2,
+        ),
       });
     }
 
