@@ -68,6 +68,8 @@ export interface OpenTicketParams {
   player: PlayerInfo;
   /** Text intake answers keyed by field id. */
   intake: Record<string, string>;
+  /** CDN URLs of files uploaded in the modal (e.g. evidence). */
+  evidenceFileUrls?: string[];
   /** Appeal punishment history, if any (rendered as a separate embed). */
   ticketInfractionInfo?: TicketInfractionInfo | null;
 }
@@ -80,6 +82,7 @@ export interface OpenTicketParams {
  */
 export async function openTicket(params: OpenTicketParams): Promise<void> {
   const { interaction, meta, player, intake } = params;
+  const evidenceFileUrls = params.evidenceFileUrls ?? [];
   const ticketInfractionInfo = params.ticketInfractionInfo ?? null;
 
   // Resolve the ticket category. Each ticket is its own text channel created
@@ -94,6 +97,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
           "**Configuration error.** The ticket category could not be found. Please contact an administrator.",
         ),
       ],
+      flags: MessageFlags.IsComponentsV2,
     });
     return;
   }
@@ -140,6 +144,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
           "**Error!** Failed to create the ticket channel. Please try again, or contact a moderator directly.",
         ),
       ],
+      flags: MessageFlags.IsComponentsV2,
     });
     return;
   }
@@ -167,6 +172,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
           "**Error!** Failed to save your ticket. Please try again in a moment.",
         ),
       ],
+      flags: MessageFlags.IsComponentsV2,
     });
     return;
   }
@@ -183,10 +189,29 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     )
     .catch((e) => logger.error("Ticket: failed to set channel topic:", e));
 
+  // Resolve the season the opener joined in (best-effort) for the header.
+  let seasonName: string | null = null;
+  try {
+    const application = await appDb.getLatestApplication(interaction.user.id);
+    if (application?.season) {
+      const season = await appDb.getSeasonById(application.season);
+      seasonName = season?.name ?? application.season;
+    }
+  } catch (e) {
+    logger.error("Ticket: failed to resolve opener season:", e);
+  }
+
+  const headerPlayer = {
+    minecraftUsername: player.minecraftUsername,
+    minecraftUuid: player.minecraftUuid,
+    isWhitelisted: player.isWhitelisted,
+    seasonName,
+  };
+
   try {
     const openingMessage = await ticketChannel.send({
       components: [
-        buildTicketHeader(meta, ticket.id, interaction.user.id, intake),
+        buildTicketHeader(meta, ticket.id, interaction.user.id, intake, headerPlayer),
         buildStaffButtons(ticket.id),
       ],
       allowedMentions: { parse: [], users: [interaction.user.id], roles: [] },
@@ -197,6 +222,22 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     await openingMessage
       .pin()
       .catch((e) => logger.error("Ticket: failed to pin opening message:", e));
+
+    // Re-upload any evidence files into the channel so they persist (the modal
+    // upload URLs are short-lived). Fall back to posting the links on failure.
+    if (evidenceFileUrls.length > 0) {
+      await ticketChannel
+        .send({ content: "**Evidence**", files: evidenceFileUrls })
+        .catch(async (e) => {
+          logger.error("Ticket: failed to attach evidence files:", e);
+          await ticketChannel
+            .send({
+              content: `**Evidence**\n${evidenceFileUrls.join("\n")}`,
+              allowedMentions: { parse: [] },
+            })
+            .catch(() => null);
+        });
+    }
 
     // Appeals get a standard embed of the appellant's punishment history. It's a
     // separate message because a classic embed can't be mixed into the
@@ -230,5 +271,6 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
         `### Ticket Opened\nYour **${meta.label}** ticket is ready in <#${ticketChannel.id}>.`,
       ),
     ],
+    flags: MessageFlags.IsComponentsV2,
   });
 }
