@@ -208,13 +208,13 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   );
   const evidenceAttachments = appendEvidence(header, evidenceFiles);
 
-  // The header carries the ticket info + evidence and is pinned. The Close
-  // button lives on its OWN message below so the header (which can contain File
-  // components that only accept attachment:// urls) is never edited afterwards.
+  // The header carries the ticket info + evidence + Close button and is pinned.
+  // It is never edited afterwards (the close/reopen lifecycle uses a separate
+  // notice message) because its File components can't survive a re-send.
   let openingMessage: Awaited<ReturnType<typeof ticketChannel.send>> | null = null;
   try {
     openingMessage = await ticketChannel.send({
-      components: [header],
+      components: [header, buildStaffButtons(ticket.id)],
       files: evidenceAttachments.length > 0 ? evidenceAttachments : undefined,
       allowedMentions: mentions,
       flags: MessageFlags.IsComponentsV2,
@@ -227,6 +227,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
       .send({
         components: [
           buildTicketHeader(meta, ticket.id, interaction.user.id, intake, headerPlayer),
+          buildStaffButtons(ticket.id),
         ],
         allowedMentions: mentions,
         flags: MessageFlags.IsComponentsV2,
@@ -268,19 +269,10 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
       .catch((e) => logger.error("Ticket: failed to send infraction embed:", e));
   }
 
-  // The Close button on its own message — this is what the close/reopen/delete
-  // lifecycle edits, keeping it clear of the header's File components.
-  await ticketChannel
-    .send({
-      components: [buildStaffButtons(ticket.id)],
-      flags: MessageFlags.IsComponentsV2,
-    })
-    .catch((e) => logger.error("Ticket: failed to send controls message:", e));
-
   await interaction.editReply({
     components: [
       primaryContainer(
-        `### Ticket Opened\nYour **${meta.label}** ticket is ready in <#${ticketChannel.id}>.`,
+        `Your **${meta.emoji} ${meta.label}** ticket has been created: <#${ticketChannel.id}>`,
       ),
     ],
     flags: MessageFlags.IsComponentsV2,

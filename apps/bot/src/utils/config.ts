@@ -22,6 +22,7 @@ interface IdConfig {
   channels: {
     applicationCategory: string;
     log: string;
+    ticketLog?: string;
     leaderboard?: string;
     wiki?: string;
     starboard?: string;
@@ -102,6 +103,7 @@ interface IConfig {
   PUNISHMENT_REDIS_GROUP: string;
   APPLICATION_CATEGORY_ID: string;
   LOG_CHANNEL_ID: string;
+  TICKET_LOG_CHANNEL_ID: string;
   LEADERBOARD_CHANNEL_ID: string;
   WIKI_CHANNEL_ID: string;
   STARBOARD_CHANNEL_ID: string;
@@ -133,6 +135,8 @@ const config: IConfig = {
   PUNISHMENT_REDIS_GROUP: ids.redis?.punishmentGroup ?? "crabcraft-bot",
   APPLICATION_CATEGORY_ID: ids.channels.applicationCategory,
   LOG_CHANNEL_ID: ids.channels.log,
+  // Ticket transcripts go here; falls back to the general log channel if unset.
+  TICKET_LOG_CHANNEL_ID: ids.channels.ticketLog || ids.channels.log,
   LEADERBOARD_CHANNEL_ID: ids.channels.leaderboard ?? "",
   WIKI_CHANNEL_ID: ids.channels.wiki ?? "",
   STARBOARD_CHANNEL_ID: ids.channels.starboard ?? "",

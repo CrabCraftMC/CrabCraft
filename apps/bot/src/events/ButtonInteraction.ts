@@ -27,6 +27,7 @@ import { applicationAcceptedMessage } from "../utils/applicationMessages.js";
 import {
   buildClosedNotice,
   buildClosedTicketButtons,
+  buildDisabledClosedTicketButtons,
   buildInfractionEmbedMessage,
   buildIntakeModal,
   buildReopenedNotice,
@@ -876,8 +877,9 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      // Acknowledge the button. The controls message (where this button lives)
-      // is transformed into the closed notice below.
+      // Acknowledge the button without editing the header (its evidence File
+      // components can't survive a re-send). The closed notice is posted as its
+      // own message below.
       await interaction.deferUpdate();
 
       const ticketChannel = interaction.channel as TextChannel | null;
@@ -899,19 +901,19 @@ export default class ButtonInteractionEvent extends Event {
         }
       }
 
-      // Turn the controls message into the closed notice + Reopen / Delete.
-      try {
-        await interaction.message.edit({
-          components: [
-            buildClosedNotice(`<@${interaction.user.id}>`, deleteAtSeconds),
-            buildClosedTicketButtons(ticket.id),
-          ],
-          // Render the closer's name without pinging them.
-          allowedMentions: { parse: [] },
-          flags: MessageFlags.IsComponentsV2,
-        });
-      } catch (e) {
-        logger.error("Ticket: failed to render closed notice:", e);
+      // Post the closed notice + Reopen / Delete buttons as a new message.
+      if (ticketChannel) {
+        await ticketChannel
+          .send({
+            components: [
+              buildClosedNotice(`<@${interaction.user.id}>`, deleteAtSeconds),
+              buildClosedTicketButtons(ticket.id),
+            ],
+            // Render the closer's name without pinging them.
+            allowedMentions: { parse: [] },
+            flags: MessageFlags.IsComponentsV2,
+          })
+          .catch((e) => logger.error("Ticket: failed to send closed notice:", e));
       }
       return;
     }
@@ -975,14 +977,21 @@ export default class ButtonInteractionEvent extends Event {
         }
       }
 
-      // Revert the controls message back to just the Close button.
+      // Grey out the Reopen / Delete buttons on the closed notice just clicked.
+      // (The header's Close button stays active, so the ticket can be reclosed.)
       try {
+        const otherComponents = interaction.message.components.filter(
+          (row) => row.type !== ComponentType.ActionRow,
+        );
         await interaction.message.edit({
-          components: [buildStaffButtons(ticket.id)],
+          components: [
+            ...otherComponents,
+            buildDisabledClosedTicketButtons(ticket.id),
+          ],
           flags: MessageFlags.IsComponentsV2,
         });
       } catch (e) {
-        logger.error("Ticket: failed to restore close button:", e);
+        logger.error("Ticket: failed to disable closed-notice buttons:", e);
       }
 
       // Announce the reopen (without pinging the reopener).
@@ -1033,10 +1042,10 @@ export default class ButtonInteractionEvent extends Event {
 
       const ticketChannel = interaction.channel as TextChannel | null;
 
-      // Save the transcript to the log channel before deletion.
+      // Save the transcript to the ticket-log channel before deletion.
       try {
         const logChannel = await interaction.guild?.channels
-          .fetch(config.LOG_CHANNEL_ID)
+          .fetch(config.TICKET_LOG_CHANNEL_ID)
           .catch(() => null) as TextChannel | null;
         if (logChannel && ticketChannel) {
           await saveTranscriptToLog(
