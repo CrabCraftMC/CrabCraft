@@ -539,7 +539,7 @@ export function buildClosedNotice(
     .setAccentColor(resolveColor("DarkButNotBlack"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `${TICKET_CLOSED_EMOJI} 〉Ticket closed\nThis ticket was closed by ${closedByMention}. It will be automatically deleted <t:${deleteAtEpochSeconds}:R>.`,
+        `### ${TICKET_CLOSED_EMOJI} 〉Ticket closed\nThis ticket was closed by ${closedByMention}. It will be automatically deleted <t:${deleteAtEpochSeconds}:R>.`,
       ),
     );
 }
