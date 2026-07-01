@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, sql, lte, ne, ilike, isNull, isNotNull, or } from "drizzle-orm";
+import { eq, and, asc, desc, sql, lte, ne, ilike, isNull, isNotNull } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
@@ -10,12 +10,10 @@ import {
   countingState,
   tickets,
   applicationChannels,
-  shopDeedApplications,
   type TicketCategory,
-  type ShopDeedStatus,
 } from "../schema";
 
-export type { TicketCategory, TicketStatus, ShopDeedStatus } from "../schema";
+export type { TicketCategory, TicketStatus } from "../schema";
 
 export interface UpsertUserData {
   discordId: string;
@@ -741,102 +739,6 @@ export async function listOpenTicketsForUser(
       ),
     )
     .orderBy(desc(tickets.created_at));
-}
-
-// ── Shop deed applications ─────────────────────────────────────
-
-export interface CreateShopDeedApplicationData {
-  threadId: string;
-  channelId: string;
-  guildId: string;
-  applicantDiscordId: string;
-  applicantDiscordUsername: string;
-  shopName: string;
-  shopDescription: string;
-  goodsServices: string;
-  location?: string | null;
-}
-
-export type ShopDeedApplication = typeof shopDeedApplications.$inferSelect;
-
-export async function createShopDeedApplication(
-  data: CreateShopDeedApplicationData,
-): Promise<ShopDeedApplication> {
-  const [row] = await db
-    .insert(shopDeedApplications)
-    .values({
-      thread_id: data.threadId,
-      channel_id: data.channelId,
-      guild_id: data.guildId,
-      applicant_discord_id: data.applicantDiscordId,
-      applicant_discord_username: data.applicantDiscordUsername,
-      shop_name: data.shopName,
-      shop_description: data.shopDescription,
-      goods_services: data.goodsServices,
-      location: data.location ?? null,
-    })
-    .returning();
-  return row;
-}
-
-export async function getShopDeedApplicationById(
-  id: number,
-): Promise<ShopDeedApplication | null> {
-  const [row] = await db
-    .select()
-    .from(shopDeedApplications)
-    .where(eq(shopDeedApplications.id, id))
-    .limit(1);
-  return row ?? null;
-}
-
-export async function isWhitelistedForCurrentSeason(
-  discordId: string,
-): Promise<boolean> {
-  const currentSeason = await getCurrentSeason();
-  if (!currentSeason) return false;
-
-  const rows = await db
-    .select({ id: applications.id })
-    .from(applications)
-    .where(
-      and(
-        eq(applications.discord_id, discordId),
-        eq(applications.season, currentSeason.id),
-        eq(applications.status, "accepted"),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
-}
-
-export async function resolveShopDeedApplication(
-  id: number,
-  status: Exclude<ShopDeedStatus, "pending">,
-  moderatorNote: string | null,
-  resolvedByDiscordId: string,
-): Promise<ShopDeedApplication | null> {
-  const now = Math.floor(Date.now() / 1000);
-  const [row] = await db
-    .update(shopDeedApplications)
-    .set({
-      status,
-      moderator_note: moderatorNote,
-      reviewed_by_discord_id: resolvedByDiscordId,
-      reviewed_at: now,
-      updated_at: now,
-    })
-    .where(
-      and(
-        eq(shopDeedApplications.id, id),
-        or(
-          eq(shopDeedApplications.status, "pending"),
-          eq(shopDeedApplications.status, "changes_requested"),
-        ),
-      ),
-    )
-    .returning();
-  return row ?? null;
 }
 
 /** Minimal player lookup used to populate the ticket header card. */

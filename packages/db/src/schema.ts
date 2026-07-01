@@ -436,49 +436,6 @@ export const tickets = pgTable(
   ],
 );
 
-// ── shop_deed_applications ─────────────────────────────────────
-export const shopDeedStatusEnum = pgEnum("shop_deed_status", [
-  "pending",
-  "changes_requested",
-  "accepted",
-  "rejected",
-]);
-
-export type ShopDeedStatus = (typeof shopDeedStatusEnum.enumValues)[number];
-
-// Short Discord applications for SMP shop deeds. Each request is discussed in
-// a public Discord thread; the table is the source of truth for status and the
-// moderator decision reason.
-export const shopDeedApplications = pgTable(
-  "shop_deed_applications",
-  {
-    id: serial("id").primaryKey(),
-    thread_id: text("thread_id").notNull().unique(),
-    channel_id: text("channel_id").notNull(),
-    guild_id: text("guild_id").notNull(),
-
-    applicant_discord_id: text("applicant_discord_id").notNull(),
-    applicant_discord_username: text("applicant_discord_username").notNull(),
-
-    shop_name: text("shop_name").notNull(),
-    shop_description: text("shop_description").notNull(),
-    goods_services: text("goods_services").notNull(),
-    location: text("location"),
-
-    status: shopDeedStatusEnum("status").notNull().default("pending"),
-    moderator_note: text("moderator_note"),
-    reviewed_by_discord_id: text("reviewed_by_discord_id"),
-    reviewed_at: integer("reviewed_at"),
-
-    created_at: integer("created_at")
-      .notNull()
-      .$defaultFn(() => Math.floor(Date.now() / 1000)),
-    updated_at: integer("updated_at")
-      .notNull()
-      .$defaultFn(() => Math.floor(Date.now() / 1000)),
-  },
-);
-
 // ── application_channels ────────────────────────────────────────
 // One private text channel per applicant, created on join under the
 // configured application category. This table is the source of truth for
