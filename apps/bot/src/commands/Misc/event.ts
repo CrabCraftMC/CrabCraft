@@ -45,11 +45,11 @@ export default class EventCommand extends SlashCommand {
   }
 
   private async handlePing(interaction: ChatInputCommandInteraction) {
-    if (!config.EVENT_PING_ROLE_ID || !config.EVENT_ROLE_ID) {
+    if (!config.GAME_MASTER_ROLE_ID || !config.EVENT_ROLE_ID) {
       await interaction.reply({
         components: [
           errorContainer(
-            "**Error!** Event ping roles are not configured in `apps/bot/config.json`.",
+            "**Error!** Event roles are not configured in `apps/bot/config.json`.",
           ),
         ],
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -60,7 +60,7 @@ export default class EventCommand extends SlashCommand {
     const member = await interaction.guild!.members
       .fetch(interaction.user.id)
       .catch(() => null) as GuildMember | null;
-    if (!member?.roles.cache.has(config.EVENT_PING_ROLE_ID)) {
+    if (!member?.roles.cache.has(config.GAME_MASTER_ROLE_ID)) {
       await interaction.reply({
         components: [errorContainer("**Missing permissions**")],
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
