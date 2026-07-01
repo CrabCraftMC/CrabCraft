@@ -359,15 +359,18 @@ export function buildIntakeModal(
 export function buildTicketHeader(
   meta: CategoryMeta,
   ticketId: number,
-  openerDiscordId: string,
+  openedByDiscordId: string,
   intake: Record<string, string>,
   player?: TicketHeaderPlayer,
+  forDiscordId?: string,
 ): ContainerBuilder {
   const lines = [
     `## ${meta.emoji}  〉${meta.headerTitle}`,
     `**Ticket ID:** \`#${String(ticketId).padStart(4, "0")}\``,
-    `**Opened by:** <@${openerDiscordId}>`,
+    `**Opened by:** <@${openedByDiscordId}>`,
   ];
+  // Staff opened this on someone else's behalf — show who it's for.
+  if (forDiscordId) lines.push(`**For:** <@${forDiscordId}>`);
 
   // Minecraft account we have on file for linked openers, after a blank line.
   if (player && (player.minecraftUsername || player.minecraftUuid)) {

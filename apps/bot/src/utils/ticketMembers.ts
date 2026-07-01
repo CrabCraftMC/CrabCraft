@@ -38,10 +38,13 @@ export function buildTicketMemberCommand(
     .toJSON();
 }
 
-type Target = { id: string; label: string };
+export type Target = { id: string; label: string };
 
-/** Resolve the target Discord user from the `user` or `username` option. */
-async function resolveTarget(
+/**
+ * Resolve a target Discord user from the `user` or `username` command options
+ * (a Minecraft username is mapped to its linked Discord account).
+ */
+export async function resolveTarget(
   interaction: ChatInputCommandInteraction,
 ): Promise<Target | { error: string }> {
   const userOpt = interaction.options.getUser("user", false);

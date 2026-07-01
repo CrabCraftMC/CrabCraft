@@ -1,6 +1,7 @@
 import {
   ButtonInteraction,
   ChannelType,
+  type ChatInputCommandInteraction,
   type Client,
   MessageFlags,
   ModalSubmitInteraction,
@@ -17,9 +18,12 @@ import {
   appendEvidence,
   buildChannelName,
   buildInfractionEmbedMessage,
+  buildIntakeModal,
   buildStaffButtons,
   buildTicketHeader,
+  buildTicketLimitNotice,
   buildTicketTopic,
+  getPlayerInfo,
   type CategoryMeta,
   type EvidenceFile,
   type PlayerInfo,
@@ -65,7 +69,10 @@ export async function getLiveOpenTicketsForCategory(
 
 export interface OpenTicketParams {
   /** The interaction to reply on. Must already be deferred (ephemeral + V2). */
-  interaction: ModalSubmitInteraction | ButtonInteraction;
+  interaction:
+    | ModalSubmitInteraction
+    | ButtonInteraction
+    | ChatInputCommandInteraction;
   meta: CategoryMeta;
   player: PlayerInfo;
   /** Text intake answers keyed by field id. */
@@ -74,6 +81,11 @@ export interface OpenTicketParams {
   evidenceFiles?: EvidenceFile[];
   /** Appeal punishment history, if any (rendered as a separate embed). */
   ticketInfractionInfo?: TicketInfractionInfo | null;
+  /**
+   * Who the ticket is for (gets channel access + shown as "opened by").
+   * Defaults to the interaction user; staff can open on someone else's behalf.
+   */
+  opener?: { id: string; username: string };
 }
 
 /**
@@ -86,6 +98,11 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   const { interaction, meta, player, intake } = params;
   const evidenceFiles = params.evidenceFiles ?? [];
   const ticketInfractionInfo = params.ticketInfractionInfo ?? null;
+  const opener = params.opener ?? {
+    id: interaction.user.id,
+    username: interaction.user.username,
+  };
+  const onBehalf = opener.id !== interaction.user.id;
 
   // Resolve the ticket category. Each ticket is its own text channel created
   // beneath this category.
@@ -109,18 +126,18 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   let ticketChannel: TextChannel;
   try {
     ticketChannel = (await interaction.guild!.channels.create({
-      name: buildChannelName(interaction.user.username, meta),
+      name: buildChannelName(opener.username, meta),
       type: ChannelType.GuildText,
       parent: parentCategory.id,
-      topic: `Ticket opened by ${interaction.user.tag} — category: ${meta.category}`,
-      reason: `Ticket opened by ${interaction.user.tag} (${meta.category})`,
+      topic: `Ticket opened by ${opener.username} — category: ${meta.category}`,
+      reason: `Ticket opened by ${opener.username} (${meta.category})`,
       permissionOverwrites: [
         {
           id: interaction.guild!.roles.everyone,
           deny: [PermissionFlagsBits.ViewChannel],
         },
         {
-          id: interaction.user.id,
+          id: opener.id,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
@@ -157,8 +174,8 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
       channelId: ticketChannel.id,
       parentCategoryId: parentCategory.id,
       guildId: interaction.guildId!,
-      openerDiscordId: interaction.user.id,
-      openerDiscordUsername: interaction.user.username,
+      openerDiscordId: opener.id,
+      openerDiscordUsername: opener.username,
       openerMinecraftUuid: player.minecraftUuid,
       openerMinecraftUsername: player.minecraftUsername,
       category: meta.category,
@@ -184,7 +201,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     .setTopic(
       buildTicketTopic({
         ticketId: ticket.id,
-        openerName: interaction.user.username,
+        openerName: opener.username,
         meta,
         openedAtEpochSeconds: ticket.created_at,
       }),
@@ -195,7 +212,13 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     minecraftUsername: player.minecraftUsername,
     minecraftUuid: player.minecraftUuid,
   };
-  const mentions = { parse: [], users: [interaction.user.id], roles: [] };
+  // "Opened by" is the actual creator (the invoker). For staff-opened tickets
+  // the subject is shown as "For" and both are pinged.
+  const mentions = {
+    parse: [],
+    users: onBehalf ? [opener.id, interaction.user.id] : [opener.id],
+    roles: [],
+  };
 
   // Evidence (griefing reports) rides inside the header container itself: media
   // in an inline gallery, other files as native File components (re-attached).
@@ -205,6 +228,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     interaction.user.id,
     intake,
     headerPlayer,
+    onBehalf ? opener.id : undefined,
   );
   const evidenceAttachments = appendEvidence(header, evidenceFiles);
 
@@ -226,7 +250,14 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     openingMessage = await ticketChannel
       .send({
         components: [
-          buildTicketHeader(meta, ticket.id, interaction.user.id, intake, headerPlayer),
+          buildTicketHeader(
+            meta,
+            ticket.id,
+            interaction.user.id,
+            intake,
+            headerPlayer,
+            onBehalf ? opener.id : undefined,
+          ),
           buildStaffButtons(ticket.id),
         ],
         allowedMentions: mentions,
@@ -272,9 +303,83 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   await interaction.editReply({
     components: [
       primaryContainer(
-        `Your **${meta.emoji} ${meta.label}** ticket has been created: <#${ticketChannel.id}>`,
+        onBehalf
+          ? `Opened a **${meta.emoji} ${meta.label}** ticket for <@${opener.id}>: <#${ticketChannel.id}>`
+          : `Your **${meta.emoji} ${meta.label}** ticket has been created: <#${ticketChannel.id}>`,
       ),
     ],
     flags: MessageFlags.IsComponentsV2,
   });
+}
+
+/**
+ * Start opening a ticket for the interaction user: enforce the per-category
+ * limit, then either open directly (no-question categories) or show the intake
+ * modal. Shared by the panel button and the /new command.
+ */
+export async function beginTicketOpen(
+  interaction: ButtonInteraction | ChatInputCommandInteraction,
+  meta: CategoryMeta,
+): Promise<void> {
+  try {
+    const sameCategory = await getLiveOpenTicketsForCategory(
+      interaction.client,
+      interaction.user.id,
+      meta.category,
+    );
+    if (sameCategory.length >= meta.maxOpen) {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            buildTicketLimitNotice(
+              meta,
+              sameCategory.map((t) => t.channel_id),
+            ),
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+  } catch (e) {
+    logger.error("Ticket: rate-limit check failed:", e);
+  }
+
+  // Categories with no intake questions (e.g. General Question) open straight away.
+  if (meta.fields.length === 0 && !meta.fileField) {
+    await interaction.deferReply({
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+    });
+    const player = await getPlayerInfo(interaction.user.id, interaction.user.tag);
+    await openTicket({ interaction, meta, player, intake: {} });
+    return;
+  }
+
+  // Appeals prompt for a Minecraft username only when the user isn't linked.
+  let includeMinecraftUsername = false;
+  if (meta.category === "appeal") {
+    try {
+      const player = await getPlayerInfo(interaction.user.id, interaction.user.tag);
+      includeMinecraftUsername = !player.minecraftUuid;
+    } catch (e) {
+      logger.error("Ticket: appeal link check failed:", e);
+      includeMinecraftUsername = true;
+    }
+  }
+
+  try {
+    await interaction.showModal(buildIntakeModal(meta, { includeMinecraftUsername }));
+  } catch (e) {
+    logger.error("Ticket: failed to show intake modal:", e);
+    await interaction
+      .reply({
+        components: [
+          errorContainer(
+            "**Error!** Couldn't open the ticket form. Please try again, or contact a moderator.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      })
+      .catch(() => null);
+  }
 }
