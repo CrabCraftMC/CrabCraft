@@ -159,7 +159,8 @@ public final class LiteBansInfractionService {
     private Set<String> queryActivePunishments(Object database, Source source,
                                                Map<String, String> uuidLookup)
             throws SQLException, LiteBansUnavailableException {
-        String sql = "SELECT uuid FROM {" + source.tableToken() + "} "
+        long nowEpochSeconds = System.currentTimeMillis() / 1000L;
+        String sql = "SELECT uuid, until, removed_by_name, removed_by_date FROM {" + source.tableToken() + "} "
                 + "WHERE active = 1 AND uuid IN (" + placeholders(uuidLookup.size()) + ")";
         try (PreparedStatement stmt = prepareStatement(database, sql)) {
             try {
@@ -172,8 +173,10 @@ public final class LiteBansInfractionService {
                 stmt.setString(index++, uuid);
             }
             try (ResultSet rs = stmt.executeQuery()) {
+                Map<String, Integer> columns = columns(rs.getMetaData());
                 Set<String> rows = new LinkedHashSet<>();
                 while (rs.next()) {
+                    if (!isCurrentPunishment(columns, rs, nowEpochSeconds)) continue;
                     String rawUuid = rs.getString("uuid");
                     if (rawUuid == null) continue;
                     String normalizedUuid = uuidLookup.get(rawUuid.toLowerCase(Locale.ROOT));
@@ -188,7 +191,8 @@ public final class LiteBansInfractionService {
 
     private Set<String> queryAllActivePunishments(Object database, Source source)
             throws SQLException, LiteBansUnavailableException {
-        String sql = "SELECT uuid FROM {" + source.tableToken() + "} WHERE active = 1";
+        long nowEpochSeconds = System.currentTimeMillis() / 1000L;
+        String sql = "SELECT uuid, until, removed_by_name, removed_by_date FROM {" + source.tableToken() + "} WHERE active = 1";
         try (PreparedStatement stmt = prepareStatement(database, sql)) {
             try {
                 stmt.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
@@ -196,8 +200,10 @@ public final class LiteBansInfractionService {
                 // Some JDBC drivers do not support per-statement timeouts.
             }
             try (ResultSet rs = stmt.executeQuery()) {
+                Map<String, Integer> columns = columns(rs.getMetaData());
                 Set<String> rows = new LinkedHashSet<>();
                 while (rs.next()) {
+                    if (!isCurrentPunishment(columns, rs, nowEpochSeconds)) continue;
                     String normalizedUuid = normalizeStoredUuid(rs.getString("uuid"));
                     if (normalizedUuid != null) {
                         rows.add(normalizedUuid);
@@ -242,6 +248,19 @@ public final class LiteBansInfractionService {
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    private static boolean isCurrentPunishment(Map<String, Integer> columns,
+                                               ResultSet rs,
+                                               long nowEpochSeconds) throws SQLException {
+        String removedBy = getString(columns, rs, "removed_by_name");
+        Long removedAt = getNullableTimestampMillis(columns, rs, "removed_by_date");
+        if ((removedBy != null && !removedBy.isBlank()) || (removedAt != null && removedAt > 0L)) {
+            return false;
+        }
+
+        Long expiresAt = getNullableTimestampMillis(columns, rs, "until");
+        return expiresAt == null || expiresAt <= 0L || toEpochSeconds(expiresAt) > nowEpochSeconds;
     }
 
     private Infraction readInfraction(String type, ResultSet rs) throws SQLException {

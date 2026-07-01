@@ -148,9 +148,18 @@ public final class PunishmentEventPublisher {
 
     private void handleEntryRemoved(Entry entry) {
         String type = getEntryType(entry);
-        if (type == null || isTrackedPunishmentType(type)) {
+        if (type != null && !isTrackedPunishmentType(type)) return;
+
+        String uuid = normalizeEntryUuid(entry.getUuid());
+        if (uuid == null) {
             triggerDiff("litebans-event");
+            return;
         }
+
+        ScheduledExecutorService currentExecutor = executor;
+        if (currentExecutor == null || currentExecutor.isShutdown()) return;
+
+        currentExecutor.execute(() -> publishCurrentPunishmentState(uuid, "litebans-event"));
     }
 
     private void triggerDiff(String source) {
@@ -208,6 +217,36 @@ public final class PunishmentEventPublisher {
 
         if (publishedAllDeltas) {
             lastActiveUuids = next;
+        }
+    }
+
+    private void publishCurrentPunishmentState(String uuid, String source) {
+        LiteBansInfractionService service = plugin.getLiteBansInfractionService();
+        if (service == null) return;
+
+        boolean active;
+        try {
+            active = service.getActivePunishedUuids(Set.of(uuid)).contains(uuid);
+            if (liteBansFailureLogged) {
+                plugin.getLogger().info("Punishment event publisher recovered LiteBans access.");
+                liteBansFailureLogged = false;
+            }
+        } catch (LiteBansInfractionService.LiteBansUnavailableException | SQLException e) {
+            if (!liteBansFailureLogged) {
+                plugin.getLogger().warn("Punishment event publisher cannot query LiteBans; REST reconcile will cover gaps.", e);
+                liteBansFailureLogged = true;
+            } else {
+                plugin.getLogger().debug("Punishment event publisher LiteBans query failed: {}", e.getMessage());
+            }
+            return;
+        }
+
+        if (publish(uuid, active, source) && lastActiveUuids != null) {
+            if (active) {
+                lastActiveUuids.add(uuid);
+            } else {
+                lastActiveUuids.remove(uuid);
+            }
         }
     }
 
