@@ -5,7 +5,7 @@
     "punished": "",
     "live": "",
     "event": "",
-    "eventPing": ""
+    "gameMaster": ""
   },
   "redis": {
     "host": "localhost",
