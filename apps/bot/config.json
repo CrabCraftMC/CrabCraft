@@ -3,7 +3,9 @@
     "member": "",
     "mod": "",
     "punished": "",
-    "live": ""
+    "live": "",
+    "event": "",
+    "eventPing": ""
   },
   "redis": {
     "host": "localhost",
