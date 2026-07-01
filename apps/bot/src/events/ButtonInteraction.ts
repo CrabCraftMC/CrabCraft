@@ -29,18 +29,11 @@ import {
   buildClosedTicketButtons,
   buildDisabledClosedTicketButtons,
   buildInfractionEmbedMessage,
-  buildIntakeModal,
   buildReopenedNotice,
-  buildStaffButtons,
-  buildTicketLimitNotice,
   getCategoryMeta,
-  getPlayerInfo,
   TICKET_INFRACTION_BUTTON_PREFIX,
 } from "../utils/ticket.js";
-import {
-  getLiveOpenTicketsForCategory,
-  openTicket,
-} from "../utils/ticketFlow.js";
+import { beginTicketOpen } from "../utils/ticketFlow.js";
 import {
   buildDisabledShopDeedStaffButtons,
   buildShopDeedDecisionModal,
@@ -689,78 +682,7 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      try {
-        const sameCategory = await getLiveOpenTicketsForCategory(
-          interaction.client,
-          interaction.user.id,
-          meta.category,
-        );
-        if (sameCategory.length >= meta.maxOpen) {
-          await interaction.reply({
-            components: [
-              errorContainer(
-                buildTicketLimitNotice(
-                  meta,
-                  sameCategory.map((t) => t.channel_id),
-                ),
-              ),
-            ],
-            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-          });
-          return;
-        }
-      } catch (e) {
-        logger.error("Ticket: rate-limit check failed:", e);
-      }
-
-      // Categories with no intake questions (e.g. General Question) skip the
-      // modal entirely and open a ticket straight away.
-      if (meta.fields.length === 0 && !meta.fileField) {
-        await interaction.deferReply({
-          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-        });
-        const player = await getPlayerInfo(
-          interaction.user.id,
-          interaction.user.tag,
-        );
-        await openTicket({ interaction, meta, player, intake: {} });
-        return;
-      }
-
-      // Appeals normally pull the appellant's Minecraft account from our
-      // database. If they aren't linked, ask for their username in the modal so
-      // we can still look up their punishment history.
-      let includeMinecraftUsername = false;
-      if (meta.category === "appeal") {
-        try {
-          const player = await getPlayerInfo(
-            interaction.user.id,
-            interaction.user.tag,
-          );
-          includeMinecraftUsername = !player.minecraftUuid;
-        } catch (e) {
-          logger.error("Ticket: appeal link check failed:", e);
-          includeMinecraftUsername = true;
-        }
-      }
-
-      try {
-        await interaction.showModal(
-          buildIntakeModal(meta, { includeMinecraftUsername }),
-        );
-      } catch (e) {
-        logger.error("Ticket: failed to show intake modal:", e);
-        await interaction
-          .reply({
-            components: [
-              errorContainer(
-                "**Error!** Couldn't open the ticket form. Please try again, or contact a moderator.",
-              ),
-            ],
-            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-          })
-          .catch(() => null);
-      }
+      await beginTicketOpen(interaction, meta);
       return;
     }
 
