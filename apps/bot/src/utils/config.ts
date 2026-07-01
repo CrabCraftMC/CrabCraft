@@ -11,6 +11,8 @@ interface IdConfig {
     mod: string;
     punished: string;
     live?: string;
+    event?: string;
+    eventPing?: string;
   };
   redis?: {
     host?: string;
@@ -96,6 +98,8 @@ interface IConfig {
   MOD_ROLE_ID: string;
   PUNISHED_ROLE_ID: string;
   LIVE_ROLE_ID: string;
+  EVENT_ROLE_ID: string;
+  EVENT_PING_ROLE_ID: string;
   REDIS_HOST: string;
   REDIS_PORT: number;
   REDIS_PASSWORD: string;
@@ -128,6 +132,8 @@ const config: IConfig = {
   MOD_ROLE_ID: ids.roles.mod,
   PUNISHED_ROLE_ID: ids.roles.punished,
   LIVE_ROLE_ID: ids.roles.live ?? "",
+  EVENT_ROLE_ID: ids.roles.event ?? "",
+  EVENT_PING_ROLE_ID: ids.roles.eventPing ?? "",
   REDIS_HOST: ids.redis?.host ?? "localhost",
   REDIS_PORT: ids.redis?.port ?? 6379,
   REDIS_PASSWORD: ids.redis?.password ?? "",
