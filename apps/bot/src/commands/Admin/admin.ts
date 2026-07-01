@@ -11,10 +11,6 @@ import {
   buildFastTrackButton,
   buildFastTrackContainer,
 } from "../../utils/applicationChannel.js";
-import {
-  buildShopDeedPanel,
-  buildShopDeedPanelButton,
-} from "../../utils/shopDeed.js";
 import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
 import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
 import {
@@ -412,7 +408,7 @@ export default class AdminCommand extends SlashCommand {
 
         case "fast_track": {
           const season = await appDb.getCurrentSeason().catch(() => null);
-          const seasonName = season?.name ?? "the server";
+          const seasonName = season?.name ?? "the next season";
           await textChannel.send({
             components: [
               buildFastTrackContainer(seasonName),
@@ -438,14 +434,6 @@ export default class AdminCommand extends SlashCommand {
             flags: MessageFlags.IsComponentsV2,
           });
           label = "Ticket panel";
-          break;
-
-        case "shop_deed_panel":
-          await textChannel.send({
-            components: [buildShopDeedPanel(), buildShopDeedPanelButton()],
-            flags: MessageFlags.IsComponentsV2,
-          });
-          label = "Shop deed panel";
           break;
 
         default:
@@ -579,7 +567,6 @@ export default class AdminCommand extends SlashCommand {
                 { name: "Fast Track (Access)", value: "fast_track" },
                 { name: "Rules & Info", value: "rules_info" },
                 { name: "Ticket Panel", value: "ticket_panel" },
-                { name: "Shop Deed Panel", value: "shop_deed_panel" },
                 { name: "Leaderboard", value: "leaderboard" },
               ),
           ),
