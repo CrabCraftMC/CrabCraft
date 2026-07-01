@@ -251,9 +251,9 @@ public class JadeProtocol {
                 MinecraftServer.getServer().reloadableRegistries().lookup().lookupOrThrow(Registries.LOOT_TABLE),
                 Items.SHEARS.getDefaultInstance()
             ));
-        } catch (Throwable ignore) {
+        } catch (Throwable t) {
             shearableBlocks = List.of();
-            JadeBootstrap.LOGGER.error("Failed to collect shearable blocks");
+            JadeBootstrap.LOGGER.error("Failed to collect shearable blocks", t);
         }
     }
 
