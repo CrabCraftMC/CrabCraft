@@ -34,13 +34,6 @@ import {
 } from "../utils/ticket.js";
 import { beginTicketOpen } from "../utils/ticketFlow.js";
 import { buildDenyModal } from "../utils/denyReasons.js";
-import {
-  FAST_TRACK_EDIT_USERNAME_BUTTON_ID,
-  buildFastTrackErrorComponents,
-  buildFastTrackSuccessComponents,
-  buildFastTrackUsernameModal,
-  grantFastTrackAccess,
-} from "../utils/fastTrack.js";
 
 function intakeString(intake: unknown, key: string): string | null {
   if (typeof intake !== "object" || intake === null) return null;
@@ -215,53 +208,9 @@ export default class ButtonInteractionEvent extends Event {
       await interaction.showModal(applicationModal);
     }
 
-    if (interaction.customId == "fast-apply") {
-      const hasPendingFast = await appDb.hasPendingApplication(interaction.user.id);
-      if (hasPendingFast) {
-        await interaction.reply({
-          components: [errorContainer("You've already submitted an application. Please wait for it to be reviewed.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      const storedIdentity = await appDb
-        .getPlayerLink(interaction.user.id)
-        .catch((e) => {
-          logger.error("Fast track: failed to load stored Minecraft account:", e);
-          return null;
-        });
-      if (!storedIdentity?.minecraft_username || !storedIdentity.minecraft_uuid) {
-        await interaction.showModal(buildFastTrackUsernameModal());
-        return;
-      }
-
-      await interaction.reply({
-        components: [primaryContainer("Checking your Minecraft account...")],
-        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-      });
-      const identity = {
-        minecraftUsername: storedIdentity.minecraft_username,
-        minecraftUuid: storedIdentity.minecraft_uuid,
-      };
-      const result = await grantFastTrackAccess(interaction, identity);
-      await interaction.editReply({
-        components: result.ok
-          ? buildFastTrackSuccessComponents(identity, result.seasonName)
-          : buildFastTrackErrorComponents(result.message),
-      });
-      return;
-    }
-
-    if (interaction.customId === FAST_TRACK_EDIT_USERNAME_BUTTON_ID) {
-      await interaction.showModal(buildFastTrackUsernameModal());
-      return;
-    }
-
-    if (interaction.customId === "retry-username" || interaction.customId === "retry-fast-username") {
-      const modalId = interaction.customId === "retry-username" ? "retry-application" : "retry-fast-application";
+    if (interaction.customId === "retry-username") {
       const retryModal = new ModalBuilder()
-        .setCustomId(modalId)
+        .setCustomId("retry-application")
         .setTitle("Retry Minecraft Username");
 
       const minecraftUsername = new TextInputBuilder()
