@@ -236,7 +236,8 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      await interaction.deferReply({
+      await interaction.reply({
+        components: [primaryContainer("Checking your Minecraft account...")],
         flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
       const identity = {

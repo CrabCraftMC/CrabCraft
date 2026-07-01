@@ -895,12 +895,15 @@ export default class ModalInteractionEvent extends Event {
       minecraftUsername,
       minecraftUuid: UUID,
     };
-    const result = await grantFastTrackAccess(interaction, identity);
     await interaction.reply({
+      components: [primaryContainer("Checking your Minecraft account...")],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    });
+    const result = await grantFastTrackAccess(interaction, identity);
+    await interaction.editReply({
       components: result.ok
         ? buildFastTrackSuccessComponents(identity, result.seasonName)
         : buildFastTrackErrorComponents(result.message),
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
     });
   }
 }
