@@ -9,24 +9,20 @@ export interface FullAppData {
   favouriteWood: string;
 }
 
-export interface FastAppData {
-  type: "fast";
-}
-
 type RetryEntry = {
-  data: FullAppData | FastAppData;
+  data: FullAppData;
   timer: Timer;
 };
 
 const store = new Map<string, RetryEntry>();
 
-export function storeRetry(userId: string, data: FullAppData | FastAppData) {
+export function storeRetry(userId: string, data: FullAppData) {
   clearRetry(userId);
   const timer = setTimeout(() => store.delete(userId), RETRY_EXPIRY_MS);
   store.set(userId, { data, timer });
 }
 
-export function getRetry(userId: string): FullAppData | FastAppData | null {
+export function getRetry(userId: string): FullAppData | null {
   const entry = store.get(userId);
   if (!entry) return null;
   clearTimeout(entry.timer);

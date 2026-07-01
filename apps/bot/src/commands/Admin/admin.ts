@@ -8,8 +8,6 @@ import { deleteAllAltsForUser } from "../../utils/altDb.js";
 import {
   buildApplicationHubButton,
   buildApplicationHubContainer,
-  buildFastTrackButton,
-  buildFastTrackContainer,
 } from "../../utils/applicationChannel.js";
 import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
 import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
@@ -406,20 +404,6 @@ export default class AdminCommand extends SlashCommand {
           label = "Application hub";
           break;
 
-        case "fast_track": {
-          const season = await appDb.getCurrentSeason().catch(() => null);
-          const seasonName = season?.name ?? "the next season";
-          await textChannel.send({
-            components: [
-              buildFastTrackContainer(seasonName),
-              buildFastTrackButton(seasonName),
-            ],
-            flags: MessageFlags.IsComponentsV2,
-          });
-          label = "Fast track panel";
-          break;
-        }
-
         case "rules_info":
           await textChannel.send({
             components: buildRulesInfoComponents(),
@@ -564,7 +548,6 @@ export default class AdminCommand extends SlashCommand {
               .setRequired(true)
               .addChoices(
                 { name: "Application Hub", value: "application_hub" },
-                { name: "Fast Track (Access)", value: "fast_track" },
                 { name: "Rules & Info", value: "rules_info" },
                 { name: "Ticket Panel", value: "ticket_panel" },
                 { name: "Leaderboard", value: "leaderboard" },

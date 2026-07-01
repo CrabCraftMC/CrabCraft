@@ -74,25 +74,6 @@ export function buildApplicationHubButton(): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
-/** The Fast Track (direct access) panel (posted via /admin send). */
-export function buildFastTrackContainer(seasonName: string) {
-  return primaryContainer(
-    `## Join us for ${seasonName}\nClick the button below to get instant access to the next season of CrabCraft. Since you are already a member, you do not need to fill out another application. Clicking the button also helps us estimate how many players will join us for the next season.`,
-  );
-}
-
-/** The fast-track button, using the stored Minecraft account when available. */
-export function buildFastTrackButton(
-  seasonName: string,
-): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId("fast-apply")
-      .setLabel(seasonName.slice(0, 80))
-      .setStyle(ButtonStyle.Primary),
-  );
-}
-
 /**
  * Post the welcome message: the applicant ping (as a text component) and the
  * welcome/requirements panel + Apply button, all in a single message.

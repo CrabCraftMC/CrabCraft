@@ -50,11 +50,6 @@ import {
   DENY_REASON_PRESET_SELECT_ID,
   resolveDenyReason,
 } from "../utils/denyReasons.js";
-import {
-  buildFastTrackErrorComponents,
-  buildFastTrackSuccessComponents,
-  grantFastTrackAccess,
-} from "../utils/fastTrack.js";
 
 const ACCEPTED_VALUES = [
   "y",
@@ -270,77 +265,6 @@ export default class ModalInteractionEvent extends Event {
         stored.ingameVoice,
         stored.joinReason,
         stored.favouriteWood,
-      );
-      return;
-    }
-
-    // ── Fast Application ──────────────────────────────────────────────
-    if (interaction.customId === "fast-application") {
-      const minecraftUsername =
-        interaction.fields.getTextInputValue("minecraft-username");
-
-      const resolved = await resolveUsername(minecraftUsername);
-      if (!resolved) {
-        storeRetry(interaction.user.id, { type: "fast" });
-        await interaction.reply({
-          components: [
-            errorContainer(
-              `**Sorry**, the provided username: \`${minecraftUsername}\` is not a valid Minecraft Java username.\n\nClick below to try a different username.`,
-            ),
-            retryButtonRow("retry-fast-username"),
-          ],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      await this.processFastApplication(
-        interaction,
-        minecraftUsername,
-        resolved.uuid,
-      );
-      return;
-    }
-
-    // ── Fast Application Retry ────────────────────────────────────────
-    if (interaction.customId === "retry-fast-application") {
-      interaction.message?.delete().catch(() => null);
-
-      const minecraftUsername =
-        interaction.fields.getTextInputValue("minecraft-username");
-      const stored = getRetry(interaction.user.id);
-
-      if (!stored || stored.type !== "fast") {
-        await interaction.reply({
-          components: [
-            errorContainer(
-              "Your retry session has expired. Please start a new application.",
-            ),
-          ],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      const resolved = await resolveUsername(minecraftUsername);
-      if (!resolved) {
-        storeRetry(interaction.user.id, stored);
-        await interaction.reply({
-          components: [
-            errorContainer(
-              `**Sorry**, the provided username: \`${minecraftUsername}\` is not a valid Minecraft Java username.\n\nClick below to try again.`,
-            ),
-            retryButtonRow("retry-fast-username"),
-          ],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      await this.processFastApplication(
-        interaction,
-        minecraftUsername,
-        resolved.uuid,
       );
       return;
     }
@@ -883,24 +807,5 @@ export default class ModalInteractionEvent extends Event {
       .catch((e) => logger.error("Failed to send policy message:", e));
 
     await interaction.deleteReply().catch(() => null);
-  }
-
-  // ── Shared: process a validated fast application ───────────────────
-  private async processFastApplication(
-    interaction: ModalSubmitInteraction,
-    minecraftUsername: string,
-    UUID: string,
-  ) {
-    const identity = {
-      minecraftUsername,
-      minecraftUuid: UUID,
-    };
-    const result = await grantFastTrackAccess(interaction, identity);
-    await interaction.reply({
-      components: result.ok
-        ? buildFastTrackSuccessComponents(identity, result.seasonName)
-        : buildFastTrackErrorComponents(result.message),
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-    });
   }
 }
