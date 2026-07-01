@@ -212,16 +212,23 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     minecraftUsername: player.minecraftUsername,
     minecraftUuid: player.minecraftUuid,
   };
-  const mentions = { parse: [], users: [opener.id], roles: [] };
+  // "Opened by" is the actual creator (the invoker). For staff-opened tickets
+  // the subject is shown as "For" and both are pinged.
+  const mentions = {
+    parse: [],
+    users: onBehalf ? [opener.id, interaction.user.id] : [opener.id],
+    roles: [],
+  };
 
   // Evidence (griefing reports) rides inside the header container itself: media
   // in an inline gallery, other files as native File components (re-attached).
   const header = buildTicketHeader(
     meta,
     ticket.id,
-    opener.id,
+    interaction.user.id,
     intake,
     headerPlayer,
+    onBehalf ? opener.id : undefined,
   );
   const evidenceAttachments = appendEvidence(header, evidenceFiles);
 
@@ -243,7 +250,14 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     openingMessage = await ticketChannel
       .send({
         components: [
-          buildTicketHeader(meta, ticket.id, opener.id, intake, headerPlayer),
+          buildTicketHeader(
+            meta,
+            ticket.id,
+            interaction.user.id,
+            intake,
+            headerPlayer,
+            onBehalf ? opener.id : undefined,
+          ),
           buildStaffButtons(ticket.id),
         ],
         allowedMentions: mentions,

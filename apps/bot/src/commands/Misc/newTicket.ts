@@ -20,10 +20,6 @@ import {
   openTicket,
 } from "../../utils/ticketFlow.js";
 import { resolveTarget } from "../../utils/ticketMembers.js";
-import {
-  fetchPlayerInfractions,
-  type TicketInfractionInfo,
-} from "../../utils/infractions.js";
 
 export default class NewTicketCommand extends SlashCommand {
   constructor() {
@@ -57,6 +53,16 @@ export default class NewTicketCommand extends SlashCommand {
       await this.replyError(
         interaction,
         "**Missing permissions** — only staff can open tickets for other users.",
+      );
+      return;
+    }
+
+    // Griefing/appeal tickets rely on the reporter's own form answers, which we
+    // can't collect on their behalf — so staff may only open General tickets.
+    if (meta.category !== "general") {
+      await this.replyError(
+        interaction,
+        `**Error!** You can only open **${TICKET_CATEGORIES.general.label}** tickets for another user — griefing and appeal tickets need the person's own form responses.`,
       );
       return;
     }
@@ -102,26 +108,11 @@ export default class NewTicketCommand extends SlashCommand {
 
     const player = await getPlayerInfo(target.id, member.user.tag);
 
-    // For appeals, surface the target's punishment history if they're linked.
-    const intake: Record<string, string> = {};
-    let ticketInfractionInfo: TicketInfractionInfo | null = null;
-    if (meta.category === "appeal" && player.minecraftUuid) {
-      const lookupName = player.minecraftUsername ?? member.user.username;
-      intake.resolved_minecraft_username = lookupName;
-      intake.resolved_minecraft_uuid = player.minecraftUuid;
-      ticketInfractionInfo = await fetchPlayerInfractions(
-        lookupName,
-        player.minecraftUuid,
-        25,
-      );
-    }
-
     await openTicket({
       interaction,
       meta,
       player,
-      intake,
-      ticketInfractionInfo,
+      intake: {},
       opener: { id: target.id, username: member.user.username },
     });
   }
