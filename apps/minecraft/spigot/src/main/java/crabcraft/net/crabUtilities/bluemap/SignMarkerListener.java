@@ -4,40 +4,59 @@ import com.destroystokyo.paper.event.block.BlockDestroyEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.sign.Side;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 
 import java.util.List;
 
 /**
  * Watches signs for the marker keyword and keeps {@link SignMarkerService} in
  * sync when marker signs are placed, edited, or destroyed.
+ *
+ * <p>Store/BlueMap mutations happen at MONITOR priority so they only commit
+ * once the event's final cancellation state is known — a protection plugin
+ * cancelling the edit or break at a higher priority must not leave a phantom
+ * marker (or delete a real one). Only the keyword recolor runs earlier,
+ * because MONITOR handlers must not modify the event.
  */
 final class SignMarkerListener implements Listener {
 
     static final String PERMISSION = "crabutilities.bluemap.marker";
-    static final String DEFAULT_KEYWORD = "[map]";
 
     private final SignMarkerService service;
     private final String keyword;
 
     SignMarkerListener(SignMarkerService service, String keyword) {
         this.service = service;
-        this.keyword = keyword == null || keyword.isBlank() ? DEFAULT_KEYWORD : keyword.trim();
+        this.keyword = keyword;
     }
 
-    String getKeyword() {
-        return keyword;
+    /**
+     * Recolors the keyword line as confirmation. Runs at HIGHEST (not
+     * MONITOR, which forbids modifying the event) — a same-tick cancellation
+     * after this discards the whole edit, recolor included.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onSignChangeRecolor(SignChangeEvent event) {
+        if (event.getSide() != Side.FRONT || !isKeyword(event.line(0))) {
+            return;
+        }
+        if (event.getPlayer().hasPermission(PERMISSION)) {
+            event.line(0, Component.text(keyword, NamedTextColor.AQUA));
+        }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onSignChange(SignChangeEvent event) {
         // Only the front face carries the keyword; ignore back-side edits so
         // they can't wipe a marker created on the front.
@@ -45,17 +64,15 @@ final class SignMarkerListener implements Listener {
             return;
         }
         Block block = event.getBlock();
-        String firstLine = plain(event.line(0)).trim();
-        if (!firstLine.equalsIgnoreCase(keyword)) {
+        Player player = event.getPlayer();
+        if (!isKeyword(event.line(0))) {
             // Editing the keyword off an existing marker sign removes the marker.
-            if (service.hasMarker(block)) {
-                service.removeMarker(block);
-                event.getPlayer().sendMessage(Component.text("Map marker removed.", NamedTextColor.YELLOW));
+            if (service.removeMarker(block)) {
+                player.sendMessage(Component.text("Map marker removed.", NamedTextColor.YELLOW));
             }
             return;
         }
 
-        Player player = event.getPlayer();
         if (!player.hasPermission(PERMISSION)) {
             player.sendMessage(Component.text("You don't have permission to create map markers.", NamedTextColor.RED));
             return;
@@ -75,38 +92,53 @@ final class SignMarkerListener implements Listener {
         }
         String markerLabel = label.isEmpty() ? "Marker" : label.toString();
 
-        service.addMarker(block, markerLabel);
-        // Recolor the keyword line as confirmation the marker was created.
-        event.line(0, Component.text(keyword, NamedTextColor.AQUA));
-        player.sendMessage(Component.text("Map marker \"" + markerLabel + "\" added to BlueMap.", NamedTextColor.GREEN));
+        if (service.addMarker(block, markerLabel)) {
+            player.sendMessage(Component.text("Map marker \"" + markerLabel + "\" added to BlueMap.", NamedTextColor.GREEN));
+        } else {
+            player.sendMessage(Component.text("Map marker \"" + markerLabel
+                    + "\" saved — it will show once BlueMap has a map for this world.", NamedTextColor.YELLOW));
+        }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
-        removeIfMarker(event.getBlock());
+        removeIfMarkerSign(event.getBlock());
     }
 
     // Catches signs the server destroys itself, e.g. a wall sign popping off
     // when its supporting block is removed.
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockDestroy(BlockDestroyEvent event) {
-        removeIfMarker(event.getBlock());
+        removeIfMarkerSign(event.getBlock());
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
-        event.blockList().forEach(this::removeIfMarker);
+        event.blockList().forEach(this::removeIfMarkerSign);
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
-        event.blockList().forEach(this::removeIfMarker);
+        event.blockList().forEach(this::removeIfMarkerSign);
     }
 
-    private void removeIfMarker(Block block) {
-        if (service.hasMarker(block)) {
+    // Worlds loaded after BlueMap's API enabled were skipped by the initial
+    // replay; late-populate their stored markers.
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        service.worldLoaded(event.getWorld());
+    }
+
+    private void removeIfMarkerSign(Block block) {
+        // Cheap tag check first: these events fire for every block on the
+        // server, and only signs can carry markers.
+        if (Tag.ALL_SIGNS.isTagged(block.getType())) {
             service.removeMarker(block);
         }
+    }
+
+    private boolean isKeyword(Component line) {
+        return plain(line).trim().equalsIgnoreCase(keyword);
     }
 
     private static String plain(Component component) {

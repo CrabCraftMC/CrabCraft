@@ -12,6 +12,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.HandlerList;
+import org.bukkit.plugin.IllegalPluginAccessException;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Map;
@@ -32,7 +33,10 @@ import java.util.function.Consumer;
  * <p>BlueMap markers only live as long as the BlueMap API instance, so signs
  * are persisted to {@code bluemap-sign-markers.yml} and replayed via
  * {@link BlueMapAPI#onEnable(Consumer)}, which fires immediately if BlueMap is
- * already up and again after every BlueMap reload.
+ * already up and again after every BlueMap reload. BlueMap may fire that
+ * callback on its own load thread; population is hopped onto the main thread
+ * because resolving Bukkit worlds is not thread-safe, and so that it is
+ * serialized with the (main-thread) event handlers mutating markers.
  */
 public final class SignMarkerService {
 
@@ -42,6 +46,7 @@ public final class SignMarkerService {
     private final SignMarkerStore store;
     private final SignMarkerListener listener;
 
+    private final String keyword;
     private final String markerSetLabel;
     private final boolean toggleable;
     private final boolean defaultHidden;
@@ -51,6 +56,10 @@ public final class SignMarkerService {
     // Live marker set per world, valid only while the BlueMap API is enabled.
     private final Map<UUID, MarkerSet> markerSets = new ConcurrentHashMap<>();
 
+    // Blocks a populate task scheduled before shutdown() from re-attaching
+    // marker sets after this service instance has been retired.
+    private volatile boolean stopped;
+
     // Kept in fields so shutdown() can unregister the exact same instances.
     private final Consumer<BlueMapAPI> onApiEnable = this::populate;
     private final Consumer<BlueMapAPI> onApiDisable = api -> markerSets.clear();
@@ -59,6 +68,8 @@ public final class SignMarkerService {
         this.plugin = plugin;
         this.store = new SignMarkerStore(plugin);
         FileConfiguration config = plugin.getConfig();
+        String configuredKeyword = config.getString("bluemap.sign-markers.keyword", "[map]");
+        this.keyword = configuredKeyword == null || configuredKeyword.isBlank() ? "[map]" : configuredKeyword.trim();
         this.markerSetLabel = config.getString("bluemap.sign-markers.marker-set-label", "Player Markers");
         this.toggleable = config.getBoolean("bluemap.sign-markers.toggleable", true);
         this.defaultHidden = config.getBoolean("bluemap.sign-markers.default-hidden", false);
@@ -67,11 +78,11 @@ public final class SignMarkerService {
         this.iconAnchor = new Vector2i(
                 config.getInt("bluemap.sign-markers.icon-anchor-x", 0),
                 config.getInt("bluemap.sign-markers.icon-anchor-y", 0));
-        this.listener = new SignMarkerListener(this, config.getString("bluemap.sign-markers.keyword", "[map]"));
+        this.listener = new SignMarkerListener(this, keyword);
     }
 
     public String getKeyword() {
-        return listener.getKeyword();
+        return keyword;
     }
 
     public void start() {
@@ -82,9 +93,11 @@ public final class SignMarkerService {
     }
 
     public void shutdown() {
+        stopped = true;
         HandlerList.unregisterAll(listener);
         BlueMapAPI.unregisterListener(onApiEnable);
         BlueMapAPI.unregisterListener(onApiDisable);
+        store.flush();
         // Detach our sets so a /crabutilities reload doesn't leave stale copies
         // behind on the maps.
         BlueMapAPI.getInstance().ifPresent(api ->
@@ -92,61 +105,101 @@ public final class SignMarkerService {
         markerSets.clear();
     }
 
-    boolean hasMarker(Block block) {
-        return store.contains(block.getWorld().getUID(), block.getX(), block.getY(), block.getZ());
-    }
-
-    void addMarker(Block block, String label) {
+    /**
+     * Adds (or overwrites) the marker for a sign. Returns whether a live
+     * marker is now visible on the web map — {@code false} means it was only
+     * persisted, because BlueMap is down or has no map for this world yet.
+     */
+    boolean addMarker(Block block, String label) {
         World world = block.getWorld();
         int x = block.getX();
         int y = block.getY();
         int z = block.getZ();
         store.put(world.getUID(), x, y, z, label);
-        BlueMapAPI.getInstance().ifPresent(api -> {
-            MarkerSet set = markerSetFor(api, world);
-            if (set != null) {
-                set.getMarkers().put(markerId(x, y, z), createMarker(label, x, y, z));
-            }
-        });
+        BlueMapAPI api = BlueMapAPI.getInstance().orElse(null);
+        if (api == null) {
+            return false;
+        }
+        MarkerSet set = markerSetFor(api, world);
+        if (set == null) {
+            return false;
+        }
+        set.getMarkers().put(markerId(x, y, z), createMarker(label, x, y, z));
+        return true;
     }
 
-    void removeMarker(Block block) {
+    /** Removes the marker at a sign's position; {@code false} if none was stored. */
+    boolean removeMarker(Block block) {
         UUID worldId = block.getWorld().getUID();
         int x = block.getX();
         int y = block.getY();
         int z = block.getZ();
         if (!store.remove(worldId, x, y, z)) {
-            return;
+            return false;
         }
         MarkerSet set = markerSets.get(worldId);
         if (set != null) {
             set.getMarkers().remove(markerId(x, y, z));
         }
+        return true;
+    }
+
+    /**
+     * Replays stored markers for a world that loaded after the BlueMap API
+     * enabled — populate() only sees worlds loaded at that moment.
+     */
+    void worldLoaded(World world) {
+        BlueMapAPI.getInstance().ifPresent(api -> {
+            Map<String, String> worldMarkers = store.snapshotWorld(world.getUID());
+            if (!worldMarkers.isEmpty()) {
+                populateWorld(api, world, worldMarkers);
+            }
+        });
     }
 
     /**
      * Replays every stored marker into BlueMap. Runs each time the API
-     * enables; BlueMap may call this off the main thread, which is fine —
-     * everything touched here is thread-safe.
+     * enables; BlueMap may call this off the main thread, so the work is
+     * hopped onto the main thread where Bukkit world access is legal and
+     * where it is serialized with the event handlers.
      */
     private void populate(BlueMapAPI api) {
+        if (Bukkit.isPrimaryThread()) {
+            populateAll(api);
+            return;
+        }
+        try {
+            Bukkit.getScheduler().runTask(plugin, () -> populateAll(api));
+        } catch (IllegalPluginAccessException e) {
+            // Plugin is disabling; the markers die with the API instance anyway.
+        }
+    }
+
+    private void populateAll(BlueMapAPI api) {
+        // A stale callback (service retired, or the API instance already
+        // replaced by another reload) must not resurrect markers.
+        if (stopped || BlueMapAPI.getInstance().orElse(null) != api) {
+            return;
+        }
         markerSets.clear();
         store.snapshot().forEach((worldId, worldMarkers) -> {
             World world = Bukkit.getWorld(worldId);
-            if (world == null) {
-                return;
+            if (world != null) {
+                populateWorld(api, world, worldMarkers);
             }
-            MarkerSet set = markerSetFor(api, world);
-            if (set == null) {
-                return;
+        });
+    }
+
+    private void populateWorld(BlueMapAPI api, World world, Map<String, String> worldMarkers) {
+        MarkerSet set = markerSetFor(api, world);
+        if (set == null) {
+            return;
+        }
+        worldMarkers.forEach((posKey, label) -> {
+            int[] pos = SignMarkerStore.parseKey(posKey);
+            if (pos != null) {
+                set.getMarkers().put("sign_" + posKey, createMarker(label, pos[0], pos[1], pos[2]));
             }
-            worldMarkers.forEach((posKey, label) -> {
-                int[] pos = SignMarkerStore.parseKey(posKey);
-                if (pos != null) {
-                    set.getMarkers().put(markerId(pos[0], pos[1], pos[2]),
-                            createMarker(label, pos[0], pos[1], pos[2]));
-                }
-            });
         });
     }
 
@@ -178,10 +231,22 @@ public final class SignMarkerService {
                 .label(label)
                 .position(new Vector3d(x + 0.5, y + 0.5, z + 0.5))
                 .build();
+        // The marker detail defaults to the label and is rendered as raw HTML
+        // by the BlueMap web app; the label is player-written sign text, so it
+        // must be escaped to keep script out of the public map page.
+        marker.setDetail(escapeHtml(label));
         if (!icon.isEmpty()) {
             marker.setIcon(icon, iconAnchor);
         }
         return marker;
+    }
+
+    private static String escapeHtml(String text) {
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     private static String markerId(int x, int y, int z) {

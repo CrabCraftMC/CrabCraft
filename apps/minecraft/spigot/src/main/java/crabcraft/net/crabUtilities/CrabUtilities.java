@@ -220,7 +220,9 @@ public final class CrabUtilities extends JavaPlugin {
 
         stopSignMarkers();
         startSignMarkers();
-        messages.add("BlueMap sign markers restarted with current settings.");
+        messages.add(signMarkerService != null
+                ? "BlueMap sign markers restarted with current settings."
+                : "BlueMap sign markers inactive (disabled in config or BlueMap not installed).");
 
         if (updateService != null) {
             updateService.shutdown();
@@ -345,14 +347,16 @@ public final class CrabUtilities extends JavaPlugin {
         }
         // Same pattern as the PlaceholderAPI expansion: SignMarkerService is
         // the only class referencing the BlueMap API, and it is only loaded
-        // here, after BlueMap's presence has been confirmed.
+        // here, after BlueMap's presence has been confirmed. LinkageError (not
+        // just NoClassDefFoundError) because the first BlueMap-class touch is
+        // a method-ref bootstrap, whose failure surfaces as BootstrapMethodError.
         try {
             this.signMarkerService = new SignMarkerService(this);
             signMarkerService.start();
             getLogger().info("BlueMap sign markers enabled (keyword: " + signMarkerService.getKeyword() + ")");
-        } catch (NoClassDefFoundError e) {
+        } catch (LinkageError e) {
             this.signMarkerService = null;
-            getLogger().warning("BlueMap present but API classes not visible: " + e.getMessage());
+            getLogger().warning("BlueMap present but API classes not usable: " + e.getMessage());
         }
     }
 

@@ -1,7 +1,9 @@
 package crabcraft.net.crabUtilities.bluemap;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.IllegalPluginAccessException;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -11,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 
 /**
@@ -18,6 +21,11 @@ import java.util.logging.Level;
  * position. BlueMap's own markers are not persistent — they vanish whenever
  * BlueMap reloads — so this file is the source of truth: the service replays
  * it into BlueMap every time the API enables.
+ *
+ * <p>Mutations update the in-memory maps immediately; the file write happens
+ * on an async task (single-flight, so a burst of changes — e.g. an explosion
+ * taking out several marker signs — coalesces into one write) rather than
+ * blocking the tick thread. {@link #flush()} writes synchronously on shutdown.
  */
 final class SignMarkerStore {
 
@@ -25,6 +33,7 @@ final class SignMarkerStore {
     private final File file;
     // world UUID -> "x_y_z" -> marker label
     private final Map<UUID, Map<String, String>> markers = new ConcurrentHashMap<>();
+    private final AtomicBoolean savePending = new AtomicBoolean();
 
     SignMarkerStore(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -89,7 +98,7 @@ final class SignMarkerStore {
 
     void put(UUID worldId, int x, int y, int z, String label) {
         markers.computeIfAbsent(worldId, id -> new ConcurrentHashMap<>()).put(key(x, y, z), label);
-        save();
+        queueSave();
     }
 
     boolean remove(UUID worldId, int x, int y, int z) {
@@ -97,19 +106,40 @@ final class SignMarkerStore {
         if (worldMarkers == null || worldMarkers.remove(key(x, y, z)) == null) {
             return false;
         }
-        save();
+        queueSave();
         return true;
-    }
-
-    boolean contains(UUID worldId, int x, int y, int z) {
-        Map<String, String> worldMarkers = markers.get(worldId);
-        return worldMarkers != null && worldMarkers.containsKey(key(x, y, z));
     }
 
     Map<UUID, Map<String, String>> snapshot() {
         Map<UUID, Map<String, String>> copy = new HashMap<>();
         markers.forEach((id, worldMarkers) -> copy.put(id, new HashMap<>(worldMarkers)));
         return Collections.unmodifiableMap(copy);
+    }
+
+    Map<String, String> snapshotWorld(UUID worldId) {
+        Map<String, String> worldMarkers = markers.get(worldId);
+        return worldMarkers == null ? Map.of() : Map.copyOf(worldMarkers);
+    }
+
+    /** Writes any pending state synchronously; for shutdown. */
+    void flush() {
+        save();
+    }
+
+    private void queueSave() {
+        if (!savePending.compareAndSet(false, true)) {
+            return; // a save is already queued and will pick this change up
+        }
+        try {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                savePending.set(false);
+                save();
+            });
+        } catch (IllegalPluginAccessException e) {
+            // Plugin is disabling and can't schedule; write inline.
+            savePending.set(false);
+            save();
+        }
     }
 
     private synchronized void save() {
