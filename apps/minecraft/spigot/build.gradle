@@ -29,6 +29,10 @@ repositories {
         name = "placeholderapi"
         url = uri("https://repo.extendedclip.com/content/repositories/placeholderapi/")
     }
+    maven {
+        name = "bluecolored"
+        url = uri("https://repo.bluecolored.de/releases")
+    }
 }
 
 dependencies {
@@ -42,6 +46,7 @@ dependencies {
     compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     compileOnly("me.clip:placeholderapi:2.11.6")
+    compileOnly("de.bluecolored:bluemap-api:2.7.7")
     implementation("redis.clients:jedis:5.1.0")
 }
 

@@ -114,3 +114,31 @@ phantoms:
   # Master switch for the whole feature. Set false to ignore players' /settings
   # choices and give everyone vanilla phantoms.
   suppress-for-opted-out: true
+
+# BlueMap integration. Soft dependency — everything here is skipped when the
+# BlueMap plugin isn't installed, and the plugin runs fine without it.
+bluemap:
+  # Player-made map markers: writing the keyword (default "[map]") on the top
+  # line of a sign adds a POI marker at the sign's location to the BlueMap web
+  # map; the sign's remaining lines become the marker's label. Breaking the
+  # sign — or editing the keyword off it — removes the marker again. Markers
+  # are saved to bluemap-sign-markers.yml and re-created automatically every
+  # time BlueMap (re)loads. DISABLED by default.
+  sign-markers:
+    enabled: false
+    # Trigger text players write on the sign's top line (case-insensitive).
+    keyword: "[map]"
+    # Menu label for the marker set in the BlueMap web interface.
+    marker-set-label: "Player Markers"
+    # Whether web users can hide/show the marker set, and whether it starts
+    # hidden until they toggle it on.
+    toggleable: true
+    default-hidden: false
+    # Optional custom icon: a path or URL resolved against BlueMap's web root
+    # (e.g. "assets/pin.svg"). Leave empty for BlueMap's default POI icon.
+    # The anchor is the pixel of the icon that sits on the marker position
+    # (e.g. 16/32 for the bottom-center of a 32x32 pin). Only used with a
+    # custom icon.
+    icon: ""
+    icon-anchor-x: 0
+    icon-anchor-y: 0

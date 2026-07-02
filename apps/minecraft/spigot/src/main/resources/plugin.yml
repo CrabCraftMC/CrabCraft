@@ -8,6 +8,7 @@ softdepend:
   - Essentials
   - voicechat
   - PlaceholderAPI
+  - BlueMap
 commands:
   crabutilities:
     description: CrabUtilities admin commands.
@@ -31,4 +32,7 @@ permissions:
     default: true
   crabutilities.settings:
     description: Use the /settings menu to configure personal preferences.
+    default: true
+  crabutilities.bluemap.marker:
+    description: Create BlueMap markers by writing the marker keyword on a sign.
     default: true
