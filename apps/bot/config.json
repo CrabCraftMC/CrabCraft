@@ -3,9 +3,7 @@
     "member": "",
     "mod": "",
     "punished": "",
-    "live": "",
-    "event": "",
-    "gameMaster": ""
+    "live": ""
   },
   "redis": {
     "host": "localhost",
