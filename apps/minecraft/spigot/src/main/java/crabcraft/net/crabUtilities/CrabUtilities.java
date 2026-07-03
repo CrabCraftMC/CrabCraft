@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
+import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
@@ -41,6 +42,7 @@ public final class CrabUtilities extends JavaPlugin {
     private PhantomManager phantomManager;
     private LocatorBarManager locatorBarManager;
     private SettingsDialog settingsDialog;
+    private SignMarkerService signMarkerService;
 
     @Override
     public void onEnable() {
@@ -110,6 +112,11 @@ public final class CrabUtilities extends JavaPlugin {
         // Per-player settings (/settings) and the gameplay toggles they drive.
         // Settings are stored network-wide in Redis; phantoms and locator bar default OFF.
         startPlayerSettings();
+
+        // BlueMap sign markers: signs with [map] on the top line become POI
+        // markers on the BlueMap web map. Soft dependency — skipped when the
+        // BlueMap plugin isn't installed or the feature is off in config.
+        startSignMarkers();
 
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
@@ -210,6 +217,12 @@ public final class CrabUtilities extends JavaPlugin {
         stopPlayerSettings();
         startPlayerSettings();
         messages.add("Player settings, phantom manager, and locator bar manager restarted.");
+
+        stopSignMarkers();
+        startSignMarkers();
+        messages.add(signMarkerService != null
+                ? "BlueMap sign markers restarted with current settings."
+                : "BlueMap sign markers inactive (disabled in config or BlueMap not installed).");
 
         if (updateService != null) {
             updateService.shutdown();
@@ -324,6 +337,36 @@ public final class CrabUtilities extends JavaPlugin {
         }
     }
 
+    private void startSignMarkers() {
+        if (!getConfig().getBoolean("bluemap.sign-markers.enabled", false)) {
+            return;
+        }
+        if (Bukkit.getPluginManager().getPlugin("BlueMap") == null) {
+            getLogger().info("BlueMap not detected — sign markers disabled.");
+            return;
+        }
+        // Same pattern as the PlaceholderAPI expansion: SignMarkerService is
+        // the only class referencing the BlueMap API, and it is only loaded
+        // here, after BlueMap's presence has been confirmed. LinkageError (not
+        // just NoClassDefFoundError) because the first BlueMap-class touch is
+        // a method-ref bootstrap, whose failure surfaces as BootstrapMethodError.
+        try {
+            this.signMarkerService = new SignMarkerService(this);
+            signMarkerService.start();
+            getLogger().info("BlueMap sign markers enabled (keyword: " + signMarkerService.getKeyword() + ")");
+        } catch (LinkageError e) {
+            this.signMarkerService = null;
+            getLogger().warning("BlueMap present but API classes not usable: " + e.getMessage());
+        }
+    }
+
+    private void stopSignMarkers() {
+        if (signMarkerService != null) {
+            signMarkerService.shutdown();
+            signMarkerService = null;
+        }
+    }
+
     private void stopGlobalChatService() {
         if (globalChatListener != null) {
             HandlerList.unregisterAll(globalChatListener);
@@ -348,5 +391,6 @@ public final class CrabUtilities extends JavaPlugin {
         stopLoginStreakCache();
         stopGlobalChatService();
         stopPlayerSettings();
+        stopSignMarkers();
     }
 }
