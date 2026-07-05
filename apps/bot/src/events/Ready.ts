@@ -14,6 +14,7 @@ import { loadLeaderboardState } from "../utils/leaderboardState.js";
 import {
   fetchLeaderboardData,
   buildLeaderboardComponents,
+  DEFAULT_LEADERBOARD_SEASON,
 } from "../utils/leaderboard.js";
 import {
   LEADERBOARD_REFRESH_MS,
@@ -94,7 +95,8 @@ export default class ReadyEvent extends Event {
             .catch(() => null) as TextChannel | null;
           if (!channel) return;
 
-          const data = await fetchLeaderboardData();
+          const season = state.season ?? DEFAULT_LEADERBOARD_SEASON;
+          const data = await fetchLeaderboardData(season);
           if (!data) return;
 
           const emojiMap = await syncLeaderboardEmojis(client, data.topPlayers);
@@ -105,7 +107,7 @@ export default class ReadyEvent extends Event {
           if (!message) return;
 
           await message.edit({
-            components: buildLeaderboardComponents(data, emojiMap),
+            components: buildLeaderboardComponents(data, emojiMap, season),
             flags: MessageFlags.IsComponentsV2,
           });
         } catch (error) {

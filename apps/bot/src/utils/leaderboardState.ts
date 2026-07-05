@@ -8,6 +8,8 @@ const STATE_PATH = join(process.cwd(), STATE_FILE);
 export interface LeaderboardState {
   channelId: string | null;
   messageId: string | null;
+  /** Season the tracked message shows; absent in pre-season-option state files. */
+  season?: number | null;
 }
 
 export async function saveLeaderboardState(state: LeaderboardState): Promise<void> {

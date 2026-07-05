@@ -15,8 +15,12 @@ import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
 import {
   fetchLeaderboardData,
   buildLeaderboardComponents,
+  DEFAULT_LEADERBOARD_SEASON,
 } from "../../utils/leaderboard.js";
-import { saveLeaderboardState } from "../../utils/leaderboardState.js";
+import {
+  saveLeaderboardState,
+  loadLeaderboardState,
+} from "../../utils/leaderboardState.js";
 import { syncLeaderboardEmojis } from "../../utils/playerEmoji.js";
 import {
   type ChatInputCommandInteraction,
@@ -462,7 +466,13 @@ export default class AdminCommand extends SlashCommand {
   ) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const data = await fetchLeaderboardData();
+    const prior = await loadLeaderboardState();
+    const season =
+      interaction.options.getInteger("season") ??
+      prior.season ??
+      DEFAULT_LEADERBOARD_SEASON;
+
+    const data = await fetchLeaderboardData(season);
     if (!data) {
       await interaction.editReply({
         components: [errorContainer("Failed to fetch leaderboard data.")],
@@ -477,17 +487,18 @@ export default class AdminCommand extends SlashCommand {
         data.topPlayers,
       );
       const message = await channel.send({
-        components: buildLeaderboardComponents(data, emojiMap),
+        components: buildLeaderboardComponents(data, emojiMap, season),
         flags: MessageFlags.IsComponentsV2,
       });
       await saveLeaderboardState({
         channelId: channel.id,
         messageId: message.id,
+        season,
       });
       await interaction.editReply({
         components: [
           primaryContainer(
-            `## Leaderboard Created\nLeaderboard posted in <#${channel.id}>. It will update every 5 minutes.`,
+            `## Leaderboard Created\nLeaderboard posted in <#${channel.id}> showing season ${season}. It will update every 5 minutes.`,
           ),
         ],
         flags: MessageFlags.IsComponentsV2,
@@ -565,6 +576,14 @@ export default class AdminCommand extends SlashCommand {
                 { name: "Ticket Panel", value: "ticket_panel" },
                 { name: "Leaderboard", value: "leaderboard" },
               ),
+          )
+          .addIntegerOption((opt) =>
+            opt
+              .setName("season")
+              .setDescription(
+                "Season ID for the leaderboard panel (default: last used)",
+              )
+              .setMinValue(1),
           ),
       )
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
