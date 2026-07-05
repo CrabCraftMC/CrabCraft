@@ -225,9 +225,7 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      await interaction.deferReply({
-        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-      });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       // Whitelisted = linked in the DiscordSRV database AND in our own
       // players table.
@@ -257,6 +255,7 @@ export default class ButtonInteractionEvent extends Event {
             ),
             buildOpenTicketButton(),
           ],
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
@@ -269,6 +268,7 @@ export default class ButtonInteractionEvent extends Event {
               "**Error!** Season access isn't set up yet. Please try again later.",
             ),
           ],
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
@@ -283,6 +283,7 @@ export default class ButtonInteractionEvent extends Event {
               "**Error!** Something went wrong while granting access. Please try again.",
             ),
           ],
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
@@ -297,6 +298,7 @@ export default class ButtonInteractionEvent extends Event {
               : `## You're in!\nYou're confirmed for ${seasonName}. See you there!`,
           ),
         ],
+        flags: MessageFlags.IsComponentsV2,
       });
       return;
     }
