@@ -858,6 +858,40 @@ export async function updateAltMinecraftUsername(
     .where(eq(playerAlts.minecraft_uuid, minecraftUuid));
 }
 
+/**
+ * Unlink a Minecraft account from whichever player row currently holds it,
+ * so the account can be re-linked (e.g. as another user's alt). Returns the
+ * discord_id of the row that was unlinked, or null if no row held the uuid.
+ */
+export async function clearPlayerMinecraftLinkByUuid(
+  uuid: string,
+): Promise<string | null> {
+  const [row] = await db
+    .update(players)
+    .set({
+      minecraft_uuid: null,
+      minecraft_username: null,
+      updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+    })
+    .where(eq(players.minecraft_uuid, uuid))
+    .returning({ discord_id: players.discord_id });
+  return row?.discord_id ?? null;
+}
+
+/** Unlink a Discord user's Minecraft account (keeps the player row). */
+export async function clearPlayerMinecraftLinkByDiscordId(
+  discordId: string,
+): Promise<void> {
+  await db
+    .update(players)
+    .set({
+      minecraft_uuid: null,
+      minecraft_username: null,
+      updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+    })
+    .where(eq(players.discord_id, discordId));
+}
+
 // ── player profile card (/playerinfo) ───────────────────────────
 
 export interface PlayerIdentity {
