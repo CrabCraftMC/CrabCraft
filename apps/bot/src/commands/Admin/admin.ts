@@ -252,6 +252,15 @@ export default class AdminCommand extends SlashCommand {
       // Non-critical — continue with wipe
     }
 
+    // Unlink the Minecraft account in the app database too, otherwise the
+    // account stays claimed as their primary and can't be re-linked or added
+    // as someone's alt.
+    try {
+      await appDb.clearPlayerMinecraftLinkByDiscordId(targetUser.id);
+    } catch {
+      // Non-critical — continue with wipe
+    }
+
     const member = await interaction
       .guild!.members.fetch(targetUser.id)
       .catch(() => null);
@@ -337,6 +346,14 @@ export default class AdminCommand extends SlashCommand {
       } catch {
         // Non-critical — continue with wipe
       }
+    }
+
+    // Unlink the account in the app database too, otherwise it stays claimed
+    // as someone's primary and can't be re-linked or added as an alt.
+    try {
+      await appDb.clearPlayerMinecraftLinkByUuid(UUID);
+    } catch {
+      // Non-critical — continue with wipe
     }
 
     if (linkedDiscordId) {
