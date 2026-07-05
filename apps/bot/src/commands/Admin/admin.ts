@@ -176,6 +176,12 @@ export default class AdminCommand extends SlashCommand {
       await applicant.roles.add(memberRole).catch(() => null);
     }
 
+    // Whitelisted members are joining for the current season, so grant its
+    // role too (the same one the season access button hands out).
+    if (config.CURRENT_SEASON_ROLE_ID) {
+      await applicant.roles.add(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
+    }
+
     await appDb.upsertUser({
       discordId: applicant.id,
       discordUsername: applicant.user.username,
