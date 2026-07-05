@@ -18,7 +18,7 @@ As per the results of the poll above, the confirmed Season 7 release date is <t:
 ### What we're doing for the sulfur update (26.2):
 1. As soon as we can, we will be updating the server to Minecraft 26.2
 2. Any chunks with no player activity will be purged to allow for the new cave biome to be generated
-3. A world border of 5k will be active while the server is running 26.1.2
+3. A world border of 4k (8k total diameter) will be active while the server is running 26.1.2
 
 If you plan to play Season 7, click this button to receive the <@&1516779370109206578> role. **(you must click this)**`;
 
