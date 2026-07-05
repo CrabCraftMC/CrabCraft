@@ -260,6 +260,17 @@ export async function postToStarboard(
     await setStarboardMessageId(message.id, sent.id).catch((e) =>
       logger.error("Failed to record starboard message id:", e),
     );
+    // Mark the original message with the emoji that starred it. Bot
+    // reactions are excluded from reactor counts, so this can't re-trigger
+    // or inflate the starboard tally.
+    const reactionEmoji = triggerEmoji.id ?? triggerEmoji.name;
+    if (reactionEmoji) {
+      await message
+        .react(reactionEmoji)
+        .catch((e) =>
+          logger.warn("Failed to react to starred message:", e),
+        );
+    }
   } catch (error) {
     starredCache.delete(message.id);
     await deleteStarboardPost(message.id).catch(() => null);
