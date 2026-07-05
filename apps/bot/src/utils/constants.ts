@@ -55,3 +55,6 @@ export const STARBOARD_THRESHOLD = 5;
 
 /** How long to wait after the last reaction change before editing the starboard repost (30s). */
 export const STARBOARD_UPDATE_DEBOUNCE_MS = 30 * 1000;
+
+/** Custom emoji the bot reacts with when a message mentions "crab". */
+export const CRAB_EMOJI_ID = "1397355651822256299";
