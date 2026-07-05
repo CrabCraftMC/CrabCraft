@@ -10,7 +10,7 @@ import {
   buildApplicationHubContainer,
 } from "../../utils/applicationChannel.js";
 import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
-import { buildSeasonAccessComponents } from "../../utils/seasonAccess.js";
+import { buildSeasonAccessMessage } from "../../utils/seasonAccess.js";
 import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
 import {
   fetchLeaderboardData,
@@ -406,11 +406,12 @@ export default class AdminCommand extends SlashCommand {
           break;
 
         case "season_access":
+          // Deliberately a normal message (not Components V2): the text
+          // renders full width and the event link unfurls into its card.
           await textChannel.send({
-            components: buildSeasonAccessComponents(),
+            ...buildSeasonAccessMessage(),
             // Ping @everyone, but render the role mentions without pinging.
             allowedMentions: { parse: ["everyone"] },
-            flags: MessageFlags.IsComponentsV2,
           });
           label = "Season access panel";
           break;
