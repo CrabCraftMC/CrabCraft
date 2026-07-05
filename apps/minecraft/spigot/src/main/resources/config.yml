@@ -115,6 +115,34 @@ phantoms:
   # choices and give everyone vanilla phantoms.
   suppress-for-opted-out: true
 
+# Sleep broadcast: announce in chat who slept when the night gets skipped.
+# DISABLED by default. Works with the playersSleepingPercentage game rule —
+# whoever is actually asleep the moment the night is skipped is listed, so a
+# rule requiring only a fraction of players to sleep announces just the sleepers.
+sleep-broadcast:
+  enabled: false
+  # MiniMessage line used when exactly one player skips the night.
+  # Placeholder: <player> — the sleeping player's name.
+  single-format: "<#FCD05C><player></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>"
+  # MiniMessage line used when several players sleep together. Placeholders:
+  # <players> — the names joined naturally (e.g. "Steve, Alex, and Bob"),
+  # <count>   — how many players slept.
+  multiple-format: "<#FCD05C><players></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>"
+
+# Happy Ghast tweaks.
+happy-ghast:
+  # Makes happy ghasts fly faster, but ONLY while a player is riding them —
+  # unridden ghasts (and their idle animations) stay vanilla. DISABLED by
+  # default. Implemented as a transient modifier on the ghast's flying_speed
+  # attribute, so nothing is ever written to the entity and removing a rider
+  # (or disabling this) immediately restores vanilla speed.
+  ridden-speed-boost:
+    enabled: false
+    # Ridden speed as a multiple of vanilla. Vanilla ridden speed is about
+    # 3.6 blocks/sec, so 2.0 = ~7.2 blocks/sec. Values much above 4.0 get hard
+    # to control. Must be positive; 1.0 means no change.
+    multiplier: 2.0
+
 # BlueMap integration. Soft dependency — everything here is skipped when the
 # BlueMap plugin isn't installed, and the plugin runs fine without it.
 bluemap:

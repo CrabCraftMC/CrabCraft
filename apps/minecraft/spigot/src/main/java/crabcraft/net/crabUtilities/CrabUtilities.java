@@ -5,12 +5,14 @@ import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
+import crabcraft.net.crabUtilities.happyghast.HappyGhastSpeedManager;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
 import crabcraft.net.crabUtilities.settings.LocatorBarManager;
 import crabcraft.net.crabUtilities.settings.PhantomManager;
 import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
 import crabcraft.net.crabUtilities.settings.SettingsCommand;
 import crabcraft.net.crabUtilities.settings.SettingsDialog;
+import crabcraft.net.crabUtilities.sleep.SleepBroadcastListener;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
@@ -43,6 +45,7 @@ public final class CrabUtilities extends JavaPlugin {
     private LocatorBarManager locatorBarManager;
     private SettingsDialog settingsDialog;
     private SignMarkerService signMarkerService;
+    private HappyGhastSpeedManager happyGhastSpeedManager;
 
     @Override
     public void onEnable() {
@@ -86,6 +89,11 @@ public final class CrabUtilities extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(nicknameSync, this);
         nicknameSync.syncAll();
 
+        // Sleep broadcast: announce who slept when the night is skipped. Opt-in
+        // and disabled by default; the listener reads config live, so
+        // /crabutilities reload toggles it without re-registration.
+        Bukkit.getPluginManager().registerEvents(new SleepBroadcastListener(this), this);
+
         // Auto-updater
         this.updateService = new UpdateService(this);
         UpdateCommand updateCommand = new UpdateCommand(this, updateService);
@@ -117,6 +125,10 @@ public final class CrabUtilities extends JavaPlugin {
         // markers on the BlueMap web map. Soft dependency — skipped when the
         // BlueMap plugin isn't installed or the feature is off in config.
         startSignMarkers();
+
+        // Happy ghast ridden speed boost: while a player is riding, a transient
+        // flying_speed modifier makes the ghast faster. Disabled by default.
+        startHappyGhastSpeed();
 
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
@@ -223,6 +235,12 @@ public final class CrabUtilities extends JavaPlugin {
         messages.add(signMarkerService != null
                 ? "BlueMap sign markers restarted with current settings."
                 : "BlueMap sign markers inactive (disabled in config or BlueMap not installed).");
+
+        stopHappyGhastSpeed();
+        startHappyGhastSpeed();
+        messages.add(happyGhastSpeedManager != null
+                ? "Happy ghast ridden speed boost active (x" + happyGhastSpeedManager.getMultiplier() + ")."
+                : "Happy ghast ridden speed boost inactive (disabled in config).");
 
         if (updateService != null) {
             updateService.shutdown();
@@ -367,6 +385,25 @@ public final class CrabUtilities extends JavaPlugin {
         }
     }
 
+    private void startHappyGhastSpeed() {
+        HappyGhastSpeedManager manager = new HappyGhastSpeedManager(this);
+        if (!manager.isEnabled()) {
+            return;
+        }
+        this.happyGhastSpeedManager = manager;
+        Bukkit.getPluginManager().registerEvents(manager, this);
+        manager.start();
+        getLogger().info("Happy ghast ridden speed boost enabled (x" + manager.getMultiplier() + ")");
+    }
+
+    private void stopHappyGhastSpeed() {
+        if (happyGhastSpeedManager != null) {
+            HandlerList.unregisterAll(happyGhastSpeedManager);
+            happyGhastSpeedManager.shutdown();
+            happyGhastSpeedManager = null;
+        }
+    }
+
     private void stopGlobalChatService() {
         if (globalChatListener != null) {
             HandlerList.unregisterAll(globalChatListener);
@@ -392,5 +429,6 @@ public final class CrabUtilities extends JavaPlugin {
         stopGlobalChatService();
         stopPlayerSettings();
         stopSignMarkers();
+        stopHappyGhastSpeed();
     }
 }
