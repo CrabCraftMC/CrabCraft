@@ -521,6 +521,13 @@ export default class ButtonInteractionEvent extends Event {
       try { await applicant.roles.add(config.MEMBER_ROLE_ID); }
       catch (e) { logger.error("Failed to add member role:", e); }
 
+      // New members are joining for the current season, so grant its role
+      // too (the same one the season access button hands out).
+      if (config.CURRENT_SEASON_ROLE_ID) {
+        try { await applicant.roles.add(config.CURRENT_SEASON_ROLE_ID); }
+        catch (e) { logger.error("Failed to add current season role:", e); }
+      }
+
       // Claim the MC link in `players` now (not at submit), detaching
       // it from any prior owner. upsertUser handles the unique
       // constraint on players.minecraft_uuid in a transaction.
