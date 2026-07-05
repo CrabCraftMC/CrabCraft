@@ -296,8 +296,7 @@ export default class ButtonInteractionEvent extends Event {
             link.minecraft_username
               ? `## You're in!\n\`${link.minecraft_username}\` is confirmed for ${seasonName}.`
               : `## You're in!\nYou're confirmed for ${seasonName}.`,
-            // starlightskins rejects dashed UUIDs.
-            `https://starlightskins.lunareclipse.studio/render/default/${link.minecraft_uuid.replace(/-/g, "")}/bust`,
+            `https://render.crafty.gg/3d/bust/${link.minecraft_uuid}`,
           ),
         ],
         flags: MessageFlags.IsComponentsV2,
