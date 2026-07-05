@@ -7,7 +7,6 @@ const CONFIG_PATH = path.resolve(__dirname, "../../config.json");
 
 interface IdConfig {
   roles: {
-    member: string;
     mod: string;
     punished: string;
     live?: string;
@@ -55,7 +54,6 @@ if (missingEnv.length > 0) {
 }
 
 const REQUIRED_IDS: Array<[string, string | undefined]> = [
-  ["roles.member", ids.roles?.member],
   ["roles.mod", ids.roles?.mod],
   ["roles.punished", ids.roles?.punished],
   ["channels.applicationCategory", ids.channels?.applicationCategory],
@@ -93,7 +91,6 @@ interface IConfig {
   OPENAI_API_KEY: string;
 
   // Discord IDs (config.json)
-  MEMBER_ROLE_ID: string;
   MOD_ROLE_ID: string;
   PUNISHED_ROLE_ID: string;
   LIVE_ROLE_ID: string;
@@ -126,7 +123,6 @@ const config: IConfig = {
   TWITCH_CLIENT_SECRET: process.env.TWITCH_CLIENT_SECRET ?? "",
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
 
-  MEMBER_ROLE_ID: ids.roles.member,
   MOD_ROLE_ID: ids.roles.mod,
   PUNISHED_ROLE_ID: ids.roles.punished,
   LIVE_ROLE_ID: ids.roles.live ?? "",

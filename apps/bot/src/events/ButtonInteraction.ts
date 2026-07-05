@@ -69,19 +69,31 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      if (member.roles.cache.has(config.MEMBER_ROLE_ID)) {
-        await interaction.reply({
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      // The whitelist database is the source of truth for membership; roles
+      // can drift (manual changes, partial wipes).
+      let alreadyMember = false;
+      try {
+        const rows = await mysql.query(
+          "SELECT uuid FROM discordsrv_accounts WHERE discord = ?",
+          [member.id],
+        );
+        alreadyMember = rows.length > 0;
+      } catch (e) {
+        logger.error("App hub: whitelist lookup failed:", e);
+      }
+      if (alreadyMember) {
+        await interaction.editReply({
           components: [
             successContainer(
               "## <:Crab:1397355651822256299> You're already in!\nYou're already a member of CrabCraft, so there's no need to apply again. Enjoy your stay!",
             ),
           ],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
-
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       // If they already have a live application channel, point them to it.
       const existing = await appDb
@@ -518,11 +530,9 @@ export default class ButtonInteractionEvent extends Event {
         }).catch((e: unknown) => logger.error("Failed to send accept log:", e));
       }
 
-      try { await applicant.roles.add(config.MEMBER_ROLE_ID); }
-      catch (e) { logger.error("Failed to add member role:", e); }
-
-      // New members are joining for the current season, so grant its role
-      // too (the same one the season access button hands out).
+      // Membership itself lives in the whitelist database; the only role a
+      // new member needs is the current season's (the same one the season
+      // access button hands out).
       if (config.CURRENT_SEASON_ROLE_ID) {
         try { await applicant.roles.add(config.CURRENT_SEASON_ROLE_ID); }
         catch (e) { logger.error("Failed to add current season role:", e); }
