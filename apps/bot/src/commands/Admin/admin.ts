@@ -31,6 +31,7 @@ import {
   PermissionFlagsBits,
   MessageFlags,
   type GuildMember,
+  type NewsChannel,
   type TextChannel,
 } from "discord.js";
 
@@ -377,16 +378,22 @@ export default class AdminCommand extends SlashCommand {
     const which = interaction.options.getString("message", true);
 
     const channel = interaction.channel;
-    if (!channel || channel.type !== ChannelType.GuildText) {
+    if (
+      !channel ||
+      (channel.type !== ChannelType.GuildText &&
+        channel.type !== ChannelType.GuildAnnouncement)
+    ) {
       await interaction.reply({
         components: [
-          errorContainer("**Error!** This must be run in a text channel."),
+          errorContainer(
+            "**Error!** This must be run in a text or announcement channel.",
+          ),
         ],
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
       });
       return;
     }
-    const textChannel = channel as TextChannel;
+    const textChannel = channel as TextChannel | NewsChannel;
 
     // The leaderboard is stateful (its message is tracked + auto-updated),
     // so it has its own flow.
@@ -462,7 +469,7 @@ export default class AdminCommand extends SlashCommand {
   /** Post a fresh leaderboard message and register it for auto-updates. */
   private async sendLeaderboard(
     interaction: ChatInputCommandInteraction,
-    channel: TextChannel,
+    channel: TextChannel | NewsChannel,
   ) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
