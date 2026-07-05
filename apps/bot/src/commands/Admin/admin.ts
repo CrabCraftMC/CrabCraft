@@ -169,15 +169,9 @@ export default class AdminCommand extends SlashCommand {
       return;
     }
 
-    const memberRole = interaction.guild!.roles.cache.get(
-      config.MEMBER_ROLE_ID,
-    );
-    if (memberRole) {
-      await applicant.roles.add(memberRole).catch(() => null);
-    }
-
-    // Whitelisted members are joining for the current season, so grant its
-    // role too (the same one the season access button hands out).
+    // Membership itself lives in the whitelist database; the only role a new
+    // member needs is the current season's (the same one the season access
+    // button hands out).
     if (config.CURRENT_SEASON_ROLE_ID) {
       await applicant.roles.add(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
     }
@@ -270,9 +264,8 @@ export default class AdminCommand extends SlashCommand {
     const member = await interaction
       .guild!.members.fetch(targetUser.id)
       .catch(() => null);
-    if (member) {
-      const role = interaction.guild!.roles.cache.get(config.MEMBER_ROLE_ID);
-      if (role) await member.roles.remove(role).catch(() => null);
+    if (member && config.CURRENT_SEASON_ROLE_ID) {
+      await member.roles.remove(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
     }
 
     const logChannel = await interaction.guild!.channels
@@ -366,9 +359,8 @@ export default class AdminCommand extends SlashCommand {
       const member = await interaction
         .guild!.members.fetch(linkedDiscordId)
         .catch(() => null);
-      if (member) {
-        const role = interaction.guild!.roles.cache.get(config.MEMBER_ROLE_ID);
-        if (role) await member.roles.remove(role).catch(() => null);
+      if (member && config.CURRENT_SEASON_ROLE_ID) {
+        await member.roles.remove(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
       }
     }
 
