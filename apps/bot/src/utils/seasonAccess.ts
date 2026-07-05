@@ -9,7 +9,7 @@ export const SEASON_PLAY_BUTTON_ID = "season-play";
 
 const ANNOUNCEMENT_BEFORE_BUTTON = `## <:Crab:1397355651822256299> Release date **confirmed**
 
-Hey everyone!
+Hey @everyone!
 -# (long message, but please read it all!)
 
 As per the results of the poll above, the confirmed Season 7 release date is <t:1783706400:F> (<t:1783706400:R>).

@@ -408,8 +408,8 @@ export default class AdminCommand extends SlashCommand {
         case "season_access":
           await textChannel.send({
             components: buildSeasonAccessComponents(),
-            // The announcement text renders role mentions; don't ping them.
-            allowedMentions: { parse: [] },
+            // Ping @everyone, but render the role mentions without pinging.
+            allowedMentions: { parse: ["everyone"] },
             flags: MessageFlags.IsComponentsV2,
           });
           label = "Season access panel";
