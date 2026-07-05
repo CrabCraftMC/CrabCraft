@@ -10,6 +10,7 @@ import {
   buildApplicationHubContainer,
 } from "../../utils/applicationChannel.js";
 import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
+import { buildSeasonAccessComponents } from "../../utils/seasonAccess.js";
 import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
 import {
   fetchLeaderboardData,
@@ -404,6 +405,16 @@ export default class AdminCommand extends SlashCommand {
           label = "Application hub";
           break;
 
+        case "season_access":
+          await textChannel.send({
+            components: buildSeasonAccessComponents(),
+            // The announcement text renders role mentions; don't ping them.
+            allowedMentions: { parse: [] },
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Season access panel";
+          break;
+
         case "rules_info":
           await textChannel.send({
             components: buildRulesInfoComponents(),
@@ -548,6 +559,7 @@ export default class AdminCommand extends SlashCommand {
               .setRequired(true)
               .addChoices(
                 { name: "Application Hub", value: "application_hub" },
+                { name: "Season Access", value: "season_access" },
                 { name: "Rules & Info", value: "rules_info" },
                 { name: "Ticket Panel", value: "ticket_panel" },
                 { name: "Leaderboard", value: "leaderboard" },

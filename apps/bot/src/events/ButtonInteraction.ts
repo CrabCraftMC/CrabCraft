@@ -34,6 +34,10 @@ import {
 } from "../utils/ticket.js";
 import { beginTicketOpen } from "../utils/ticketFlow.js";
 import { buildDenyModal } from "../utils/denyReasons.js";
+import {
+  SEASON_PLAY_BUTTON_ID,
+  buildOpenTicketButton,
+} from "../utils/seasonAccess.js";
 
 function intakeString(intake: unknown, key: string): string | null {
   if (typeof intake !== "object" || intake === null) return null;
@@ -206,6 +210,95 @@ export default class ButtonInteractionEvent extends Event {
       applicationModal.addComponents(fifthActionRow);
 
       await interaction.showModal(applicationModal);
+    }
+
+    // Season access panel: grant the season role to already-whitelisted members.
+    if (interaction.customId === SEASON_PLAY_BUTTON_ID) {
+      const member = interaction.member as GuildMember | null;
+      if (!interaction.guild || !member) {
+        await interaction.reply({
+          components: [
+            errorContainer("**Error!** This button can only be used in a server."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.deferReply({
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
+
+      // Whitelisted = linked in the DiscordSRV database AND in our own
+      // players table.
+      let srvLinked = false;
+      try {
+        const rows = await mysql.query(
+          "SELECT uuid FROM discordsrv_accounts WHERE discord = ?",
+          [interaction.user.id],
+        );
+        srvLinked = rows.length > 0;
+      } catch (e) {
+        logger.error("Season access: DiscordSRV lookup failed:", e);
+      }
+
+      const link = srvLinked
+        ? await appDb.getPlayerLink(interaction.user.id).catch((e) => {
+            logger.error("Season access: player link lookup failed:", e);
+            return null;
+          })
+        : null;
+
+      if (!srvLinked || !link?.minecraft_uuid) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "There was an issue locating your Minecraft account. Please open a ticket.",
+            ),
+            buildOpenTicketButton(),
+          ],
+        });
+        return;
+      }
+
+      if (!config.CURRENT_SEASON_ROLE_ID) {
+        logger.error("Season access: roles.currentSeason is not configured.");
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "**Error!** Season access isn't set up yet. Please try again later.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      try {
+        await member.roles.add(config.CURRENT_SEASON_ROLE_ID);
+      } catch (e) {
+        logger.error("Season access: failed to add season role:", e);
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "**Error!** Something went wrong while granting access. Please try again.",
+            ),
+          ],
+        });
+        return;
+      }
+
+      const currentSeason = await appDb.getCurrentSeason().catch(() => null);
+      const seasonName = currentSeason?.name ?? "the new season";
+      await interaction.editReply({
+        components: [
+          successContainer(
+            link.minecraft_username
+              ? `## You're in!\n\`${link.minecraft_username}\` is confirmed for ${seasonName}. See you there!`
+              : `## You're in!\nYou're confirmed for ${seasonName}. See you there!`,
+          ),
+        ],
+      });
+      return;
     }
 
     if (interaction.customId === "retry-username") {
