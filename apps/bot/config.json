@@ -3,7 +3,8 @@
     "member": "",
     "mod": "",
     "punished": "",
-    "live": ""
+    "live": "",
+    "seasonSeven": ""
   },
   "redis": {
     "host": "localhost",
