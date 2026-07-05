@@ -16,6 +16,7 @@ import config from "../../utils/config.js";
 import {
   fetchLeaderboardData,
   buildLeaderboardComponents,
+  DEFAULT_LEADERBOARD_SEASON,
 } from "../../utils/leaderboard.js";
 
 import {
@@ -68,7 +69,13 @@ export default class LeaderboardCommand extends SlashCommand {
   private async handleCreate(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const data = await fetchLeaderboardData();
+    const prior = await loadLeaderboardState();
+    const season =
+      interaction.options.getInteger("season") ??
+      prior.season ??
+      DEFAULT_LEADERBOARD_SEASON;
+
+    const data = await fetchLeaderboardData(season);
     if (!data) {
       await interaction.editReply({
         components: [errorContainer("Failed to fetch leaderboard data.")],
@@ -82,19 +89,20 @@ export default class LeaderboardCommand extends SlashCommand {
 
     try {
       const message = await channel.send({
-        components: buildLeaderboardComponents(data, emojiMap),
+        components: buildLeaderboardComponents(data, emojiMap, season),
         flags: MessageFlags.IsComponentsV2,
       });
 
       await saveLeaderboardState({
         channelId: channel.id,
         messageId: message.id,
+        season,
       });
 
       await interaction.editReply({
         components: [
           primaryContainer(
-            `## Leaderboard Created\nLeaderboard message created in <#${channel.id}>. It will update every 5 minutes.`,
+            `## Leaderboard Created\nLeaderboard message created in <#${channel.id}> showing season ${season}. It will update every 5 minutes.`,
           ),
         ],
         flags: MessageFlags.IsComponentsV2,
@@ -134,18 +142,25 @@ export default class LeaderboardCommand extends SlashCommand {
         return;
       }
 
+      const prior = await loadLeaderboardState();
+      const season =
+        interaction.options.getInteger("season") ??
+        prior.season ??
+        DEFAULT_LEADERBOARD_SEASON;
+
       await saveLeaderboardState({
         channelId: channel.id,
         messageId: message.id,
+        season,
       });
 
       // Force an update immediately to ensure it looks right
 
-      const data = await fetchLeaderboardData();
+      const data = await fetchLeaderboardData(season);
 
       if (data) {
         await message.edit({
-          components: buildLeaderboardComponents(data),
+          components: buildLeaderboardComponents(data, undefined, season),
           flags: MessageFlags.IsComponentsV2,
         });
       }
@@ -153,7 +168,7 @@ export default class LeaderboardCommand extends SlashCommand {
       await interaction.editReply({
         components: [
           primaryContainer(
-            `## Leaderboard Set\nLeaderboard linked to message ${messageId} in <#${channel.id}>.`,
+            `## Leaderboard Set\nLeaderboard linked to message ${messageId} in <#${channel.id}> showing season ${season}.`,
           ),
         ],
         flags: MessageFlags.IsComponentsV2,
@@ -184,7 +199,8 @@ export default class LeaderboardCommand extends SlashCommand {
       return;
     }
 
-    const data = await fetchLeaderboardData();
+    const season = state.season ?? DEFAULT_LEADERBOARD_SEASON;
+    const data = await fetchLeaderboardData(season);
     if (!data) {
       await interaction.editReply({
         components: [errorContainer("Failed to fetch leaderboard data.")],
@@ -204,7 +220,7 @@ export default class LeaderboardCommand extends SlashCommand {
       if (!message) throw new Error("Message not found");
 
       await message.edit({
-        components: buildLeaderboardComponents(data, emojiMap),
+        components: buildLeaderboardComponents(data, emojiMap, season),
         flags: MessageFlags.IsComponentsV2,
       });
 
@@ -234,7 +250,13 @@ export default class LeaderboardCommand extends SlashCommand {
       .addSubcommand((sub) =>
         sub
           .setName("create")
-          .setDescription("Create a new leaderboard message in this channel"),
+          .setDescription("Create a new leaderboard message in this channel")
+          .addIntegerOption((opt) =>
+            opt
+              .setName("season")
+              .setDescription("Season ID to show (default: last used)")
+              .setMinValue(1),
+          ),
       )
 
       .addSubcommand((sub) =>
@@ -253,6 +275,12 @@ export default class LeaderboardCommand extends SlashCommand {
               .setDescription(
                 "The channel the message is in (default: current)",
               ),
+          )
+          .addIntegerOption((opt) =>
+            opt
+              .setName("season")
+              .setDescription("Season ID to show (default: last used)")
+              .setMinValue(1),
           ),
       )
       .addSubcommand((sub) =>
