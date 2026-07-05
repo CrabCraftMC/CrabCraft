@@ -10,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.TimeSkipEvent;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,15 +42,19 @@ public class SleepBroadcastListener implements Listener {
             "<#FCD05C><players></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>";
 
     /**
-     * Whether this server's {@code TimeSkipEvent} exposes {@code getSkipReason()}.
-     * The method has been in the Bukkit API since 1.14, but some forks ship a
-     * {@code TimeSkipEvent} without it, which surfaces as a
-     * {@link NoSuchMethodError} the first time the handler runs. Detect it once
-     * up front; when it's missing we skip the reason filter and rely on the
-     * "is anyone actually sleeping?" guard below to reject non-sleep skips
-     * (commands, custom plugins) instead.
+     * {@code TimeSkipEvent#getSkipReason()}, resolved reflectively — or
+     * {@code null} when this server doesn't have it. The method has been in the
+     * Bukkit API since 1.14, but at least one fork ships it with a different
+     * return type than the API we compile against, and a direct call then
+     * throws {@link NoSuchMethodError}: the JVM links an invocation by its full
+     * descriptor, return type included, while reflection matches by name and
+     * parameters only. So we must never emit the descriptor — invoke the
+     * {@link Method} reflectively and compare the returned constant's name.
+     * When the reason can't be resolved at all, the "is anyone actually
+     * sleeping?" guard below rejects non-sleep skips (commands, other plugins)
+     * instead.
      */
-    private static final boolean HAS_SKIP_REASON = detectSkipReason();
+    private static final Method GET_SKIP_REASON = resolveGetSkipReason();
 
     private final CrabUtilities plugin;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
@@ -58,26 +63,34 @@ public class SleepBroadcastListener implements Listener {
         this.plugin = plugin;
     }
 
-    private static boolean detectSkipReason() {
+    private static Method resolveGetSkipReason() {
         try {
-            TimeSkipEvent.class.getMethod("getSkipReason");
-            return true;
+            return TimeSkipEvent.class.getMethod("getSkipReason");
         } catch (NoSuchMethodException | LinkageError e) {
-            return false;
+            return null;
         }
     }
 
     /**
-     * Only invoked when {@link #HAS_SKIP_REASON} is true, so the direct call
-     * (and the {@code SkipReason} class reference) can never fail to link.
+     * True only when the skip reason is resolvable and is something other than
+     * a night skip. Unresolvable (missing method, reflective failure, null
+     * reason) means "can't tell" — we fall through to the sleepers guard.
      */
-    private static boolean isNightSkip(TimeSkipEvent event) {
-        return event.getSkipReason() == TimeSkipEvent.SkipReason.NIGHT_SKIP;
+    private static boolean isKnownNotNightSkip(TimeSkipEvent event) {
+        if (GET_SKIP_REASON == null) {
+            return false;
+        }
+        try {
+            Object reason = GET_SKIP_REASON.invoke(event);
+            return reason != null && !"NIGHT_SKIP".equals(String.valueOf(reason));
+        } catch (ReflectiveOperationException | LinkageError e) {
+            return false;
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onTimeSkip(TimeSkipEvent event) {
-        if (HAS_SKIP_REASON && !isNightSkip(event)) {
+        if (isKnownNotNightSkip(event)) {
             return;
         }
         if (!plugin.getConfig().getBoolean("sleep-broadcast.enabled", false)) {
@@ -92,9 +105,9 @@ public class SleepBroadcastListener implements Listener {
         }
         if (sleepers.isEmpty()) {
             // Shouldn't normally happen for a NIGHT_SKIP, but guard anyway so we
-            // never broadcast an empty list. On servers without getSkipReason()
-            // (HAS_SKIP_REASON false) this is also what filters out non-sleep
-            // skips such as /time set or another plugin skipping time.
+            // never broadcast an empty list. When the skip reason couldn't be
+            // resolved, this is also what filters out non-sleep skips such as
+            // /time set or another plugin skipping time.
             return;
         }
 
