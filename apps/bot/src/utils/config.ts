@@ -11,7 +11,7 @@ interface IdConfig {
     mod: string;
     punished: string;
     live?: string;
-    seasonSeven?: string;
+    currentSeason?: string;
   };
   redis?: {
     host?: string;
@@ -97,7 +97,7 @@ interface IConfig {
   MOD_ROLE_ID: string;
   PUNISHED_ROLE_ID: string;
   LIVE_ROLE_ID: string;
-  SEASON_SEVEN_ROLE_ID: string;
+  CURRENT_SEASON_ROLE_ID: string;
   REDIS_HOST: string;
   REDIS_PORT: number;
   REDIS_PASSWORD: string;
@@ -130,7 +130,7 @@ const config: IConfig = {
   MOD_ROLE_ID: ids.roles.mod,
   PUNISHED_ROLE_ID: ids.roles.punished,
   LIVE_ROLE_ID: ids.roles.live ?? "",
-  SEASON_SEVEN_ROLE_ID: ids.roles.seasonSeven ?? "",
+  CURRENT_SEASON_ROLE_ID: ids.roles.currentSeason ?? "",
   REDIS_HOST: ids.redis?.host ?? "localhost",
   REDIS_PORT: ids.redis?.port ?? 6379,
   REDIS_PASSWORD: ids.redis?.password ?? "",

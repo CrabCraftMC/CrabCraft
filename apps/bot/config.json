@@ -4,7 +4,7 @@
     "mod": "",
     "punished": "",
     "live": "",
-    "seasonSeven": ""
+    "currentSeason": ""
   },
   "redis": {
     "host": "localhost",

@@ -261,8 +261,8 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      if (!config.SEASON_SEVEN_ROLE_ID) {
-        logger.error("Season access: roles.seasonSeven is not configured.");
+      if (!config.CURRENT_SEASON_ROLE_ID) {
+        logger.error("Season access: roles.currentSeason is not configured.");
         await interaction.editReply({
           components: [
             errorContainer(
@@ -274,7 +274,7 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       try {
-        await member.roles.add(config.SEASON_SEVEN_ROLE_ID);
+        await member.roles.add(config.CURRENT_SEASON_ROLE_ID);
       } catch (e) {
         logger.error("Season access: failed to add season role:", e);
         await interaction.editReply({
@@ -287,12 +287,14 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
+      const currentSeason = await appDb.getCurrentSeason().catch(() => null);
+      const seasonName = currentSeason?.name ?? "the new season";
       await interaction.editReply({
         components: [
           successContainer(
             link.minecraft_username
-              ? `## You're in!\n\`${link.minecraft_username}\` is confirmed for Season Seven. See you there!`
-              : "## You're in!\nYou're confirmed for Season Seven. See you there!",
+              ? `## You're in!\n\`${link.minecraft_username}\` is confirmed for ${seasonName}. See you there!`
+              : `## You're in!\nYou're confirmed for ${seasonName}. See you there!`,
           ),
         ],
       });
