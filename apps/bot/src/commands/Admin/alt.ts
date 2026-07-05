@@ -1,5 +1,10 @@
 import SlashCommand from "../../structures/SlashCommand.js";
-import { errorContainer, primaryContainer } from "../../utils/embeds.js";
+import {
+  errorContainer,
+  primaryContainer,
+  logAltAdded,
+  logAltRemoved,
+} from "../../utils/embeds.js";
 import config from "../../utils/config.js";
 import * as appDb from "../../utils/appDb.js";
 import { resolveUsername } from "../../utils/mojang.js";
@@ -21,6 +26,7 @@ import {
   type ChatInputCommandInteraction,
   type GuildMember,
   type RESTPostAPIApplicationCommandsJSONBody,
+  type TextChannel,
   type User,
 } from "discord.js";
 
@@ -149,6 +155,11 @@ export default class AltCommand extends SlashCommand {
       return;
     }
 
+    await this.sendAltLog(
+      interaction,
+      logAltAdded(member.id, resolved.name, `${interaction.user}`),
+    );
+
     await this.respondPrimary(
       interaction,
       `## Alt Added\nAdded \`${resolved.name}\` as an alt for <@${member.id}>.`,
@@ -202,10 +213,29 @@ export default class AltCommand extends SlashCommand {
       return;
     }
 
+    await this.sendAltLog(
+      interaction,
+      logAltRemoved(targetUser.id, resolved.name, `${interaction.user}`),
+    );
+
     await this.replyPrimary(
       interaction,
       `## Alt Removed\nRemoved \`${resolved.name}\` from <@${targetUser.id}>'s linked alt accounts.`,
     );
+  }
+
+  /** Post an alt change to the log channel; failures are non-critical. */
+  private async sendAltLog(
+    interaction: ChatInputCommandInteraction,
+    content: string,
+  ) {
+    const logChannel = await interaction
+      .guild!.channels.fetch(config.LOG_CHANNEL_ID)
+      .catch(() => null) as TextChannel | null;
+    if (!logChannel) return;
+    await logChannel
+      .send({ content, allowedMentions: { parse: [] } })
+      .catch(() => null);
   }
 
   private async fetchTargetMember(
