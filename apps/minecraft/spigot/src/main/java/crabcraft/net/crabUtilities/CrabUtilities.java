@@ -11,6 +11,7 @@ import crabcraft.net.crabUtilities.settings.PhantomManager;
 import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
 import crabcraft.net.crabUtilities.settings.SettingsCommand;
 import crabcraft.net.crabUtilities.settings.SettingsDialog;
+import crabcraft.net.crabUtilities.sleep.SleepBroadcastListener;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
@@ -85,6 +86,11 @@ public final class CrabUtilities extends JavaPlugin {
         mentionAutocompleteListener.refreshAll();
         Bukkit.getPluginManager().registerEvents(nicknameSync, this);
         nicknameSync.syncAll();
+
+        // Sleep broadcast: announce who slept when the night is skipped. Opt-in
+        // and disabled by default; the listener reads config live, so
+        // /crabutilities reload toggles it without re-registration.
+        Bukkit.getPluginManager().registerEvents(new SleepBroadcastListener(this), this);
 
         // Auto-updater
         this.updateService = new UpdateService(this);
