@@ -44,6 +44,19 @@ export function primaryContainerWithThumbnail(text: string, imageUrl: string) {
     );
 }
 
+/** Success container with a thumbnail accessory (e.g. player skin). */
+export function successContainerWithThumbnail(text: string, imageUrl: string) {
+  return new ContainerBuilder()
+    .setAccentColor(resolveColor("Green"))
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents((td) => td.setContent(text))
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(imageUrl),
+        ),
+    );
+}
+
 // ── Log channel messages ────────────────────────────────────────────
 
 /** Log message for an accepted application. */

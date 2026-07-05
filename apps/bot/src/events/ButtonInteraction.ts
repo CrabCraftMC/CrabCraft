@@ -11,7 +11,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { errorContainer, successContainer, primaryContainer, coloredContainer, logAccept } from "../utils/embeds.js";
+import { errorContainer, successContainer, successContainerWithThumbnail, primaryContainer, coloredContainer, logAccept } from "../utils/embeds.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { createApplicationChannelFor } from "../utils/applicationChannel.js";
@@ -292,10 +292,12 @@ export default class ButtonInteractionEvent extends Event {
       const seasonName = currentSeason?.name ?? "the new season";
       await interaction.editReply({
         components: [
-          successContainer(
+          successContainerWithThumbnail(
             link.minecraft_username
-              ? `## You're in!\n\`${link.minecraft_username}\` is confirmed for ${seasonName}. See you there!`
-              : `## You're in!\nYou're confirmed for ${seasonName}. See you there!`,
+              ? `## You're in!\n\`${link.minecraft_username}\` is confirmed for ${seasonName}.`
+              : `## You're in!\nYou're confirmed for ${seasonName}.`,
+            // starlightskins rejects dashed UUIDs.
+            `https://starlightskins.lunareclipse.studio/render/default/${link.minecraft_uuid.replace(/-/g, "")}/bust`,
           ),
         ],
         flags: MessageFlags.IsComponentsV2,
