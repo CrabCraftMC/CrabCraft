@@ -46,7 +46,7 @@ export function buildSeasonAccessButton(): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(SEASON_PLAY_BUTTON_ID)
-      .setLabel("Play season seven")
+      .setLabel("Play S7")
       .setStyle(ButtonStyle.Primary),
   );
 }
