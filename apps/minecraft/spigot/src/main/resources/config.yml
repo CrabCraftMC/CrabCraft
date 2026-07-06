@@ -168,6 +168,51 @@ happy-ghast:
     # to control. Must be positive; 1.0 means no change.
     multiplier: 2.0
 
+# Cauldron crafting: toss an item into a WATER cauldron to transform it in
+# place (the water level is left untouched). Ports of VanillaTweaks datapacks.
+# Both halves are DISABLED by default.
+cauldron:
+  # Concrete powder dropped into a water cauldron becomes solid concrete of the
+  # same colour.
+  concrete:
+    enabled: false
+  # Dirt, coarse dirt or rooted dirt dropped into a water cauldron becomes mud.
+  mud:
+    enabled: false
+
+# Unlock every server recipe for players automatically, so the recipe book
+# shows everything and nothing has to be discovered through play. Applied on
+# join and to everyone online when the feature starts or the config reloads.
+# DISABLED by default.
+unlock-all-recipes:
+  enabled: false
+
+# Enderman grief prevention. Stops endermen picking up or placing blocks.
+# Unlike the vanilla mobGriefing game rule (which disables ALL mob griefing —
+# creeper/ghast/wither block damage, villager farming, sheep eating grass,
+# etc.), this targets endermen only and leaves everything else vanilla.
+# DISABLED by default.
+enderman-grief:
+  prevent: false
+
+# Shulker shell drops based on who scored the kill, so hand-farming beats fully
+# automatic farms. These fixed counts replace vanilla's 0-1 (+Looting) roll, so
+# output is predictable. DISABLED by default.
+shulker-shells:
+  enabled: false
+  # Shells dropped when a player gets the kill (melee, arrow, etc.).
+  player-kill-count: 2
+  # Shells dropped for any non-player kill (crushing, suffocation, fire, mob
+  # farms, ...).
+  other-count: 1
+
+# Persistent heads: player heads keep their custom name and lore when broken
+# and placed back down (vanilla drops a plain head). Also guards against the
+# name/lore being stripped by flowing water, water buckets, and explosions.
+# DISABLED by default.
+persistent-heads:
+  enabled: false
+
 # BlueMap integration. Soft dependency — everything here is skipped when the
 # BlueMap plugin isn't installed, and the plugin runs fine without it.
 bluemap:

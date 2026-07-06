@@ -2,12 +2,17 @@ package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
 import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
+import crabcraft.net.crabUtilities.cauldron.CauldronRecipeListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
+import crabcraft.net.crabUtilities.enderman.EndermanGriefListener;
 import crabcraft.net.crabUtilities.happyghast.HappyGhastSpeedManager;
+import crabcraft.net.crabUtilities.heads.PersistentHeadsListener;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
 import crabcraft.net.crabUtilities.netherportals.CustomNetherPortalListener;
+import crabcraft.net.crabUtilities.recipes.UnlockAllRecipesManager;
+import crabcraft.net.crabUtilities.shulker.ShulkerShellListener;
 import crabcraft.net.crabUtilities.settings.LocatorBarManager;
 import crabcraft.net.crabUtilities.settings.PhantomManager;
 import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
@@ -47,6 +52,7 @@ public final class CrabUtilities extends JavaPlugin {
     private SettingsDialog settingsDialog;
     private SignMarkerService signMarkerService;
     private HappyGhastSpeedManager happyGhastSpeedManager;
+    private UnlockAllRecipesManager unlockAllRecipesManager;
 
     @Override
     public void onEnable() {
@@ -99,6 +105,25 @@ public final class CrabUtilities extends JavaPlugin {
         // Opt-in and disabled by default; the listener reads config live, so
         // /crabutilities reload toggles it without re-registration.
         Bukkit.getPluginManager().registerEvents(new CustomNetherPortalListener(this), this);
+
+        // Small opt-in survival tweaks (ported from VanillaTweaks/PaperTweaks).
+        // Each reads config live and is disabled by default, so /crabutilities
+        // reload toggles them without re-registration:
+        //   - Cauldron crafting (concrete powder -> concrete, dirt -> mud)
+        //   - Enderman-only grief prevention (targeted, unlike the global game rule)
+        //   - Predictable shulker shell drops (more on a player kill)
+        //   - Player heads keeping their name/lore when broken and replaced
+        Bukkit.getPluginManager().registerEvents(new CauldronRecipeListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new EndermanGriefListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ShulkerShellListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new PersistentHeadsListener(this), this);
+
+        // Unlock-all-recipes: unlock every recipe on join (and for anyone
+        // already online). Caches the recipe key set; the cache is rebuilt and
+        // re-applied on /crabutilities reload.
+        this.unlockAllRecipesManager = new UnlockAllRecipesManager(this);
+        Bukkit.getPluginManager().registerEvents(unlockAllRecipesManager, this);
+        unlockAllRecipesManager.start();
 
         // Auto-updater
         this.updateService = new UpdateService(this);
@@ -247,6 +272,11 @@ public final class CrabUtilities extends JavaPlugin {
         messages.add(happyGhastSpeedManager != null
                 ? "Happy ghast ridden speed boost active (x" + happyGhastSpeedManager.getMultiplier() + ")."
                 : "Happy ghast ridden speed boost inactive (disabled in config).");
+
+        if (unlockAllRecipesManager != null) {
+            unlockAllRecipesManager.refresh();
+            messages.add("Recipe unlock cache rebuilt and re-applied to online players (if enabled).");
+        }
 
         if (updateService != null) {
             updateService.shutdown();
