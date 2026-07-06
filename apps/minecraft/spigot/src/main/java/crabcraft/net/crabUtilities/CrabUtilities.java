@@ -7,6 +7,7 @@ import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
 import crabcraft.net.crabUtilities.happyghast.HappyGhastSpeedManager;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
+import crabcraft.net.crabUtilities.netherportals.CustomNetherPortalListener;
 import crabcraft.net.crabUtilities.settings.LocatorBarManager;
 import crabcraft.net.crabUtilities.settings.PhantomManager;
 import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
@@ -93,6 +94,11 @@ public final class CrabUtilities extends JavaPlugin {
         // and disabled by default; the listener reads config live, so
         // /crabutilities reload toggles it without re-registration.
         Bukkit.getPluginManager().registerEvents(new SleepBroadcastListener(this), this);
+
+        // Custom nether portals: allow non-rectangular / custom-size portals.
+        // Opt-in and disabled by default; the listener reads config live, so
+        // /crabutilities reload toggles it without re-registration.
+        Bukkit.getPluginManager().registerEvents(new CustomNetherPortalListener(this), this);
 
         // Auto-updater
         this.updateService = new UpdateService(this);

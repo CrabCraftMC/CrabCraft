@@ -129,6 +129,31 @@ sleep-broadcast:
   # <count>   — how many players slept.
   multiple-format: "<#FCD05C><players></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>"
 
+# Custom nether portals: build portals of any shape and size, not just the
+# vanilla rectangle. When a portal frame is lit, the enclosed area is flooded
+# with portal blocks as long as it's fully bounded by frame material and within
+# the size limits below — so L-shapes, plus-signs, rough circles, tall/wide
+# portals, etc. all work. DISABLED by default.
+#
+# A port of VanillaTweaks' "Custom Nether Portals" datapack.
+custom-nether-portals:
+  enabled: false
+  # Blocks that count as portal frame. Any of these can form the frame; mixing
+  # them in one portal is fine. Use namespaced or plain material names.
+  frame-materials:
+    - "OBSIDIAN"
+    - "CRYING_OBSIDIAN"
+  size:
+    # Minimum number of interior (portal) blocks required to form a portal.
+    # Vanilla's smallest portal has 6.
+    min-portal-blocks: 6
+    # Maximum width (span across the portal's flat axis). Larger values allow
+    # bigger portals but cost more to search; much above the vanilla 23 may
+    # cause lag on ignite.
+    max-portal-width: 23
+    # Maximum height (vertical span). Same trade-off as max width.
+    max-portal-height: 23
+
 # Happy Ghast tweaks.
 happy-ghast:
   # Makes happy ghasts fly faster, but ONLY while a player is riding them —
