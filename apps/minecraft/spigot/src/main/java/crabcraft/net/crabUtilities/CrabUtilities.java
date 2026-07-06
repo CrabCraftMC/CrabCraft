@@ -53,6 +53,7 @@ public final class CrabUtilities extends JavaPlugin {
     private SignMarkerService signMarkerService;
     private HappyGhastSpeedManager happyGhastSpeedManager;
     private UnlockAllRecipesManager unlockAllRecipesManager;
+    private CustomNetherPortalListener customNetherPortalListener;
 
     @Override
     public void onEnable() {
@@ -102,9 +103,11 @@ public final class CrabUtilities extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new SleepBroadcastListener(this), this);
 
         // Custom nether portals: allow non-rectangular / custom-size portals.
-        // Opt-in and disabled by default; the listener reads config live, so
-        // /crabutilities reload toggles it without re-registration.
-        Bukkit.getPluginManager().registerEvents(new CustomNetherPortalListener(this), this);
+        // Opt-in and disabled by default; the enabled flag is read live so
+        // /crabutilities reload toggles it without re-registration. The parsed
+        // frame-materials/size settings are cached and invalidated on reload.
+        this.customNetherPortalListener = new CustomNetherPortalListener(this);
+        Bukkit.getPluginManager().registerEvents(customNetherPortalListener, this);
 
         // Small opt-in survival tweaks (ported from VanillaTweaks/PaperTweaks).
         // Each reads config live and is disabled by default, so /crabutilities
@@ -276,6 +279,11 @@ public final class CrabUtilities extends JavaPlugin {
         if (unlockAllRecipesManager != null) {
             unlockAllRecipesManager.refresh();
             messages.add("Recipe unlock cache rebuilt and re-applied to online players (if enabled).");
+        }
+
+        if (customNetherPortalListener != null) {
+            customNetherPortalListener.invalidate();
+            messages.add("Custom nether portal settings cache cleared (re-read on next ignite).");
         }
 
         if (updateService != null) {

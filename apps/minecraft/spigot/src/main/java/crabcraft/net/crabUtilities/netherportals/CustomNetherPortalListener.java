@@ -34,10 +34,24 @@ import java.util.Set;
  */
 public class CustomNetherPortalListener implements Listener {
 
+    // Hard ceiling on the configurable portal dimensions. Keeps maxWidth *
+    // maxHeight (the flood-fill's block budget) well within int range and bounds
+    // the worst-case flood so an absurd config value can't overflow the loop
+    // bound or hang the server on ignite.
+    private static final int MAX_DIMENSION = 256;
+
     private final CrabUtilities plugin;
+    // Parsed config snapshot, cached so we don't rebuild the frame-material set
+    // on every ignite. Rebuilt on demand and cleared by invalidate() on reload.
+    private volatile @Nullable PortalSettings cachedSettings;
 
     public CustomNetherPortalListener(final CrabUtilities plugin) {
         this.plugin = plugin;
+    }
+
+    /** Drops the cached settings so the next ignite re-reads config (reload). */
+    public void invalidate() {
+        this.cachedSettings = null;
     }
 
     private static boolean isInValidDimension(final World world) {
@@ -79,12 +93,21 @@ public class CustomNetherPortalListener implements Listener {
     }
 
     private PortalSettings readSettings() {
-        return new PortalSettings(
-                this.readFrameMaterials(),
-                Math.max(1, this.plugin.getConfig().getInt("custom-nether-portals.size.min-portal-blocks", 6)),
-                Math.max(1, this.plugin.getConfig().getInt("custom-nether-portals.size.max-portal-width", 23)),
-                Math.max(1, this.plugin.getConfig().getInt("custom-nether-portals.size.max-portal-height", 23))
-        );
+        PortalSettings settings = this.cachedSettings;
+        if (settings == null) {
+            settings = new PortalSettings(
+                    this.readFrameMaterials(),
+                    clamp(this.plugin.getConfig().getInt("custom-nether-portals.size.min-portal-blocks", 6)),
+                    clamp(this.plugin.getConfig().getInt("custom-nether-portals.size.max-portal-width", 23)),
+                    clamp(this.plugin.getConfig().getInt("custom-nether-portals.size.max-portal-height", 23))
+            );
+            this.cachedSettings = settings;
+        }
+        return settings;
+    }
+
+    private static int clamp(final int value) {
+        return Math.max(1, Math.min(MAX_DIMENSION, value));
     }
 
     private Set<Material> readFrameMaterials() {

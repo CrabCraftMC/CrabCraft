@@ -5,7 +5,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.block.Skull;
 import org.bukkit.block.TileState;
 import org.bukkit.entity.Item;
@@ -141,7 +140,8 @@ public class PersistentHeadsListener implements Listener {
         final Iterator<Block> iterator = blocks.iterator();
         while (iterator.hasNext()) {
             final Block block = iterator.next();
-            if (block.getState() instanceof Skull && ThreadLocalRandom.current().nextFloat() <= yield) {
+            // Cheap type check before touching block.getState() (an allocation).
+            if (isPlayerHead(block.getType()) && ThreadLocalRandom.current().nextFloat() <= yield) {
                 // Drop the restored head ourselves and take the block out of the
                 // explosion so vanilla doesn't also drop a stripped one.
                 this.handleBlock(block, null, false);
@@ -156,11 +156,16 @@ public class PersistentHeadsListener implements Listener {
      * triggering event.
      */
     private void handleBlock(final Block block, final @Nullable Cancellable event, final boolean cancelEvent) {
-        final BlockState blockState = block.getState();
-        if (!(blockState instanceof Skull) || !(blockState instanceof final TileState state)) {
+        // Guard on the block type first: this runs from onLiquidFlow, which
+        // fires on every liquid-spread event, so we must not allocate a
+        // BlockState snapshot for the (overwhelmingly common) non-head case.
+        if (!isPlayerHead(block.getType())) {
             return;
         }
-        final @Nullable ItemStack stored = this.readStored(state);
+        if (!(block.getState() instanceof final Skull skull)) {
+            return;
+        }
+        final @Nullable ItemStack stored = this.readStored(skull);
         if (stored == null) {
             return;
         }
@@ -172,6 +177,10 @@ public class PersistentHeadsListener implements Listener {
         }
     }
 
+    private static boolean isPlayerHead(final Material type) {
+        return type == Material.PLAYER_HEAD || type == Material.PLAYER_WALL_HEAD;
+    }
+
     private @Nullable ItemStack readStored(final TileState state) {
         final @Nullable String encoded =
                 state.getPersistentDataContainer().get(this.headItemKey, PersistentDataType.STRING);
@@ -180,7 +189,11 @@ public class PersistentHeadsListener implements Listener {
         }
         try {
             return ItemStack.deserializeBytes(Base64.getDecoder().decode(encoded));
-        } catch (final IllegalArgumentException | IllegalStateException ex) {
+        } catch (final RuntimeException ex) {
+            // Corrupt data, or bytes written by an incompatible item format
+            // (e.g. after a Minecraft version upgrade) — treat as "no data"
+            // rather than letting it escape the event handler.
+            this.plugin.getLogger().warning("Failed to read stored head data: " + ex.getMessage());
             return null;
         }
     }
