@@ -129,6 +129,31 @@ sleep-broadcast:
   # <count>   — how many players slept.
   multiple-format: "<#FCD05C><players></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>"
 
+# Custom nether portals: build portals of any shape and size, not just the
+# vanilla rectangle. When a portal frame is lit, the enclosed area is flooded
+# with portal blocks as long as it's fully bounded by frame material and within
+# the size limits below — so L-shapes, plus-signs, rough circles, tall/wide
+# portals, etc. all work. DISABLED by default.
+#
+# A port of VanillaTweaks' "Custom Nether Portals" datapack.
+custom-nether-portals:
+  enabled: false
+  # Blocks that count as portal frame. Any of these can form the frame; mixing
+  # them in one portal is fine. Use namespaced or plain material names.
+  frame-materials:
+    - "OBSIDIAN"
+    - "CRYING_OBSIDIAN"
+  size:
+    # Minimum number of interior (portal) blocks required to form a portal.
+    # Vanilla's smallest portal has 6.
+    min-portal-blocks: 6
+    # Maximum width (span across the portal's flat axis). Larger values allow
+    # bigger portals but cost more to search; much above the vanilla 23 may
+    # cause lag on ignite.
+    max-portal-width: 23
+    # Maximum height (vertical span). Same trade-off as max width.
+    max-portal-height: 23
+
 # Happy Ghast tweaks.
 happy-ghast:
   # Makes happy ghasts fly faster, but ONLY while a player is riding them —
@@ -142,6 +167,55 @@ happy-ghast:
     # 3.6 blocks/sec, so 2.0 = ~7.2 blocks/sec. Values much above 4.0 get hard
     # to control. Must be positive; 1.0 means no change.
     multiplier: 2.0
+
+# Cauldron crafting: toss an item into a WATER cauldron to transform it in
+# place (the water level is left untouched). Ports of VanillaTweaks datapacks.
+# Both halves are DISABLED by default.
+cauldron:
+  # Concrete powder dropped into a water cauldron becomes solid concrete of the
+  # same colour.
+  concrete:
+    enabled: false
+  # Dirt, coarse dirt or rooted dirt dropped into a water cauldron becomes mud.
+  mud:
+    enabled: false
+
+# Unlock every server recipe for players automatically, so the recipe book
+# shows everything and nothing has to be discovered through play. Applied on
+# join and to everyone online when the feature starts or the config reloads.
+# DISABLED by default.
+unlock-all-recipes:
+  enabled: false
+
+# Enderman grief prevention. Stops endermen picking up or placing blocks.
+# Unlike the vanilla mobGriefing game rule (which disables ALL mob griefing —
+# creeper/ghast/wither block damage, villager farming, sheep eating grass,
+# etc.), this targets endermen only and leaves everything else vanilla.
+# DISABLED by default.
+enderman-grief:
+  prevent: false
+
+# Shulker shell drops based on who scored the kill, so hand-farming beats fully
+# automatic farms. This keeps vanilla's drop LUCK intact (Java drops a single
+# shell ~50% of the time, and Looting raises that chance) and only multiplies
+# the amount AFTER a shell actually drops. So a kill can still yield no shell,
+# Looting still helps, and when it lands the amount is scaled below. A
+# multiplier of 1 leaves the vanilla drop unchanged. DISABLED by default.
+shulker-shells:
+  enabled: false
+  # Multiplier applied when a PLAYER gets the kill (melee, arrow, etc.).
+  # e.g. 2 = drop 2 shells instead of 1 whenever a shell drops.
+  player-kill-multiplier: 2
+  # Multiplier for any non-player kill (crushing, suffocation, fire, mob farms,
+  # ...). Leave at 1 for vanilla behaviour on automatic farms.
+  other-multiplier: 1
+
+# Persistent heads: player heads keep their custom name and lore when broken
+# and placed back down (vanilla drops a plain head). Also guards against the
+# name/lore being stripped by flowing water, water buckets, and explosions.
+# DISABLED by default.
+persistent-heads:
+  enabled: false
 
 # BlueMap integration. Soft dependency — everything here is skipped when the
 # BlueMap plugin isn't installed, and the plugin runs fine without it.
