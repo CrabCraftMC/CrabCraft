@@ -196,15 +196,19 @@ enderman-grief:
   prevent: false
 
 # Shulker shell drops based on who scored the kill, so hand-farming beats fully
-# automatic farms. These fixed counts replace vanilla's 0-1 (+Looting) roll, so
-# output is predictable. DISABLED by default.
+# automatic farms. This keeps vanilla's drop LUCK intact (Java drops a single
+# shell ~50% of the time, and Looting raises that chance) and only multiplies
+# the amount AFTER a shell actually drops. So a kill can still yield no shell,
+# Looting still helps, and when it lands the amount is scaled below. A
+# multiplier of 1 leaves the vanilla drop unchanged. DISABLED by default.
 shulker-shells:
   enabled: false
-  # Shells dropped when a player gets the kill (melee, arrow, etc.).
-  player-kill-count: 2
-  # Shells dropped for any non-player kill (crushing, suffocation, fire, mob
-  # farms, ...).
-  other-count: 1
+  # Multiplier applied when a PLAYER gets the kill (melee, arrow, etc.).
+  # e.g. 2 = drop 2 shells instead of 1 whenever a shell drops.
+  player-kill-multiplier: 2
+  # Multiplier for any non-player kill (crushing, suffocation, fire, mob farms,
+  # ...). Leave at 1 for vanilla behaviour on automatic farms.
+  other-multiplier: 1
 
 # Persistent heads: player heads keep their custom name and lore when broken
 # and placed back down (vanilla drops a plain head). Also guards against the
