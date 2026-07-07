@@ -1,24 +1,19 @@
 # CrabUtilities - Spigot Plugin Configuration
 
-# Season this server writes data to (e.g. "6").
-# Leave empty to disable stats, awards, and advancement syncing.
+# Season this server writes data to (e.g. "6"). Empty disables stats,
+# awards, and advancement syncing.
 season: ""
 
-# Redis - used for publishing stats to the Velocity proxy
-# and syncing nicknames across servers.
 redis:
   host: "localhost"
   port: 6379
   password: ""
 
-# Periodically scans the world's stats/ and advancements/ folders.
-# Changed files are published to Redis for the Velocity proxy to
-# process into awards, leaderboards, and advancement tracking.
+# How often the world's stats/ and advancements/ folders are scanned and
+# published to Redis for the proxy to process.
 stats-push:
   interval-minutes: 5
 
-# Polls GitHub Releases for new versions and stages the JAR into
-# plugins/update/ so Paper swaps it in on the next restart.
 auto-update:
   enabled: true
   check-interval-hours: 6
@@ -27,45 +22,29 @@ auto-update:
   github-repo: "CrabCraftMC/CrabCraft"
   github-token: ""
 
-# Server-side companions for client-side mods. Each feeds extra data to
-# players who have the matching mod installed and is harmless for players who
-# don't. Toggle any of them off here.
+# Server-side companions for client-side mods. Harmless for players without
+# the matching mod installed.
 mod-protocols:
-  # Jade (the "what am I looking at" tooltip mod): block/entity info such as
-  # tool requirements, growth/breeding progress, container contents, etc.
   jade:
     enabled: true
-  # AppleSkin: saturation, exhaustion and natural-regeneration info on the
-  # hunger bar.
   appleskin:
     enabled: true
-  # Xaero's Minimap / World Map: on join, sends a small "world id" packet so
-  # clients store saved maps keyed off that id instead of the connection
-  # address. Behind a proxy every backend shares one IP, so without this Xaero
-  # would merge the maps of different worlds; with it, each world keeps its own.
   xaero-map:
     enabled: true
-    # Integer identifying this world to Xaero clients. Leave at 0 to generate a
-    # random id on first start and write it back here (so it stays stable across
-    # restarts). Changing it makes Xaero treat this as a brand-new world.
+    # World id sent to Xaero clients so saved maps stay per-world behind a
+    # proxy. 0 generates a random id on first start and writes it back here.
     server-id: 0
 
-# Global chat: sync this server's normal chat across the network via Redis.
-# DISABLED by default. Turn this on only for servers that should share one
-# chat; servers left off keep their chat local. Staff chat is unaffected.
+# Sync this server's normal chat across the network via Redis. Servers left
+# off keep their chat local. Staff chat is unaffected.
 global-chat:
   enabled: false
-  # Shown via the <server> placeholder in the format. Optional, free text.
-  server-name: ""
-  # MiniMessage format for each line. Placeholders: <server>, <display_name>,
-  # <username>, <message>. Player text fills <message> and is never parsed as
-  # MiniMessage (no tag injection).
-  format: "<gray>[</gray><aqua><server></aqua><gray>]</gray> <display_name><gray>:</gray> <message>"
+  # MiniMessage format. Placeholders: <display_name>, <username>, <message>.
+  # Player text fills <message> and is never parsed as MiniMessage.
+  format: "<display_name><gray>:</gray> <message>"
   mentions:
     enabled: true
-    # Trigger character before a name, e.g. @Steve.
     prefix: "@"
-    # MiniMessage wrapping applied to a matched @name token. <name> = the token.
     highlight: "<yellow><name></yellow>"
     sound:
       enabled: true
@@ -73,174 +52,96 @@ global-chat:
       volume: 1.0
       pitch: 1.0
 
-# Simple Voice Chat cross-server bridge.
-# Creates a fixed set of persistent open voice groups with deterministic
-# UUIDs on every backend, then forwards opus frames between backends
-# over Redis pub/sub so members on different backends can hear each
-# other in the same group. User-created GUI groups remain local to
-# whichever backend they were created on.
+# Simple Voice Chat cross-server bridge. Forwards opus frames between backends
+# over Redis so members of a persistent group hear each other across servers.
 voicechat:
   cross-server:
-    # Toggle the whole bridge. If false, voice still works locally on
-    # each backend (native SVC behaviour) but the persistent groups
-    # below stay per-backend.
     enabled: true
-    # Velocity-side server name for THIS backend. Must match the name
-    # configured in velocity.toml's [servers] section. Used so the
-    # receiver can verify that frames claiming to come from "this
-    # backend" really originated here, preventing a brief audio glitch
-    # when a player switches servers while talking.
+    # Velocity server name for THIS backend; must match velocity.toml's
+    # [servers] section.
     this-backend: ""
-    # Persistent open groups created automatically with deterministic
-    # UUIDs so all backends have the same group IDs. Cross-server audio
-    # is forwarded for any group whose name appears here.
     persistent-groups:
       - "Global #1"
       - "Global #2"
       - "Global #3"
 
-# Per-player phantom control, exposed to players via /settings. Each player
-# picks one of three modes:
-#   on   - vanilla phantoms (they spawn and attack)
-#   off  - no phantoms spawn near them and none may attack them (the default)
-#   safe - phantoms still spawn around them, but never attack them
-#
-# NOTE: this is done purely with events (cancelling phantom spawns, targeting
-# and damage). We deliberately do NOT reset the "time since rest" statistic,
-# because it also backs the "Night Owl" award (longest time since last sleep) —
-# zeroing it would make that award unwinnable. Leaving it untouched keeps the
-# award working for everyone (including 'safe' players, who keep accruing it).
+# Per-player phantom control via /settings (on / off / safe). Set
+# suppress-for-opted-out false to force vanilla phantoms for everyone.
 phantoms:
-  # Master switch for the whole feature. Set false to ignore players' /settings
-  # choices and give everyone vanilla phantoms.
   suppress-for-opted-out: true
 
-# Sleep broadcast: announce in chat who slept when the night gets skipped.
-# DISABLED by default. Works with the playersSleepingPercentage game rule —
-# whoever is actually asleep the moment the night is skipped is listed, so a
-# rule requiring only a fraction of players to sleep announces just the sleepers.
-sleep-broadcast:
-  enabled: false
-  # MiniMessage line used when exactly one player skips the night.
-  # Placeholder: <player> — the sleeping player's name.
-  single-format: "<#FCD05C><player></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>"
-  # MiniMessage line used when several players sleep together. Placeholders:
-  # <players> — the names joined naturally (e.g. "Steve, Alex, and Bob"),
-  # <count>   — how many players slept.
-  multiple-format: "<#FCD05C><players></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>"
-
-# Custom nether portals: build portals of any shape and size, not just the
-# vanilla rectangle. When a portal frame is lit, the enclosed area is flooded
-# with portal blocks as long as it's fully bounded by frame material and within
-# the size limits below — so L-shapes, plus-signs, rough circles, tall/wide
-# portals, etc. all work. DISABLED by default.
-#
-# A port of VanillaTweaks' "Custom Nether Portals" datapack.
-custom-nether-portals:
-  enabled: false
-  # Blocks that count as portal frame. Any of these can form the frame; mixing
-  # them in one portal is fine. Use namespaced or plain material names.
-  frame-materials:
-    - "OBSIDIAN"
-    - "CRYING_OBSIDIAN"
-  size:
-    # Minimum number of interior (portal) blocks required to form a portal.
-    # Vanilla's smallest portal has 6.
-    min-portal-blocks: 6
-    # Maximum width (span across the portal's flat axis). Larger values allow
-    # bigger portals but cost more to search; much above the vanilla 23 may
-    # cause lag on ignite.
-    max-portal-width: 23
-    # Maximum height (vertical span). Same trade-off as max width.
-    max-portal-height: 23
-
-# Happy Ghast tweaks.
-happy-ghast:
-  # Makes happy ghasts fly faster, but ONLY while a player is riding them —
-  # unridden ghasts (and their idle animations) stay vanilla. DISABLED by
-  # default. Implemented as a transient modifier on the ghast's flying_speed
-  # attribute, so nothing is ever written to the entity and removing a rider
-  # (or disabling this) immediately restores vanilla speed.
-  ridden-speed-boost:
-    enabled: false
-    # Ridden speed as a multiple of vanilla. Vanilla ridden speed is about
-    # 3.6 blocks/sec, so 2.0 = ~7.2 blocks/sec. Values much above 4.0 get hard
-    # to control. Must be positive; 1.0 means no change.
-    multiplier: 2.0
-
-# Cauldron crafting: toss an item into a WATER cauldron to transform it in
-# place (the water level is left untouched). Ports of VanillaTweaks datapacks.
-# Both halves are DISABLED by default.
-cauldron:
-  # Concrete powder dropped into a water cauldron becomes solid concrete of the
-  # same colour.
-  concrete:
-    enabled: false
-  # Dirt, coarse dirt or rooted dirt dropped into a water cauldron becomes mud.
-  mud:
-    enabled: false
-
-# Unlock every server recipe for players automatically, so the recipe book
-# shows everything and nothing has to be discovered through play. Applied on
-# join and to everyone online when the feature starts or the config reloads.
-# DISABLED by default.
-unlock-all-recipes:
-  enabled: false
-
-# Enderman grief prevention. Stops endermen picking up or placing blocks.
-# Unlike the vanilla mobGriefing game rule (which disables ALL mob griefing —
-# creeper/ghast/wither block damage, villager farming, sheep eating grass,
-# etc.), this targets endermen only and leaves everything else vanilla.
-# DISABLED by default.
-enderman-grief:
-  prevent: false
-
-# Shulker shell drops based on who scored the kill, so hand-farming beats fully
-# automatic farms. This keeps vanilla's drop LUCK intact (Java drops a single
-# shell ~50% of the time, and Looting raises that chance) and only multiplies
-# the amount AFTER a shell actually drops. So a kill can still yield no shell,
-# Looting still helps, and when it lands the amount is scaled below. A
-# multiplier of 1 leaves the vanilla drop unchanged. DISABLED by default.
-shulker-shells:
-  enabled: false
-  # Multiplier applied when a PLAYER gets the kill (melee, arrow, etc.).
-  # e.g. 2 = drop 2 shells instead of 1 whenever a shell drops.
-  player-kill-multiplier: 2
-  # Multiplier for any non-player kill (crushing, suffocation, fire, mob farms,
-  # ...). Leave at 1 for vanilla behaviour on automatic farms.
-  other-multiplier: 1
-
-# Persistent heads: player heads keep their custom name and lore when broken
-# and placed back down (vanilla drops a plain head). Also guards against the
-# name/lore being stripped by flowing water, water buckets, and explosions.
-# DISABLED by default.
-persistent-heads:
-  enabled: false
-
-# BlueMap integration. Soft dependency — everything here is skipped when the
-# BlueMap plugin isn't installed, and the plugin runs fine without it.
+# BlueMap integration. Soft dependency; skipped when BlueMap isn't installed.
 bluemap:
-  # Player-made map markers: writing the keyword (default "[map]") on the top
-  # line of a sign adds a POI marker at the sign's location to the BlueMap web
-  # map; the sign's remaining lines become the marker's label. Breaking the
-  # sign — or editing the keyword off it — removes the marker again. Markers
-  # are saved to bluemap-sign-markers.yml and re-created automatically every
-  # time BlueMap (re)loads. DISABLED by default.
+  # Writing the keyword on a sign's top line adds a POI marker at the sign;
+  # breaking or editing the sign removes it. Markers persist in
+  # bluemap-sign-markers.yml.
   sign-markers:
     enabled: false
-    # Trigger text players write on the sign's top line (case-insensitive).
     keyword: "[map]"
-    # Menu label for the marker set in the BlueMap web interface.
     marker-set-label: "Player Markers"
-    # Whether web users can hide/show the marker set, and whether it starts
-    # hidden until they toggle it on.
     toggleable: true
     default-hidden: false
-    # Optional custom icon: a path or URL resolved against BlueMap's web root
-    # (e.g. "assets/pin.svg"). Leave empty for BlueMap's default POI icon.
-    # The anchor is the pixel of the icon that sits on the marker position
-    # (e.g. 16/32 for the bottom-center of a 32x32 pin). Only used with a
-    # custom icon.
+    # Optional custom icon path/URL resolved against BlueMap's web root. The
+    # anchor is the icon pixel that sits on the marker position.
     icon: ""
     icon-anchor-x: 0
     icon-anchor-y: 0
+
+# Optional gameplay tweaks, all disabled by default.
+tweaks:
+  # Announce who slept when the night is skipped.
+  sleep-broadcast:
+    enabled: false
+    # Placeholder: <player>.
+    single-format: "<#FCD05C><player></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>"
+    # Placeholders: <players>, <count>.
+    multiple-format: "<#FCD05C><players></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>"
+
+  # Portals of any shape/size bounded by frame material, not just the vanilla
+  # rectangle. Port of VanillaTweaks' Custom Nether Portals.
+  custom-nether-portals:
+    enabled: false
+    frame-materials:
+      - "OBSIDIAN"
+      - "CRYING_OBSIDIAN"
+    size:
+      min-portal-blocks: 6
+      max-portal-width: 23
+      max-portal-height: 23
+
+  # Faster happy ghasts while ridden; unridden ghasts stay vanilla.
+  happy-ghast:
+    ridden-speed-boost:
+      enabled: false
+      # Multiple of vanilla ridden speed. Must be positive; 1.0 = no change.
+      multiplier: 2.0
+
+  # Toss an item into a water cauldron to transform it in place.
+  cauldron:
+    # Concrete powder -> concrete.
+    concrete:
+      enabled: false
+    # Dirt / coarse dirt / rooted dirt -> mud.
+    mud:
+      enabled: false
+
+  # Auto-unlock every server recipe on join so nothing has to be discovered.
+  unlock-all-recipes:
+    enabled: false
+
+  # Stop endermen picking up or placing blocks (endermen only, unlike the
+  # mobGriefing game rule).
+  enderman-grief:
+    prevent: false
+
+  # Scale shulker shell drops by who scored the kill, so hand-farming beats
+  # automatic farms. Vanilla drop chance/Looting are unchanged; the amount is
+  # multiplied only after a shell actually drops. 1 = vanilla.
+  shulker-shells:
+    enabled: false
+    player-kill-multiplier: 2
+    other-multiplier: 1
+
+  # Player heads keep their custom name and lore when broken and replaced.
+  persistent-heads:
+    enabled: false

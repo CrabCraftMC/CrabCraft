@@ -60,10 +60,10 @@ public class CauldronRecipeListener implements Listener {
     }
 
     private @Nullable Material resultFor(final Material type) {
-        if (isConcretePowder(type) && this.plugin.getConfig().getBoolean("cauldron.concrete.enabled", false)) {
+        if (isConcretePowder(type) && this.plugin.getConfig().getBoolean("tweaks.cauldron.concrete.enabled", false)) {
             return Material.matchMaterial(type.name().replace("_POWDER", ""));
         }
-        if (DIRT_TYPES.contains(type) && this.plugin.getConfig().getBoolean("cauldron.mud.enabled", false)) {
+        if (DIRT_TYPES.contains(type) && this.plugin.getConfig().getBoolean("tweaks.cauldron.mud.enabled", false)) {
             return Material.MUD;
         }
         return null;

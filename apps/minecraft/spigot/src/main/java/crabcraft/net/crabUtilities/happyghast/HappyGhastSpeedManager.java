@@ -44,10 +44,10 @@ public class HappyGhastSpeedManager implements Listener {
     public HappyGhastSpeedManager(CrabUtilities plugin) {
         this.plugin = plugin;
         this.modifierKey = new NamespacedKey(plugin, "happy_ghast_ridden_speed_boost");
-        boolean configEnabled = plugin.getConfig().getBoolean("happy-ghast.ridden-speed-boost.enabled", false);
-        this.multiplier = plugin.getConfig().getDouble("happy-ghast.ridden-speed-boost.multiplier", 2.0);
+        boolean configEnabled = plugin.getConfig().getBoolean("tweaks.happy-ghast.ridden-speed-boost.enabled", false);
+        this.multiplier = plugin.getConfig().getDouble("tweaks.happy-ghast.ridden-speed-boost.multiplier", 2.0);
         if (configEnabled && multiplier <= 0.0) {
-            plugin.getLogger().warning("happy-ghast.ridden-speed-boost.multiplier must be positive (got "
+            plugin.getLogger().warning("tweaks.happy-ghast.ridden-speed-boost.multiplier must be positive (got "
                     + multiplier + ") — feature disabled.");
             configEnabled = false;
         }
