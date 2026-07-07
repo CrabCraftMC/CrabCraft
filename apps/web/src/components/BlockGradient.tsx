@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import ColorPicker, { type ColorPickerHandle } from "./ColorPicker";
+import SwatchColorPicker from "./SwatchColorPicker";
 import Squircle from "@/components/Squircle";
 import {
   interpolateOklab,
@@ -124,9 +124,6 @@ export default function BlockGradient() {
     cellKey: string;
   } | null>(null);
 
-  // Color picker refs
-  const startPickerRef = useRef<ColorPickerHandle>(null);
-  const endPickerRef = useRef<ColorPickerHandle>(null);
   const presetMenuRef = useRef<HTMLDivElement>(null);
 
   // Load saved state after hydration
@@ -491,31 +488,25 @@ export default function BlockGradient() {
                 Block
               </button>
             </div>
-            {/* ColorPicker always mounted (hidden to avoid Pickr DOM issues) */}
-            <div className={start.mode === "color" ? "" : "hidden"}>
-              <button
-                type="button"
-                onClick={() => startPickerRef.current?.show()}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-line hover:border-orange-400 transition-colors cursor-pointer"
+            {start.mode === "color" && (
+              <SwatchColorPicker
+                color={start.color}
+                ariaLabel="Start colour"
+                triggerClassName="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-line hover:border-orange-400 transition-colors cursor-pointer"
+                onChange={(c) =>
+                  setStart((s) =>
+                    s.mode === "color"
+                      ? { ...s, color: c, blockId: null, blockName: null, blockTexture: null }
+                      : { ...s, color: c }
+                  )
+                }
               >
-                <div className="pcr-square flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <ColorPicker
-                    ref={startPickerRef}
-                    color={start.color}
-                    onChange={(c) =>
-                      setStart((s) =>
-                        s.mode === "color"
-                          ? { ...s, color: c, blockId: null, blockName: null, blockTexture: null }
-                          : { ...s, color: c }
-                      )
-                    }
-                  />
-                </div>
+                <div className="w-8 h-8 flex-shrink-0 rounded border border-black/10 dark:border-white/15" style={{ backgroundColor: start.color }} />
                 <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
                   {start.color.toUpperCase()}
                 </span>
-              </button>
-            </div>
+              </SwatchColorPicker>
+            )}
             {/* Block picker conditionally rendered */}
             {start.mode === "block" && (
               <button
@@ -581,31 +572,25 @@ export default function BlockGradient() {
                 Block
               </button>
             </div>
-            {/* ColorPicker always mounted (hidden to avoid Pickr DOM issues) */}
-            <div className={end.mode === "color" ? "" : "hidden"}>
-              <button
-                type="button"
-                onClick={() => endPickerRef.current?.show()}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-line hover:border-orange-400 transition-colors cursor-pointer"
+            {end.mode === "color" && (
+              <SwatchColorPicker
+                color={end.color}
+                ariaLabel="End colour"
+                triggerClassName="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border-2 border-dashed border-line hover:border-orange-400 transition-colors cursor-pointer"
+                onChange={(c) =>
+                  setEnd((s) =>
+                    s.mode === "color"
+                      ? { ...s, color: c, blockId: null, blockName: null, blockTexture: null }
+                      : { ...s, color: c }
+                  )
+                }
               >
-                <div className="pcr-square flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <ColorPicker
-                    ref={endPickerRef}
-                    color={end.color}
-                    onChange={(c) =>
-                      setEnd((s) =>
-                        s.mode === "color"
-                          ? { ...s, color: c, blockId: null, blockName: null, blockTexture: null }
-                          : { ...s, color: c }
-                      )
-                    }
-                  />
-                </div>
+                <div className="w-8 h-8 flex-shrink-0 rounded border border-black/10 dark:border-white/15" style={{ backgroundColor: end.color }} />
                 <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
                   {end.color.toUpperCase()}
                 </span>
-              </button>
-            </div>
+              </SwatchColorPicker>
+            )}
             {/* Block picker conditionally rendered */}
             {end.mode === "block" && (
               <button
