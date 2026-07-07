@@ -640,7 +640,7 @@ export default function RGBGenerator() {
                                 aria-label="Characters per colour"
                                 aria-valuetext={`${charsPerColor} character${charsPerColor === 1 ? "" : "s"} per colour`}
                                 onChange={(e) => setCharsPerColor(Number(e.target.value))}
-                                className="range-thick w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="w-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             />
                             {maxCharsPerColor > 1 && (
                                 <div className="flex justify-between text-xs text-gray-400 mt-1.5">

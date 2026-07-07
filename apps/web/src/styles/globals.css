@@ -88,44 +88,6 @@ body {
 
 
 
-/* Chunky range slider — tall track + large thumb for an easy hit target */
-input[type="range"].range-thick {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 24px;
-  background: transparent;
-  cursor: pointer;
-}
-input[type="range"].range-thick::-webkit-slider-runnable-track {
-  height: 10px;
-  border-radius: 9999px;
-  background: rgb(120 120 120 / 0.25);
-}
-input[type="range"].range-thick::-moz-range-track {
-  height: 10px;
-  border-radius: 9999px;
-  background: rgb(120 120 120 / 0.25);
-}
-input[type="range"].range-thick::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 22px;
-  height: 22px;
-  margin-top: -6px;
-  border-radius: 9999px;
-  background: rgb(249 115 22);
-  border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
-}
-input[type="range"].range-thick::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  border-radius: 9999px;
-  background: rgb(249 115 22);
-  border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
-}
-
 /* Compact react-colorful picker used in the colour tools */
 .rgb-swatch-picker .react-colorful {
   width: 100%;
