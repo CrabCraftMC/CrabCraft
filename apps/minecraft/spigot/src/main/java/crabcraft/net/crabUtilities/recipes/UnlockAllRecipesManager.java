@@ -38,7 +38,7 @@ public class UnlockAllRecipesManager implements Listener {
     }
 
     private boolean isEnabled() {
-        return this.plugin.getConfig().getBoolean("unlock-all-recipes.enabled", false);
+        return this.plugin.getConfig().getBoolean("tweaks.unlock-all-recipes.enabled", false);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

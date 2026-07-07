@@ -60,7 +60,7 @@ public class CustomNetherPortalListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockIgnite(final BlockIgniteEvent event) {
-        if (!this.plugin.getConfig().getBoolean("custom-nether-portals.enabled", false)) {
+        if (!this.plugin.getConfig().getBoolean("tweaks.custom-nether-portals.enabled", false)) {
             return;
         }
 
@@ -97,9 +97,9 @@ public class CustomNetherPortalListener implements Listener {
         if (settings == null) {
             settings = new PortalSettings(
                     this.readFrameMaterials(),
-                    clamp(this.plugin.getConfig().getInt("custom-nether-portals.size.min-portal-blocks", 6)),
-                    clamp(this.plugin.getConfig().getInt("custom-nether-portals.size.max-portal-width", 23)),
-                    clamp(this.plugin.getConfig().getInt("custom-nether-portals.size.max-portal-height", 23))
+                    clamp(this.plugin.getConfig().getInt("tweaks.custom-nether-portals.size.min-portal-blocks", 6)),
+                    clamp(this.plugin.getConfig().getInt("tweaks.custom-nether-portals.size.max-portal-width", 23)),
+                    clamp(this.plugin.getConfig().getInt("tweaks.custom-nether-portals.size.max-portal-height", 23))
             );
             this.cachedSettings = settings;
         }
@@ -111,7 +111,7 @@ public class CustomNetherPortalListener implements Listener {
     }
 
     private Set<Material> readFrameMaterials() {
-        final List<String> names = this.plugin.getConfig().getStringList("custom-nether-portals.frame-materials");
+        final List<String> names = this.plugin.getConfig().getStringList("tweaks.custom-nether-portals.frame-materials");
         final Set<Material> materials = EnumSet.noneOf(Material.class);
         for (final String name : names) {
             final @Nullable Material material = Material.matchMaterial(name);

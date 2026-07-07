@@ -6,45 +6,38 @@ redis:
   punishment-stream: "crabcraft:punishments"
   punishment-watch-interval-seconds: 10
 
-# Simple Voice Chat cross-server bridge — Velocity side.
-# This proxy plugin tracks which backend each player is on and writes
-# the answer to a short-TTL Redis key so backends can validate the
-# origin of inbound voice frames during the brief window when a
-# player is mid-switch between servers.
+# Simple Voice Chat cross-server bridge - proxy side. Tracks which backend
+# each player is on so backends can validate inbound voice frames.
 voicechat:
   cross-server:
     enabled: true
-    # TTL for the player-home Redis key, in seconds. Keep this longer
-    # than the typical server-switch window so the key never expires
-    # for an active player. Refreshed on every server switch.
+    # TTL for the player-home Redis key; keep longer than the server-switch
+    # window. Refreshed on every switch.
     player-home-ttl-seconds: 300
 
 api:
   port: 8080
 
 staff-chat:
-  # MiniMessage format. Placeholders: <sender>, <message>
+  # MiniMessage. Placeholders: <sender>, <message>
   format: "<dark_gray>[<aqua>SC</aqua>]</dark_gray> <gray><sender></gray> <dark_gray>></dark_gray> <white><message></white>"
-  # Discord relay for staff chat. Leave webhook-url empty to disable.
-  # The webhook posts as the sender's nickname with their head as the avatar.
+  # Discord relay for staff chat. Empty webhook-url disables it.
   # avatar-url placeholder: {uuid}
   discord:
     webhook-url: ""
     avatar-url: "https://mc-heads.net/head/{uuid}"
 
 private-messages:
-  # MiniMessage format shown to the sender. Placeholders: <target>, <message>
+  # Placeholders: <target>, <message>
   outgoing-format: "<gold>(to <target>) <white><message>"
-  # MiniMessage format shown to the recipient. Placeholders: <sender>, <message>
+  # Placeholders: <sender>, <message>
   incoming-format: "<gold>(from <sender>) <white><message>"
-  # MiniMessage format shown to /socialspy listeners. Placeholders: <sender>, <target>, <message>
+  # /socialspy format. Placeholders: <sender>, <target>, <message>
   spy-format: "<gray>[SPY] (<sender> → <target>) <white><message>"
-  # Error messages (MiniMessage)
   player-not-found: "<red>Player not found or not online."
   no-reply-target: "<red>You have no one to reply to."
   self-error: "<red>You can't message yourself."
-  # Sound played to the recipient when they receive a DM. Set enabled to false to disable.
-  # `sound` is a Minecraft sound key. `volume` and `pitch` accept floats.
+  # Sound played to the recipient on an incoming DM.
   incoming-sound:
     enabled: true
     sound: "minecraft:entity.experience_orb.pickup"
@@ -52,12 +45,12 @@ private-messages:
     pitch: 1.0
 
 join-leave-messages:
-  # Servers that should NOT trigger join/leave/swap messages
+  # Servers that should NOT trigger join/leave/swap messages.
   ignored-servers: []
-  # MiniMessage format for first-time join. Placeholders: <name>, <username>
+  # Placeholders: <name>, <username>
   first-join: "<yellow><name> joined the game for the first time</yellow>"
-  # Discord webhook integration. Leave webhook-url empty to disable.
-  # Placeholders: {name} (nickname or username), {username} (always raw), {server} (current server)
+  # Discord webhook. Empty webhook-url disables it.
+  # Placeholders: {name}, {username}, {server}
   discord:
     webhook-url: ""
     join: "{name} joined the game"
@@ -70,25 +63,18 @@ database:
   username: "crabcraft"
   password: ""
 
-# All-time login streaks. The streak counts the days a player plays long
-# enough to qualify.
-# A "day" is a fixed 24-hour window that rolls over at reset-hour-utc:00
-# UTC (06:00 by default — a quiet hour for a UK-centric server).
-# Players must be online for required-play-minutes total within that
-# streak day before it adds +1. The required time can be split across
-# multiple sessions. Missing a single day is forgiven (the streak holds
-# but earns no point); missing two days in a row resets it to 1.
+# All-time login streaks. A "day" is a fixed 24h window rolling over at
+# reset-hour-utc:00 UTC; a player must be online required-play-minutes total
+# (across sessions) within that day to earn +1. One missed day is forgiven;
+# two in a row resets the streak to 1.
 login-streaks:
   reset-hour-utc: 6
   required-play-minutes: 10
 
-# Automatic updates — polls GitHub Releases and downloads the new proxy JAR to
-# plugins/CrabUtilities-Velocity.jar.staged. Stop the proxy, replace the live
-# jar with the .staged file, then start the proxy to apply.
 auto-update:
   enabled: true
   check-interval-hours: 6
   include-prereleases: false
   github-repo: "CrabCraftMC/CrabCraft"
-  # Optional personal-access token; unauthenticated requests are limited to 60/hour.
+  # Optional PAT; unauthenticated requests are limited to 60/hour.
   github-token: ""

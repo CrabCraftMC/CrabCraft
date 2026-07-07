@@ -32,7 +32,7 @@ public class EndermanGriefListener implements Listener {
         if (event.getEntity().getType() != EntityType.ENDERMAN) {
             return;
         }
-        if (this.plugin.getConfig().getBoolean("enderman-grief.prevent", false)) {
+        if (this.plugin.getConfig().getBoolean("tweaks.enderman-grief.prevent", false)) {
             event.setCancelled(true);
         }
     }

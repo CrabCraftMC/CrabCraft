@@ -39,13 +39,13 @@ public class ShulkerShellListener implements Listener {
         if (!(event.getEntity() instanceof final Shulker shulker)) {
             return;
         }
-        if (!this.plugin.getConfig().getBoolean("shulker-shells.enabled", false)) {
+        if (!this.plugin.getConfig().getBoolean("tweaks.shulker-shells.enabled", false)) {
             return;
         }
 
         final int configured = shulker.getKiller() != null
-                ? this.plugin.getConfig().getInt("shulker-shells.player-kill-multiplier", 2)
-                : this.plugin.getConfig().getInt("shulker-shells.other-multiplier", 1);
+                ? this.plugin.getConfig().getInt("tweaks.shulker-shells.player-kill-multiplier", 2)
+                : this.plugin.getConfig().getInt("tweaks.shulker-shells.other-multiplier", 1);
         final int multiplier = Math.max(1, configured);
         if (multiplier == 1) {
             return; // leave the vanilla drop exactly as rolled

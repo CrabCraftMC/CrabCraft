@@ -57,7 +57,7 @@ public class PersistentHeadsListener implements Listener {
     }
 
     private boolean isEnabled() {
-        return this.plugin.getConfig().getBoolean("persistent-heads.enabled", false);
+        return this.plugin.getConfig().getBoolean("tweaks.persistent-heads.enabled", false);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
