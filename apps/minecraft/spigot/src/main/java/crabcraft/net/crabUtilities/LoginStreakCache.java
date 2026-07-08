@@ -186,6 +186,25 @@ public class LoginStreakCache implements Listener {
             this.expiresAt = expiresAt;
             this.active = active;
         }
+
+        /**
+         * Whether the streak is still alive at {@code nowEpochSeconds}.
+         *
+         * <p>The {@code active} / {@code currentStreak} fields are baked
+         * into the Redis payload when Velocity last recorded a qualified
+         * day, so they go stale while the player is away — a hash entry
+         * from a week ago still says {@code active: true}. Consumers must
+         * re-check against {@code expiresAt} at read time via this method
+         * instead of trusting the stored flag.
+         */
+        public boolean isActiveAt(long nowEpochSeconds) {
+            return pendingStreak > 0 && nowEpochSeconds < expiresAt;
+        }
+
+        /** Live streak at {@code nowEpochSeconds}; {@code 0} once lapsed. */
+        public int currentStreakAt(long nowEpochSeconds) {
+            return isActiveAt(nowEpochSeconds) ? pendingStreak : 0;
+        }
     }
 
     private final class SubscriberThread extends Thread {
