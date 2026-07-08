@@ -34,3 +34,9 @@ description: Build, run, and drive the CrabCraft web app (apps/web) to verify ch
   match unrelated layout nodes — always anchor on the 10-image rows.
 - The gradient intentionally shows fewer blocks than the "Blocks" slider value
   when the color path has fewer unique palette matches.
+- The Block List grid is `div.grid[style*="80px"]` (inline auto-fill columns).
+  A bare `div.grid` matches the endpoint-controls grid first, whose third
+  button is the desktop-only swap button — invisible on mobile viewports.
+- Excluding a block usually keeps the Block List count the same: the gradient
+  re-picks from the remaining palette. Assert on the "Excluded (N)" chip, not
+  the list count.

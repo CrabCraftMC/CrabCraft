@@ -322,6 +322,15 @@ export function isBlockGradientPresetId(value: unknown): value is BlockGradientP
   return typeof value === "string" && presetIds.has(value)
 }
 
+// Presets compose as AND filters: a block must satisfy every selected
+// preset. An empty selection means the full palette.
+export function isBlockAllowedForPresets(
+  block: BlockPresetBlock,
+  presetIds: readonly BlockGradientPresetId[],
+) {
+  return presetIds.every((presetId) => isBlockAllowedForPreset(block, presetId))
+}
+
 export function isBlockAllowedForPreset(
   block: BlockPresetBlock,
   presetId: BlockGradientPresetId,

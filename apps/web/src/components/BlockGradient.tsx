@@ -18,7 +18,7 @@ import { RotateCcw, ArrowLeftRight, ChevronDown, Check } from "lucide-react";
 import blocks from "@/data/blocks.json";
 import {
   BLOCK_GRADIENT_PRESETS,
-  isBlockAllowedForPreset,
+  isBlockAllowedForPresets,
   isBlockGradientPresetId,
   type BlockGradientPresetId,
 } from "@/lib/blockGradientPresets";
@@ -121,7 +121,9 @@ export default function BlockGradient() {
   const [steps, setSteps] = useState(12);
   const [randomness, setRandomness] = useState(20);
   const [gradientLength, setGradientLength] = useState(7);
-  const [blockPreset, setBlockPreset] = useState<BlockGradientPresetId>("all");
+  // Selected preset filters, ANDed together; empty = full palette. "all"
+  // is never stored — it is represented by the empty selection.
+  const [blockPresets, setBlockPresets] = useState<BlockGradientPresetId[]>([]);
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -181,8 +183,19 @@ export default function BlockGradient() {
       if (saved.steps) setSteps(saved.steps);
       if (saved.randomness !== undefined) setRandomness(saved.randomness);
       if (saved.gradientLength) setGradientLength(saved.gradientLength);
-      if (isBlockGradientPresetId(saved.blockPreset)) {
-        setBlockPreset(saved.blockPreset);
+      if (Array.isArray(saved.blockPresets)) {
+        setBlockPresets(
+          saved.blockPresets.filter(
+            (id: unknown): id is BlockGradientPresetId =>
+              isBlockGradientPresetId(id) && id !== "all"
+          )
+        );
+      } else if (
+        isBlockGradientPresetId(saved.blockPreset) &&
+        saved.blockPreset !== "all"
+      ) {
+        // Migrate the legacy single-preset selection
+        setBlockPresets([saved.blockPreset]);
       }
       if (saved.excludedIds) setExcludedIds(saved.excludedIds);
     }
@@ -200,11 +213,11 @@ export default function BlockGradient() {
         steps,
         randomness,
         gradientLength,
-        blockPreset,
+        blockPresets,
         excludedIds,
       })
     );
-  }, [start, end, steps, randomness, gradientLength, blockPreset, excludedIds, hydrated]);
+  }, [start, end, steps, randomness, gradientLength, blockPresets, excludedIds, hydrated]);
 
   // Close wall popover on outside click
   useEffect(() => {
@@ -247,20 +260,34 @@ export default function BlockGradient() {
     });
   }, []);
 
-  const activePreset = useMemo(
-    () =>
-      BLOCK_GRADIENT_PRESETS.find((preset) => preset.id === blockPreset) ??
-      BLOCK_GRADIENT_PRESETS[0],
-    [blockPreset]
+  const selectedPresets = useMemo(
+    () => BLOCK_GRADIENT_PRESETS.filter((preset) => blockPresets.includes(preset.id)),
+    [blockPresets]
   );
 
+  const fullPalettePreset =
+    BLOCK_GRADIENT_PRESETS.find((preset) => preset.id === "all") ??
+    BLOCK_GRADIENT_PRESETS[0];
+
+  const presetLabel =
+    selectedPresets.length === 0
+      ? fullPalettePreset.name
+      : selectedPresets.map((preset) => preset.name).join(" + ");
+
+  const presetDescription =
+    selectedPresets.length === 0
+      ? fullPalettePreset.description
+      : selectedPresets.length === 1
+        ? selectedPresets[0].description
+        : "Blocks must match every selected preset.";
+
   const presetBlocks = useMemo(() => {
-    return blocks.filter((block) => isBlockAllowedForPreset(block, blockPreset));
-  }, [blockPreset]);
+    return blocks.filter((block) => isBlockAllowedForPresets(block, blockPresets));
+  }, [blockPresets]);
 
   const presetBlocksWithLab = useMemo(() => {
-    return blocksWithLab.filter((block) => isBlockAllowedForPreset(block, blockPreset));
-  }, [blocksWithLab, blockPreset]);
+    return blocksWithLab.filter((block) => isBlockAllowedForPresets(block, blockPresets));
+  }, [blocksWithLab, blockPresets]);
 
   // Drop selected block endpoints when the active preset no longer allows them.
   useEffect(() => {
@@ -269,7 +296,7 @@ export default function BlockGradient() {
     const sanitizeEndpoint = (endpoint: GradientEndpoint): GradientEndpoint => {
       if (!endpoint.blockId) return endpoint;
       const block = blocks.find((b) => b.id === endpoint.blockId);
-      if (block && isBlockAllowedForPreset(block, blockPreset)) return endpoint;
+      if (block && isBlockAllowedForPresets(block, blockPresets)) return endpoint;
       return {
         ...endpoint,
         mode: "color",
@@ -281,7 +308,7 @@ export default function BlockGradient() {
 
     setStart((current) => sanitizeEndpoint(current));
     setEnd((current) => sanitizeEndpoint(current));
-  }, [blockPreset, hydrated]);
+  }, [blockPresets, hydrated]);
 
   // Available blocks for gradient matching (excluding preset-hidden, user-excluded + glazed terracotta)
   const availableBlocks = useMemo(() => {
@@ -479,7 +506,7 @@ export default function BlockGradient() {
     setSteps(12);
     setRandomness(20);
     setGradientLength(7);
-    setBlockPreset("all");
+    setBlockPresets([]);
     setExcludedIds([]);
   };
 
@@ -705,7 +732,7 @@ export default function BlockGradient() {
                 aria-expanded={presetMenuOpen}
                 className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-line bg-paper text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-paper/80 focus:outline-none focus:border-orange-400 transition-colors cursor-pointer"
               >
-                <span className="truncate">{activePreset.name}</span>
+                <span className="truncate">{presetLabel}</span>
                 <ChevronDown
                   className={`w-4 h-4 text-gray-400 transition-transform ${
                     presetMenuOpen ? "rotate-180" : ""
@@ -715,10 +742,14 @@ export default function BlockGradient() {
               {presetMenuOpen && (
                 <div
                   role="listbox"
+                  aria-multiselectable
                   className="absolute left-0 right-0 top-full mt-2 z-30 bg-paper-2 rounded-xl shadow-lg overflow-hidden animate-[scaleIn_0.15s_ease-out]"
                 >
                   {BLOCK_GRADIENT_PRESETS.map((preset) => {
-                    const selected = preset.id === blockPreset;
+                    const isFullPalette = preset.id === "all";
+                    const selected = isFullPalette
+                      ? blockPresets.length === 0
+                      : blockPresets.includes(preset.id);
                     return (
                       <button
                         key={preset.id}
@@ -726,8 +757,16 @@ export default function BlockGradient() {
                         role="option"
                         aria-selected={selected}
                         onClick={() => {
-                          setBlockPreset(preset.id);
-                          setPresetMenuOpen(false);
+                          if (isFullPalette) {
+                            setBlockPresets([]);
+                            setPresetMenuOpen(false);
+                          } else {
+                            setBlockPresets((current) =>
+                              current.includes(preset.id)
+                                ? current.filter((id) => id !== preset.id)
+                                : [...current, preset.id]
+                            );
+                          }
                         }}
                         className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-bold transition-colors cursor-pointer ${
                           selected
@@ -744,7 +783,7 @@ export default function BlockGradient() {
               )}
             </div>
             <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-              {activePreset.description} Matching from {availableBlocks.length} blocks.
+              {presetDescription} Matching from {availableBlocks.length} blocks.
             </p>
           </div>
 
@@ -803,13 +842,16 @@ export default function BlockGradient() {
             {displayGradient.map((block, i) => (
               <button
                 key={`${block.id}-${i}`}
-                onClick={() => excludeBlock(block.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTooltip(null);
+                  handleWallCellClick(block, `list-${i}`, e.currentTarget);
+                }}
                 onMouseEnter={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   setTooltip({
                     name: block.name,
                     texture: block.texture,
-                    subtitle: block.id === start.blockId || block.id === end.blockId ? undefined : "Click to exclude",
                     x: rect.left + rect.width / 2,
                     y: rect.top - 4,
                   });
@@ -917,7 +959,7 @@ export default function BlockGradient() {
                   Pick a Block
                 </h2>
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {activePreset.name} preset
+                  {presetLabel} preset
                 </p>
               </div>
               <button
