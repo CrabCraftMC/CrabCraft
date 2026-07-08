@@ -30,6 +30,10 @@ import java.sql.Types;
  * <p>So qualifying Mon, Tue, Wed gives a streak of 3; qualifying Mon and
  * Wed (missing Tue) gives 2; qualifying Mon then Thu (missing both Tue
  * and Wed) resets to 1.
+ *
+ * <p>Alt accounts (rows in {@code player_alts}) never build a streak:
+ * their current and longest streaks are capped at 1, and they are
+ * excluded from the streak leaderboard entirely.
  */
 public final class LoginStreakService {
 
@@ -89,6 +93,22 @@ public final class LoginStreakService {
                 qualified_at = ?,
                 updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER
             WHERE minecraft_uuid = ? AND streak_day = ?
+            """;
+
+    private static final String IS_ALT_SQL =
+            "SELECT 1 FROM player_alts WHERE minecraft_uuid = ? LIMIT 1";
+
+    private static final String CAP_ALT_STREAK_SQL = """
+            UPDATE player_login_streaks SET
+                current_streak = LEAST(current_streak, 1),
+                longest_streak = LEAST(longest_streak, 1),
+                streak_started_at = CASE
+                    WHEN current_streak > 1 THEN last_login_at
+                    ELSE streak_started_at
+                END,
+                updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER
+            WHERE minecraft_uuid = ?
+              AND (current_streak > 1 OR longest_streak > 1)
             """;
 
     private static final String UPSERT_SQL = """
@@ -263,6 +283,15 @@ public final class LoginStreakService {
         }
         int newLongest = Math.max(longestStreak, newStreak);
 
+        // Alt accounts only ever hold a one-day streak at most.
+        if (isAltAccount(conn, uuid)) {
+            if (newStreak > 1) {
+                newStreak = 1;
+                newStartedAt = loginAt;
+            }
+            newLongest = Math.min(newLongest, 1);
+        }
+
         try (PreparedStatement stmt = conn.prepareStatement(UPSERT_SQL)) {
             stmt.setString(1, uuid);
             stmt.setInt(2, newStreak);
@@ -273,6 +302,35 @@ public final class LoginStreakService {
         }
 
         return new StreakSnapshot(newStreak, newLongest, newLastLoginAt, newStartedAt);
+    }
+
+    private static boolean isAltAccount(Connection conn, String uuid) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(IS_ALT_SQL)) {
+            stmt.setString(1, uuid);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /**
+     * Clamps an alt account's stored streak to a single day. Called when
+     * the proxy identifies a connecting player as an alt, so streaks
+     * accumulated before the account was registered as an alt (or before
+     * alt capping existed) are normalized without waiting for the next
+     * qualified day.
+     */
+    public void capAltStreak(String uuid) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(CAP_ALT_STREAK_SQL)) {
+            stmt.setString(1, uuid);
+            int updated = stmt.executeUpdate();
+            if (updated > 0) {
+                logger.info("Capped login streak for alt account {}", uuid);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to cap login streak for alt {}", uuid, e);
+        }
     }
 
     public PlaytimeCreditResult recordPlaytime(String uuid, long from, long to) {
@@ -484,15 +542,19 @@ public final class LoginStreakService {
         long activeCutoff = startOfDay(dayNumber(now, rh) - 2, rh);
         String activeFilter = longest ? "" : "AND s.last_login_at >= ? ";
 
+        // Alt accounts are excluded — they only ever hold a one-day streak
+        // and should not occupy leaderboard ranks alongside main accounts.
+        String notAlt = "AND NOT EXISTS (SELECT 1 FROM player_alts pa WHERE pa.minecraft_uuid = s.minecraft_uuid) ";
+
         String listSql = "SELECT s.minecraft_uuid, s.current_streak, s.longest_streak, " +
                 "s.last_login_at, s.streak_started_at, p.minecraft_username " +
                 "FROM player_login_streaks s " +
                 "LEFT JOIN players p ON p.minecraft_uuid = s.minecraft_uuid " +
-                "WHERE s." + column + " > 0 " + activeFilter +
+                "WHERE s." + column + " > 0 " + activeFilter + notAlt +
                 "ORDER BY s." + column + " DESC, s.last_login_at DESC " +
                 "LIMIT ? OFFSET ?";
-        String countSql = "SELECT COUNT(*) FROM player_login_streaks s WHERE s." + column + " > 0" +
-                (longest ? "" : " AND s.last_login_at >= ?");
+        String countSql = "SELECT COUNT(*) FROM player_login_streaks s " +
+                "WHERE s." + column + " > 0 " + activeFilter + notAlt;
 
         JsonArray entries = new JsonArray();
         int total = 0;

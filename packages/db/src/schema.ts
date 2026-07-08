@@ -268,7 +268,8 @@ export const mcLoginHistory = pgTable("mc_login_history", {
 // for the streak day. A "day" is a fixed 24-hour window rolling over at
 // a configured hour (06:00 UTC by default). A qualified day adds +1; a
 // single missed day is forgiven (streak holds, no point); two missed
-// days in a row reset it to 1.
+// days in a row reset it to 1. Alt accounts (rows in `player_alts`)
+// are capped at a one-day streak and excluded from the leaderboard.
 export const playerLoginStreaks = pgTable(
   "player_login_streaks",
   {
