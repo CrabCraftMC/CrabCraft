@@ -2,6 +2,7 @@ import { eq, and, desc, sql, like, ilike, asc, count } from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
+  playerAlts,
   applications,
   seasons as seasonsTable,
   playerSeasonStats,
@@ -284,6 +285,8 @@ export async function getUserByIdentifier(
   minecraft_uuid: string;
   minecraft_username: string;
   role: string;
+  nickname: string | null;
+  nickname_raw: string | null;
 } | null> {
   const isUuid = identifier.includes("-") || identifier.length === 32;
   const rows = await db
@@ -291,6 +294,8 @@ export async function getUserByIdentifier(
       minecraft_uuid: players.minecraft_uuid,
       minecraft_username: players.minecraft_username,
       role: players.role,
+      nickname: players.nickname,
+      nickname_raw: players.nickname_raw,
     })
     .from(players)
     .where(
@@ -305,6 +310,42 @@ export async function getUserByIdentifier(
     minecraft_uuid: row.minecraft_uuid,
     minecraft_username: row.minecraft_username,
     role: row.role,
+    nickname: row.nickname,
+    nickname_raw: row.nickname_raw,
+  };
+}
+
+/**
+ * Resolve an alt account (by UUID or username) to its owner's primary
+ * Minecraft account. Alts live in player_alts, linked to the owner via
+ * discord_id; the stats page uses this to redirect /stats/<alt> to the
+ * owner's profile.
+ */
+export async function getAltOwner(
+  identifier: string,
+): Promise<{
+  owner_uuid: string;
+  owner_username: string;
+} | null> {
+  const isUuid = identifier.includes("-") || identifier.length === 32;
+  const rows = await db
+    .select({
+      owner_uuid: players.minecraft_uuid,
+      owner_username: players.minecraft_username,
+    })
+    .from(playerAlts)
+    .innerJoin(players, eq(players.discord_id, playerAlts.discord_id))
+    .where(
+      isUuid
+        ? eq(playerAlts.minecraft_uuid, identifier)
+        : sql`LOWER(${playerAlts.minecraft_username}) = LOWER(${identifier})`,
+    )
+    .limit(1);
+  const row = rows[0];
+  if (!row?.owner_uuid || !row.owner_username) return null;
+  return {
+    owner_uuid: row.owner_uuid,
+    owner_username: row.owner_username,
   };
 }
 

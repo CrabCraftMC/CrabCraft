@@ -6,6 +6,7 @@ export const getMinecraftUuid = cache(webQueries.getMinecraftUuid);
 export const getPlayerRole = cache(webQueries.getPlayerRole);
 export const getMinecraftUsername = cache(webQueries.getMinecraftUsername);
 export const getUserByIdentifier = cache(webQueries.getUserByIdentifier);
+export const getAltOwner = cache(webQueries.getAltOwner);
 export const getJoinedSeason = cache(webQueries.getJoinedSeason);
 export const getPlayerProfile = cache(webQueries.getPlayerProfile);
 export const getPlayerCurrentStreak = cache(webQueries.getPlayerCurrentStreak);
