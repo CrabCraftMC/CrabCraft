@@ -55,6 +55,8 @@ export default function Navbar({ user }: { user?: UserData | null }) {
     const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
     const currentPath = usePathname();
     const [isDark, setIsDark] = useState(false);
+    const [ipCopied, setIpCopied] = useState(false);
+    const ipCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const featuredTools = featuredToolUrls
         .map((url) => config.navbar.tools.find((tool) => tool.url === url))
         .filter((tool): tool is (typeof config.navbar.tools)[number] => Boolean(tool));
@@ -95,6 +97,14 @@ export default function Navbar({ user }: { user?: UserData | null }) {
 
     const toggleMenu = () => { trigger(); setIsMenuOpen(!isMenuOpen); };
 
+    const copyIp = () => {
+        trigger();
+        navigator.clipboard.writeText("crabcraft.net");
+        setIpCopied(true);
+        if (ipCopiedTimer.current) clearTimeout(ipCopiedTimer.current);
+        ipCopiedTimer.current = setTimeout(() => setIpCopied(false), 2000);
+    };
+
     return (
         <div className="sticky top-4 z-50 px-4 lg:px-8 relative">
         <nav className="container mx-auto relative">
@@ -105,18 +115,29 @@ export default function Navbar({ user }: { user?: UserData | null }) {
             <div className="relative z-10 px-6 lg:px-8">
                 <div className="flex items-center h-14 md:h-20">
                     <div className="flex-1 flex justify-start">
-                        <Link href="/" className="flex items-center gap-3">
-                            <Image
-                                src="/logo.png"
-                                alt="CrabCraft logo"
-                                width={44}
-                                height={44}
-                                loading="eager"
-                                unoptimized
-                                className="object-contain w-9 h-9 md:w-[44px] md:h-[44px]"
-                            />
-                            <span className="font-bold text-base text-orange-500 tracking-wide">CrabCraft.net</span>
-                        </Link>
+                        <div className="flex items-center gap-3">
+                            <Link href="/" className="flex items-center">
+                                <Image
+                                    src="/logo.png"
+                                    alt="CrabCraft logo"
+                                    width={44}
+                                    height={44}
+                                    loading="eager"
+                                    unoptimized
+                                    className="object-contain w-9 h-9 md:w-[44px] md:h-[44px]"
+                                />
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={copyIp}
+                                title="Click to copy server IP"
+                                aria-label="Copy server IP"
+                                className="relative font-bold text-base text-orange-500 tracking-wide text-left cursor-pointer"
+                            >
+                                <span className={`transition-opacity duration-300 ${ipCopied ? "opacity-0" : "opacity-100"}`}>CrabCraft.net</span>
+                                <span aria-hidden={!ipCopied} className={`absolute inset-0 transition-opacity duration-300 ${ipCopied ? "opacity-100" : "opacity-0"}`}>IP copied</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="hidden md:flex flex-1 justify-center items-center space-x-4 lg:space-x-6">
