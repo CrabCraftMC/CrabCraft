@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import PlayerStatsPage from "@/components/PlayerStatsPage";
 import {
+  getAltOwner,
   getPlayerRole,
   getJoinedSeason,
   getUserByIdentifier,
@@ -110,8 +112,16 @@ export default async function StatsPage({ params }: Props) {
     fetchAwardDefinitions(),
   ]);
 
+  // Alt accounts have no players row of their own — send visitors to the
+  // owner's profile instead of a "player not found" page.
+  if (!dbUser) {
+    const altOwner = await getAltOwner(identifier).catch(() => null);
+    if (altOwner) redirect(`/stats/${altOwner.owner_uuid}`);
+  }
+
   const playerData = {
     nickname: dbUser?.minecraft_username ?? identifier,
+    nicknameRaw: dbUser?.nickname_raw ?? null,
     uuid: dbUser?.minecraft_uuid ?? "",
     rank: 0,
     points: 0,

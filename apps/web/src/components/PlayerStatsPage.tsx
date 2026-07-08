@@ -3,9 +3,11 @@ import Squircle from "@/components/Squircle";
 import PlayerDetailedStats from "@/components/PlayerDetailedStats";
 import PlayerAdvancements from "@/components/PlayerAdvancements";
 import { SiTwitch, SiYoutube, SiTiktok } from "react-icons/si";
+import { ColoredNickname, parseMinecraftColors } from "@/lib/parseMinecraftColors";
 
 interface PlayerProps {
     nickname: string;
+    nicknameRaw?: string | null;
     uuid: string;
     rank: number;
     points: number;
@@ -44,9 +46,17 @@ export default function PlayerStatsPage(props: PlayerProps) {
         );
     }
 
-    const { nickname, uuid, rank, points, gold, silver, bronze, currentStreak, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile, advancements: advancementsData } = props;
+    const { nickname, nicknameRaw, uuid, rank, points, gold, silver, bronze, currentStreak, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile, advancements: advancementsData } = props;
     const showStreak = currentStreak >= 3;
     const hasMeta = showStreak || rank > 0 || joinedSeason;
+    // Show the real username under a nickname that spells something else
+    // (a recolored username needs no repeat).
+    const plainNick = nicknameRaw
+        ? parseMinecraftColors(nicknameRaw).map((s) => s.text).join("")
+        : null;
+    const showUsername = Boolean(
+        plainNick && plainNick.toLowerCase() !== nickname.toLowerCase(),
+    );
 
     return (
         <div className="min-h-screen pt-16 lg:pt-24 pb-16">
@@ -82,7 +92,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                         <div className="relative z-10 pl-24 lg:pl-32 flex items-center justify-between">
                             <div>
                                 <h1 className="text-3xl lg:text-4xl font-bold text-white flex items-center flex-wrap">
-                                    {nickname}
+                                    {nicknameRaw ? <ColoredNickname raw={nicknameRaw} exact /> : nickname}
                                     {(role === "moderator" || role === "admin") && (
                                         <span className="ml-3 inline-flex items-center group relative cursor-pointer" tabIndex={0} title="Moderator">
                                             <img
@@ -95,6 +105,9 @@ export default function PlayerStatsPage(props: PlayerProps) {
                                         </span>
                                     )}
                                 </h1>
+                                {showUsername && (
+                                    <p className="text-white/50 text-sm mt-0.5">{nickname}</p>
+                                )}
                                 {profile?.discord_username && (
                                     <p className="text-white/50 text-sm mt-0.5 flex items-center gap-1.5">
                                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3c-.2.4-.5 1-.7 1.4a18.2 18.2 0 0 0-5.4 0C9.1 4 8.8 3.4 8.6 3A19.5 19.5 0 0 0 3.7 4.4 20.2 20.2 0 0 0 .2 17.2a19.7 19.7 0 0 0 6 3 14.3 14.3 0 0 0 1.2-2 12.8 12.8 0 0 1-2-.9l.5-.4a14 14 0 0 0 12.1 0l.5.4a12.8 12.8 0 0 1-2 .9 14.3 14.3 0 0 0 1.3 2 19.7 19.7 0 0 0 6-3A20.2 20.2 0 0 0 20.3 4.4zM8 14.7c-1.1 0-2-1-2-2.3s.9-2.3 2-2.3 2 1 2 2.3-.9 2.3-2 2.3zm8 0c-1.1 0-2-1-2-2.3s.9-2.3 2-2.3 2 1 2 2.3-.9 2.3-2 2.3z" /></svg>
