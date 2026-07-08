@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GridPattern from "@/components/GridPattern";
 import CommandMenu from "@/components/CommandMenu";
+import MascotJoin from "@/components/MascotJoin";
 import "@/styles/globals.css";
 
 const unbounded = Unbounded({
@@ -132,6 +133,8 @@ export default async function RootLayout({
           <Footer />
         </div>
         <CommandMenu />
+        {/* Only nudge signed-out visitors to join — signed-in users already have. */}
+        {!userData && <MascotJoin />}
         {process.env.NODE_ENV === "production" && (
           <Script
             src="https://web.maxmoon.sh/script.js"
