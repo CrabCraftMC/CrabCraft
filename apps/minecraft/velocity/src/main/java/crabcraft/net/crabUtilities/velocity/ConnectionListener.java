@@ -87,6 +87,16 @@ public class ConnectionListener {
             if (altQueryService == null) return;
 
             boolean isAlt = altQueryService.isAlt(uuid);
+
+            // Alts only ever hold a one-day streak; clamp any streak the
+            // account built up before it was registered as an alt.
+            if (isAlt) {
+                var streakService = plugin.getLoginStreakService();
+                if (streakService != null) {
+                    streakService.capAltStreak(uuid);
+                }
+            }
+
             if (!isPlayerActive(playerId)) return;
 
             if (isAlt) {
