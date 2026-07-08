@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, useDeferredValue, memo } from "react";
 import SwatchColorPicker from "./SwatchColorPicker";
 import Squircle from "@/components/Squircle";
 import {
@@ -78,6 +78,31 @@ function valueNoise2d(x: number, y: number, seed: number): number {
   return nx0 + (nx1 - nx0) * sy;
 }
 
+// Memoized so slider drags only re-render the wall cells whose block
+// actually changed, instead of all ~300 images per input event.
+const WallCell = memo(function WallCell({
+  block,
+  cellKey,
+  onCellClick,
+}: {
+  block: BlockWithLab;
+  cellKey: string;
+  onCellClick: (block: BlockWithLab, cellKey: string, target: HTMLElement) => void;
+}) {
+  return (
+    <img
+      src={`${TEXTURE_BASE}/${block.texture}.png`}
+      alt=""
+      className="flex-1 min-w-0 cursor-pointer hover:brightness-125 transition-[filter] block-texture"
+      style={{ aspectRatio: "1" }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onCellClick(block, cellKey, e.currentTarget);
+      }}
+    />
+  );
+});
+
 export default function BlockGradient() {
   const [start, setStart] = useState<GradientEndpoint>({
     mode: "block",
@@ -102,6 +127,13 @@ export default function BlockGradient() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
+
+  // Deferred slider values: the slider thumb and its label update
+  // immediately, while the gradient/wall recomputes render at low
+  // priority so drags stay responsive on slower devices.
+  const deferredSteps = useDeferredValue(steps);
+  const deferredRandomness = useDeferredValue(randomness);
+  const deferredGradientLength = useDeferredValue(gradientLength);
 
   // Block picker modal state
   const [blockPickerFor, setBlockPickerFor] = useState<
@@ -296,8 +328,10 @@ export default function BlockGradient() {
     [availableBlocks, presetBlocksWithLab, blocksWithLab]
   );
 
-  // Compute gradient: oversample, dedup, then select `steps` unique blocks
-  const displayGradient = useMemo(() => {
+  // Discover all unique blocks along the gradient by oversampling. This is
+  // the expensive part (100 samples × nearest-match over the palette), and
+  // it is independent of the Blocks slider so drags never re-run it.
+  const uniqueGradientBlocks = useMemo(() => {
     const startBlock = start.blockId
       ? presetBlocksWithLab.find((b) => b.id === start.blockId)
       : null;
@@ -323,22 +357,29 @@ export default function BlockGradient() {
     if (startBlock) unique[0] = startBlock;
     if (endBlock) unique[unique.length - 1] = endBlock;
 
+    return unique;
+  }, [startLab, endLab, findClosest, start.blockId, end.blockId, presetBlocksWithLab]);
+
+  // Select `steps` blocks evenly from the unique list (cheap)
+  const displayGradient = useMemo(() => {
+    const unique = uniqueGradientBlocks;
+    const steps = deferredSteps;
+
     // If we have fewer unique blocks than requested, return all of them
     if (unique.length <= steps) return unique;
 
-    // Select `steps` blocks evenly from the unique list
     const result: BlockWithLab[] = [];
     for (let i = 0; i < steps; i++) {
       const idx = Math.round((i / (steps - 1)) * (unique.length - 1));
       result.push(unique[idx]);
     }
     return result;
-  }, [startLab, endLab, steps, findClosest, start.blockId, end.blockId, presetBlocksWithLab]);
+  }, [uniqueGradientBlocks, deferredSteps]);
 
   // Build the wall grid with per-cell randomness
   const WALL_COLS = 10;
-  const WALL_ROWS = gradientLength;
-  const randFactor = randomness / 100;
+  const WALL_ROWS = deferredGradientLength;
+  const randFactor = deferredRandomness / 100;
 
   const wallGrid = useMemo(() => {
     const blocks = displayGradient;
@@ -351,7 +392,7 @@ export default function BlockGradient() {
 
         // Apply randomness: organic 2D noise perturbation
         if (randFactor > 0) {
-          const noise = valueNoise2d(c * 0.4, r * 0.4, steps);
+          const noise = valueNoise2d(c * 0.4, r * 0.4, deferredSteps);
           const perturbation = (noise - 0.5) * randFactor;
           t = Math.max(0, Math.min(1, t + perturbation));
         }
@@ -366,10 +407,26 @@ export default function BlockGradient() {
   }, [
     displayGradient,
     randFactor,
-    steps,
+    deferredSteps,
     WALL_ROWS,
     WALL_COLS,
   ]);
+
+  const handleWallCellClick = useCallback(
+    (block: BlockWithLab, cellKey: string, target: HTMLElement) => {
+      setWallPopover((current) => {
+        if (current?.cellKey === cellKey) return null;
+        const rect = target.getBoundingClientRect();
+        return {
+          block,
+          x: rect.left + rect.width / 2,
+          y: rect.top - 4,
+          cellKey,
+        };
+      });
+    },
+    []
+  );
 
   // Filtered blocks for modal
   const filteredBlocks = useMemo(() => {
@@ -797,27 +854,11 @@ export default function BlockGradient() {
             {wallGrid.map((row, r) => (
               <div key={r} className="flex">
                 {row.map((block, c) => (
-                  <img
+                  <WallCell
                     key={`${r}-${c}`}
-                    src={`${TEXTURE_BASE}/${block.texture}.png`}
-                    alt=""
-                    className="flex-1 min-w-0 cursor-pointer hover:brightness-125 transition-[filter] block-texture"
-                    style={{ aspectRatio: "1" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const key = `${r}-${c}`;
-                      if (wallPopover?.cellKey === key) {
-                        setWallPopover(null);
-                      } else {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setWallPopover({
-                          block,
-                          x: rect.left + rect.width / 2,
-                          y: rect.top - 4,
-                          cellKey: key,
-                        });
-                      }
-                    }}
+                    block={block}
+                    cellKey={`${r}-${c}`}
+                    onCellClick={handleWallCellClick}
                   />
                 ))}
               </div>
@@ -900,7 +941,7 @@ export default function BlockGradient() {
               className="w-full px-4 py-2.5 rounded-xl border border-line bg-paper text-sm focus:outline-none focus:border-orange-400 mb-4"
             />
             <div
-              className="overflow-y-auto flex-1 -mx-1 px-1 themed-scrollbar"
+              className="overflow-y-auto flex-1 -ml-1 pl-1 pr-2 themed-scrollbar"
               onMouseLeave={() => setTooltip(null)}
             >
               <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 p-1">

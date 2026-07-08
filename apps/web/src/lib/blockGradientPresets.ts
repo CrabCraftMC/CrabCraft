@@ -5,6 +5,11 @@ export const BLOCK_GRADIENT_PRESETS = [
     description: "Every block in the gradient palette.",
   },
   {
+    id: "no_transparent",
+    name: "No transparent blocks",
+    description: "Excludes see-through blocks like glass, leaves, ice, and slime.",
+  },
+  {
     id: "survival",
     name: "Survival obtainable",
     description: "Blocks with obtainable item forms in vanilla Survival.",
@@ -286,6 +291,19 @@ const BULK_BUILDING_EXACT_BLOCKS = makeSet([
   "warped_nylium",
 ])
 
+// Blocks that are not full opaque cubes in-game — glass, leaves, ice, and
+// similar see-through blocks. Packed and blue ice render fully opaque, so
+// they are intentionally not listed here.
+const TRANSPARENT_EXACT_BLOCKS = makeSet([
+  "glass",
+  "tinted_glass",
+  "ice",
+  "slime_block",
+  "honey_block",
+])
+
+const TRANSPARENT_SUFFIXES = ["_stained_glass", "_leaves"]
+
 const BULK_BUILDING_SUFFIXES = [
   "_concrete",
   "_concrete_powder",
@@ -309,6 +327,8 @@ export function isBlockAllowedForPreset(
   presetId: BlockGradientPresetId,
 ) {
   switch (presetId) {
+    case "no_transparent":
+      return !isTransparentBlock(block)
     case "survival":
       return isSurvivalObtainableBlock(block)
     case "renewable":
@@ -321,6 +341,14 @@ export function isBlockAllowedForPreset(
     default:
       return true
   }
+}
+
+function isTransparentBlock(block: BlockPresetBlock) {
+  const { id } = block
+  return (
+    TRANSPARENT_EXACT_BLOCKS.has(id) ||
+    TRANSPARENT_SUFFIXES.some((suffix) => id.endsWith(suffix))
+  )
 }
 
 function isSurvivalObtainableBlock(block: BlockPresetBlock) {
