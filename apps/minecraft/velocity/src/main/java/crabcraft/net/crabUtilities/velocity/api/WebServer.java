@@ -529,7 +529,7 @@ public class WebServer {
             + "\"get\":{"
             + "\"tags\":[\"Streaks\"],"
             + "\"summary\":\"Login streak leaderboard\","
-            + "\"description\":\"Returns players ranked by their current or longest login streak. Use `metric=longest` for the all-time best leaderboard; the default ranks by current streak. Each entry includes the player's UUID, username, current and longest streaks, and whether their streak is still active. Supports pagination with limit and offset.\","
+            + "\"description\":\"Returns players ranked by their current or longest login streak. Use `metric=longest` for the all-time best leaderboard; the default ranks by current streak and only includes streaks that are still active (lapsed streaks are excluded). Each entry includes the player's UUID, username, current and longest streaks, and whether their streak is still active. Supports pagination with limit and offset.\","
             + "\"operationId\":\"getStreakLeaderboard\","
             + "\"parameters\":["
             + "{\"name\":\"metric\",\"in\":\"query\",\"schema\":{\"type\":\"string\",\"enum\":[\"current\",\"longest\"],\"default\":\"current\"},\"description\":\"Which streak to rank by\"},"

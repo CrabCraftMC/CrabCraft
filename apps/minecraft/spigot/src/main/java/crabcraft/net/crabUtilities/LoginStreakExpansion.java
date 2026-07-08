@@ -65,11 +65,14 @@ public class LoginStreakExpansion extends PlaceholderExpansion {
         LoginStreakCache.StreakSnapshot snap = cache.get(player.getUniqueId());
         long now = System.currentTimeMillis() / 1000L;
 
+        // Re-derive liveness from expires_at on every request: the cached
+        // payload's own active/current fields were computed when Velocity
+        // last published and go stale while the player is offline.
         return switch (key) {
-            case "current" -> Integer.toString(snap == null ? 0 : snap.currentStreak);
+            case "current" -> Integer.toString(snap == null ? 0 : snap.currentStreakAt(now));
             case "pending" -> Integer.toString(snap == null ? 0 : snap.pendingStreak);
             case "longest" -> Integer.toString(snap == null ? 0 : snap.longestStreak);
-            case "active" -> Boolean.toString(snap != null && snap.active);
+            case "active" -> Boolean.toString(snap != null && snap.isActiveAt(now));
             case "last_login" -> Long.toString(snap == null ? 0L : snap.lastLoginAt);
             case "started_at" -> Long.toString(snap == null ? 0L : snap.streakStartedAt);
             case "expires_at" -> Long.toString(snap == null ? 0L : snap.expiresAt);
@@ -80,7 +83,7 @@ public class LoginStreakExpansion extends PlaceholderExpansion {
     }
 
     private static long remaining(LoginStreakCache.StreakSnapshot snap, long now) {
-        if (snap == null || !snap.active) return 0L;
+        if (snap == null || !snap.isActiveAt(now)) return 0L;
         return Math.max(0L, snap.expiresAt - now);
     }
 
