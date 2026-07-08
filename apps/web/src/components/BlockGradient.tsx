@@ -900,7 +900,7 @@ export default function BlockGradient() {
               className="w-full px-4 py-2.5 rounded-xl border border-line bg-paper text-sm focus:outline-none focus:border-orange-400 mb-4"
             />
             <div
-              className="overflow-y-auto flex-1 -mx-1 px-1 themed-scrollbar"
+              className="overflow-y-auto flex-1 -ml-1 pl-1 pr-2 themed-scrollbar"
               onMouseLeave={() => setTooltip(null)}
             >
               <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 p-1">
