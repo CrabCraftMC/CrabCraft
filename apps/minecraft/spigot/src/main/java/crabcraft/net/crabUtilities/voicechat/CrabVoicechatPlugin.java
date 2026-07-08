@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 public class CrabVoicechatPlugin implements VoicechatPlugin {
@@ -49,6 +50,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private BukkitTask rosterRebroadcastTask;
     private BukkitTask sweepTask;
     private Set<UUID> crossServerGroupIds = Set.of();
+
+    /** Velocity backend names we've already warned about mismatching this-backend. */
+    private final Set<String> homeMismatchWarned = ConcurrentHashMap.newKeySet();
 
     public CrabVoicechatPlugin(CrabUtilities plugin) {
         this.plugin = plugin;
@@ -192,6 +196,20 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         // run on the SVC server thread (the API is thread-safe, but we
         // route through the connection which expects normal scheduling).
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            // Self-check: Velocity just wrote this player's home key with
+            // THIS backend's name from velocity.toml. If it doesn't match
+            // our configured this-backend, every other backend will drop
+            // the audio frames we publish — surface the config error here
+            // instead of failing near-silently on the listeners' side.
+            String velocityName = bus.fetchPlayerHome(playerId);
+            if (velocityName != null && !velocityName.equals(thisBackend)
+                    && homeMismatchWarned.add(velocityName)) {
+                logger.severe("voicechat.cross-server.this-backend is '" + thisBackend
+                        + "' but Velocity calls this backend '" + velocityName
+                        + "'. Other backends will DROP all voice frames published by "
+                        + "this server — fix config.yml (names are case-sensitive).");
+            }
+
             String groupIdStr = bus.fetchPlayerGroup(playerId);
             if (groupIdStr == null) return;
             UUID groupId;
@@ -246,11 +264,27 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (group != null && event.getConnection() != null
                 && crossServerGroupIds.contains(group.getId())) {
             UUID playerId = event.getConnection().getPlayer().getUuid();
-            bus.publishRoster(VoiceMessages.encodeRosterLeave(
-                    group.getId(), playerId, thisBackend));
-            // Explicit leave clears the auto-rejoin record so the player
-            // doesn't get put back into the group on their next server hop.
-            bus.deletePlayerGroup(playerId);
+            UUID groupId = group.getId();
+            // Decide on the next tick whether this was an explicit leave: a
+            // GUI leave still has the player online then, while a leave the
+            // SVC server fires as part of a disconnect (server hop) resolves
+            // to offline. For hops, onPlayerDisconnect already publishes the
+            // roster leave, and deleting the player-group key here would
+            // break auto-rejoin on the destination backend.
+            try {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    Player p = Bukkit.getPlayer(playerId);
+                    if (p == null || !p.isOnline()) return;
+                    bus.publishRoster(VoiceMessages.encodeRosterLeave(
+                            groupId, playerId, thisBackend));
+                    // Explicit leave clears the auto-rejoin record so the player
+                    // doesn't get put back into the group on their next server hop.
+                    bus.deletePlayerGroup(playerId);
+                });
+            } catch (Exception ignored) {
+                // Plugin is disabling; shutdown() broadcasts leaves for all
+                // local members anyway.
+            }
         }
         membership.onLeaveGroupEvent(event);
     }

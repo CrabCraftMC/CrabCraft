@@ -203,6 +203,10 @@ public class CrabUtilitiesVelocity {
             if (connectionListener != null) {
                 connectionListener.shutdown();
             }
+            if (playerLocationTracker != null) {
+                playerLocationTracker.shutdown();
+                playerLocationTracker = null;
+            }
             stopRuntimeConsumers();
             shutdownDatabaseExecutor("shutdown");
             stopLoginStreakPublisher();
@@ -273,6 +277,14 @@ public class CrabUtilitiesVelocity {
             this.redisStaffChat = new RedisStaffChat(this, newConfig);
             this.redisStaffChat.start();
 
+            // Tear down the old tracker first: re-registering a new instance
+            // without unregistering the old one leaked its Jedis pool and
+            // left a duplicate event handler behind on every reload.
+            if (playerLocationTracker != null) {
+                server.getEventManager().unregisterListener(this, playerLocationTracker);
+                playerLocationTracker.shutdown();
+                playerLocationTracker = null;
+            }
             if (newConfig.isVoicechatCrossServerEnabled()) {
                 this.playerLocationTracker = new PlayerLocationTracker(this, newConfig);
                 this.playerLocationTracker.start();

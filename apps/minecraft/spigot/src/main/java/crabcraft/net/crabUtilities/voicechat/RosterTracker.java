@@ -105,9 +105,19 @@ class RosterTracker {
 
         Map<UUID, RemoteMember> members = remoteByGroup.get(leave.groupId());
         if (members == null) return;
-        RemoteMember removed = members.remove(leave.playerId());
-        if (members.isEmpty()) remoteByGroup.remove(leave.groupId());
+        // Only the backend that owns the tracked entry may remove it. On a
+        // server hop the origin's ROSTER_LEAVE can be delayed (async publish
+        // under tick lag) and arrive after the destination's ROSTER_JOIN;
+        // honoring it here would evict a member who is still in the group.
+        RemoteMember[] holder = new RemoteMember[1];
+        members.computeIfPresent(leave.playerId(), (id, current) -> {
+            if (!current.backend().equals(leave.backend())) return current;
+            holder[0] = current;
+            return null;
+        });
+        RemoteMember removed = holder[0];
         if (removed == null) return;
+        if (members.isEmpty()) remoteByGroup.remove(leave.groupId());
 
         Bukkit.getScheduler().runTask(plugin,
                 () -> removeMemberFromLocalListeners(leave.groupId(), removed));
@@ -193,12 +203,20 @@ class RosterTracker {
     }
 
     private void removeMemberFromLocalListeners(UUID groupId, RemoteMember member) {
+        // Never strip state for a player who is live on this backend: that
+        // happens when a cross-server member hops HERE and their old
+        // backend's ROSTER_LEAVE lands after they connected. SVC's native
+        // PlayerState is authoritative for local players, and a fake
+        // remove_state would wipe it on every client with no repair path.
+        if (Bukkit.getPlayer(member.uuid()) != null) return;
         for (Player p : Bukkit.getOnlinePlayers()) {
             svcPackets.sendRemove(p, member.uuid());
         }
     }
 
     private void sendMemberTo(Player recipient, UUID groupId, RemoteMember member) {
+        // Same rule as removal: never fake state for a live local player.
+        if (Bukkit.getPlayer(member.uuid()) != null) return;
         svcPackets.sendState(recipient, member.uuid(), member.name(), groupId);
     }
 

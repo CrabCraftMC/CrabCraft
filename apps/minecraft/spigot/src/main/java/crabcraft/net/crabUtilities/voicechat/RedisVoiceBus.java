@@ -2,6 +2,7 @@ package crabcraft.net.crabUtilities.voicechat;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.IllegalPluginAccessException;
 import redis.clients.jedis.BinaryJedisPubSub;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -59,6 +60,10 @@ class RedisVoiceBus {
 
         JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxTotal(8);
+        // Bound resource waits: getResource() otherwise blocks forever when
+        // the pool is exhausted, which would stall the audio subscriber
+        // threads (fetchPlayerHome runs on them) during a Redis hiccup.
+        poolConfig.setMaxWait(java.time.Duration.ofMillis(1500));
         if (password != null && !password.isEmpty()) {
             jedisPool = new JedisPool(poolConfig, host, port, 2000, password);
         } else {
@@ -141,13 +146,28 @@ class RedisVoiceBus {
     void publishRoster(String message) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        runAsync(() -> {
             try (Jedis jedis = pool.getResource()) {
                 jedis.publish(VoiceMessages.ROSTER_CHANNEL, message);
             } catch (Exception e) {
                 plugin.getLogger().warning("Voice roster publish failed: " + e.getMessage());
             }
         });
+    }
+
+    /**
+     * Bukkit rejects new tasks once the plugin is disabling (the enabled
+     * flag flips before onDisable runs), which made the shutdown
+     * leave-broadcast throw and abort the rest of the cleanup. Fall back
+     * to running inline in that case — the shutdown path is not
+     * latency-sensitive and the publish has a bounded socket timeout.
+     */
+    private void runAsync(Runnable task) {
+        try {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
+        } catch (IllegalPluginAccessException e) {
+            task.run();
+        }
     }
 
     /** Returns the home backend for the speaker, or null if not set. */
@@ -178,7 +198,7 @@ class RedisVoiceBus {
     void writePlayerGroup(UUID playerId, UUID groupId, long ttlSeconds) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        runAsync(() -> {
             try (Jedis jedis = pool.getResource()) {
                 jedis.setex(VoiceMessages.playerGroupKey(playerId), ttlSeconds, groupId.toString());
             } catch (Exception e) {
@@ -190,7 +210,7 @@ class RedisVoiceBus {
     void deletePlayerGroup(UUID playerId) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        runAsync(() -> {
             try (Jedis jedis = pool.getResource()) {
                 jedis.del(VoiceMessages.playerGroupKey(playerId));
             } catch (Exception ignored) {}

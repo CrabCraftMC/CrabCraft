@@ -466,7 +466,12 @@ public final class CrabUtilities extends JavaPlugin {
             updateService.shutdown();
         }
         if (voicechatPlugin != null) {
-            voicechatPlugin.shutdown();
+            // Never let voice-bridge cleanup abort the rest of onDisable.
+            try {
+                voicechatPlugin.shutdown();
+            } catch (Exception e) {
+                getLogger().warning("Voice bridge shutdown failed: " + e.getMessage());
+            }
             getServer().getServicesManager().unregister(voicechatPlugin);
         }
         stopLoginStreakCache();
