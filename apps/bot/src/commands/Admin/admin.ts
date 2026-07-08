@@ -10,12 +10,17 @@ import {
   buildApplicationHubContainer,
 } from "../../utils/applicationChannel.js";
 import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
+import { buildSeasonAccessMessage } from "../../utils/seasonAccess.js";
 import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
 import {
   fetchLeaderboardData,
   buildLeaderboardComponents,
+  DEFAULT_LEADERBOARD_SEASON,
 } from "../../utils/leaderboard.js";
-import { saveLeaderboardState } from "../../utils/leaderboardState.js";
+import {
+  saveLeaderboardState,
+  loadLeaderboardState,
+} from "../../utils/leaderboardState.js";
 import { syncLeaderboardEmojis } from "../../utils/playerEmoji.js";
 import {
   type ChatInputCommandInteraction,
@@ -26,6 +31,7 @@ import {
   PermissionFlagsBits,
   MessageFlags,
   type GuildMember,
+  type NewsChannel,
   type TextChannel,
 } from "discord.js";
 
@@ -163,11 +169,11 @@ export default class AdminCommand extends SlashCommand {
       return;
     }
 
-    const memberRole = interaction.guild!.roles.cache.get(
-      config.MEMBER_ROLE_ID,
-    );
-    if (memberRole) {
-      await applicant.roles.add(memberRole).catch(() => null);
+    // Membership itself lives in the whitelist database; the only role a new
+    // member needs is the current season's (the same one the season access
+    // button hands out).
+    if (config.CURRENT_SEASON_ROLE_ID) {
+      await applicant.roles.add(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
     }
 
     await appDb.upsertUser({
@@ -246,12 +252,20 @@ export default class AdminCommand extends SlashCommand {
       // Non-critical — continue with wipe
     }
 
+    // Unlink the Minecraft account in the app database too, otherwise the
+    // account stays claimed as their primary and can't be re-linked or added
+    // as someone's alt.
+    try {
+      await appDb.clearPlayerMinecraftLinkByDiscordId(targetUser.id);
+    } catch {
+      // Non-critical — continue with wipe
+    }
+
     const member = await interaction
       .guild!.members.fetch(targetUser.id)
       .catch(() => null);
-    if (member) {
-      const role = interaction.guild!.roles.cache.get(config.MEMBER_ROLE_ID);
-      if (role) await member.roles.remove(role).catch(() => null);
+    if (member && config.CURRENT_SEASON_ROLE_ID) {
+      await member.roles.remove(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
     }
 
     const logChannel = await interaction.guild!.channels
@@ -333,13 +347,20 @@ export default class AdminCommand extends SlashCommand {
       }
     }
 
+    // Unlink the account in the app database too, otherwise it stays claimed
+    // as someone's primary and can't be re-linked or added as an alt.
+    try {
+      await appDb.clearPlayerMinecraftLinkByUuid(UUID);
+    } catch {
+      // Non-critical — continue with wipe
+    }
+
     if (linkedDiscordId) {
       const member = await interaction
         .guild!.members.fetch(linkedDiscordId)
         .catch(() => null);
-      if (member) {
-        const role = interaction.guild!.roles.cache.get(config.MEMBER_ROLE_ID);
-        if (role) await member.roles.remove(role).catch(() => null);
+      if (member && config.CURRENT_SEASON_ROLE_ID) {
+        await member.roles.remove(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
       }
     }
 
@@ -372,16 +393,22 @@ export default class AdminCommand extends SlashCommand {
     const which = interaction.options.getString("message", true);
 
     const channel = interaction.channel;
-    if (!channel || channel.type !== ChannelType.GuildText) {
+    if (
+      !channel ||
+      (channel.type !== ChannelType.GuildText &&
+        channel.type !== ChannelType.GuildAnnouncement)
+    ) {
       await interaction.reply({
         components: [
-          errorContainer("**Error!** This must be run in a text channel."),
+          errorContainer(
+            "**Error!** This must be run in a text or announcement channel.",
+          ),
         ],
         flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
       });
       return;
     }
-    const textChannel = channel as TextChannel;
+    const textChannel = channel as TextChannel | NewsChannel;
 
     // The leaderboard is stateful (its message is tracked + auto-updated),
     // so it has its own flow.
@@ -402,6 +429,17 @@ export default class AdminCommand extends SlashCommand {
             flags: MessageFlags.IsComponentsV2,
           });
           label = "Application hub";
+          break;
+
+        case "season_access":
+          // Deliberately a normal message (not Components V2): the text
+          // renders full width and the event link unfurls into its card.
+          await textChannel.send({
+            ...buildSeasonAccessMessage(),
+            // Ping @everyone, but render the role mentions without pinging.
+            allowedMentions: { parse: ["everyone"] },
+          });
+          label = "Season access panel";
           break;
 
         case "rules_info":
@@ -446,11 +484,17 @@ export default class AdminCommand extends SlashCommand {
   /** Post a fresh leaderboard message and register it for auto-updates. */
   private async sendLeaderboard(
     interaction: ChatInputCommandInteraction,
-    channel: TextChannel,
+    channel: TextChannel | NewsChannel,
   ) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const data = await fetchLeaderboardData();
+    const prior = await loadLeaderboardState();
+    const season =
+      interaction.options.getInteger("season") ??
+      prior.season ??
+      DEFAULT_LEADERBOARD_SEASON;
+
+    const data = await fetchLeaderboardData(season);
     if (!data) {
       await interaction.editReply({
         components: [errorContainer("Failed to fetch leaderboard data.")],
@@ -465,17 +509,18 @@ export default class AdminCommand extends SlashCommand {
         data.topPlayers,
       );
       const message = await channel.send({
-        components: buildLeaderboardComponents(data, emojiMap),
+        components: buildLeaderboardComponents(data, emojiMap, season),
         flags: MessageFlags.IsComponentsV2,
       });
       await saveLeaderboardState({
         channelId: channel.id,
         messageId: message.id,
+        season,
       });
       await interaction.editReply({
         components: [
           primaryContainer(
-            `## Leaderboard Created\nLeaderboard posted in <#${channel.id}>. It will update every 5 minutes.`,
+            `## Leaderboard Created\nLeaderboard posted in <#${channel.id}> showing season ${season}. It will update every 5 minutes.`,
           ),
         ],
         flags: MessageFlags.IsComponentsV2,
@@ -548,10 +593,19 @@ export default class AdminCommand extends SlashCommand {
               .setRequired(true)
               .addChoices(
                 { name: "Application Hub", value: "application_hub" },
+                { name: "Season Access", value: "season_access" },
                 { name: "Rules & Info", value: "rules_info" },
                 { name: "Ticket Panel", value: "ticket_panel" },
                 { name: "Leaderboard", value: "leaderboard" },
               ),
+          )
+          .addIntegerOption((opt) =>
+            opt
+              .setName("season")
+              .setDescription(
+                "Season ID for the leaderboard panel (default: last used)",
+              )
+              .setMinValue(1),
           ),
       )
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)

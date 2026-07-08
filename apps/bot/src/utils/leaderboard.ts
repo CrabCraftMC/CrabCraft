@@ -8,7 +8,8 @@ import {
 import logger from "./logger.js";
 import rankEmojis from "../data/rankEmojis.json" with { type: "json" };
 
-const API_URL = "https://api.crabcraft.net/awards/crowns?limit=100&season=6";
+/** Used when no season was given and none is stored in the leaderboard state. */
+export const DEFAULT_LEADERBOARD_SEASON = 6;
 
 export interface PlayerStats {
   uuid: string;
@@ -26,9 +27,13 @@ export interface LeaderboardData {
   playerCount: number;
 }
 
-export async function fetchLeaderboardData(): Promise<LeaderboardData | null> {
+export async function fetchLeaderboardData(
+  season: number,
+): Promise<LeaderboardData | null> {
   try {
-    const response = await fetch(API_URL);
+    const response = await fetch(
+      `https://api.crabcraft.net/awards/crowns?limit=100&season=${season}`,
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch leaderboard: ${response.statusText}`);
     }
@@ -68,7 +73,11 @@ export async function fetchLeaderboardData(): Promise<LeaderboardData | null> {
 }
 
 
-export function buildLeaderboardComponents(data: LeaderboardData, emojis?: Map<string, string>) {
+export function buildLeaderboardComponents(
+  data: LeaderboardData,
+  emojis?: Map<string, string>,
+  season: number = DEFAULT_LEADERBOARD_SEASON,
+) {
   const headerContainer = new ContainerBuilder().addTextDisplayComponents(
     (td) => td.setContent("# 🏆 CrabCraft Hall of Fame"),
     (td) => td.setContent("-# Top 10 players based on total awards earned"),
@@ -84,19 +93,23 @@ export function buildLeaderboardComponents(data: LeaderboardData, emojis?: Map<s
         const headStr = head ? ` ${head}` : "";
         return `${rankStr}${headStr} **${p.name}** - ${p.total.toLocaleString()} points (<:1st:1397647414982086829> ${p.gold}, <:2nd:1397647416681042011> ${p.silver}, <:3rd:1397647418492850226> ${p.bronze})`;
       })
-      .join("\n") || "No data available.";
+      .join("\n") ||
+    "No player data yet. Rankings will appear here once people are playing.";
 
   const rankingsContainer = new ContainerBuilder().addTextDisplayComponents(
     (td) => td.setContent("## 🎖️ Rankings"),
     (td) => td.setContent(rankingsText),
   );
 
-  const statsText = `## 📊 Server Statistics\n**Total Points:** ${data.totalPoints.toLocaleString()}\n**Average:** ${Math.floor(data.averagePoints).toLocaleString()}\n-# Updates every 5 minutes`;
+  const statsText =
+    data.topPlayers.length > 0
+      ? `## 📊 Server Statistics\n**Total Points:** ${data.totalPoints.toLocaleString()}\n**Average:** ${Math.floor(data.averagePoints).toLocaleString()}\n-# Updates every 5 minutes`
+      : "## 📊 Server Statistics\nNothing to count yet.\n-# Updates every 5 minutes";
 
   const viewStatsButton = new ButtonBuilder()
     .setLabel("View Full Stats")
     .setStyle(ButtonStyle.Link)
-    .setURL("https://www.crabcraft.net/leaderboard?season=6");
+    .setURL(`https://www.crabcraft.net/leaderboard?season=${season}`);
 
   const statsContainer = new ContainerBuilder().addTextDisplayComponents((td) =>
     td.setContent(statsText),

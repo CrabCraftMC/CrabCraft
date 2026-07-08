@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { GripVertical } from "lucide-react";
 import { useWebHaptics } from "web-haptics/react";
-import ColorPicker from "./ColorPicker";
+import SwatchColorPicker from "./SwatchColorPicker";
 import Squircle from "@/components/Squircle";
-import { hexToRgb, rgbToHex, interpolateColors } from "@/lib/colors";
+import { rgbToHex, interpolateColors } from "@/lib/colors";
 
 type Format = "minimessage" | "ampersand" | "section" | "ampersand-hex";
 
@@ -108,13 +109,35 @@ export default function RGBGenerator() {
     const [charsPerColor, setCharsPerColor] = useState(1);
     const [hydrated, setHydrated] = useState(false);
 
+    // Drag-to-reorder. Rows never change order in the DOM — we reorder the
+    // colour VALUES on drop and keep each row/id fixed, so the pickers never
+    // remount. The "push down" feel during a drag is faked with CSS transforms
+    // only: the dragged row follows the pointer (dragY) and the rows it passes
+    // slide up/down by one rowHeight to open a gap.
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
+    const [overIndex, setOverIndex] = useState<number | null>(null);
+    const [dragY, setDragY] = useState(0);
+    const [rowHeight, setRowHeight] = useState(0);
+    // True for the single frame after a drop: transforms snap to their resting
+    // positions (transition disabled) while the colour values commit, so the
+    // rows don't visibly slide back after the reorder already happened.
+    const [isDropping, setIsDropping] = useState(false);
+    const colorListRef = useRef<HTMLDivElement>(null);
+
     // Load saved state after hydration
     useEffect(() => {
         const saved = loadSaved();
         if (saved) {
             if (saved.text) setText(saved.text);
             if (saved.charFormats) setCharFormats(saved.charFormats);
-            if (saved.colorStops) setColorStops(saved.colorStops);
+            if (saved.colorStops) {
+                // Reassign fresh sequential ids on load: guarantees uniqueness
+                // (heals any older saved state with duplicate ids) and keeps the
+                // id counter in sync so new colours can't collide.
+                const restored = saved.colorStops.map((s: ColorStop, i: number) => ({ color: s.color, id: i }));
+                setColorStops(restored);
+                nextIdRef.current = restored.length;
+            }
             if (saved.charsPerColor) setCharsPerColor(saved.charsPerColor);
         }
         setHydrated(true);
@@ -155,12 +178,21 @@ export default function RGBGenerator() {
     }, []);
 
     const visibleChars = text.replace(WHITESPACE_RE, "");
+    // Cap chars-per-colour so every colour stop still appears: we need at least
+    // as many gradient steps as colours, i.e. charsPerColor <= chars / colours.
+    // Clamp to >= 1 for short names (fewer chars than colours).
+    const maxCharsPerColor = Math.max(1, Math.floor(visibleChars.length / colorStops.length));
     const numSteps = Math.ceil(visibleChars.length / charsPerColor) || 1;
     const colorsKey = colors.join(",");
     const gradientColors = useMemo(
         () => interpolateColors(colors, numSteps),
         [colorsKey, numSteps]
     );
+
+    // Pull the slider back in when the name shrinks or colours are added.
+    useEffect(() => {
+        if (charsPerColor > maxCharsPerColor) setCharsPerColor(maxCharsPerColor);
+    }, [maxCharsPerColor, charsPerColor]);
 
     const previewChars = useMemo(() => {
         const result: { char: string; color: string; fmt: CharFormat }[] = [];
@@ -200,6 +232,11 @@ export default function RGBGenerator() {
         }
         return result;
     }, [text, gradientColors, format, charFormats, charsPerColor]);
+
+    // Minecraft chat caps a single message at 256 chars. The /nick command adds
+    // a "/nick " prefix (6 chars), so the whole command is what must fit.
+    const nickCommand = `/nick ${output}`;
+    const nickTooLong = nickCommand.length > 256;
 
     // Get selection range as character offsets
     const getSelectionRange = useCallback((): [number, number] => {
@@ -278,14 +315,52 @@ export default function RGBGenerator() {
         setColorStops(colorStops.map((s) => (s.id === id ? { ...s, color } : s)));
     };
 
-    const moveColor = (index: number, direction: -1 | 1) => {
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= colorStops.length) return;
-        setColorStops(prev => prev.map((stop, i) => {
-            if (i === index) return { ...stop, color: prev[newIndex].color };
-            if (i === newIndex) return { ...stop, color: prev[index].color };
-            return stop;
-        }));
+    // Reorder colour values only, keeping each row's id/DOM position fixed.
+    const moveColorValue = (from: number, to: number) => {
+        if (from === to) return;
+        setColorStops((prev) => {
+            const colors = prev.map((s) => s.color);
+            const [moved] = colors.splice(from, 1);
+            colors.splice(to, 0, moved);
+            return prev.map((s, i) => ({ ...s, color: colors[i] }));
+        });
+    };
+
+    const startColorDrag = (index: number, clientY: number) => {
+        const list = colorListRef.current;
+        if (!list) return;
+        const rows = list.children;
+        const height = rows.length > 1
+            ? (rows[1] as HTMLElement).offsetTop - (rows[0] as HTMLElement).offsetTop
+            : (rows[0] as HTMLElement).offsetHeight + 8;
+        const count = colorStops.length;
+        let currentOver = index;
+
+        setRowHeight(height);
+        setDragIndex(index);
+        setOverIndex(index);
+        setDragY(0);
+
+        const onMove = (e: PointerEvent) => {
+            const delta = e.clientY - clientY;
+            setDragY(delta);
+            const target = Math.max(0, Math.min(count - 1, index + Math.round(delta / height)));
+            currentOver = target;
+            setOverIndex(target);
+        };
+        const onUp = () => {
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+            setIsDropping(true);
+            moveColorValue(index, currentOver);
+            setDragIndex(null);
+            setOverIndex(null);
+            setDragY(0);
+            // Re-enable transitions once the snapped-to-rest frame has painted.
+            requestAnimationFrame(() => requestAnimationFrame(() => setIsDropping(false)));
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
     };
 
     const gradientCss = `linear-gradient(90deg, ${colors.join(", ")})`;
@@ -425,13 +500,14 @@ export default function RGBGenerator() {
                         <p className="text-xs text-gray-500 uppercase tracking-wider">Click to edit</p>
                         <div className="flex gap-1 items-center">
                             {[
-                                { label: "B", key: "bold" as keyof CharFormat, style: "font-bold" },
-                                { label: "I", key: "italic" as keyof CharFormat, style: "italic" },
-                                { label: "U", key: "underline" as keyof CharFormat, style: "underline" },
-                                { label: "S", key: "strikethrough" as keyof CharFormat, style: "line-through" },
+                                { label: "B", name: "Bold", key: "bold" as keyof CharFormat, style: "font-bold" },
+                                { label: "I", name: "Italic", key: "italic" as keyof CharFormat, style: "italic" },
+                                { label: "U", name: "Underline", key: "underline" as keyof CharFormat, style: "underline" },
+                                { label: "S", name: "Strikethrough", key: "strikethrough" as keyof CharFormat, style: "line-through" },
                             ].map((btn) => (
                                 <button
                                     key={btn.label}
+                                    aria-label={btn.name}
                                     onMouseDown={(e) => { e.preventDefault(); toggleFormat(btn.key); }}
                                     className={`w-7 h-7 rounded flex items-center justify-center text-xs cursor-pointer transition-all ${btn.style} bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-white/20 hover:text-gray-900 dark:hover:text-white`}
                                 >
@@ -475,54 +551,61 @@ export default function RGBGenerator() {
                         {/* Colors */}
                         <Squircle cornerRadius={32} className="p-6 bg-paper-2 shadow-sm animate-in" style={{ animationDelay: "0.2s" }}>
                             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Gradient Colours</label>
-                            <div className="flex flex-col gap-2">
-                                {colorStops.map((stop, index) => (
-                                    <div key={stop.id} className="flex items-center gap-1.5">
-                                        <div className="flex flex-col gap-0.5">
+                            <div ref={colorListRef} className="flex flex-col gap-2">
+                                {colorStops.map((stop, index) => {
+                                    const isDragging = dragIndex === index;
+
+                                    // Rows the dragged item passes over slide by one row to open a gap.
+                                    let shift = 0;
+                                    if (dragIndex !== null && overIndex !== null && !isDragging) {
+                                        if (index > dragIndex && index <= overIndex) shift = -rowHeight;
+                                        else if (index < dragIndex && index >= overIndex) shift = rowHeight;
+                                    }
+
+                                    return (
+                                        <div
+                                            key={stop.id}
+                                            style={{
+                                                transform: `translateY(${isDragging ? dragY : shift}px)`,
+                                                transition: isDragging || isDropping ? "none" : "transform 200ms ease",
+                                                zIndex: isDragging ? 10 : undefined,
+                                                position: "relative",
+                                            }}
+                                            className={`flex items-center gap-1.5 rounded-lg ${isDragging ? "shadow-lg" : ""}`}
+                                        >
                                             <button
                                                 type="button"
-                                                aria-label="Move color up"
-                                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); moveColor(index, -1); }}
-                                                disabled={index === 0}
-                                                className="w-5 h-5 rounded flex items-center justify-center text-[10px] cursor-pointer transition-colours disabled:opacity-20 disabled:cursor-default bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-400 relative z-10"
+                                                aria-label="Drag to reorder colour"
+                                                onPointerDown={(e) => { e.preventDefault(); startColorDrag(index, e.clientY); }}
+                                                className="w-5 h-8 flex items-center justify-center flex-shrink-0 cursor-grab active:cursor-grabbing touch-none text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colours"
                                             >
-                                                ▲
+                                                <GripVertical className="w-4 h-4" />
                                             </button>
-                                            <button
-                                                type="button"
-                                                aria-label="Move color down"
-                                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); moveColor(index, 1); }}
-                                                disabled={index === colorStops.length - 1}
-                                                className="w-5 h-5 rounded flex items-center justify-center text-[10px] cursor-pointer transition-colours disabled:opacity-20 disabled:cursor-default bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-400 relative z-10"
-                                            >
-                                                ▼
-                                            </button>
+                                            <div className="flex-1">
+                                                <SwatchColorPicker
+                                                    color={stop.color}
+                                                    onChange={(c) => updateColor(stop.id, c)}
+                                                />
+                                            </div>
+                                            {colorStops.length > 1 && (
+                                                <button
+                                                    aria-label="Remove color"
+                                                    onClick={() => removeColor(stop.id)}
+                                                    className="w-8 h-8 flex-shrink-0 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[10px] flex items-center justify-center cursor-pointer transition-colours"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="flex-1 relative">
-                                            <ColorPicker
-                                                color={stop.color}
-                                                onChange={(c) => updateColor(stop.id, c)}
-                                            />
-                                            <span className={`absolute inset-0 flex items-center pl-2 text-xs font-bold pointer-events-none ${(() => { const [r,g,b] = hexToRgb(stop.color); return (r*0.299+g*0.587+b*0.114) > 150 ? 'text-gray-900' : 'text-white'; })()}`}>{stop.color.toUpperCase()}</span>
-                                        </div>
-                                        {colorStops.length > 1 && (
-                                            <button
-                                                aria-label="Remove color"
-                                                onClick={() => removeColor(stop.id)}
-                                                className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[10px] flex items-center justify-center cursor-pointer transition-colours"
-                                            >
-                                                ✕
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                                <button
-                                    onClick={addColor}
-                                    className="w-full py-2 rounded-xl border-2 border-dashed border-line hover:border-orange-400 text-gray-400 hover:text-orange-500 flex items-center justify-center text-sm transition-colours cursor-pointer mt-1"
-                                >
-                                    + Add Colour
-                                </button>
+                                    );
+                                })}
                             </div>
+                            <button
+                                onClick={addColor}
+                                className="w-full py-2 rounded-xl border-2 border-dashed border-line hover:border-orange-400 text-gray-400 hover:text-orange-500 flex items-center justify-center text-sm transition-colours cursor-pointer mt-2"
+                            >
+                                + Add Colour
+                            </button>
                         </Squircle>
 
                         {/* Presets button */}
@@ -544,42 +627,61 @@ export default function RGBGenerator() {
                     <div className="lg:col-span-2 space-y-6">
                         {/* Chars per color */}
                         <Squircle cornerRadius={32} className="p-6 bg-paper-2 shadow-sm animate-in" style={{ animationDelay: "0.15s" }}>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                                Characters per color: {charsPerColor}
+                            <label htmlFor="chars-per-colour" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                Characters per colour: {charsPerColor}
                             </label>
                             <input
+                                id="chars-per-colour"
                                 type="range"
                                 min={1}
-                                max={4}
+                                max={maxCharsPerColor}
                                 value={charsPerColor}
+                                disabled={maxCharsPerColor <= 1}
+                                aria-label="Characters per colour"
+                                aria-valuetext={`${charsPerColor} character${charsPerColor === 1 ? "" : "s"} per colour`}
                                 onChange={(e) => setCharsPerColor(Number(e.target.value))}
-                                className="w-full cursor-pointer"
+                                className="w-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             />
-                            <div className="flex justify-between text-xs text-gray-400 mt-1">
-                                <span>Smooth</span>
-                                <span>Blocky</span>
-                            </div>
+                            {maxCharsPerColor > 1 && (
+                                <div className="flex justify-between text-xs text-gray-400 mt-1.5">
+                                    <span>Smooth</span>
+                                    <span>Blocky</span>
+                                </div>
+                            )}
                         </Squircle>
 
                         {/* Output */}
                         <Squircle cornerRadius={32} className="p-6 bg-paper-2 shadow-sm animate-in" style={{ animationDelay: "0.2s" }}>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Output</label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label htmlFor="rgb-output" className="text-sm font-bold text-gray-700 dark:text-gray-300">Output</label>
+                                <span
+                                    aria-hidden={copied !== "output"}
+                                    className={`text-xs font-bold text-orange-500 transition-opacity duration-200 ${copied === "output" ? "opacity-100" : "opacity-0"}`}
+                                >
+                                    Copied!
+                                </span>
+                            </div>
                             <textarea
+                                id="rgb-output"
                                 readOnly
                                 value={output}
                                 rows={4}
+                                aria-label="Generated nickname output, click to copy"
                                 onClick={() => copyToClipboard(output, "output")}
                                 className="w-full px-4 py-3 rounded-xl border border-line bg-paper text-sm font-mono resize-none focus:outline-none cursor-pointer"
                             />
-                            {copied === "output" && (
-                                <p className="text-xs text-orange-500 mt-1">Copied!</p>
-                            )}
                             <button
-                                onClick={() => copyToClipboard(`/nick ${output}`, "nick")}
+                                onClick={() => copyToClipboard(nickCommand, "nick")}
                                 className="w-full mt-3 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition-colors cursor-pointer active:scale-95"
                             >
                                 {copied === "nick" ? "Copied!" : "Copy /nick"}
                             </button>
+                            {nickTooLong && (
+                                <p className="text-xs text-red-500 mt-2 flex items-start gap-1">
+                                    <span aria-hidden>⚠</span>
+                                    <span>This /nick command is {nickCommand.length} characters. Minecraft chat has a 256-character limit, so it may be too long to run.</span>
+                                </p>
+                            )}
                         </Squircle>
                     </div>
                 </div>

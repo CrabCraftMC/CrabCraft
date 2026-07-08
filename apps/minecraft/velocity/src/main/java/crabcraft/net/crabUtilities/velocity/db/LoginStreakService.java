@@ -532,40 +532,52 @@ public final class LoginStreakService {
         int safeOffset = Math.max(0, offset);
         String column = longest ? "longest_streak" : "current_streak";
 
+        int rh = resetHourUtc;
+        long now = System.currentTimeMillis() / 1000L;
+        // Streaks reset lazily (on the player's next qualified day), so the
+        // stored current_streak of a long-absent player is stale. The current
+        // leaderboard must drop lapsed streaks, or absent players keep their
+        // rank indefinitely. last_login_at >= startOfDay(today - 2) is exactly
+        // the "now < expiryOf(last_login_at)" liveness check in SQL form.
+        long activeCutoff = startOfDay(dayNumber(now, rh) - 2, rh);
+        String activeFilter = longest ? "" : "AND s.last_login_at >= ? ";
+
         // Alt accounts are excluded — they only ever hold a one-day streak
         // and should not occupy leaderboard ranks alongside main accounts.
-        String notAlt = "NOT EXISTS (SELECT 1 FROM player_alts pa WHERE pa.minecraft_uuid = s.minecraft_uuid) ";
+        String notAlt = "AND NOT EXISTS (SELECT 1 FROM player_alts pa WHERE pa.minecraft_uuid = s.minecraft_uuid) ";
+
         String listSql = "SELECT s.minecraft_uuid, s.current_streak, s.longest_streak, " +
                 "s.last_login_at, s.streak_started_at, p.minecraft_username " +
                 "FROM player_login_streaks s " +
                 "LEFT JOIN players p ON p.minecraft_uuid = s.minecraft_uuid " +
-                "WHERE s." + column + " > 0 " +
-                "AND " + notAlt +
+                "WHERE s." + column + " > 0 " + activeFilter + notAlt +
                 "ORDER BY s." + column + " DESC, s.last_login_at DESC " +
                 "LIMIT ? OFFSET ?";
-        String countSql = "SELECT COUNT(*) FROM player_login_streaks s WHERE s." + column + " > 0 " +
-                "AND " + notAlt;
-
-        long now = System.currentTimeMillis() / 1000L;
+        String countSql = "SELECT COUNT(*) FROM player_login_streaks s " +
+                "WHERE s." + column + " > 0 " + activeFilter + notAlt;
 
         JsonArray entries = new JsonArray();
         int total = 0;
         try (Connection conn = dataSource.getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(countSql);
-                 ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) total = rs.getInt(1);
+            try (PreparedStatement stmt = conn.prepareStatement(countSql)) {
+                if (!longest) stmt.setLong(1, activeCutoff);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) total = rs.getInt(1);
+                }
             }
 
             try (PreparedStatement stmt = conn.prepareStatement(listSql)) {
-                stmt.setInt(1, safeLimit);
-                stmt.setInt(2, safeOffset);
+                int param = 0;
+                if (!longest) stmt.setLong(++param, activeCutoff);
+                stmt.setInt(++param, safeLimit);
+                stmt.setInt(++param, safeOffset);
                 try (ResultSet rs = stmt.executeQuery()) {
                     int rank = safeOffset;
                     while (rs.next()) {
                         rank++;
                         int currentStreak = rs.getInt("current_streak");
                         long lastLogin = rs.getLong("last_login_at");
-                        boolean active = now < expiryOf(lastLogin, resetHourUtc);
+                        boolean active = now < expiryOf(lastLogin, rh);
                         JsonObject entry = new JsonObject();
                         entry.addProperty("rank", rank);
                         entry.addProperty("uuid", rs.getString("minecraft_uuid"));

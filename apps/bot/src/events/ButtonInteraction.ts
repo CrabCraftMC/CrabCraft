@@ -11,7 +11,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { errorContainer, successContainer, primaryContainer, coloredContainer, logAccept } from "../utils/embeds.js";
+import { errorContainer, successContainer, successContainerWithThumbnail, primaryContainer, coloredContainer, logAccept } from "../utils/embeds.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 import { createApplicationChannelFor } from "../utils/applicationChannel.js";
@@ -34,6 +34,10 @@ import {
 } from "../utils/ticket.js";
 import { beginTicketOpen } from "../utils/ticketFlow.js";
 import { buildDenyModal } from "../utils/denyReasons.js";
+import {
+  SEASON_PLAY_BUTTON_ID,
+  buildOpenTicketButton,
+} from "../utils/seasonAccess.js";
 
 function intakeString(intake: unknown, key: string): string | null {
   if (typeof intake !== "object" || intake === null) return null;
@@ -65,19 +69,31 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      if (member.roles.cache.has(config.MEMBER_ROLE_ID)) {
-        await interaction.reply({
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      // The whitelist database is the source of truth for membership; roles
+      // can drift (manual changes, partial wipes).
+      let alreadyMember = false;
+      try {
+        const rows = await mysql.query(
+          "SELECT uuid FROM discordsrv_accounts WHERE discord = ?",
+          [member.id],
+        );
+        alreadyMember = rows.length > 0;
+      } catch (e) {
+        logger.error("App hub: whitelist lookup failed:", e);
+      }
+      if (alreadyMember) {
+        await interaction.editReply({
           components: [
             successContainer(
               "## <:Crab:1397355651822256299> You're already in!\nYou're already a member of CrabCraft, so there's no need to apply again. Enjoy your stay!",
             ),
           ],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
-
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       // If they already have a live application channel, point them to it.
       const existing = await appDb
@@ -206,6 +222,98 @@ export default class ButtonInteractionEvent extends Event {
       applicationModal.addComponents(fifthActionRow);
 
       await interaction.showModal(applicationModal);
+    }
+
+    // Season access panel: grant the season role to already-whitelisted members.
+    if (interaction.customId === SEASON_PLAY_BUTTON_ID) {
+      const member = interaction.member as GuildMember | null;
+      if (!interaction.guild || !member) {
+        await interaction.reply({
+          components: [
+            errorContainer("**Error!** This button can only be used in a server."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      // Whitelisted = linked in the DiscordSRV database AND in our own
+      // players table.
+      let srvLinked = false;
+      try {
+        const rows = await mysql.query(
+          "SELECT uuid FROM discordsrv_accounts WHERE discord = ?",
+          [interaction.user.id],
+        );
+        srvLinked = rows.length > 0;
+      } catch (e) {
+        logger.error("Season access: DiscordSRV lookup failed:", e);
+      }
+
+      const link = srvLinked
+        ? await appDb.getPlayerLink(interaction.user.id).catch((e) => {
+            logger.error("Season access: player link lookup failed:", e);
+            return null;
+          })
+        : null;
+
+      if (!srvLinked || !link?.minecraft_uuid) {
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "There was an issue locating your Minecraft account. Please open a ticket.",
+            ),
+            buildOpenTicketButton(),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+        return;
+      }
+
+      if (!config.CURRENT_SEASON_ROLE_ID) {
+        logger.error("Season access: roles.currentSeason is not configured.");
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "**Error!** Season access isn't set up yet. Please try again later.",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+        return;
+      }
+
+      try {
+        await member.roles.add(config.CURRENT_SEASON_ROLE_ID);
+      } catch (e) {
+        logger.error("Season access: failed to add season role:", e);
+        await interaction.editReply({
+          components: [
+            errorContainer(
+              "**Error!** Something went wrong while granting access. Please try again.",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2,
+        });
+        return;
+      }
+
+      const currentSeason = await appDb.getCurrentSeason().catch(() => null);
+      const seasonName = currentSeason?.name ?? "the new season";
+      await interaction.editReply({
+        components: [
+          successContainerWithThumbnail(
+            link.minecraft_username
+              ? `## You're in!\n\`${link.minecraft_username}\` is confirmed for ${seasonName}.`
+              : `## You're in!\nYou're confirmed for ${seasonName}.`,
+            `https://render.crafty.gg/3d/bust/${link.minecraft_uuid}`,
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
     }
 
     if (interaction.customId === "retry-username") {
@@ -422,8 +530,13 @@ export default class ButtonInteractionEvent extends Event {
         }).catch((e: unknown) => logger.error("Failed to send accept log:", e));
       }
 
-      try { await applicant.roles.add(config.MEMBER_ROLE_ID); }
-      catch (e) { logger.error("Failed to add member role:", e); }
+      // Membership itself lives in the whitelist database; the only role a
+      // new member needs is the current season's (the same one the season
+      // access button hands out).
+      if (config.CURRENT_SEASON_ROLE_ID) {
+        try { await applicant.roles.add(config.CURRENT_SEASON_ROLE_ID); }
+        catch (e) { logger.error("Failed to add current season role:", e); }
+      }
 
       // Claim the MC link in `players` now (not at submit), detaching
       // it from any prior owner. upsertUser handles the unique
@@ -636,16 +749,22 @@ export default class ButtonInteractionEvent extends Event {
       // only when the ticket is actually deleted (manual Delete button or the
       // 24-hour cleanup scan), so a reopened ticket isn't transcribed early.
 
-      // Revoke the opener's per-channel ViewChannel grant so the channel
-      // disappears from their sidebar. Mods retain access via MOD_ROLE_ID.
+      // Lock the channel instead of hiding it: everyone keeps ViewChannel so
+      // the opener can still read the ticket until it's deleted, but nobody —
+      // opener, added members, or moderators — can send messages while closed.
       if (ticketChannel) {
-        try {
-          await ticketChannel.permissionOverwrites.delete(
-            ticket.opener_discord_id,
-            "Ticket closed",
-          );
-        } catch (e) {
-          logger.error("Ticket: failed to revoke opener access:", e);
+        const everyoneId = interaction.guild?.roles.everyone.id;
+        for (const overwrite of ticketChannel.permissionOverwrites.cache.values()) {
+          if (overwrite.id === everyoneId) continue;
+          try {
+            await ticketChannel.permissionOverwrites.edit(
+              overwrite.id,
+              { SendMessages: false },
+              { reason: "Ticket closed — channel locked" },
+            );
+          } catch (e) {
+            logger.error("Ticket: failed to lock channel on close:", e);
+          }
         }
       }
 
@@ -712,16 +831,33 @@ export default class ButtonInteractionEvent extends Event {
 
       const ticketChannel = interaction.channel as TextChannel | null;
 
-      // Restore the opener's per-channel ViewChannel grant.
+      // Unlock the channel: restore send permissions on every overwrite that
+      // was locked at close (opener, moderators, and any added members). The
+      // opener's edit also re-grants access for tickets closed before the
+      // lock-instead-of-hide behaviour, where their overwrite was deleted.
       if (ticketChannel) {
+        const everyoneId = interaction.guild?.roles.everyone.id;
         try {
-          await ticketChannel.permissionOverwrites.create(ticket.opener_discord_id, {
+          await ticketChannel.permissionOverwrites.edit(ticket.opener_discord_id, {
             ViewChannel: true,
             SendMessages: true,
             ReadMessageHistory: true,
           });
         } catch (e) {
           logger.error("Ticket: failed to restore opener access:", e);
+        }
+        for (const overwrite of ticketChannel.permissionOverwrites.cache.values()) {
+          if (overwrite.id === everyoneId) continue;
+          if (overwrite.id === ticket.opener_discord_id) continue;
+          try {
+            await ticketChannel.permissionOverwrites.edit(
+              overwrite.id,
+              { SendMessages: true },
+              { reason: "Ticket reopened — channel unlocked" },
+            );
+          } catch (e) {
+            logger.error("Ticket: failed to unlock channel on reopen:", e);
+          }
         }
       }
 

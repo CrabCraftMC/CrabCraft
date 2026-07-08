@@ -44,6 +44,19 @@ export function primaryContainerWithThumbnail(text: string, imageUrl: string) {
     );
 }
 
+/** Success container with a thumbnail accessory (e.g. player skin). */
+export function successContainerWithThumbnail(text: string, imageUrl: string) {
+  return new ContainerBuilder()
+    .setAccentColor(resolveColor("Green"))
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents((td) => td.setContent(text))
+        .setThumbnailAccessory(
+          new ThumbnailBuilder().setURL(imageUrl),
+        ),
+    );
+}
+
 // ── Log channel messages ────────────────────────────────────────────
 
 /** Log message for an accepted application. */
@@ -77,6 +90,24 @@ export function logAutoReject(userId: string, reason: string) {
 /** Log message for a member leaving the server. */
 export function logMemberLeft(user: string, mcUsername: string) {
   return `<:PlayerLeft:1251574076061913179> **${user}** left the server. \`${mcUsername}\` was removed from the whitelist.`;
+}
+
+/** Log message for an alt account being added. */
+export function logAltAdded(
+  userId: string,
+  mcUsername: string,
+  moderator: string,
+) {
+  return `<:PlayerJoined:1251574077186113606> \`${mcUsername}\` was added as an alt for **<@${userId}>** by **${moderator}**.`;
+}
+
+/** Log message for an alt account being removed. */
+export function logAltRemoved(
+  userId: string,
+  mcUsername: string,
+  moderator: string,
+) {
+  return `<:PlayerLeft:1251574076061913179> \`${mcUsername}\` was removed as an alt for **<@${userId}>** by **${moderator}**.`;
 }
 
 /** Log message for an admin wipe action. */

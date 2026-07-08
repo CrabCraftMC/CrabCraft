@@ -88,22 +88,22 @@ body {
 
 
 
-.pcr-button {
-  width: 100% !important;
-  height: 2rem !important;
-  border-radius: 0.75rem !important;
-  cursor: pointer !important;
+/* Compact react-colorful picker used in the colour tools */
+.rgb-swatch-picker .react-colorful {
+  width: 100%;
+  height: 168px;
 }
-
-.pcr-button:focus,
-.pcr-button.pcr-active {
-  box-shadow: none !important;
+.rgb-swatch-picker .react-colorful__saturation {
+  border-radius: 0.5rem 0.5rem 0 0;
 }
-
-.pcr-square .pcr-button {
-  width: 32px !important;
-  height: 32px !important;
-  border-radius: 0.25rem !important;
+.rgb-swatch-picker .react-colorful__hue {
+  height: 18px;
+  border-radius: 0 0 0.5rem 0.5rem;
+  margin-top: 8px;
+}
+.rgb-swatch-picker .react-colorful__pointer {
+  width: 16px;
+  height: 16px;
 }
 
 .pixelated {

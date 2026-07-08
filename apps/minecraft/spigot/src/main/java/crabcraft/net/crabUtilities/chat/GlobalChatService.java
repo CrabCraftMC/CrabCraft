@@ -46,7 +46,6 @@ public class GlobalChatService {
     private final String password;
 
     private final boolean enabled;
-    private final String serverName;
     private final String format;
     private final MentionProcessor mentionProcessor;
     private final boolean soundEnabled;
@@ -68,9 +67,8 @@ public class GlobalChatService {
         this.password = plugin.getConfig().getString("redis.password", "");
 
         this.enabled = plugin.getConfig().getBoolean("global-chat.enabled", false);
-        this.serverName = plugin.getConfig().getString("global-chat.server-name", "");
         this.format = plugin.getConfig().getString("global-chat.format",
-                "<gray>[</gray><aqua><server></aqua><gray>]</gray> <display_name><gray>:</gray> <message>");
+                "<display_name><gray>:</gray> <message>");
 
         boolean mentionsEnabled = plugin.getConfig().getBoolean("global-chat.mentions.enabled", true);
         String prefix = plugin.getConfig().getString("global-chat.mentions.prefix", "@");
@@ -162,8 +160,8 @@ public class GlobalChatService {
     /**
      * Renders one chat line from the configured format. The display name and
      * message component are bound via {@link Placeholder#component} and the
-     * server name / username via {@link Placeholder#unparsed}, so nothing the
-     * player typed is parsed as MiniMessage.
+     * username via {@link Placeholder#unparsed}, so nothing the player typed
+     * is parsed as MiniMessage.
      *
      * <p>Must run on the main thread because mention resolution walks the
      * online Bukkit player list and reads display names.
@@ -172,7 +170,6 @@ public class GlobalChatService {
         MentionProcessor.Result mention = mentionProcessor.process(plainMessage, senderUuid);
         Component clickableDisplayName = displayName.clickEvent(ClickEvent.suggestCommand(messageCommand(username)));
         Component line = miniMessage.deserialize(format,
-                Placeholder.unparsed("server", serverName == null ? "" : serverName),
                 Placeholder.component("display_name", clickableDisplayName),
                 Placeholder.unparsed("username", username),
                 Placeholder.component("message", mention.message()));
@@ -238,7 +235,6 @@ public class GlobalChatService {
         if (pool == null || pool.isClosed()) return;
         JsonObject envelope = new JsonObject();
         envelope.addProperty("origin", serverId.toString());
-        envelope.addProperty("server", serverName == null ? "" : serverName);
         envelope.addProperty("uuid", senderUuid.toString());
         envelope.addProperty("username", username);
         envelope.addProperty("displayName", GsonComponentSerializer.gson().serialize(displayName));

@@ -132,6 +132,26 @@ async function countReactorsForEmoji(
   return reactors.size;
 }
 
+/**
+ * React to the starred message with its trigger emoji, skipping the API
+ * call if the bot has already reacted. Bot reactions are excluded from
+ * reactor counts, so this can't re-trigger or inflate the starboard tally.
+ */
+async function ensureBotReaction(
+  message: Message,
+  emoji: TriggerEmoji,
+): Promise<void> {
+  const reactionEmoji = emoji.id ?? emoji.name;
+  if (!reactionEmoji) return;
+  const existing = message.reactions.cache.find(
+    (r) => emojiMatches(r.emoji, emoji) && r.me,
+  );
+  if (existing) return;
+  await message
+    .react(reactionEmoji)
+    .catch((e) => logger.warn("Failed to react to starred message:", e));
+}
+
 interface ComponentOpts {
   authorId: string;
   channelId: string;
@@ -260,6 +280,7 @@ export async function postToStarboard(
     await setStarboardMessageId(message.id, sent.id).catch((e) =>
       logger.error("Failed to record starboard message id:", e),
     );
+    await ensureBotReaction(message, triggerEmoji);
   } catch (error) {
     starredCache.delete(message.id);
     await deleteStarboardPost(message.id).catch(() => null);
@@ -307,6 +328,10 @@ async function runStarboardUpdate(
   const count = hasRecordedEmoji
     ? await countReactorsForEmoji(full, triggerEmoji)
     : 0;
+
+  // Backfill the bot's reaction on messages starred before reacting was
+  // introduced. Legacy rows have no recorded emoji, so they're skipped.
+  if (hasRecordedEmoji) await ensureBotReaction(full, triggerEmoji);
 
   const starboard = (await full.client.channels
     .fetch(config.STARBOARD_CHANNEL_ID)

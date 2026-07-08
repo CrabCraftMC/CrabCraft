@@ -93,7 +93,7 @@ public class SleepBroadcastListener implements Listener {
         if (isKnownNotNightSkip(event)) {
             return;
         }
-        if (!plugin.getConfig().getBoolean("sleep-broadcast.enabled", false)) {
+        if (!plugin.getConfig().getBoolean("tweaks.sleep-broadcast.enabled", false)) {
             return;
         }
 
@@ -114,12 +114,12 @@ public class SleepBroadcastListener implements Listener {
         Component message;
         if (sleepers.size() == 1) {
             String format = plugin.getConfig().getString(
-                    "sleep-broadcast.single-format", DEFAULT_SINGLE_FORMAT);
+                    "tweaks.sleep-broadcast.single-format", DEFAULT_SINGLE_FORMAT);
             message = miniMessage.deserialize(format,
                     Placeholder.unparsed("player", sleepers.get(0)));
         } else {
             String format = plugin.getConfig().getString(
-                    "sleep-broadcast.multiple-format", DEFAULT_MULTIPLE_FORMAT);
+                    "tweaks.sleep-broadcast.multiple-format", DEFAULT_MULTIPLE_FORMAT);
             message = miniMessage.deserialize(format,
                     Placeholder.unparsed("players", joinNames(sleepers)),
                     Placeholder.unparsed("count", String.valueOf(sleepers.size())));
