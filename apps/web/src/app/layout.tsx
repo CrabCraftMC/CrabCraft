@@ -133,7 +133,8 @@ export default async function RootLayout({
           <Footer />
         </div>
         <CommandMenu />
-        <MascotJoin />
+        {/* Only nudge signed-out visitors to join — signed-in users already have. */}
+        {!userData && <MascotJoin />}
         {process.env.NODE_ENV === "production" && (
           <Script
             src="https://web.maxmoon.sh/script.js"
