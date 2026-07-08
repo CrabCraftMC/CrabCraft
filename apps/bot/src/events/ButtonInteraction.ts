@@ -749,16 +749,22 @@ export default class ButtonInteractionEvent extends Event {
       // only when the ticket is actually deleted (manual Delete button or the
       // 24-hour cleanup scan), so a reopened ticket isn't transcribed early.
 
-      // Revoke the opener's per-channel ViewChannel grant so the channel
-      // disappears from their sidebar. Mods retain access via MOD_ROLE_ID.
+      // Lock the channel instead of hiding it: everyone keeps ViewChannel so
+      // the opener can still read the ticket until it's deleted, but nobody —
+      // opener, added members, or moderators — can send messages while closed.
       if (ticketChannel) {
-        try {
-          await ticketChannel.permissionOverwrites.delete(
-            ticket.opener_discord_id,
-            "Ticket closed",
-          );
-        } catch (e) {
-          logger.error("Ticket: failed to revoke opener access:", e);
+        const everyoneId = interaction.guild?.roles.everyone.id;
+        for (const overwrite of ticketChannel.permissionOverwrites.cache.values()) {
+          if (overwrite.id === everyoneId) continue;
+          try {
+            await ticketChannel.permissionOverwrites.edit(
+              overwrite.id,
+              { SendMessages: false },
+              { reason: "Ticket closed — channel locked" },
+            );
+          } catch (e) {
+            logger.error("Ticket: failed to lock channel on close:", e);
+          }
         }
       }
 
@@ -825,16 +831,33 @@ export default class ButtonInteractionEvent extends Event {
 
       const ticketChannel = interaction.channel as TextChannel | null;
 
-      // Restore the opener's per-channel ViewChannel grant.
+      // Unlock the channel: restore send permissions on every overwrite that
+      // was locked at close (opener, moderators, and any added members). The
+      // opener's edit also re-grants access for tickets closed before the
+      // lock-instead-of-hide behaviour, where their overwrite was deleted.
       if (ticketChannel) {
+        const everyoneId = interaction.guild?.roles.everyone.id;
         try {
-          await ticketChannel.permissionOverwrites.create(ticket.opener_discord_id, {
+          await ticketChannel.permissionOverwrites.edit(ticket.opener_discord_id, {
             ViewChannel: true,
             SendMessages: true,
             ReadMessageHistory: true,
           });
         } catch (e) {
           logger.error("Ticket: failed to restore opener access:", e);
+        }
+        for (const overwrite of ticketChannel.permissionOverwrites.cache.values()) {
+          if (overwrite.id === everyoneId) continue;
+          if (overwrite.id === ticket.opener_discord_id) continue;
+          try {
+            await ticketChannel.permissionOverwrites.edit(
+              overwrite.id,
+              { SendMessages: true },
+              { reason: "Ticket reopened — channel unlocked" },
+            );
+          } catch (e) {
+            logger.error("Ticket: failed to unlock channel on reopen:", e);
+          }
         }
       }
 
