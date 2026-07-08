@@ -92,7 +92,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                         <div className="relative z-10 pl-24 lg:pl-32 flex items-center justify-between">
                             <div>
                                 <h1 className="text-3xl lg:text-4xl font-bold text-white flex items-center flex-wrap">
-                                    {nicknameRaw ? <ColoredNickname raw={nicknameRaw} exact /> : nickname}
+                                    {nicknameRaw ? <ColoredNickname raw={nicknameRaw} contrastBg="#F97316" shadow /> : nickname}
                                     {(role === "moderator" || role === "admin") && (
                                         <span className="ml-3 inline-flex items-center group relative cursor-pointer" tabIndex={0} title="Moderator">
                                             <img
