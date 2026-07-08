@@ -138,18 +138,63 @@ export function parseMinecraftColors(raw: string): ColorSegment[] {
   return segments;
 }
 
+// sRGB → linear
+const lin = (c: number) => {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+};
+
+function luminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function contrastRatio(l1: number, l2: number): number {
+  const [hi, lo] = l1 > l2 ? [l1, l2] : [l2, l1];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * Blend a color toward white until it reaches the target contrast against
+ * a colored background — used for nicknames on the orange profile header,
+ * where similar hues (gold, orange) disappear entirely. Blending toward
+ * white (rather than black) keeps bright nicks bright; the header's dark
+ * text shadow handles whatever contrast this can't reach.
+ */
+function ensureContrastOn(hex: string, bgHex: string, target = 2): string {
+  const bgL = luminance(bgHex);
+  if (contrastRatio(luminance(hex), bgL) >= target) return hex;
+
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 8; i++) {
+    const t = (lo + hi) / 2;
+    const mixed =
+      0.2126 * lin(r + (255 - r) * t) +
+      0.7152 * lin(g + (255 - g) * t) +
+      0.0722 * lin(b + (255 - b) * t);
+    if (contrastRatio(mixed, bgL) >= target) hi = t;
+    else lo = t;
+  }
+  const mix = (c: number) => Math.round(c + (255 - c) * hi);
+  return (
+    "#" +
+    [mix(r), mix(g), mix(b)].map((c) => c.toString(16).padStart(2, "0")).join("")
+  );
+}
+
 /** Darken colors that lack contrast against white (WCAG ~3:1). */
 function ensureReadable(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
 
-  // sRGB → linear
-  const lin = (c: number) => {
-    const s = c / 255;
-    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  };
-  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const L = luminance(hex);
 
   // Contrast ratio against white (L=1): (1.05) / (L + 0.05)
   const contrast = 1.05 / (L + 0.05);
@@ -167,14 +212,33 @@ function ensureReadable(hex: string): string {
   );
 }
 
-export function ColoredNickname({ raw, exact }: { raw: string; exact?: boolean }) {
+export function ColoredNickname({
+  raw,
+  exact,
+  contrastBg,
+  shadow,
+}: {
+  raw: string;
+  exact?: boolean;
+  /** Lighten segments that would blend into this background color. */
+  contrastBg?: string;
+  /** Minecraft-style dark drop shadow behind each glyph. */
+  shadow?: boolean;
+}) {
   const segments = parseMinecraftColors(raw);
 
   return (
     <span className="inline-flex">
       {segments.map((seg, i) => {
         const style: React.CSSProperties = {};
-        if (seg.color) style.color = exact ? seg.color : ensureReadable(seg.color);
+        if (seg.color) {
+          style.color = contrastBg
+            ? ensureContrastOn(seg.color, contrastBg)
+            : exact
+              ? seg.color
+              : ensureReadable(seg.color);
+        }
+        if (shadow) style.textShadow = "0.07em 0.07em 0 rgba(0,0,0,0.45)";
         if (seg.bold) style.fontWeight = "bold";
         if (seg.italic) style.fontStyle = "italic";
 
