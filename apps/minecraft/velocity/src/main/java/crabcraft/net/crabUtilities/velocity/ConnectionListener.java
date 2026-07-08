@@ -15,11 +15,6 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
-import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
-
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
@@ -29,8 +24,6 @@ import java.util.concurrent.TimeUnit;
 
 public class ConnectionListener {
 
-    private static final MinecraftChannelIdentifier NICKNAME_CHANNEL =
-            MinecraftChannelIdentifier.from("crabutilities:nicknames");
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
             .character('§')
@@ -59,18 +52,9 @@ public class ConnectionListener {
             settingsService.onLogin(player.getUniqueId());
         }
 
-        // Seed the authoritative nickname from the database into the proxy
-        // cache so it survives across (re)joins regardless of whether the
-        // backend the player lands on still has it in EssentialsX. The proxy
-        // cache — not the backend — is the source of truth.
-        plugin.runDatabaseTask("nickname-seed", () -> {
-            UUID id = player.getUniqueId();
-            if (plugin.getNicknameCache().getRawNickname(id) != null) return;
-            String raw = plugin.getPgWriter().loadRawNickname(uuid);
-            if (raw != null && !raw.isEmpty()) {
-                plugin.getNicknameCache().setNickname(id, raw);
-            }
-        });
+        // Seed the authoritative nickname from the database into Redis/proxy
+        // cache so backends never need to report local EssentialsX state.
+        plugin.runDatabaseTask("nickname-seed", () -> seedNickname(player));
 
         // Start tracking cumulative online time for today's streak credit.
         // The streak itself is only recorded once the player reaches the
@@ -139,22 +123,25 @@ public class ConnectionListener {
 
         String currentServerName = currentServer.getServerInfo().getName();
 
-        // Push the authoritative nickname to the backend server so EssentialsX
-        // stays in sync across servers. Runs on every server connect (join + swap).
-        pushNicknameToBackend(player, currentServer);
+        // Publish cached nicknames immediately; first-join cache misses are
+        // published by the DB seed below so a transient miss cannot clear one.
+        if (previousServer != null || plugin.getNicknameCache().getRawNickname(player.getUniqueId()) != null) {
+            publishNicknameToBackends(player);
+        }
 
         if (previousServer == null) {
             // Player just joined the proxy
             if (isIgnored(currentServerName)) return;
 
-            // Check if nickname is already cached (rare: plugin message arrived before this event)
+            // Check if nickname is already cached.
             if (plugin.getNicknameCache().getRawNickname(player.getUniqueId()) != null) {
                 broadcastJoin(player);
                 return;
             }
 
-            // Wait for nickname to arrive from Spigot, with timeout fallback
+            // Wait for the DB/Redis seed, with timeout fallback.
             CompletableFuture<Void> pending = plugin.getPendingJoinManager().register(player.getUniqueId());
+            plugin.runDatabaseTask("nickname-post-connect-seed", () -> seedNickname(player));
             pending.orTimeout(2, TimeUnit.SECONDS)
                     .whenComplete((result, throwable) -> {
                         plugin.getServer().getScheduler()
@@ -396,19 +383,34 @@ public class ConnectionListener {
         return result;
     }
 
-    private void pushNicknameToBackend(Player player, RegisteredServer server) {
-        String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
-        if (raw == null) return; // No cached nick yet — Spigot will send one on join
-
-        try {
-            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-            DataOutputStream out = new DataOutputStream(bytes);
-            out.writeUTF(player.getUniqueId().toString());
-            out.writeUTF(raw);
-            server.sendPluginMessage(NICKNAME_CHANNEL, bytes.toByteArray());
-        } catch (IOException e) {
-            plugin.getLogger().warn("Failed to push nickname to backend for {}", player.getUsername(), e);
+    private void seedNickname(Player player) {
+        UUID id = player.getUniqueId();
+        String cached = plugin.getNicknameCache().getRawNickname(id);
+        if (cached != null) {
+            publishNickname(id, cached);
+            plugin.getPendingJoinManager().complete(id);
+            return;
         }
+
+        String raw = plugin.getPgWriter().loadRawNickname(id.toString());
+        if (raw != null && !raw.isEmpty()) {
+            plugin.getNicknameCache().setNickname(id, raw);
+        } else {
+            plugin.getNicknameCache().remove(id);
+            raw = "";
+        }
+        publishNickname(id, raw);
+        plugin.getPendingJoinManager().complete(id);
+    }
+
+    private void publishNicknameToBackends(Player player) {
+        String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
+        publishNickname(player.getUniqueId(), raw == null ? "" : raw);
+    }
+
+    private void publishNickname(UUID uuid, String raw) {
+        NicknameListener listener = plugin.getNicknameListener();
+        if (listener != null) listener.publishNickname(uuid, raw);
     }
 
     private boolean isIgnored(String serverName) {

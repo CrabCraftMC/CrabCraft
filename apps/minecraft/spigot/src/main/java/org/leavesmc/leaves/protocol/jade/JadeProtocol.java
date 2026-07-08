@@ -23,9 +23,12 @@ import net.minecraft.world.entity.animal.sniffer.Sniffer;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.entity.*;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import org.bukkit.Bukkit;
 import org.jadepaper.JadeMessenger;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
@@ -53,6 +56,7 @@ import org.leavesmc.leaves.protocol.jade.provider.entity.PetArmorProvider;
 import org.leavesmc.leaves.protocol.jade.provider.entity.StatusEffectsProvider;
 import org.leavesmc.leaves.protocol.jade.provider.entity.WaxedProvider;
 import org.leavesmc.leaves.protocol.jade.provider.entity.ZombieVillagerProvider;
+import org.leavesmc.leaves.protocol.jade.util.CommonUtil;
 import org.leavesmc.leaves.protocol.jade.util.HierarchyLookup;
 import org.leavesmc.leaves.protocol.jade.util.LootTableMineableCollector;
 import org.leavesmc.leaves.protocol.jade.util.PairHierarchyLookup;
@@ -60,9 +64,9 @@ import org.leavesmc.leaves.protocol.jade.util.PriorityStore;
 import org.leavesmc.leaves.protocol.jade.util.WrappedHierarchyLookup;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class JadeProtocol {
 
@@ -71,7 +75,8 @@ public class JadeProtocol {
     public static final HierarchyLookup<ServerDataProvider<EntityAccessor>> entityDataProviders = new HierarchyLookup<>(Entity.class);
     public static final PairHierarchyLookup<ServerDataProvider<BlockAccessor>> blockDataProviders = new PairHierarchyLookup<>(new HierarchyLookup<>(Block.class), new HierarchyLookup<>(BlockEntity.class));
     public static final WrappedHierarchyLookup<ServerExtensionProvider<ItemStack>> itemStorageProviders = WrappedHierarchyLookup.forAccessor();
-    private static final Set<ServerPlayer> enabledPlayers = new HashSet<>();
+    private static final Set<ServerPlayer> enabledPlayers = ConcurrentHashMap.newKeySet();
+    private static final double REQUEST_MARGIN = 1.0D;
 
     public static PriorityStore<Identifier, JadeProvider> priorities;
     private static List<Block> shearableBlocks = null;
@@ -160,15 +165,23 @@ public class JadeProtocol {
     }
 
     public static void requestEntityData(ServerPlayer player, RequestEntityPayload payload) {
+        if (!enabledPlayers.contains(player)) {
+            return;
+        }
         Bukkit.getGlobalRegionScheduler().run(JadeBootstrap.INSTANCE, (task) -> {
+            Entity requested = CommonUtil.wrapPartEntityParent(
+                    CommonUtil.getPartEntity(player.level().getEntity(payload.data().id()), payload.data().partIndex()));
+            if (!isValidEntityTarget(player, requested)) {
+                return;
+            }
+
             EntityAccessor accessor = payload.data().unpack(player);
             if (accessor == null) {
                 return;
             }
 
             Entity entity = accessor.getEntity();
-            double maxDistance = Mth.square(player.entityInteractionRange() + 21);
-            if (entity == null || player.distanceToSqr(entity) > maxDistance) {
+            if (!isValidEntityTarget(player, entity)) {
                 return;
             }
 
@@ -195,7 +208,15 @@ public class JadeProtocol {
     }
 
     public static void requestBlockData(ServerPlayer player, RequestBlockPayload payload) {
+        if (!enabledPlayers.contains(player)) {
+            return;
+        }
         Bukkit.getGlobalRegionScheduler().run(JadeBootstrap.INSTANCE, (task) -> {
+            BlockHitResult hit = payload.data().hit();
+            if (!isValidBlockHit(player, hit)) {
+                return;
+            }
+
             BlockAccessor accessor = payload.data().unpack(player);
             if (accessor == null) {
                 return;
@@ -204,10 +225,6 @@ public class JadeProtocol {
             BlockPos pos = accessor.getPosition();
             Block block = accessor.getBlock();
             BlockEntity blockEntity = accessor.getBlockEntity();
-            double maxDistance = Mth.square(player.blockInteractionRange() + 21);
-            if (pos.distSqr(player.blockPosition()) > maxDistance || !accessor.getLevel().isLoaded(pos)) {
-                return;
-            }
 
             List<ServerDataProvider<BlockAccessor>> providers;
             if (blockEntity != null) {
@@ -255,6 +272,35 @@ public class JadeProtocol {
             shearableBlocks = List.of();
             JadeBootstrap.LOGGER.error("Failed to collect shearable blocks", t);
         }
+    }
+
+    private static boolean isValidEntityTarget(ServerPlayer player, Entity entity) {
+        if (entity == null || entity.level() != player.level() || !entity.isAlive()) {
+            return false;
+        }
+        double maxDistance = Mth.square(player.entityInteractionRange() + REQUEST_MARGIN);
+        return player.distanceToSqr(entity) <= maxDistance && player.hasLineOfSight(entity);
+    }
+
+    private static boolean isValidBlockHit(ServerPlayer player, BlockHitResult hit) {
+        if (hit == null) {
+            return false;
+        }
+        BlockPos pos = hit.getBlockPos();
+        if (!player.level().isLoaded(pos)) {
+            return false;
+        }
+        double maxDistance = Mth.square(player.blockInteractionRange() + REQUEST_MARGIN);
+        if (pos.distSqr(player.blockPosition()) > maxDistance) {
+            return false;
+        }
+        BlockHitResult serverHit = player.level().clip(new ClipContext(
+                player.getEyePosition(),
+                hit.getLocation(),
+                ClipContext.Block.OUTLINE,
+                ClipContext.Fluid.NONE,
+                player));
+        return serverHit.getType() == HitResult.Type.BLOCK && serverHit.getBlockPos().equals(pos);
     }
 
 }

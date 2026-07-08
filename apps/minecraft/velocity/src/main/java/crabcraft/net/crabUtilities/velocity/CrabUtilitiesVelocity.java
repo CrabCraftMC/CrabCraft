@@ -5,7 +5,6 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Dependency;
-import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -71,6 +70,7 @@ public class CrabUtilitiesVelocity {
     private MessageManager messageManager;
     private WebServer webServer;
     private NicknameCache nicknameCache;
+    private NicknameListener nicknameListener;
     private PendingJoinManager pendingJoinManager;
     private DiscordWebhook discordWebhook;
     private DiscordWebhook staffChatDiscordWebhook;
@@ -116,12 +116,13 @@ public class CrabUtilitiesVelocity {
         this.discordWebhook = new DiscordWebhook(config.getDiscordWebhookUrl(), logger);
         this.staffChatDiscordWebhook = new DiscordWebhook(config.getStaffChatDiscordWebhookUrl(), logger);
 
-        server.getChannelRegistrar().register(MinecraftChannelIdentifier.from("crabutilities:nicknames"));
-        server.getEventManager().register(this, new NicknameListener(this));
-
         this.pgWriter = new PostgresStatsWriter(
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
         );
+
+        this.nicknameListener = new NicknameListener(this, config);
+        this.nicknameListener.start();
+        server.getEventManager().register(this, nicknameListener);
 
         AwardSeeder.seedIfEmpty(pgWriter.getDataSource(), logger);
         Map<String, AwardDefinition> awards = AwardLoader.loadAll(pgWriter.getDataSource(), logger);
@@ -264,6 +265,10 @@ public class CrabUtilitiesVelocity {
             this.staffChatDiscordWebhook = new DiscordWebhook(newConfig.getStaffChatDiscordWebhookUrl(), logger);
             this.databaseExecutor = createExecutor("CrabUtilities-DB", 4, 256);
 
+            this.nicknameListener = new NicknameListener(this, newConfig);
+            this.nicknameListener.start();
+            server.getEventManager().register(this, nicknameListener);
+
             this.statsPushSubscriber = new StatsPushSubscriber(this, newConfig, logger);
             this.statsPushSubscriber.start();
 
@@ -298,6 +303,7 @@ public class CrabUtilitiesVelocity {
     public MessageManager getMessageManager() { return messageManager; }
     public RedisStaffChat getRedisStaffChat() { return redisStaffChat; }
     public NicknameCache getNicknameCache() { return nicknameCache; }
+    public NicknameListener getNicknameListener() { return nicknameListener; }
     public PendingJoinManager getPendingJoinManager() { return pendingJoinManager; }
     public DiscordWebhook getDiscordWebhook() { return discordWebhook; }
     public WebServer getWebServer() { return webServer; }
@@ -348,6 +354,11 @@ public class CrabUtilitiesVelocity {
         if (redisStaffChat != null) {
             redisStaffChat.shutdown();
             redisStaffChat = null;
+        }
+        if (nicknameListener != null) {
+            nicknameListener.shutdown();
+            server.getEventManager().unregisterListener(this, nicknameListener);
+            nicknameListener = null;
         }
         if (playerLocationTracker != null) {
             playerLocationTracker.shutdown();
