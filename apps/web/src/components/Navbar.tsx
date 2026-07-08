@@ -115,7 +115,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 unoptimized
                                 className="object-contain w-9 h-9 md:w-[44px] md:h-[44px]"
                             />
-                            <span className="font-bold text-base text-orange-500 tracking-wide">CrabCraft</span>
+                            <span className="font-bold text-base text-orange-500 tracking-wide">CrabCraft.net</span>
                         </Link>
                     </div>
 
