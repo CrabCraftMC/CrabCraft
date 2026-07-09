@@ -177,6 +177,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (conn == null) return;
         UUID playerId = conn.getPlayer().getUuid();
 
+        // If this player was previously heard through a relay on this backend,
+        // its next-sequence stop marker resets listeners before native audio starts.
+        audioRelay.invalidateSpeaker(playerId);
+
         // Catch-up roster on the main thread — purely local sends, no
         // Redis read. Doing it eagerly (not waiting on the auto-rejoin
         // Redis round-trip) means the GUI is correct as soon as the
@@ -272,8 +276,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             // (90 s) handles real long-disconnects so a player who logs
             // off for hours doesn't get auto-rejoined when they return.
         }
-        if (membership != null) membership.onPlayerDisconnect(event);
         if (audioRelay != null) audioRelay.onPlayerDisconnect(event);
+        if (membership != null) membership.onPlayerDisconnect(event);
     }
 
     /** Public hook so {@link CrabUtilities#onDisable()} can release resources. */
