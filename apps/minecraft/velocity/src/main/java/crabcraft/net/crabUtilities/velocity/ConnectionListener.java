@@ -392,6 +392,17 @@ public class ConnectionListener {
             return;
         }
 
+        NicknameListener listener = plugin.getNicknameListener();
+        if (listener != null) {
+            String redisRaw = listener.loadRawNickname(id);
+            if (redisRaw != null) {
+                plugin.getNicknameCache().setNickname(id, redisRaw);
+                listener.persist(id);
+                plugin.getPendingJoinManager().complete(id);
+                return;
+            }
+        }
+
         String raw = plugin.getPgWriter().loadRawNickname(id.toString());
         if (raw != null && !raw.isEmpty()) {
             plugin.getNicknameCache().setNickname(id, raw);

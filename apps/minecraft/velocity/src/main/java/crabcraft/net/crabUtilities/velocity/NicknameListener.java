@@ -112,6 +112,28 @@ public class NicknameListener {
         }).schedule();
     }
 
+    public String loadRawNickname(UUID uuid) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return null;
+
+        try (Jedis jedis = pool.getResource()) {
+            String raw = jedis.hget(HASH_KEY, uuid.toString());
+            if (redisFailureLogged) {
+                plugin.getLogger().info("Nickname Redis reader recovered.");
+                redisFailureLogged = false;
+            }
+            return raw;
+        } catch (Exception e) {
+            if (!redisFailureLogged) {
+                plugin.getLogger().warn("Failed to read nickname for {} from Redis", uuid, e);
+                redisFailureLogged = true;
+            } else {
+                plugin.getLogger().debug("Failed to read nickname for {} from Redis: {}", uuid, e.getMessage());
+            }
+            return null;
+        }
+    }
+
     private void ingest(String json) {
         final UUID uuid;
         final String raw;
@@ -168,7 +190,7 @@ public class NicknameListener {
         jedisPool = null;
     }
 
-    private void persist(UUID uuid) {
+    void persist(UUID uuid) {
         final String uuidStr = uuid.toString();
         final String plain = plugin.getNicknameCache().getPlainNickname(uuid);
         final String raw = plugin.getNicknameCache().getRawNickname(uuid);
