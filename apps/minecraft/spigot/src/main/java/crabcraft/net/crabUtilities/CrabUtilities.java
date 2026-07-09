@@ -54,6 +54,7 @@ public final class CrabUtilities extends JavaPlugin {
     private HappyGhastSpeedManager happyGhastSpeedManager;
     private UnlockAllRecipesManager unlockAllRecipesManager;
     private CustomNetherPortalListener customNetherPortalListener;
+    private NicknameSync nicknameSync;
 
     @Override
     public void onEnable() {
@@ -68,11 +69,6 @@ public final class CrabUtilities extends JavaPlugin {
         saveDefaultConfig();
         mergeConfigDefaults();
         reloadConfig();
-
-        // Plugin messaging channels (bidirectional for nickname sync)
-        getServer().getMessenger().registerOutgoingPluginChannel(this, "crabutilities:nicknames");
-        NicknameSync nicknameSync = new NicknameSync(this);
-        getServer().getMessenger().registerIncomingPluginChannel(this, "crabutilities:nicknames", nicknameSync);
 
         // SVC plugin-message channels — required to inject fake PlayerStatePackets
         // for cross-server group GUI roster.
@@ -91,11 +87,12 @@ public final class CrabUtilities extends JavaPlugin {
 
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);
+        this.nicknameSync = new NicknameSync(this);
+        Bukkit.getPluginManager().registerEvents(nicknameSync, this);
+        nicknameSync.start();
         this.mentionAutocompleteListener = new MentionAutocompleteListener(this);
         Bukkit.getPluginManager().registerEvents(mentionAutocompleteListener, this);
         mentionAutocompleteListener.refreshAll();
-        Bukkit.getPluginManager().registerEvents(nicknameSync, this);
-        nicknameSync.syncAll();
 
         // Sleep broadcast: announce who slept when the night is skipped. Opt-in
         // and disabled by default; the listener reads config live, so
@@ -254,6 +251,12 @@ public final class CrabUtilities extends JavaPlugin {
         stopLoginStreakCache();
         startLoginStreakCache();
         messages.add("Login streak cache restarted with current Redis settings.");
+
+        if (nicknameSync != null) {
+            nicknameSync.shutdown();
+            nicknameSync.start();
+            messages.add("Nickname Redis sync restarted with current Redis settings.");
+        }
 
         stopGlobalChatService();
         startGlobalChatService();
@@ -475,6 +478,10 @@ public final class CrabUtilities extends JavaPlugin {
             getServer().getServicesManager().unregister(voicechatPlugin);
         }
         stopLoginStreakCache();
+        if (nicknameSync != null) {
+            nicknameSync.shutdown();
+            nicknameSync = null;
+        }
         stopGlobalChatService();
         stopPlayerSettings();
         stopSignMarkers();

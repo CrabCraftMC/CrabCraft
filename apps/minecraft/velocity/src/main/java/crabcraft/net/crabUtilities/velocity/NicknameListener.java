@@ -1,108 +1,160 @@
 package crabcraft.net.crabUtilities.velocity;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
-import com.velocitypowered.api.event.connection.PluginMessageEvent;
-import com.velocitypowered.api.proxy.ServerConnection;
-import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.JedisPubSub;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.UUID;
 
 public class NicknameListener {
 
-    private static final String CHANNEL = "crabutilities:nicknames";
-    private static final MinecraftChannelIdentifier NICKNAME_CHANNEL =
-            MinecraftChannelIdentifier.from(CHANNEL);
-
-    // Origin of a Spigot -> proxy nickname message.
-    //   CHANGE — player ran /nick: authoritative set or clear.
-    //   JOIN   — a backend reporting its current local nick on join. Untrusted:
-    //            may be stale or empty if EssentialsX hasn't loaded the user.
-    private static final String ORIGIN_JOIN = "JOIN";
-    private static final String ORIGIN_CHANGE = "CHANGE";
+    public static final String HASH_KEY = "crabutilities:nicknames";
+    public static final String UPDATE_CHANNEL = "crabutilities:nicknames-updates";
 
     private final CrabUtilitiesVelocity plugin;
+    private final VelocityConfig config;
+    private JedisPool jedisPool;
+    private Thread subscriberThread;
+    private JedisPubSub pubSub;
+    private volatile boolean redisFailureLogged;
 
-    public NicknameListener(CrabUtilitiesVelocity plugin) {
+    public NicknameListener(CrabUtilitiesVelocity plugin, VelocityConfig config) {
         this.plugin = plugin;
+        this.config = config;
     }
 
-    @Subscribe
-    public void onPluginMessage(PluginMessageEvent event) {
-        if (!event.getIdentifier().getId().equals(CHANNEL)) return;
-        // Only accept messages from backend servers
-        if (!(event.getSource() instanceof ServerConnection)) return;
-
-        // Don't forward to the client
-        event.setResult(PluginMessageEvent.ForwardResult.handled());
-
-        final UUID uuid;
-        final String nickname;
-        final String origin;
-        try {
-            DataInputStream in = new DataInputStream(new ByteArrayInputStream(event.getData()));
-            uuid = UUID.fromString(in.readUTF());
-            nickname = in.readUTF();
-            origin = readOrigin(in);
-        } catch (IOException | IllegalArgumentException e) {
-            plugin.getLogger().warn("Failed to parse nickname plugin message", e);
-            return;
-        }
-
-        if (ORIGIN_JOIN.equals(origin)) {
-            handleJoinReport(uuid, nickname);
+    public void start() {
+        JedisPoolConfig poolConfig = new JedisPoolConfig();
+        poolConfig.setMaxTotal(2);
+        if (config.getRedisPassword() != null && !config.getRedisPassword().isEmpty()) {
+            jedisPool = new JedisPool(poolConfig, config.getRedisHost(),
+                    config.getRedisPort(), 2000, config.getRedisPassword());
         } else {
-            // Explicit /nick change — authoritative set or clear.
-            plugin.getNicknameCache().setNickname(uuid, nickname);
-            plugin.getPendingJoinManager().complete(uuid);
-            persist(uuid);
+            jedisPool = new JedisPool(poolConfig, config.getRedisHost(),
+                    config.getRedisPort(), 2000);
+        }
+
+        pubSub = new JedisPubSub() {
+            @Override
+            public void onMessage(String channel, String message) {
+                if (UPDATE_CHANNEL.equals(channel)) ingest(message);
+            }
+        };
+
+        subscriberThread = new Thread(() -> {
+            boolean warned = false;
+            while (!Thread.currentThread().isInterrupted()) {
+                JedisPool pool = jedisPool;
+                if (pool == null || pool.isClosed()) break;
+                try (Jedis jedis = pool.getResource()) {
+                    if (warned) {
+                        plugin.getLogger().info("Nickname Redis subscriber reconnected.");
+                        warned = false;
+                    }
+                    jedis.subscribe(pubSub, UPDATE_CHANNEL);
+                } catch (NoClassDefFoundError e) {
+                    break;
+                } catch (Exception e) {
+                    if (Thread.currentThread().isInterrupted()) break;
+                    if (!warned) {
+                        plugin.getLogger().warn("Nickname Redis subscriber unavailable, reconnecting in 3s...", e);
+                        warned = true;
+                    } else {
+                        plugin.getLogger().debug("Nickname Redis subscriber disconnected: {}", e.getMessage());
+                    }
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }, "CrabUtilities-Nickname-Subscriber");
+        subscriberThread.setDaemon(true);
+        subscriberThread.start();
+    }
+
+    public void publishNickname(UUID uuid, String raw) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
+
+        String nickname = raw == null ? "" : raw;
+        JsonObject payload = new JsonObject();
+        payload.addProperty("uuid", uuid.toString());
+        payload.addProperty("raw", nickname);
+
+        plugin.getServer().getScheduler().buildTask(plugin, () -> {
+            try (Jedis jedis = pool.getResource()) {
+                if (nickname.isEmpty()) {
+                    jedis.hdel(HASH_KEY, uuid.toString());
+                } else {
+                    jedis.hset(HASH_KEY, uuid.toString(), nickname);
+                }
+                jedis.publish(UPDATE_CHANNEL, payload.toString());
+                if (redisFailureLogged) {
+                    plugin.getLogger().info("Nickname Redis publisher recovered.");
+                    redisFailureLogged = false;
+                }
+            } catch (Exception e) {
+                if (!redisFailureLogged) {
+                    plugin.getLogger().warn("Failed to publish nickname for {}; will retry on later updates", uuid, e);
+                    redisFailureLogged = true;
+                } else {
+                    plugin.getLogger().debug("Failed to publish nickname for {}: {}", uuid, e.getMessage());
+                }
+            }
+        }).schedule();
+    }
+
+    public String loadRawNickname(UUID uuid) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return null;
+
+        try (Jedis jedis = pool.getResource()) {
+            String raw = jedis.hget(HASH_KEY, uuid.toString());
+            if (redisFailureLogged) {
+                plugin.getLogger().info("Nickname Redis reader recovered.");
+                redisFailureLogged = false;
+            }
+            return raw;
+        } catch (Exception e) {
+            if (!redisFailureLogged) {
+                plugin.getLogger().warn("Failed to read nickname for {} from Redis", uuid, e);
+                redisFailureLogged = true;
+            } else {
+                plugin.getLogger().debug("Failed to read nickname for {} from Redis: {}", uuid, e.getMessage());
+            }
+            return null;
         }
     }
 
-    /**
-     * Handles a backend's join-time report of its local nickname. This must
-     * never let a backend overwrite the authoritative nickname, otherwise a
-     * server whose EssentialsX data has lost (or never had) the nick reverts
-     * it for everyone.
-     */
-    private void handleJoinReport(UUID uuid, String reported) {
-        String cached = plugin.getNicknameCache().getRawNickname(uuid);
-        if (cached != null) {
-            // Proxy already holds the authoritative nick. If the backend
-            // disagrees (stale or missing local data), correct the backend
-            // instead of overwriting the cache/DB.
-            if (!cached.equals(reported)) {
-                pushToBackend(uuid, cached);
-            }
-            plugin.getPendingJoinManager().complete(uuid);
+    private void ingest(String json) {
+        final UUID uuid;
+        final String raw;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            uuid = UUID.fromString(obj.get("uuid").getAsString());
+            raw = obj.has("raw") && !obj.get("raw").isJsonNull()
+                    ? obj.get("raw").getAsString()
+                    : "";
+        } catch (Exception e) {
+            plugin.getLogger().warn("Ignoring malformed nickname Redis update", e);
             return;
         }
 
-        // No cached value yet — resolve against the database, which is the
-        // source of truth. The DB seed in ConnectionListener#onLogin usually
-        // populates the cache first; this covers the case where it hasn't
-        // finished, and migrates legacy nicks set directly on a backend.
-        plugin.runDatabaseTask("nickname-join-resolve", () -> {
-            String dbRaw = plugin.getPgWriter().loadRawNickname(uuid.toString());
-            if (dbRaw != null && !dbRaw.isEmpty()) {
-                plugin.getNicknameCache().setNickname(uuid, dbRaw);
-                if (!dbRaw.equals(reported)) {
-                    pushToBackend(uuid, dbRaw);
-                }
-            } else if (reported != null && !reported.isEmpty()) {
-                // DB has no nickname but the backend does — adopt and persist
-                // it (e.g. a nick set on a backend before proxy sync existed).
-                plugin.getNicknameCache().setNickname(uuid, reported);
-                persist(uuid);
-            }
-            // else: both empty — genuinely no nickname, nothing to do.
-            plugin.getPendingJoinManager().complete(uuid);
-        });
+        if (plugin.getServer().getPlayer(uuid).filter(player -> player.isActive()).isEmpty()) {
+            return;
+        }
+
+        plugin.getNicknameCache().setNickname(uuid, raw);
+        plugin.getPendingJoinManager().complete(uuid);
+        persist(uuid);
     }
 
     @Subscribe
@@ -116,40 +168,33 @@ public class NicknameListener {
         }
     }
 
-    /** Persist the currently-cached nickname for {@code uuid} to PostgreSQL. */
-    private void persist(UUID uuid) {
+    public void shutdown() {
+        if (pubSub != null) {
+            try {
+                pubSub.unsubscribe();
+            } catch (Exception ignored) {}
+        }
+        if (subscriberThread != null) {
+            subscriberThread.interrupt();
+            try {
+                subscriberThread.join(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        if (jedisPool != null && !jedisPool.isClosed()) {
+            try {
+                jedisPool.close();
+            } catch (NoClassDefFoundError ignored) {}
+        }
+        jedisPool = null;
+    }
+
+    void persist(UUID uuid) {
         final String uuidStr = uuid.toString();
         final String plain = plugin.getNicknameCache().getPlainNickname(uuid);
         final String raw = plugin.getNicknameCache().getRawNickname(uuid);
         plugin.runDatabaseTask("nickname-persist",
                 () -> plugin.getPgWriter().updateNickname(uuidStr, plain, raw));
-    }
-
-    /** Push the authoritative nickname down to the player's current backend. */
-    private void pushToBackend(UUID uuid, String raw) {
-        plugin.getServer().getPlayer(uuid).ifPresent(player ->
-                player.getCurrentServer().ifPresent(conn -> {
-                    try {
-                        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                        DataOutputStream out = new DataOutputStream(bytes);
-                        out.writeUTF(uuid.toString());
-                        out.writeUTF(raw);
-                        conn.sendPluginMessage(NICKNAME_CHANNEL, bytes.toByteArray());
-                    } catch (IOException e) {
-                        plugin.getLogger().warn("Failed to push nickname to backend for {}", uuid, e);
-                    }
-                }));
-    }
-
-    /**
-     * Reads the trailing origin flag. Falls back to {@code CHANGE} for older
-     * backends that don't send one, preserving the previous behavior.
-     */
-    private static String readOrigin(DataInputStream in) {
-        try {
-            return in.readUTF();
-        } catch (IOException e) {
-            return ORIGIN_CHANGE;
-        }
     }
 }
