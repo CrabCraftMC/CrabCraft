@@ -94,7 +94,7 @@ public class MessageManager {
                 plugin.getConfig().getMsgIncomingSoundVolume(),
                 plugin.getConfig().getMsgIncomingSoundPitch()
         );
-        target.playSound(sound);
+        target.playSound(sound, Sound.Emitter.self());
     }
 
     private void broadcastToSpies(Component senderComponent, Component targetComponent,
