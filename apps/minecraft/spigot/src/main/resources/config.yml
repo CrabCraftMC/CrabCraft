@@ -142,6 +142,10 @@ tweaks:
     player-kill-multiplier: 2
     other-multiplier: 1
 
+  # Drop the killed player's head on player kills. The head lore records the killer.
+  player-head-drops:
+    enabled: false
+
   # Player heads keep their custom name and lore when broken and replaced.
   persistent-heads:
     enabled: false
