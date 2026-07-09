@@ -14,7 +14,10 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
+import java.time.LocalDate;
+import java.time.format.TextStyle;
 import java.util.List;
+import java.util.Locale;
 
 public class PlayerHeadDropsListener implements Listener {
 
@@ -40,13 +43,28 @@ public class PlayerHeadDropsListener implements Listener {
             return;
         }
         meta.setOwningPlayer(victim);
-        meta.displayName(Component.text(victim.getName() + "'s Head", NamedTextColor.GOLD)
+        final Component victimName = NicknameComponentResolver.forPlayer(this.plugin.getEssentials(), victim);
+        meta.displayName((victimName != null ? victimName : Component.text(victim.getName(), NamedTextColor.GOLD))
+                .append(Component.text("'s Head", NamedTextColor.GOLD))
                 .decoration(TextDecoration.ITALIC, false));
         final Component killerName = NicknameComponentResolver.forPlayer(this.plugin.getEssentials(), killer);
         meta.lore(List.of(Component.text("Killed by ", NamedTextColor.GRAY)
                 .append(killerName != null ? killerName : Component.text(killer.getName(), NamedTextColor.GRAY))
-                .decoration(TextDecoration.ITALIC, false)));
+                .decoration(TextDecoration.ITALIC, false),
+                Component.text("Killed on: " + formatDate(LocalDate.now()), NamedTextColor.GRAY)
+                        .decoration(TextDecoration.ITALIC, false)));
         head.setItemMeta(meta);
         event.getDrops().add(head);
+    }
+
+    private static String formatDate(final LocalDate date) {
+        final int day = date.getDayOfMonth();
+        final String suffix = switch (day) {
+            case 1, 21, 31 -> "st";
+            case 2, 22 -> "nd";
+            case 3, 23 -> "rd";
+            default -> "th";
+        };
+        return day + suffix + " " + date.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
     }
 }
