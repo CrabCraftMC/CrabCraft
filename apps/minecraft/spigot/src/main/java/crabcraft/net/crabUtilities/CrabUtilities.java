@@ -9,6 +9,7 @@ import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
 import crabcraft.net.crabUtilities.enderman.EndermanGriefListener;
 import crabcraft.net.crabUtilities.happyghast.HappyGhastSpeedManager;
 import crabcraft.net.crabUtilities.heads.PersistentHeadsListener;
+import crabcraft.net.crabUtilities.heads.PlayerHeadDropsListener;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
 import crabcraft.net.crabUtilities.netherportals.CustomNetherPortalListener;
 import crabcraft.net.crabUtilities.recipes.UnlockAllRecipesManager;
@@ -115,10 +116,12 @@ public final class CrabUtilities extends JavaPlugin {
         //   - Cauldron crafting (concrete powder -> concrete, dirt -> mud)
         //   - Enderman-only grief prevention (targeted, unlike the global game rule)
         //   - Predictable shulker shell drops (more on a player kill)
+        //   - Player heads dropping on player kills
         //   - Player heads keeping their name/lore when broken and replaced
         Bukkit.getPluginManager().registerEvents(new CauldronRecipeListener(this), this);
         Bukkit.getPluginManager().registerEvents(new EndermanGriefListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ShulkerShellListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerHeadDropsListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PersistentHeadsListener(this), this);
 
         // Unlock-all-recipes: unlock every recipe on join (and for anyone
