@@ -6,6 +6,8 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
+import java.util.List;
+
 /**
  * Mirrors login streak snapshots into Redis so backend Spigot servers
  * can render them through PlaceholderAPI without each one talking to
@@ -27,6 +29,19 @@ public class LoginStreakPublisher {
 
     public static final String HASH_KEY = "crabutilities:streaks";
     public static final String UPDATE_CHANNEL = "crabutilities:streaks-updates";
+    private static final String PUBLISH_SCRIPT = """
+            local current = redis.call('HGET', KEYS[1], ARGV[1])
+            if current then
+                local ok, decoded = pcall(cjson.decode, current)
+                if ok and type(decoded) == 'table'
+                        and (tonumber(decoded['last_login_at']) or 0) > tonumber(ARGV[2]) then
+                    return 0
+                end
+            end
+            redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+            redis.call('PUBLISH', ARGV[4], ARGV[3])
+            return 1
+            """;
 
     private final CrabUtilitiesVelocity plugin;
     private final VelocityConfig config;
@@ -71,8 +86,10 @@ public class LoginStreakPublisher {
 
         String body = payload.toString();
         try (Jedis jedis = jedisPool.getResource()) {
-            jedis.hset(HASH_KEY, uuid, body);
-            jedis.publish(UPDATE_CHANNEL, body);
+            jedis.eval(
+                    PUBLISH_SCRIPT,
+                    List.of(HASH_KEY),
+                    List.of(uuid, Long.toString(snapshot.lastLoginAt), body, UPDATE_CHANNEL));
             if (redisFailureLogged) {
                 plugin.getLogger().info("Login streak Redis publisher recovered.");
                 redisFailureLogged = false;

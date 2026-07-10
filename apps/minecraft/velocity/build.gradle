@@ -55,6 +55,21 @@ tasks.jar {
     archiveClassifier.set('slim')
 }
 
+tasks.register('loginStreakCacheSeedRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.LoginStreakCacheSeedRegressionTest')
+}
+
+tasks.named('test') {
+    failOnNoDiscoveredTests = false
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('loginStreakCacheSeedRegressionTest')
+}
+
 tasks.build.dependsOn(tasks.shadowJar)
 
 // Bundle the single source-of-truth award seed file into the plugin JAR

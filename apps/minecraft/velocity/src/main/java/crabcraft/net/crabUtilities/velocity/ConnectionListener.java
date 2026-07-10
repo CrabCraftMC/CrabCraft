@@ -21,6 +21,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class ConnectionListener {
 
@@ -221,14 +223,30 @@ public class ConnectionListener {
             }
         }
 
-        var streakService = plugin.getLoginStreakService();
-        if (streakService == null) return;
+        String uuid = playerId.toString();
         plugin.runDatabaseTask("login-streak-progress-load", () -> {
-            var progress = streakService.getQualificationProgress(playerId.toString());
+            var streakService = plugin.getLoginStreakService();
+            if (streakService == null) return;
+            var streakPublisher = plugin.getLoginStreakPublisher();
+            if (streakPublisher != null) {
+                seedLoginStreakCache(
+                        () -> streakService.get(uuid),
+                        snapshot -> streakPublisher.publish(
+                                uuid, snapshot, streakService.getResetHourUtc()));
+            }
+
+            var progress = streakService.getQualificationProgress(uuid);
             if (progress == null) return;
             if (!isCurrentStreakSession(session) || !isPlayerActive(playerId)) return;
             scheduleNextQualificationCheck(session, progress);
         });
+    }
+
+    static void seedLoginStreakCache(
+            Supplier<crabcraft.net.crabUtilities.velocity.db.LoginStreakService.StreakSnapshot> load,
+            Consumer<crabcraft.net.crabUtilities.velocity.db.LoginStreakService.StreakSnapshot> publish) {
+        var snapshot = load.get();
+        if (snapshot != null) publish.accept(snapshot);
     }
 
     private void finishLoginStreakSession(UUID playerId) {
