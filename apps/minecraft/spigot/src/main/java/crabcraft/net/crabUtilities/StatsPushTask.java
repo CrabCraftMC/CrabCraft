@@ -11,11 +11,12 @@ import redis.clients.jedis.JedisPoolConfig;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Periodically scans the Minecraft world's {@code stats/} folder and
+ * Periodically scans the Minecraft level's {@code players/stats/} folder and
  * publishes the contents of each changed file to Redis so the Velocity
  * proxy can compute award scores and persist them.
  *
@@ -55,20 +56,18 @@ public class StatsPushTask {
         this.season = plugin.getConfig().getString("season", "").trim();
         this.intervalMinutes = Math.max(1L,
                 plugin.getConfig().getLong("stats-push.interval-minutes", 5L));
-        File worldFolder = plugin.getServer().getWorlds().isEmpty()
-                ? null
-                : plugin.getServer().getWorlds().get(0).getWorldFolder();
-        this.statsDir = worldFolder == null ? null : new File(worldFolder, "stats");
-        this.advancementsDir = worldFolder == null ? null : new File(worldFolder, "advancements");
+        Path playersDirectory = playerStorageDirectory(plugin.getServer().getLevelDirectory());
+        this.statsDir = playersDirectory.resolve("stats").toFile();
+        this.advancementsDir = playersDirectory.resolve("advancements").toFile();
+    }
+
+    static Path playerStorageDirectory(Path levelDirectory) {
+        return levelDirectory.resolve("players");
     }
 
     public void start() {
         if (season.isEmpty()) {
             plugin.getLogger().info("Stats push DISABLED: 'season' is not set in config.yml");
-            return;
-        }
-        if (statsDir == null) {
-            plugin.getLogger().warning("Stats push DISABLED: no world folder is available yet.");
             return;
         }
         JedisPoolConfig poolConfig = new JedisPoolConfig();
@@ -88,7 +87,7 @@ public class StatsPushTask {
     }
 
     /**
-     * Iterates the world's {@code stats/<uuid>.json} files and pushes
+     * Iterates the level's {@code players/stats/<uuid>.json} files and pushes
      * anything whose mtime has moved since the previous scan.
      */
     private void scan() {
