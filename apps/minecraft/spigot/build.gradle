@@ -93,6 +93,13 @@ tasks.register('statsPushPathRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.StatsPushPathRegressionTest')
 }
 
+tasks.register('globalChatLinkRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.chat.GlobalChatLinkRegressionTest')
+}
+
 tasks.named('test') {
     failOnNoDiscoveredTests = false
 }
@@ -101,6 +108,7 @@ tasks.named('check') {
     dependsOn tasks.named('voiceRelayRegressionTest')
     dependsOn tasks.named('loginStreakCacheRegressionTest')
     dependsOn tasks.named('statsPushPathRegressionTest')
+    dependsOn tasks.named('globalChatLinkRegressionTest')
 }
 
 processResources {
