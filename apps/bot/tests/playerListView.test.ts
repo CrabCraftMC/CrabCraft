@@ -21,13 +21,14 @@ describe("generatePlayerListImage", () => {
   });
 });
 
-test("parses bold italic legacy nicknames without rendering format codes", () => {
-  expect(parseMinecraftText("§x§3§c§8§f§3§6§l§oB")).toEqual([
+test("parses legacy nickname formatting without rendering format codes", () => {
+  expect(parseMinecraftText("§x§3§c§8§f§3§6§l§o§n§mB")).toEqual([
     {
       text: "B",
       color: "#3c8f36",
       bold: true,
-      strikethrough: false,
+      underline: true,
+      strikethrough: true,
       italic: true,
     },
   ]);
