@@ -41,6 +41,7 @@ interface RawImage {
 interface TextSegment {
   text: string;
   color: string;
+  bold: boolean;
   strikethrough: boolean;
   italic: boolean;
 }
@@ -409,8 +410,8 @@ function drawTextPass(
     for (let i = 0; i < segment.text.length;) {
       const code = segment.text.codePointAt(i) ?? 32;
       const char = String.fromCodePoint(code);
-      if (code !== 32) drawGlyph(dest, font, code, cursor, y, color, segment.italic);
-      cursor += getCharacterAdvance(font, code) * SCALE;
+      if (code !== 32) drawGlyph(dest, font, code, cursor, y, color, segment.bold, segment.italic);
+      cursor += getCharacterAdvance(font, code, segment.bold) * SCALE;
       i += char.length;
     }
     if (segment.strikethrough && cursor > startX) {
@@ -426,12 +427,13 @@ function drawGlyph(
   x: number,
   y: number,
   color: Rgba,
+  bold: boolean,
   italic: boolean,
 ) {
   const glyph = font.glyphs.get(code) ?? font.glyphs.get(63);
   if (!glyph) return;
 
-  drawImage(dest, font.textures[glyph.texture], x, y, {
+  const options = {
     sx: glyph.sx,
     sy: glyph.sy,
     width: glyph.width,
@@ -439,12 +441,16 @@ function drawGlyph(
     scale: SCALE,
     tint: color,
     italic,
-  });
+  };
+  drawImage(dest, font.textures[glyph.texture], x, y, options);
+  if (bold) drawImage(dest, font.textures[glyph.texture], x + SCALE, y, options);
 }
 
-function getCharacterAdvance(font: FontContext, code: number) {
-  if (code === 32) return 4;
-  return font.glyphs.get(code)?.advance ?? font.glyphs.get(63)?.advance ?? 4;
+function getCharacterAdvance(font: FontContext, code: number, bold = false) {
+  const advance = code === 32
+    ? 4
+    : font.glyphs.get(code)?.advance ?? font.glyphs.get(63)?.advance ?? 4;
+  return advance + (bold ? 1 : 0);
 }
 
 function drawAvatar(dest: RawImage, avatar: RawImage | null, x: number, y: number) {
@@ -550,13 +556,17 @@ async function fetchAvatar(uuid: string, shouldFetch: boolean): Promise<RawImage
   }
 }
 
-function parseMinecraftText(raw: string): TextSegment[] {
+export function parseMinecraftText(raw: string): TextSegment[] {
   const segments: TextSegment[] = [];
-  parseTextIntoSegments(raw, { color: "#ffffff", strikethrough: false, italic: false }, segments);
+  parseTextIntoSegments(
+    raw,
+    { color: "#ffffff", bold: false, strikethrough: false, italic: false },
+    segments,
+  );
 
   return segments.length > 0
     ? segments
-    : [{ text: "", color: "#ffffff", strikethrough: false, italic: false }];
+    : [{ text: "", color: "#ffffff", bold: false, strikethrough: false, italic: false }];
 }
 
 function parseTextIntoSegments(
@@ -593,6 +603,7 @@ function parseTextIntoSegments(
 
     if (raw.slice(i).toLowerCase().startsWith("<reset>")) {
       style.color = "#ffffff";
+      style.bold = false;
       style.strikethrough = false;
       style.italic = false;
       i += "<reset>".length;
@@ -676,6 +687,7 @@ function applyLegacyFormat(raw: string, index: number, style: Omit<TextSegment, 
       hex += raw[index + 3 + j * 2];
     }
     style.color = `#${hex.toLowerCase()}`;
+    style.bold = false;
     style.strikethrough = false;
     style.italic = false;
     return index + 14;
@@ -683,8 +695,14 @@ function applyLegacyFormat(raw: string, index: number, style: Omit<TextSegment, 
 
   if (code && LEGACY_COLORS[code]) {
     style.color = LEGACY_COLORS[code];
+    style.bold = false;
     style.strikethrough = false;
     style.italic = false;
+    return index + 2;
+  }
+
+  if (code === "l") {
+    style.bold = true;
     return index + 2;
   }
 
@@ -700,6 +718,7 @@ function applyLegacyFormat(raw: string, index: number, style: Omit<TextSegment, 
 
   if (code === "r") {
     style.color = "#ffffff";
+    style.bold = false;
     style.strikethrough = false;
     style.italic = false;
     return index + 2;
@@ -717,6 +736,7 @@ function appendTextSegment(
   if (
     last &&
     last.color === style.color &&
+    last.bold === style.bold &&
     last.strikethrough === style.strikethrough &&
     last.italic === style.italic
   ) {
@@ -780,7 +800,7 @@ function legacyFormatEnd(raw: string, index: number) {
     }
     return index + 14;
   }
-  return code && (LEGACY_COLORS[code] || code === "m" || code === "o" || code === "r")
+  return code && (LEGACY_COLORS[code] || code === "l" || code === "m" || code === "o" || code === "r")
     ? index + 2
     : index;
 }
@@ -794,7 +814,7 @@ function measureText(segments: TextSegment[], font: FontContext): number {
   for (const segment of segments) {
     for (let i = 0; i < segment.text.length;) {
       const code = segment.text.codePointAt(i) ?? 32;
-      width += getCharacterAdvance(font, code) * SCALE;
+      width += getCharacterAdvance(font, code, segment.bold) * SCALE;
       i += String.fromCodePoint(code).length;
     }
   }

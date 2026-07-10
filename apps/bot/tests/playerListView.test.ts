@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   generatePlayerListImage,
+  parseMinecraftText,
   type OnlinePlayers,
 } from "../src/utils/playerListView.js";
 
@@ -18,6 +19,18 @@ describe("generatePlayerListImage", () => {
       Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     );
   });
+});
+
+test("parses bold italic legacy nicknames without rendering format codes", () => {
+  expect(parseMinecraftText("§x§3§c§8§f§3§6§l§oB")).toEqual([
+    {
+      text: "B",
+      color: "#3c8f36",
+      bold: true,
+      strikethrough: false,
+      italic: true,
+    },
+  ]);
 });
 
 function player(username: string, server: string) {
