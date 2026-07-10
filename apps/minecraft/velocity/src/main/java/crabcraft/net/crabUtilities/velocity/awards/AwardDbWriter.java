@@ -28,21 +28,30 @@ public final class AwardDbWriter {
             computed_at = EXTRACT(EPOCH FROM NOW())::INTEGER
         """;
 
+    private static final String RESET_MEDALS = """
+        UPDATE player_award_scores
+        SET medal = 0
+        WHERE season = ?
+        """;
+
     private static final String RECOMPUTE_MEDALS = """
-        UPDATE player_award_scores pas
-        SET medal = CASE
-                WHEN pas.score <= 0 THEN 0
-                WHEN ranked.rnk = 1 THEN 1
-                WHEN ranked.rnk = 2 THEN 2
-                WHEN ranked.rnk = 3 THEN 3
-                ELSE 0
-            END
-        FROM (
-            SELECT id, RANK() OVER (PARTITION BY award_id ORDER BY score DESC) AS rnk
-            FROM player_award_scores
-            WHERE season = ?
-        ) ranked
-        WHERE pas.id = ranked.id
+        WITH ranked AS (
+            SELECT
+                scores.id,
+                RANK() OVER (
+                    PARTITION BY scores.award_id ORDER BY scores.score DESC
+                ) AS rnk
+            FROM player_award_scores scores
+            WHERE scores.season = ? AND scores.score > 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM player_alts alt
+                  WHERE alt.minecraft_uuid = scores.minecraft_uuid
+              )
+        )
+        UPDATE player_award_scores scores
+        SET medal = ranked.rnk::int
+        FROM ranked
+        WHERE scores.id = ranked.id AND ranked.rnk <= 3
         """;
 
     private final HikariDataSource dataSource;
@@ -130,6 +139,10 @@ public final class AwardDbWriter {
     }
 
     private void recomputeMedalsInTransaction(Connection conn, String season) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(RESET_MEDALS)) {
+            stmt.setString(1, season);
+            stmt.executeUpdate();
+        }
         try (PreparedStatement stmt = conn.prepareStatement(RECOMPUTE_MEDALS)) {
             stmt.setString(1, season);
             stmt.executeUpdate();

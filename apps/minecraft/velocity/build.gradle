@@ -62,12 +62,20 @@ tasks.register('loginStreakCacheSeedRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.velocity.LoginStreakCacheSeedRegressionTest')
 }
 
+tasks.register('awardAltExclusionRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.awards.AwardAltExclusionRegressionTest')
+}
+
 tasks.named('test') {
     failOnNoDiscoveredTests = false
 }
 
 tasks.named('check') {
     dependsOn tasks.named('loginStreakCacheSeedRegressionTest')
+    dependsOn tasks.named('awardAltExclusionRegressionTest')
 }
 
 tasks.build.dependsOn(tasks.shadowJar)
