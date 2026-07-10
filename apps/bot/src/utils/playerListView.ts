@@ -42,6 +42,7 @@ interface TextSegment {
   text: string;
   color: string;
   bold: boolean;
+  underline: boolean;
   strikethrough: boolean;
   italic: boolean;
 }
@@ -417,6 +418,9 @@ function drawTextPass(
     if (segment.strikethrough && cursor > startX) {
       drawRect(dest, startX, y + 7, cursor - startX, 2, color);
     }
+    if (segment.underline && cursor > startX) {
+      drawRect(dest, startX, y + 8 * SCALE - 2, cursor - startX, SCALE, color);
+    }
   }
 }
 
@@ -560,13 +564,20 @@ export function parseMinecraftText(raw: string): TextSegment[] {
   const segments: TextSegment[] = [];
   parseTextIntoSegments(
     raw,
-    { color: "#ffffff", bold: false, strikethrough: false, italic: false },
+    { color: "#ffffff", bold: false, underline: false, strikethrough: false, italic: false },
     segments,
   );
 
   return segments.length > 0
     ? segments
-    : [{ text: "", color: "#ffffff", bold: false, strikethrough: false, italic: false }];
+    : [{
+      text: "",
+      color: "#ffffff",
+      bold: false,
+      underline: false,
+      strikethrough: false,
+      italic: false,
+    }];
 }
 
 function parseTextIntoSegments(
@@ -604,6 +615,7 @@ function parseTextIntoSegments(
     if (raw.slice(i).toLowerCase().startsWith("<reset>")) {
       style.color = "#ffffff";
       style.bold = false;
+      style.underline = false;
       style.strikethrough = false;
       style.italic = false;
       i += "<reset>".length;
@@ -688,6 +700,7 @@ function applyLegacyFormat(raw: string, index: number, style: Omit<TextSegment, 
     }
     style.color = `#${hex.toLowerCase()}`;
     style.bold = false;
+    style.underline = false;
     style.strikethrough = false;
     style.italic = false;
     return index + 14;
@@ -696,6 +709,7 @@ function applyLegacyFormat(raw: string, index: number, style: Omit<TextSegment, 
   if (code && LEGACY_COLORS[code]) {
     style.color = LEGACY_COLORS[code];
     style.bold = false;
+    style.underline = false;
     style.strikethrough = false;
     style.italic = false;
     return index + 2;
@@ -711,6 +725,11 @@ function applyLegacyFormat(raw: string, index: number, style: Omit<TextSegment, 
     return index + 2;
   }
 
+  if (code === "n") {
+    style.underline = true;
+    return index + 2;
+  }
+
   if (code === "o") {
     style.italic = true;
     return index + 2;
@@ -719,6 +738,7 @@ function applyLegacyFormat(raw: string, index: number, style: Omit<TextSegment, 
   if (code === "r") {
     style.color = "#ffffff";
     style.bold = false;
+    style.underline = false;
     style.strikethrough = false;
     style.italic = false;
     return index + 2;
@@ -737,6 +757,7 @@ function appendTextSegment(
     last &&
     last.color === style.color &&
     last.bold === style.bold &&
+    last.underline === style.underline &&
     last.strikethrough === style.strikethrough &&
     last.italic === style.italic
   ) {
@@ -800,7 +821,7 @@ function legacyFormatEnd(raw: string, index: number) {
     }
     return index + 14;
   }
-  return code && (LEGACY_COLORS[code] || code === "l" || code === "m" || code === "o" || code === "r")
+  return code && (LEGACY_COLORS[code] || code === "l" || code === "m" || code === "n" || code === "o" || code === "r")
     ? index + 2
     : index;
 }
