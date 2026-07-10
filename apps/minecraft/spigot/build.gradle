@@ -79,12 +79,20 @@ tasks.register('voiceRelayRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.voicechat.VoiceRelayRegressionTest')
 }
 
+tasks.register('loginStreakCacheRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.LoginStreakCacheRegressionTest')
+}
+
 tasks.named('test') {
     failOnNoDiscoveredTests = false
 }
 
 tasks.named('check') {
     dependsOn tasks.named('voiceRelayRegressionTest')
+    dependsOn tasks.named('loginStreakCacheRegressionTest')
 }
 
 processResources {

@@ -156,10 +156,16 @@ public class LoginStreakCache implements Listener {
             long startedAt = obj.has("streak_started_at") ? obj.get("streak_started_at").getAsLong() : lastLogin;
             long expiresAt = obj.has("expires_at") ? obj.get("expires_at").getAsLong() : 0L;
             boolean active = obj.has("active") ? obj.get("active").getAsBoolean() : current > 0;
-            cache.put(uuid, new StreakSnapshot(current, pending, longest, lastLogin, startedAt, expiresAt, active));
+            StreakSnapshot incoming =
+                    new StreakSnapshot(current, pending, longest, lastLogin, startedAt, expiresAt, active);
+            cache.merge(uuid, incoming, LoginStreakCache::preferNewerSnapshot);
         } catch (Exception e) {
             plugin.getLogger().fine("Bad streak update payload: " + e.getMessage());
         }
+    }
+
+    static StreakSnapshot preferNewerSnapshot(StreakSnapshot cached, StreakSnapshot incoming) {
+        return incoming.lastLoginAt >= cached.lastLoginAt ? incoming : cached;
     }
 
     public Map<UUID, StreakSnapshot> snapshot() {
