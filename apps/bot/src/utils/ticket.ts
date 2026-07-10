@@ -669,24 +669,6 @@ export function buildReopenedNotice(
     );
 }
 
-/** Same Reopen + Delete row, both disabled — used to grey it after reopen. */
-export function buildDisabledClosedTicketButtons(
-  ticketId: number,
-): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`ticket_reopen:${ticketId}`)
-      .setLabel("Reopen Ticket")
-      .setStyle(ButtonStyle.Success)
-      .setDisabled(true),
-    new ButtonBuilder()
-      .setCustomId(`ticket_delete:${ticketId}`)
-      .setLabel("Delete Ticket")
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled(true),
-  );
-}
-
 /** The structured topic set on a ticket channel. */
 export function buildTicketTopic(opts: {
   ticketId: number;
@@ -703,17 +685,21 @@ export function buildTicketTopic(opts: {
 }
 
 /**
- * Build a channel name like `steve-grief`. Discord allows up to 100 chars
- * for channel names; usernames are sanitised to letters/numbers/dash/underscore.
+ * Build a channel name like `steve-grief-0042`. Discord allows up to 100 chars;
+ * usernames are sanitised to letters/numbers/dash/underscore.
  */
 export function buildChannelName(
   username: string,
   meta: CategoryMeta,
+  ticketId?: number,
 ): string {
+  const suffix = `-${meta.category}${
+    ticketId == null ? "" : `-${String(ticketId).padStart(4, "0")}`
+  }`;
   const safe = username
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "user";
-  return `${safe}-${meta.category}`;
+    .slice(0, 100 - suffix.length) || "user";
+  return `${safe}${suffix}`;
 }
