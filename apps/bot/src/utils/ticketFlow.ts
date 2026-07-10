@@ -196,6 +196,11 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     return;
   }
 
+  // The ticket id keeps same-user, same-category channels distinguishable.
+  await ticketChannel
+    .setName(buildChannelName(opener.username, meta, ticket.id))
+    .catch((e) => logger.error("Ticket: failed to add id to channel name:", e));
+
   // Set the structured topic now that we have the ticket id.
   await ticketChannel
     .setTopic(
@@ -232,13 +237,12 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   );
   const evidenceAttachments = appendEvidence(header, evidenceFiles);
 
-  // The header carries the ticket info + evidence + Close button and is pinned.
-  // It is never edited afterwards (the close/reopen lifecycle uses a separate
-  // notice message) because its File components can't survive a re-send.
+  // The header carries the ticket info + evidence and is pinned. Its File
+  // components can't survive a re-send, so controls live on their own message.
   let openingMessage: Awaited<ReturnType<typeof ticketChannel.send>> | null = null;
   try {
     openingMessage = await ticketChannel.send({
-      components: [header, buildStaffButtons(ticket.id)],
+      components: [header],
       files: evidenceAttachments.length > 0 ? evidenceAttachments : undefined,
       allowedMentions: mentions,
       flags: MessageFlags.IsComponentsV2,
@@ -258,7 +262,6 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
             headerPlayer,
             onBehalf ? opener.id : undefined,
           ),
-          buildStaffButtons(ticket.id),
         ],
         allowedMentions: mentions,
         flags: MessageFlags.IsComponentsV2,
@@ -282,6 +285,33 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
       .pin()
       .catch((e) => logger.error("Ticket: failed to pin opening message:", e));
   }
+
+  // This file-free message can safely transform Close -> Reopen/Delete -> Close.
+  const controlsMessage = await ticketChannel
+    .send({
+      components: [buildStaffButtons(ticket.id)],
+      flags: MessageFlags.IsComponentsV2,
+    })
+    .catch((e) => {
+      logger.error("Ticket: failed to send controls message:", e);
+      return null;
+    });
+  if (!controlsMessage) {
+    await appDb.deleteTicketRow(ticket.id).catch(() => null);
+    await ticketChannel.delete("Ticket controls failed").catch(() => null);
+    await interaction.editReply({
+      components: [
+        errorContainer(
+          "**Error!** Failed to finish creating your ticket. Please try again in a moment.",
+        ),
+      ],
+      flags: MessageFlags.IsComponentsV2,
+    });
+    return;
+  }
+  await controlsMessage
+    .pin()
+    .catch((e) => logger.error("Ticket: failed to pin controls message:", e));
 
   // Appeals get a standard embed of the appellant's punishment history. It's a
   // separate message because a classic embed can't be mixed into the

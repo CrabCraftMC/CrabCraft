@@ -689,7 +689,12 @@ export async function closeTicket(
       delete_after: deleteAfter,
       updated_at: now,
     })
-    .where(eq(tickets.id, ticketId))
+    .where(
+      and(
+        eq(tickets.id, ticketId),
+        eq(tickets.status, "open"),
+      ),
+    )
     .returning();
   return row ?? null;
 }
@@ -705,7 +710,12 @@ export async function reopenTicket(ticketId: number): Promise<Ticket | null> {
       delete_after: null,
       updated_at: now,
     })
-    .where(eq(tickets.id, ticketId))
+    .where(
+      and(
+        eq(tickets.id, ticketId),
+        eq(tickets.status, "closed"),
+      ),
+    )
     .returning();
   return row ?? null;
 }
