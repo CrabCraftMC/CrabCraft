@@ -48,16 +48,20 @@ public final class AwardQueryService {
 
             Map<String, JsonObject> leaderMap = new HashMap<>();
             try (PreparedStatement stmt = conn.prepareStatement("""
-                    SELECT DISTINCT ON (p.award_id)
-                        p.award_id,
-                        p.minecraft_uuid AS best_uuid,
+                    SELECT DISTINCT ON (scores.award_id)
+                        scores.award_id,
+                        scores.minecraft_uuid AS best_uuid,
                         u.minecraft_username AS best_username,
-                        p.score AS best_score
-                    FROM player_award_scores p
-                    LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
-                    WHERE p.season = ?
-                      AND p.score > 0
-                    ORDER BY p.award_id, p.score DESC
+                        scores.score AS best_score
+                    FROM player_award_scores scores
+                    LEFT JOIN players u ON u.minecraft_uuid = scores.minecraft_uuid
+                    WHERE scores.season = ?
+                      AND scores.score > 0
+                      AND NOT EXISTS (
+                          SELECT 1 FROM player_alts alt
+                          WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                      )
+                    ORDER BY scores.award_id, scores.score DESC
                     """)) {
                 stmt.setString(1, season);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -135,9 +139,15 @@ public final class AwardQueryService {
             }
 
             int total = 0;
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT COUNT(*)::int FROM player_award_scores " +
-                    "WHERE award_id = ? AND season = ? AND score > 0")) {
+            try (PreparedStatement stmt = conn.prepareStatement("""
+                    SELECT COUNT(*)::int
+                    FROM player_award_scores scores
+                    WHERE scores.award_id = ? AND scores.season = ? AND scores.score > 0
+                      AND NOT EXISTS (
+                          SELECT 1 FROM player_alts alt
+                          WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                      )
+                    """)) {
                 stmt.setString(1, awardId);
                 stmt.setString(2, season);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -147,11 +157,25 @@ public final class AwardQueryService {
 
             JsonArray leaderboard = new JsonArray();
             try (PreparedStatement stmt = conn.prepareStatement("""
-                    SELECT p.minecraft_uuid, u.minecraft_username, p.score, p.medal
-                    FROM player_award_scores p
-                    LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
-                    WHERE p.award_id = ? AND p.season = ?
-                    ORDER BY p.score DESC
+                    SELECT
+                        ranked.minecraft_uuid,
+                        u.minecraft_username,
+                        ranked.score,
+                        CASE WHEN ranked.rnk <= 3 THEN ranked.rnk::int ELSE 0 END AS medal
+                    FROM (
+                        SELECT
+                            scores.minecraft_uuid,
+                            scores.score,
+                            RANK() OVER (ORDER BY scores.score DESC) AS rnk
+                        FROM player_award_scores scores
+                        WHERE scores.award_id = ? AND scores.season = ? AND scores.score > 0
+                          AND NOT EXISTS (
+                              SELECT 1 FROM player_alts alt
+                              WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                          )
+                    ) ranked
+                    LEFT JOIN players u ON u.minecraft_uuid = ranked.minecraft_uuid
+                    ORDER BY ranked.score DESC
                     LIMIT ? OFFSET ?
                     """)) {
                 stmt.setString(1, awardId);
@@ -196,12 +220,22 @@ public final class AwardQueryService {
         JsonArray leaderboard = new JsonArray();
         try (Connection conn = dataSource.getConnection()) {
             try (PreparedStatement stmt = conn.prepareStatement("""
-                    SELECT COUNT(*)::int FROM (
-                        SELECT minecraft_uuid
-                        FROM player_award_scores
-                        WHERE season = ? AND medal > 0
-                        GROUP BY minecraft_uuid
-                    ) ranked
+                    WITH ranked_scores AS (
+                        SELECT
+                            scores.minecraft_uuid,
+                            RANK() OVER (
+                                PARTITION BY scores.award_id ORDER BY scores.score DESC
+                            ) AS medal_rank
+                        FROM player_award_scores scores
+                        WHERE scores.season = ? AND scores.score > 0
+                          AND NOT EXISTS (
+                              SELECT 1 FROM player_alts alt
+                              WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                          )
+                    )
+                    SELECT COUNT(DISTINCT minecraft_uuid)::int
+                    FROM ranked_scores
+                    WHERE medal_rank <= 3
                     """)) {
                 stmt.setString(1, season);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -210,29 +244,42 @@ public final class AwardQueryService {
             }
 
             try (PreparedStatement stmt = conn.prepareStatement("""
-                     SELECT
-                         c.minecraft_uuid,
-                         u.minecraft_username,
-                         c.gold,
-                         c.silver,
-                         c.bronze,
-                         c.crown_score
-                     FROM (
+                     WITH ranked_scores AS (
+                         SELECT
+                             scores.minecraft_uuid,
+                             RANK() OVER (
+                                 PARTITION BY scores.award_id ORDER BY scores.score DESC
+                             ) AS medal_rank
+                         FROM player_award_scores scores
+                         WHERE scores.season = ? AND scores.score > 0
+                           AND NOT EXISTS (
+                               SELECT 1 FROM player_alts alt
+                               WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                           )
+                     ),
+                     crowns AS (
                          SELECT
                              minecraft_uuid,
-                             COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
-                             COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
-                             COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-                             (COUNT(*) FILTER (WHERE medal = 1) * 5
-                              + COUNT(*) FILTER (WHERE medal = 2) * 3
-                              + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
-                         FROM player_award_scores
-                         WHERE season = ?
+                             COUNT(*) FILTER (WHERE medal_rank = 1)::int AS gold,
+                             COUNT(*) FILTER (WHERE medal_rank = 2)::int AS silver,
+                             COUNT(*) FILTER (WHERE medal_rank = 3)::int AS bronze,
+                             (COUNT(*) FILTER (WHERE medal_rank = 1) * 5
+                              + COUNT(*) FILTER (WHERE medal_rank = 2) * 3
+                              + COUNT(*) FILTER (WHERE medal_rank = 3))::int AS crown_score
+                         FROM ranked_scores
+                         WHERE medal_rank <= 3
                          GROUP BY minecraft_uuid
-                     ) c
-                     LEFT JOIN players u ON u.minecraft_uuid = c.minecraft_uuid
-                     WHERE c.crown_score > 0
-                     ORDER BY c.crown_score DESC, c.gold DESC, c.silver DESC
+                     )
+                     SELECT
+                         crowns.minecraft_uuid,
+                         u.minecraft_username,
+                         crowns.gold,
+                         crowns.silver,
+                         crowns.bronze,
+                         crowns.crown_score
+                     FROM crowns
+                     LEFT JOIN players u ON u.minecraft_uuid = crowns.minecraft_uuid
+                     ORDER BY crowns.crown_score DESC, crowns.gold DESC, crowns.silver DESC
                      LIMIT ? OFFSET ?
                      """)) {
                 stmt.setString(1, season);
@@ -284,12 +331,18 @@ public final class AwardQueryService {
             try (PreparedStatement stmt = conn.prepareStatement("""
                     SELECT award_id, score, rank FROM (
                         SELECT
-                            award_id,
-                            minecraft_uuid,
-                            score,
-                            RANK() OVER (PARTITION BY award_id ORDER BY score DESC) AS rank
-                        FROM player_award_scores
-                        WHERE season = ? AND score > 0
+                            scores.award_id,
+                            scores.minecraft_uuid,
+                            scores.score,
+                            RANK() OVER (
+                                PARTITION BY scores.award_id ORDER BY scores.score DESC
+                            ) AS rank
+                        FROM player_award_scores scores
+                        WHERE scores.season = ? AND scores.score > 0
+                          AND NOT EXISTS (
+                              SELECT 1 FROM player_alts alt
+                              WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                          )
                     ) ranked
                     WHERE minecraft_uuid = ?
                     """)) {
@@ -313,17 +366,30 @@ public final class AwardQueryService {
 
             JsonObject crown = null;
             try (PreparedStatement stmt = conn.prepareStatement("""
-                    WITH crown AS (
+                    WITH ranked_scores AS (
+                        SELECT
+                            scores.minecraft_uuid,
+                            RANK() OVER (
+                                PARTITION BY scores.award_id ORDER BY scores.score DESC
+                            ) AS medal_rank
+                        FROM player_award_scores scores
+                        WHERE scores.season = ? AND scores.score > 0
+                          AND NOT EXISTS (
+                              SELECT 1 FROM player_alts alt
+                              WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                          )
+                    ),
+                    crown AS (
                         SELECT
                             minecraft_uuid,
-                            COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
-                            COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
-                            COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-                            (COUNT(*) FILTER (WHERE medal = 1) * 5
-                             + COUNT(*) FILTER (WHERE medal = 2) * 3
-                             + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
-                        FROM player_award_scores
-                        WHERE season = ?
+                            COUNT(*) FILTER (WHERE medal_rank = 1)::int AS gold,
+                            COUNT(*) FILTER (WHERE medal_rank = 2)::int AS silver,
+                            COUNT(*) FILTER (WHERE medal_rank = 3)::int AS bronze,
+                            (COUNT(*) FILTER (WHERE medal_rank = 1) * 5
+                             + COUNT(*) FILTER (WHERE medal_rank = 2) * 3
+                             + COUNT(*) FILTER (WHERE medal_rank = 3))::int AS crown_score
+                        FROM ranked_scores
+                        WHERE medal_rank <= 3
                         GROUP BY minecraft_uuid
                     ),
                     ranked AS (
