@@ -202,6 +202,29 @@ describe("ticket lifecycle controls", () => {
     expect(i.message.edit).not.toHaveBeenCalled();
   });
 
+  test("close still posts its notice when an overwrite cannot be locked", async () => {
+    const actions: string[] = [];
+    const i = interaction("ticket_close:2", [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    i.channel.permissionOverwrites.cache.values = () => [{ id: "member" }];
+    i.channel.send.mockImplementationOnce(async () => {
+      actions.push("notice");
+      return i.sentMessage;
+    });
+    i.channel.permissionOverwrites.edit.mockImplementationOnce(async () => {
+      actions.push("lock");
+      throw new Error("missing permission");
+    });
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(actions).toEqual(["notice", "lock"]);
+    expect(i.channel.send).toHaveBeenCalledTimes(1);
+    expect(reopenTicket).not.toHaveBeenCalled();
+  });
+
   test("a stale Close repairs missing Discord state", async () => {
     ticket.status = "closed";
     ticket.closed_by_discord_id = "original-closer";
