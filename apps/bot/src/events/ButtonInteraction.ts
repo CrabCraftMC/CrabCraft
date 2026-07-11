@@ -5,8 +5,6 @@ import {
   ButtonInteraction,
   ComponentType,
   GuildMember,
-  type MessageCreateOptions,
-  type MessageEditOptions,
   MessageFlags,
   ModalBuilder,
   TextChannel,
@@ -29,9 +27,9 @@ import {
   buildChannelName,
   buildClosedNotice,
   buildClosedTicketButtons,
+  buildDisabledClosedTicketButtons,
   buildInfractionEmbedMessage,
   buildReopenedNotice,
-  buildStaffButtons,
   getCategoryMeta,
   TICKET_INFRACTION_BUTTON_PREFIX,
 } from "../utils/ticket.js";
@@ -94,7 +92,8 @@ async function unlockTicketChannel(
   }
 }
 
-async function lockTicketChannel(channel: TextChannel): Promise<void> {
+async function lockTicketChannel(channel: TextChannel): Promise<boolean> {
+  let locked = true;
   const everyoneId = channel.guild.roles.everyone.id;
   for (const overwrite of channel.permissionOverwrites.cache.values()) {
     if (overwrite.id === everyoneId) continue;
@@ -104,7 +103,159 @@ async function lockTicketChannel(channel: TextChannel): Promise<void> {
         { SendMessages: false },
         { reason: "Ticket closed — channel locked" },
       )
-      .catch((e) => logger.error("Ticket: failed to lock channel on close:", e));
+      .catch((e) => {
+        locked = false;
+        logger.error("Ticket: failed to lock channel on close:", e);
+      });
+  }
+  return locked;
+}
+
+async function hasActiveClosedTicketNotice(
+  channel: TextChannel,
+  ticketId: number,
+): Promise<boolean> {
+  const reopenId = `ticket_reopen:${ticketId}`;
+  const deleteId = `ticket_delete:${ticketId}`;
+  const [recent, pinned] = await Promise.all([
+    channel.messages.fetch({ limit: 100 }),
+    channel.messages.fetchPins(),
+  ]);
+  const messages = [
+    ...recent.values(),
+    ...pinned.items.map((item) => item.message),
+  ];
+  return messages.some((message) =>
+    message.components.some((row) => {
+      if (row.type !== ComponentType.ActionRow) return false;
+      const enabledIds = row.components.flatMap((component) =>
+        component.type === ComponentType.Button && !component.disabled
+          ? [component.customId]
+          : [],
+      );
+      return enabledIds.includes(reopenId) && enabledIds.includes(deleteId);
+    }),
+  );
+}
+
+async function postClosedTicketNotice(
+  channel: TextChannel,
+  ticketId: number,
+  closedByDiscordId: string,
+  deleteAtSeconds: number,
+): Promise<boolean> {
+  return Boolean(
+    await channel
+      .send({
+        components: [
+          buildClosedNotice(`<@${closedByDiscordId}>`, deleteAtSeconds),
+          buildClosedTicketButtons(ticketId),
+        ],
+        allowedMentions: { parse: [] },
+        flags: MessageFlags.IsComponentsV2,
+      })
+      .catch((e) => {
+        logger.error("Ticket: failed to send closed notice:", e);
+        return null;
+      }),
+  );
+}
+
+type ClosedTicketRepairResult = "closed" | "open" | "failed";
+
+async function performClosedTicketRepair(
+  channel: TextChannel,
+  ticketId: number,
+  fallbackCloserId: string,
+): Promise<ClosedTicketRepairResult> {
+  if (!(await lockTicketChannel(channel))) return "failed";
+
+  let ticket: appDb.Ticket | null;
+  try {
+    ticket = await appDb.getTicketById(ticketId);
+  } catch (e) {
+    logger.error("Ticket: failed to recheck closed state:", e);
+    return "failed";
+  }
+  if (!ticket) return "failed";
+  if (ticket.status === "open") {
+    await unlockTicketChannel(channel, ticket.opener_discord_id);
+    return "open";
+  }
+
+  try {
+    if (await hasActiveClosedTicketNotice(channel, ticket.id)) return "closed";
+  } catch (e) {
+    logger.error("Ticket: failed to verify closed controls:", e);
+    return "failed";
+  }
+
+  if (ticket.delete_after == null) {
+    logger.error("Ticket: closed row is missing its deletion deadline");
+    return "failed";
+  }
+
+  return (await postClosedTicketNotice(
+    channel,
+    ticket.id,
+    ticket.closed_by_discord_id ?? fallbackCloserId,
+    ticket.delete_after,
+  ))
+    ? "closed"
+    : "failed";
+}
+
+const ticketLifecycleLocks = new Map<number, Promise<void>>();
+
+async function withTicketLifecycleLock<T>(
+  ticketId: number,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const previous = ticketLifecycleLocks.get(ticketId) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.then(() => current);
+  ticketLifecycleLocks.set(ticketId, tail);
+
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (ticketLifecycleLocks.get(ticketId) === tail) {
+      ticketLifecycleLocks.delete(ticketId);
+    }
+  }
+}
+
+async function retireClosedTicketNotice(
+  interaction: ButtonInteraction,
+  ticketId: number,
+): Promise<boolean> {
+  try {
+    const otherComponents = interaction.message.components.filter(
+      (row) => row.type !== ComponentType.ActionRow,
+    );
+    await interaction.message.edit({
+      components: [
+        ...otherComponents,
+        buildDisabledClosedTicketButtons(ticketId),
+      ],
+      flags: MessageFlags.IsComponentsV2,
+    });
+    return true;
+  } catch (e) {
+    logger.error("Ticket: failed to disable closed-notice buttons:", e);
+  }
+
+  try {
+    await interaction.message.delete();
+    return true;
+  } catch (e) {
+    logger.error("Ticket: failed to remove stale closed notice:", e);
+    return false;
   }
 }
 
@@ -116,6 +267,264 @@ async function followUpTicketError(
     components: [errorContainer(message)],
     flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
   });
+}
+
+async function handleTicketClose(
+  interaction: ButtonInteraction,
+  ticketId: number,
+): Promise<void> {
+  let ticket: appDb.Ticket | null;
+  try {
+    ticket = await appDb.getTicketById(ticketId);
+  } catch (e) {
+    logger.error("Ticket: close lookup failed:", e);
+    await followUpTicketError(interaction, "Failed to close. Please try again.");
+    return;
+  }
+  if (!ticket) {
+    await followUpTicketError(interaction, "Ticket not found.");
+    return;
+  }
+  if (ticket.channel_id !== interaction.channelId) {
+    await followUpTicketError(
+      interaction,
+      "This button is not for this channel.",
+    );
+    return;
+  }
+  const ticketChannel = interaction.channel as TextChannel | null;
+  if (!ticketChannel) {
+    await followUpTicketError(interaction, "Ticket channel not found.");
+    return;
+  }
+
+  await normalizeTicketChannelName(ticketChannel, ticket);
+
+  // The header's Close button intentionally stays attached and active. If a
+  // previous close stopped after updating the DB, finish its Discord state.
+  if (ticket.status === "closed") {
+    const repaired = await performClosedTicketRepair(
+      ticketChannel,
+      ticket.id,
+      interaction.user.id,
+    );
+    await interaction.followUp({
+      components: [
+        repaired === "closed"
+          ? primaryContainer("Ticket closed.")
+          : repaired === "open"
+            ? primaryContainer(
+                "This ticket was reopened while Close was running.",
+              )
+            : errorContainer(
+                "This ticket is marked closed, but its Discord state could not be verified. Please try again.",
+              ),
+      ],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const deleteAtSeconds = Math.floor(
+    (Date.now() + TICKET_DELETE_DELAY_MS) / 1000,
+  );
+
+  // Anyone with access to this (private) ticket channel may close it. The
+  // conditional update makes simultaneous clicks safe across bot processes.
+  try {
+    const closed = await appDb.closeTicket(
+      ticket.id,
+      interaction.user.id,
+      deleteAtSeconds,
+    );
+    if (!closed) {
+      await followUpTicketError(
+        interaction,
+        "The ticket changed while it was closing. Please try again if it is still open.",
+      );
+      return;
+    }
+  } catch (e) {
+    logger.error("Ticket: close DB update failed:", e);
+    await followUpTicketError(interaction, "Failed to close. Please try again.");
+    return;
+  }
+
+  // Finish locking before exposing Reopen, so the two transitions cannot
+  // interleave and leave an open ticket partially read-only.
+  const discordClosed =
+    (await lockTicketChannel(ticketChannel)) &&
+    (await postClosedTicketNotice(
+      ticketChannel,
+      ticket.id,
+      interaction.user.id,
+      deleteAtSeconds,
+    ));
+
+  if (!discordClosed) {
+    const reopened = await appDb.reopenTicket(ticket.id).catch((e) => {
+      logger.error("Ticket: failed to roll back incomplete close:", e);
+      return null;
+    });
+    if (reopened) {
+      await unlockTicketChannel(ticketChannel, ticket.opener_discord_id);
+    }
+    await followUpTicketError(
+      interaction,
+      reopened
+        ? "Failed to finish closing the ticket, so it was left open. Please try again."
+        : "The ticket is closed, but its Discord state could not be completed.",
+    );
+  }
+}
+
+async function handleTicketReopen(
+  interaction: ButtonInteraction,
+  ticketId: number,
+): Promise<void> {
+  let ticket: appDb.Ticket | null;
+  try {
+    ticket = await appDb.getTicketById(ticketId);
+  } catch (e) {
+    logger.error("Ticket: reopen lookup failed:", e);
+    await followUpTicketError(interaction, "Failed to reopen. Please try again.");
+    return;
+  }
+  if (!ticket) {
+    await followUpTicketError(interaction, "Ticket not found.");
+    return;
+  }
+  if (ticket.channel_id !== interaction.channelId) {
+    await followUpTicketError(
+      interaction,
+      "This button is not for this channel.",
+    );
+    return;
+  }
+  const ticketChannel = interaction.channel as TextChannel | null;
+  if (!ticketChannel) {
+    await followUpTicketError(interaction, "Ticket channel not found.");
+    return;
+  }
+
+  await normalizeTicketChannelName(ticketChannel, ticket);
+
+  // Another control may already have reopened this ticket. Retire the stale
+  // notice and return a visible result instead of silently acknowledging it.
+  if (ticket.status === "open") {
+    const retired = await retireClosedTicketNotice(interaction, ticket.id);
+    await interaction.followUp({
+      components: [
+        retired
+          ? primaryContainer("This ticket is already open.")
+          : errorContainer(
+              "This ticket is open, but its stale controls could not be removed.",
+            ),
+      ],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  try {
+    const reopened = await appDb.reopenTicket(ticket.id);
+    if (!reopened) {
+      await followUpTicketError(
+        interaction,
+        "The ticket changed while it was reopening. Please try again.",
+      );
+      return;
+    }
+    ticket = reopened;
+  } catch (e) {
+    logger.error("Ticket: reopen failed:", e);
+    await followUpTicketError(interaction, "Failed to reopen. Please try again.");
+    return;
+  }
+
+  await unlockTicketChannel(ticketChannel, ticket.opener_discord_id);
+
+  // The header's attached Close button remains available for the next close.
+  // If Discord rejects the edit, remove this separate notice so its stale
+  // Reopen/Delete buttons cannot remain active.
+  if (!(await retireClosedTicketNotice(interaction, ticket.id))) {
+    await followUpTicketError(
+      interaction,
+      "The ticket reopened, but its old controls could not be disabled.",
+    );
+  }
+
+  // Announce the reopen (without pinging the reopener).
+  await ticketChannel
+    .send({
+      components: [buildReopenedNotice(`<@${interaction.user.id}>`)],
+      allowedMentions: { parse: [] },
+      flags: MessageFlags.IsComponentsV2,
+    })
+    .catch((e) => logger.error("Ticket: failed to send reopened notice:", e));
+}
+
+async function handleTicketDelete(
+  interaction: ButtonInteraction,
+  ticketId: number,
+): Promise<void> {
+  let ticket: appDb.Ticket | null;
+  try {
+    ticket = await appDb.getTicketById(ticketId);
+  } catch (e) {
+    logger.error("Ticket: delete lookup failed:", e);
+    await followUpTicketError(interaction, "Failed to delete. Please try again.");
+    return;
+  }
+  if (!ticket) {
+    await followUpTicketError(interaction, "Ticket not found.");
+    return;
+  }
+  if (ticket.channel_id !== interaction.channelId) {
+    await followUpTicketError(
+      interaction,
+      "This button is not for this channel.",
+    );
+    return;
+  }
+  if (ticket.status !== "closed") {
+    await followUpTicketError(
+      interaction,
+      "This ticket is open and cannot be deleted.",
+    );
+    return;
+  }
+  const ticketChannel = interaction.channel as TextChannel | null;
+  if (!ticketChannel) {
+    await followUpTicketError(interaction, "Ticket channel not found.");
+    return;
+  }
+
+  // Save the transcript to the ticket-log channel before deletion.
+  try {
+    const logChannel = (await interaction.guild?.channels
+      .fetch(config.TICKET_LOG_CHANNEL_ID)
+      .catch(() => null)) as TextChannel | null;
+    if (logChannel) {
+      await saveTranscriptToLog(
+        ticketChannel,
+        logChannel,
+        `ticket #${ticket.id} deleted by ${interaction.user.tag}`,
+      ).catch(() => null);
+    }
+  } catch (e) {
+    logger.error("Ticket: transcript failed:", e);
+  }
+
+  try {
+    await appDb.deleteTicketRow(ticket.id);
+  } catch (e) {
+    logger.error("Ticket: failed to delete row:", e);
+  }
+
+  await ticketChannel
+    .delete(`Ticket #${ticket.id} deleted by ${interaction.user.tag}`)
+    .catch((e) => logger.error("Ticket: failed to delete channel:", e));
 }
 
 export default class ButtonInteractionEvent extends Event {
@@ -773,126 +1182,9 @@ export default class ButtonInteractionEvent extends Event {
       if (!Number.isFinite(ticketId)) return;
 
       await interaction.deferUpdate();
-
-      let ticket: appDb.Ticket | null;
-      try {
-        ticket = await appDb.getTicketById(ticketId);
-      } catch (e) {
-        logger.error("Ticket: close lookup failed:", e);
-        await followUpTicketError(interaction, "Failed to close. Please try again.");
-        return;
-      }
-      if (!ticket) {
-        await followUpTicketError(interaction, "Ticket not found.");
-        return;
-      }
-      if (ticket.channel_id !== interaction.channelId) {
-        await followUpTicketError(
-          interaction,
-          "This button is not for this channel.",
-        );
-        return;
-      }
-      const ticketChannel = interaction.channel as TextChannel | null;
-      if (!ticketChannel) {
-        await followUpTicketError(interaction, "Ticket channel not found.");
-        return;
-      }
-
-      await normalizeTicketChannelName(ticketChannel, ticket);
-
-      // Old headers can still contain Close. Silently acknowledge stale clicks;
-      // their canonical Reopen/Delete controls are already elsewhere in-channel.
-      if (ticket.status === "closed") return;
-
-      const deleteAtSeconds = Math.floor(
-        (Date.now() + TICKET_DELETE_DELAY_MS) / 1000,
+      await withTicketLifecycleLock(ticketId, () =>
+        handleTicketClose(interaction, ticketId),
       );
-
-      // Anyone with access to this (private) ticket channel may close it. The
-      // conditional update makes simultaneous clicks safe.
-      try {
-        const closed = await appDb.closeTicket(
-          ticket.id,
-          interaction.user.id,
-          deleteAtSeconds,
-        );
-        if (!closed) return;
-      } catch (e) {
-        logger.error("Ticket: close DB update failed:", e);
-        await followUpTicketError(
-          interaction,
-          "Failed to close. Please try again.",
-        );
-        return;
-      }
-
-      // Finish locking before exposing Reopen, so the two transitions cannot
-      // interleave and leave an open ticket partially read-only.
-      await lockTicketChannel(ticketChannel);
-
-      const closedControls = {
-        components: [
-          buildClosedNotice(`<@${interaction.user.id}>`, deleteAtSeconds),
-          buildClosedTicketButtons(ticket.id),
-        ],
-        allowedMentions: { parse: [] },
-        flags: MessageFlags.IsComponentsV2,
-      } satisfies MessageCreateOptions & MessageEditOptions;
-      const standaloneControl =
-        interaction.message.components.length === 1 &&
-        interaction.message.components[0]?.type === ComponentType.ActionRow;
-      let controlsReady = false;
-      let removeStaleControl = false;
-
-      if (standaloneControl) {
-        try {
-          await interaction.message.edit(closedControls);
-          controlsReady = true;
-        } catch (e) {
-          logger.error("Ticket: failed to update controls on close:", e);
-        }
-      }
-
-      // Pre-deploy tickets keep Close on their evidence header, which cannot be
-      // edited safely. Give those tickets a new canonical controls message.
-      if (!controlsReady) {
-        const controlsMessage = await ticketChannel.send(closedControls).catch((e) => {
-          logger.error("Ticket: failed to send closed controls:", e);
-          return null;
-        });
-        if (controlsMessage) {
-          controlsReady = true;
-          removeStaleControl = standaloneControl;
-          await controlsMessage
-            .pin()
-            .catch((e) => logger.error("Ticket: failed to pin closed controls:", e));
-        }
-      }
-
-      if (!controlsReady) {
-        const reopened = await appDb.reopenTicket(ticket.id).catch((e) => {
-          logger.error("Ticket: failed to roll back missing controls:", e);
-          return null;
-        });
-        if (reopened) {
-          await unlockTicketChannel(ticketChannel, ticket.opener_discord_id);
-        }
-        await followUpTicketError(
-          interaction,
-          reopened
-            ? "Failed to finish closing the ticket, so it was left open. Please try again."
-            : "The ticket is closed, but its controls could not be updated.",
-        );
-        return;
-      }
-
-      if (removeStaleControl) {
-        await interaction.message
-          .delete()
-          .catch((e) => logger.error("Ticket: failed to remove stale Close control:", e));
-      }
-
       return;
     }
 
@@ -911,120 +1203,9 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       await interaction.deferUpdate();
-
-      let ticket: appDb.Ticket | null;
-      try {
-        ticket = await appDb.getTicketById(ticketId);
-      } catch (e) {
-        logger.error("Ticket: reopen lookup failed:", e);
-        await followUpTicketError(interaction, "Failed to reopen. Please try again.");
-        return;
-      }
-      if (!ticket) {
-        await followUpTicketError(interaction, "Ticket not found.");
-        return;
-      }
-      if (ticket.channel_id !== interaction.channelId) {
-        await followUpTicketError(
-          interaction,
-          "This button is not for this channel.",
-        );
-        return;
-      }
-      const ticketChannel = interaction.channel as TextChannel | null;
-      if (!ticketChannel) {
-        await followUpTicketError(interaction, "Ticket channel not found.");
-        return;
-      }
-
-      await normalizeTicketChannelName(ticketChannel, ticket);
-
-      // Another control may already have reopened this ticket. Do not let a
-      // stale Reopen click race a newer Close transition.
-      if (ticket.status === "open") return;
-
-      const previousClosedBy =
-        ticket.closed_by_discord_id ?? interaction.user.id;
-      const previousDeleteAfter =
-        ticket.delete_after ??
-        Math.floor((Date.now() + TICKET_DELETE_DELAY_MS) / 1000);
-
-      try {
-        const reopened = await appDb.reopenTicket(ticket.id);
-        if (!reopened) return;
-        ticket = reopened;
-      } catch (e) {
-        logger.error("Ticket: reopen failed:", e);
-        await followUpTicketError(
-          interaction,
-          "Failed to reopen. Please try again.",
-        );
-        return;
-      }
-
-      await unlockTicketChannel(ticketChannel, ticket.opener_discord_id);
-
-      // Revert the file-free lifecycle message back to Close.
-      let controlsReady = false;
-      try {
-        await interaction.message.edit({
-          components: [buildStaffButtons(ticket.id)],
-          flags: MessageFlags.IsComponentsV2,
-        });
-        controlsReady = true;
-        await interaction.message
-          .pin()
-          .catch((e) => logger.error("Ticket: failed to pin restored controls:", e));
-      } catch (e) {
-        logger.error("Ticket: failed to restore close control:", e);
-      }
-
-      if (!controlsReady) {
-        const controlsMessage = await ticketChannel
-          .send({
-            components: [buildStaffButtons(ticket.id)],
-            flags: MessageFlags.IsComponentsV2,
-          })
-          .catch((e) => {
-            logger.error("Ticket: failed to send replacement Close control:", e);
-            return null;
-          });
-        if (controlsMessage) {
-          controlsReady = true;
-          await controlsMessage
-            .pin()
-            .catch((e) => logger.error("Ticket: failed to pin replacement controls:", e));
-          await interaction.message
-            .delete()
-            .catch((e) => logger.error("Ticket: failed to remove stale Reopen control:", e));
-        }
-      }
-
-      if (!controlsReady) {
-        const reclosed = await appDb
-          .closeTicket(ticket.id, previousClosedBy, previousDeleteAfter)
-          .catch((e) => {
-            logger.error("Ticket: failed to roll back missing Close control:", e);
-            return null;
-          });
-        if (reclosed) await lockTicketChannel(ticketChannel);
-        await followUpTicketError(
-          interaction,
-          reclosed
-            ? "Failed to finish reopening the ticket, so it was left closed. Please try again."
-            : "The ticket is open, but its controls could not be updated.",
-        );
-        return;
-      }
-
-      // Announce the reopen (without pinging the reopener).
-      await ticketChannel
-        .send({
-          components: [buildReopenedNotice(`<@${interaction.user.id}>`)],
-          allowedMentions: { parse: [] },
-          flags: MessageFlags.IsComponentsV2,
-        })
-        .catch((e) => logger.error("Ticket: failed to send reopened notice:", e));
+      await withTicketLifecycleLock(ticketId, () =>
+        handleTicketReopen(interaction, ticketId),
+      );
       return;
     }
 
@@ -1042,59 +1223,10 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      const ticket = await appDb.getTicketById(ticketId);
-      if (!ticket) {
-        await interaction.reply({
-          components: [errorContainer("Ticket not found.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-      if (ticket.channel_id !== interaction.channelId) {
-        await interaction.reply({
-          components: [errorContainer("This button is not for this channel.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-      if (ticket.status !== "closed") {
-        await interaction.reply({
-          components: [errorContainer("This ticket is open and cannot be deleted.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      // Transcript generation reads the whole channel, so ack first.
       await interaction.deferUpdate();
-
-      const ticketChannel = interaction.channel as TextChannel | null;
-
-      // Save the transcript to the ticket-log channel before deletion.
-      try {
-        const logChannel = await interaction.guild?.channels
-          .fetch(config.TICKET_LOG_CHANNEL_ID)
-          .catch(() => null) as TextChannel | null;
-        if (logChannel && ticketChannel) {
-          await saveTranscriptToLog(
-            ticketChannel,
-            logChannel,
-            `ticket #${ticket.id} deleted by ${interaction.user.tag}`,
-          ).catch(() => null);
-        }
-      } catch (e) {
-        logger.error("Ticket: transcript failed:", e);
-      }
-
-      try {
-        await appDb.deleteTicketRow(ticket.id);
-      } catch (e) {
-        logger.error("Ticket: failed to delete row:", e);
-      }
-
-      await ticketChannel
-        ?.delete(`Ticket #${ticket.id} deleted by ${interaction.user.tag}`)
-        .catch((e) => logger.error("Ticket: failed to delete channel:", e));
+      await withTicketLifecycleLock(ticketId, () =>
+        handleTicketDelete(interaction, ticketId),
+      );
       return;
     }
 

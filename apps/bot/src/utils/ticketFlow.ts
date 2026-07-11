@@ -237,12 +237,13 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   );
   const evidenceAttachments = appendEvidence(header, evidenceFiles);
 
-  // The header carries the ticket info + evidence and is pinned. Its File
-  // components can't survive a re-send, so controls live on their own message.
+  // The header carries the ticket info + evidence + Close button and is pinned.
+  // It is never edited afterwards because its File components can't survive a
+  // re-send; close/reopen state is rendered on a separate notice message.
   let openingMessage: Awaited<ReturnType<typeof ticketChannel.send>> | null = null;
   try {
     openingMessage = await ticketChannel.send({
-      components: [header],
+      components: [header, buildStaffButtons(ticket.id)],
       files: evidenceAttachments.length > 0 ? evidenceAttachments : undefined,
       allowedMentions: mentions,
       flags: MessageFlags.IsComponentsV2,
@@ -262,6 +263,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
             headerPlayer,
             onBehalf ? opener.id : undefined,
           ),
+          buildStaffButtons(ticket.id),
         ],
         allowedMentions: mentions,
         flags: MessageFlags.IsComponentsV2,
@@ -280,25 +282,9 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     }
   }
 
-  if (openingMessage) {
-    await openingMessage
-      .pin()
-      .catch((e) => logger.error("Ticket: failed to pin opening message:", e));
-  }
-
-  // This file-free message can safely transform Close -> Reopen/Delete -> Close.
-  const controlsMessage = await ticketChannel
-    .send({
-      components: [buildStaffButtons(ticket.id)],
-      flags: MessageFlags.IsComponentsV2,
-    })
-    .catch((e) => {
-      logger.error("Ticket: failed to send controls message:", e);
-      return null;
-    });
-  if (!controlsMessage) {
+  if (!openingMessage) {
     await appDb.deleteTicketRow(ticket.id).catch(() => null);
-    await ticketChannel.delete("Ticket controls failed").catch(() => null);
+    await ticketChannel.delete("Ticket opening message failed").catch(() => null);
     await interaction.editReply({
       components: [
         errorContainer(
@@ -309,9 +295,9 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     });
     return;
   }
-  await controlsMessage
+  await openingMessage
     .pin()
-    .catch((e) => logger.error("Ticket: failed to pin controls message:", e));
+    .catch((e) => logger.error("Ticket: failed to pin opening message:", e));
 
   // Appeals get a standard embed of the appellant's punishment history. It's a
   // separate message because a classic embed can't be mixed into the
