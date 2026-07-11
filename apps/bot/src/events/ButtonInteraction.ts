@@ -92,8 +92,7 @@ async function unlockTicketChannel(
   }
 }
 
-async function lockTicketChannel(channel: TextChannel): Promise<boolean> {
-  let locked = true;
+async function lockTicketChannel(channel: TextChannel): Promise<void> {
   const everyoneId = channel.guild.roles.everyone.id;
   for (const overwrite of channel.permissionOverwrites.cache.values()) {
     if (overwrite.id === everyoneId) continue;
@@ -104,11 +103,9 @@ async function lockTicketChannel(channel: TextChannel): Promise<boolean> {
         { reason: "Ticket closed — channel locked" },
       )
       .catch((e) => {
-        locked = false;
         logger.error("Ticket: failed to lock channel on close:", e);
       });
   }
-  return locked;
 }
 
 async function hasActiveClosedTicketNotice(
@@ -168,8 +165,6 @@ async function performClosedTicketRepair(
   ticketId: number,
   fallbackCloserId: string,
 ): Promise<ClosedTicketRepairResult> {
-  if (!(await lockTicketChannel(channel))) return "failed";
-
   let ticket: appDb.Ticket | null;
   try {
     ticket = await appDb.getTicketById(ticketId);
@@ -184,7 +179,10 @@ async function performClosedTicketRepair(
   }
 
   try {
-    if (await hasActiveClosedTicketNotice(channel, ticket.id)) return "closed";
+    if (await hasActiveClosedTicketNotice(channel, ticket.id)) {
+      await lockTicketChannel(channel);
+      return "closed";
+    }
   } catch (e) {
     logger.error("Ticket: failed to verify closed controls:", e);
     return "failed";
@@ -195,14 +193,16 @@ async function performClosedTicketRepair(
     return "failed";
   }
 
-  return (await postClosedTicketNotice(
+  const noticePosted = await postClosedTicketNotice(
     channel,
     ticket.id,
     ticket.closed_by_discord_id ?? fallbackCloserId,
     ticket.delete_after,
-  ))
-    ? "closed"
-    : "failed";
+  );
+  if (!noticePosted) return "failed";
+
+  await lockTicketChannel(channel);
+  return "closed";
 }
 
 const ticketLifecycleLocks = new Map<number, Promise<void>>();
@@ -350,18 +350,15 @@ async function handleTicketClose(
     return;
   }
 
-  // Finish locking before exposing Reopen, so the two transitions cannot
-  // interleave and leave an open ticket partially read-only.
-  const discordClosed =
-    (await lockTicketChannel(ticketChannel)) &&
-    (await postClosedTicketNotice(
-      ticketChannel,
-      ticket.id,
-      interaction.user.id,
-      deleteAtSeconds,
-    ));
-
-  if (!discordClosed) {
+  // Post before locking so a stale overwrite cannot suppress the visible
+  // result or remove the bot's own permission to send it.
+  const noticePosted = await postClosedTicketNotice(
+    ticketChannel,
+    ticket.id,
+    interaction.user.id,
+    deleteAtSeconds,
+  );
+  if (!noticePosted) {
     const reopened = await appDb.reopenTicket(ticket.id).catch((e) => {
       logger.error("Ticket: failed to roll back incomplete close:", e);
       return null;
@@ -375,7 +372,10 @@ async function handleTicketClose(
         ? "Failed to finish closing the ticket, so it was left open. Please try again."
         : "The ticket is closed, but its Discord state could not be completed.",
     );
+    return;
   }
+
+  await lockTicketChannel(ticketChannel);
 }
 
 async function handleTicketReopen(
