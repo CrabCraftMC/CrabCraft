@@ -236,6 +236,23 @@
     }
   },
   {
+    "id": "craft_dye",
+    "title": "True Colors",
+    "description": "Dyes crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_dye.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_dye"
+      ]
+    }
+  },
+  {
     "id": "craft_ender_chest",
     "title": "Secure Storage",
     "description": "Ender chests crafted",
