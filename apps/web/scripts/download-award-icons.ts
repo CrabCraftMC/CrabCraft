@@ -146,6 +146,7 @@ const ICON_MAP: Record<string, string> = {
   craft_bundle: "Bundle",
   craft_clock: "Clock",
   craft_compass: "Compass",
+  craft_dye: "Red_Dye",
   craft_ender_chest: "Ender_Chest",
   craft_glowstone: "Glowstone",
   craft_mineral_block: "Diamond_Block",
