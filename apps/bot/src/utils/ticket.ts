@@ -669,6 +669,24 @@ export function buildReopenedNotice(
     );
 }
 
+/** Same Reopen + Delete row, both disabled after the ticket is reopened. */
+export function buildDisabledClosedTicketButtons(
+  ticketId: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket_reopen:${ticketId}`)
+      .setLabel("Reopen Ticket")
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`ticket_delete:${ticketId}`)
+      .setLabel("Delete Ticket")
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(true),
+  );
+}
+
 /** The structured topic set on a ticket channel. */
 export function buildTicketTopic(opts: {
   ticketId: number;
