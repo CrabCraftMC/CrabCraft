@@ -29,6 +29,7 @@ import {
   type PlayerInfo,
 } from "./ticket.js";
 import { errorContainer, primaryContainer } from "./embeds.js";
+import { isUnknownChannelError } from "./discordErrors.js";
 
 /**
  * Open tickets the user has in a category whose channels still exist. Any row
@@ -45,12 +46,28 @@ export async function getLiveOpenTicketsForCategory(
 
   const live: Ticket[] = [];
   for (const ticket of sameCategory) {
-    const channel = await client.channels
-      .fetch(ticket.channel_id)
-      .catch(() => null);
-    if (channel) {
+    try {
+      const channel = await client.channels.fetch(ticket.channel_id, {
+        force: true,
+      });
+      if (channel) {
+        live.push(ticket);
+        continue;
+      }
+      logger.warn(
+        `Ticket: channel lookup returned no result for row #${ticket.id}; retaining row`,
+      );
       live.push(ticket);
       continue;
+    } catch (e) {
+      if (!isUnknownChannelError(e)) {
+        logger.error(
+          `Ticket: failed to verify channel for row #${ticket.id}:`,
+          e,
+        );
+        live.push(ticket);
+        continue;
+      }
     }
     // Orphaned row — the channel no longer exists. Clean it up.
     await appDb
@@ -283,8 +300,16 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
   }
 
   if (!openingMessage) {
-    await appDb.deleteTicketRow(ticket.id).catch(() => null);
-    await ticketChannel.delete("Ticket opening message failed").catch(() => null);
+    const channelDeleted = await ticketChannel
+      .delete("Ticket opening message failed")
+      .then(() => true)
+      .catch((e) => {
+        logger.error("Ticket: failed to delete incomplete channel:", e);
+        return false;
+      });
+    if (channelDeleted) {
+      await appDb.deleteTicketRow(ticket.id).catch(() => null);
+    }
     await interaction.editReply({
       components: [
         errorContainer(
