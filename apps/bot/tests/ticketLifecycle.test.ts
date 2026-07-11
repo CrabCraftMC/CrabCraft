@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { ChannelType, ComponentType } from "discord.js";
+import {
+  ChannelType,
+  ComponentType,
+  RESTJSONErrorCodes,
+} from "discord.js";
 
 let ticket: {
   id: number;
@@ -26,6 +30,7 @@ const reopenTicket = mock(async () => {
 });
 const createTicket = mock(async () => ticket);
 const deleteTicketRow = mock(async () => {});
+const listOpenTicketsForUser = mock(async () => [ticket]);
 
 mock.module("../src/utils/config.js", () => ({
   default: {
@@ -52,6 +57,7 @@ mock.module("../src/utils/appDb.js", () => ({
   reopenTicket,
   createTicket,
   deleteTicketRow,
+  listOpenTicketsForUser,
 }));
 
 const { default: ButtonInteractionEvent } = await import(
@@ -60,7 +66,12 @@ const { default: ButtonInteractionEvent } = await import(
 const { buildChannelName, TICKET_CATEGORIES } = await import(
   "../src/utils/ticket.js"
 );
-const { openTicket } = await import("../src/utils/ticketFlow.js");
+const { getLiveOpenTicketsForCategory, openTicket } = await import(
+  "../src/utils/ticketFlow.js"
+);
+const { cleanupExpiredTicket } = await import(
+  "../src/utils/ticketCleanup.js"
+);
 
 function interaction(customId: string, components: Array<{ type: number }>) {
   const sentMessage = { pin: mock(async () => {}) };
@@ -70,7 +81,10 @@ function interaction(customId: string, components: Array<{ type: number }>) {
     channelId: "chan-2",
     user: { bot: false, id: "closer", tag: "closer" },
     member: { roles: { cache: { has: () => true } } },
-    guild: { roles: { everyone: { id: "everyone" } } },
+    guild: {
+      roles: { everyone: { id: "everyone" } },
+      channels: { fetch: mock(async () => null) },
+    },
     deferUpdate: mock(async () => {
       order.push("defer");
     }),
@@ -96,6 +110,7 @@ function interaction(customId: string, components: Array<{ type: number }>) {
         edit: mock(async () => {}),
       },
       send: mock(async () => sentMessage),
+      delete: mock(async () => {}),
     },
     sentMessage,
   };
@@ -137,6 +152,7 @@ beforeEach(() => {
   reopenTicket.mockClear();
   createTicket.mockClear();
   deleteTicketRow.mockClear();
+  listOpenTicketsForUser.mockClear();
 });
 
 describe("ticket lifecycle controls", () => {
@@ -223,6 +239,7 @@ describe("ticket lifecycle controls", () => {
     expect(actions).toEqual(["notice", "lock"]);
     expect(i.channel.send).toHaveBeenCalledTimes(1);
     expect(reopenTicket).not.toHaveBeenCalled();
+    expect(i.followUp).toHaveBeenCalledTimes(1);
   });
 
   test("a stale Close repairs missing Discord state", async () => {
@@ -359,8 +376,8 @@ describe("ticket lifecycle controls", () => {
     await Promise.all([reopening, closing]);
 
     expect(lifecycleOrder).toEqual([
-      "reopen-db",
       "unlock",
+      "reopen-db",
       "close-db",
       "lock",
     ]);
@@ -377,6 +394,46 @@ describe("ticket lifecycle controls", () => {
 
     expect(reopenTicket).not.toHaveBeenCalled();
     expect(i.message.edit).toHaveBeenCalledTimes(1);
+    expect(i.followUp).toHaveBeenCalledTimes(1);
+  });
+
+  test("failed permission restore leaves the ticket closed", async () => {
+    ticket.status = "closed";
+    const i = interaction("ticket_reopen:2", [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    i.channel.permissionOverwrites.edit.mockRejectedValueOnce(
+      new Error("missing permission"),
+    );
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(reopenTicket).not.toHaveBeenCalled();
+    expect(i.message.edit).not.toHaveBeenCalled();
+    expect(i.followUp).toHaveBeenCalledTimes(1);
+  });
+
+  test("failed DB reopen relocks the channel and leaves the ticket closed", async () => {
+    ticket.status = "closed";
+    const permissionChanges: boolean[] = [];
+    const i = interaction("ticket_reopen:2", [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    i.channel.permissionOverwrites.cache.values = () => [{ id: "opener" }];
+    i.channel.permissionOverwrites.edit.mockImplementation(
+      async (_id: string, permissions: { SendMessages: boolean }) => {
+        permissionChanges.push(permissions.SendMessages);
+      },
+    );
+    reopenTicket.mockRejectedValueOnce(new Error("database unavailable"));
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(permissionChanges).toEqual([true, false]);
+    expect(ticket.status).toBe("closed");
+    expect(i.message.edit).not.toHaveBeenCalled();
     expect(i.followUp).toHaveBeenCalledTimes(1);
   });
 
@@ -418,6 +475,86 @@ describe("ticket lifecycle controls", () => {
     expect(i.followUp).toHaveBeenCalledTimes(1);
   });
 
+  test("Delete removes a matching orphaned channel left by the old bug", async () => {
+    getTicketById.mockResolvedValueOnce(null);
+    const i = interaction("ticket_delete:2", [
+      { type: ComponentType.ActionRow },
+    ]);
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(i.channel.delete).toHaveBeenCalledTimes(1);
+    expect(deleteTicketRow).not.toHaveBeenCalled();
+    expect(i.followUp).not.toHaveBeenCalled();
+  });
+
+  test("a missing row cannot delete an unrelated channel", async () => {
+    getTicketById.mockResolvedValueOnce(null);
+    const i = interaction("ticket_delete:2", [
+      { type: ComponentType.ActionRow },
+    ]);
+    i.channel.name = "general";
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(i.channel.delete).not.toHaveBeenCalled();
+    expect(i.followUp).toHaveBeenCalledTimes(1);
+  });
+
+  test("failed channel deletion keeps the ticket row for retry", async () => {
+    ticket.status = "closed";
+    const i = interaction("ticket_delete:2", [
+      { type: ComponentType.ActionRow },
+    ]);
+    i.channel.delete.mockRejectedValueOnce(new Error("missing permission"));
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(i.deferUpdate).toHaveBeenCalledTimes(1);
+    expect(i.channel.delete).toHaveBeenCalledTimes(1);
+    expect(deleteTicketRow).not.toHaveBeenCalled();
+    expect(i.followUp).toHaveBeenCalledTimes(1);
+  });
+
+  test("Close exposes a working Delete that removes channel before row", async () => {
+    const deletionOrder: string[] = [];
+    closeTicket.mockImplementationOnce(async () => {
+      ticket.status = "closed";
+      ticket.closed_by_discord_id = "closer";
+      ticket.delete_after = 2_000_000_000;
+      return ticket;
+    });
+    const closeInteraction = interaction("ticket_close:2", [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    closeInteraction.channel.delete.mockImplementationOnce(async () => {
+      deletionOrder.push("channel");
+    });
+    deleteTicketRow.mockImplementationOnce(async () => {
+      deletionOrder.push("row");
+    });
+
+    await new ButtonInteractionEvent().execute(closeInteraction as any);
+    const deleteId = buttonIds(
+      closeInteraction.channel.send.mock.calls[0]![0] as any,
+    ).find((id) => id.startsWith("ticket_delete:"));
+    expect(deleteId).toBe("ticket_delete:2");
+
+    const deleteInteraction = interaction(deleteId!, [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    deleteInteraction.channel = closeInteraction.channel;
+    deleteInteraction.guild = closeInteraction.guild;
+
+    await new ButtonInteractionEvent().execute(deleteInteraction as any);
+
+    expect(deletionOrder).toEqual(["channel", "row"]);
+    expect(closeInteraction.channel.delete).toHaveBeenCalledTimes(1);
+    expect(deleteTicketRow).toHaveBeenCalledWith(2);
+  });
+
   test("Delete waits for an in-progress Reopen and rechecks state", async () => {
     ticket.status = "closed";
     let markReopenStarted!: () => void;
@@ -457,6 +594,72 @@ describe("ticket lifecycle controls", () => {
 
     expect(deleteTicketRow).not.toHaveBeenCalled();
     expect(deleteInteraction.followUp).toHaveBeenCalledTimes(1);
+  });
+
+  test("the attached Close survives a full reopen, reclose, and delete lifecycle", async () => {
+    closeTicket.mockImplementationOnce(async () => {
+      ticket.status = "closed";
+      ticket.closed_by_discord_id = "closer";
+      ticket.delete_after = 2_000_000_000;
+      return ticket;
+    });
+    closeTicket.mockImplementationOnce(async () => {
+      ticket.status = "closed";
+      ticket.closed_by_discord_id = "closer";
+      ticket.delete_after = 2_000_000_001;
+      return ticket;
+    });
+    reopenTicket.mockImplementationOnce(async () => {
+      ticket.status = "open";
+      ticket.closed_by_discord_id = null;
+      ticket.delete_after = null;
+      return ticket;
+    });
+
+    const firstClose = interaction("ticket_close:2", [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    await new ButtonInteractionEvent().execute(firstClose as any);
+
+    const reopenId = buttonIds(
+      firstClose.channel.send.mock.calls[0]![0] as any,
+    ).find((id) => id.startsWith("ticket_reopen:"));
+    const reopen = interaction(reopenId!, [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    reopen.channel = firstClose.channel;
+    reopen.guild = firstClose.guild;
+    await new ButtonInteractionEvent().execute(reopen as any);
+
+    const secondClose = interaction("ticket_close:2", [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    secondClose.channel = firstClose.channel;
+    secondClose.guild = firstClose.guild;
+    await new ButtonInteractionEvent().execute(secondClose as any);
+
+    const deleteId = firstClose.channel.send.mock.calls
+      .map(([payload]) => buttonIds(payload as any))
+      .flat()
+      .filter((id) => id.startsWith("ticket_delete:"))
+      .at(-1);
+    const deleteInteraction = interaction(deleteId!, [
+      { type: ComponentType.Container },
+      { type: ComponentType.ActionRow },
+    ]);
+    deleteInteraction.channel = firstClose.channel;
+    deleteInteraction.guild = firstClose.guild;
+    await new ButtonInteractionEvent().execute(deleteInteraction as any);
+
+    expect(reopenId).toBe("ticket_reopen:2");
+    expect(deleteId).toBe("ticket_delete:2");
+    expect(closeTicket).toHaveBeenCalledTimes(2);
+    expect(reopenTicket).toHaveBeenCalledTimes(1);
+    expect(firstClose.channel.delete).toHaveBeenCalledTimes(1);
+    expect(deleteTicketRow).toHaveBeenCalledWith(2);
   });
 });
 
@@ -537,6 +740,199 @@ describe("ticket opening controls", () => {
       "Ticket opening message failed",
     );
     expect(interaction.editReply).toHaveBeenCalledTimes(1);
+  });
+
+  test("keeps the row when an incomplete ticket channel cannot be deleted", async () => {
+    const { interaction, ticketChannel } = openingInteraction();
+    ticketChannel.send.mockRejectedValue(new Error("send failed"));
+    ticketChannel.delete.mockRejectedValueOnce(new Error("missing permission"));
+
+    await openTicket({
+      interaction: interaction as any,
+      meta: TICKET_CATEGORIES.general,
+      player: {
+        discordId: "opener",
+        discordTag: "Steve",
+        minecraftUsername: null,
+        minecraftUuid: null,
+        isWhitelisted: false,
+        skinUrl: null,
+      },
+      intake: {},
+    });
+
+    expect(ticketChannel.delete).toHaveBeenCalledTimes(1);
+    expect(deleteTicketRow).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ticket row and channel consistency", () => {
+  test("an inconclusive null channel lookup retains and counts the ticket", async () => {
+    const client = { channels: { fetch: mock(async () => null) } };
+
+    const live = await getLiveOpenTicketsForCategory(
+      client as any,
+      "opener",
+      "general",
+    );
+
+    expect(live).toEqual([ticket]);
+    expect(client.channels.fetch).toHaveBeenCalledWith("chan-2", {
+      force: true,
+    });
+    expect(deleteTicketRow).not.toHaveBeenCalled();
+  });
+
+  test("transient channel lookup errors retain and count the ticket", async () => {
+    const client = {
+      channels: {
+        fetch: mock(async () => {
+          throw new Error("Discord unavailable");
+        }),
+      },
+    };
+
+    const live = await getLiveOpenTicketsForCategory(
+      client as any,
+      "opener",
+      "general",
+    );
+
+    expect(live).toEqual([ticket]);
+    expect(deleteTicketRow).not.toHaveBeenCalled();
+  });
+
+  test("confirmed missing channels prune orphaned ticket rows", async () => {
+    const client = {
+      channels: {
+        fetch: mock(async () => {
+          throw Object.assign(new Error("Unknown Channel"), {
+            code: RESTJSONErrorCodes.UnknownChannel,
+          });
+        }),
+      },
+    };
+
+    const live = await getLiveOpenTicketsForCategory(
+      client as any,
+      "opener",
+      "general",
+    );
+
+    expect(live).toEqual([]);
+    expect(deleteTicketRow).toHaveBeenCalledWith(2);
+  });
+
+  test("expired cleanup retains the row when channel deletion fails", async () => {
+    ticket.status = "closed";
+    ticket.delete_after = 100;
+    const channel = {
+      delete: mock(async () => {
+        throw new Error("missing permission");
+      }),
+    };
+    const client = { channels: { fetch: mock(async () => channel) } };
+
+    await cleanupExpiredTicket(client as any, ticket.id, 100);
+
+    expect(channel.delete).toHaveBeenCalledTimes(1);
+    expect(deleteTicketRow).not.toHaveBeenCalled();
+  });
+
+  test("expired cleanup deletes the channel before its row", async () => {
+    ticket.status = "closed";
+    ticket.delete_after = 100;
+    const deletionOrder: string[] = [];
+    const channel = {
+      delete: mock(async () => {
+        deletionOrder.push("channel");
+      }),
+    };
+    const client = { channels: { fetch: mock(async () => channel) } };
+    deleteTicketRow.mockImplementationOnce(async () => {
+      deletionOrder.push("row");
+    });
+
+    await cleanupExpiredTicket(client as any, ticket.id, 100);
+
+    expect(deletionOrder).toEqual(["channel", "row"]);
+    expect(deleteTicketRow).toHaveBeenCalledWith(ticket.id);
+  });
+
+  test("expired cleanup retains the row after a transient lookup error", async () => {
+    ticket.status = "closed";
+    ticket.delete_after = 100;
+    const client = {
+      channels: {
+        fetch: mock(async () => {
+          throw new Error("Discord unavailable");
+        }),
+      },
+    };
+
+    await cleanupExpiredTicket(client as any, ticket.id, 100);
+
+    expect(deleteTicketRow).not.toHaveBeenCalled();
+  });
+
+  test("expired cleanup retains the row after an inconclusive null lookup", async () => {
+    ticket.status = "closed";
+    ticket.delete_after = 100;
+    const client = { channels: { fetch: mock(async () => null) } };
+
+    await cleanupExpiredTicket(client as any, ticket.id, 100);
+
+    expect(client.channels.fetch).toHaveBeenCalledWith("chan-2", {
+      force: true,
+    });
+    expect(deleteTicketRow).not.toHaveBeenCalled();
+  });
+
+  test("expired cleanup removes the row when deletion finds an absent channel", async () => {
+    ticket.status = "closed";
+    ticket.delete_after = 100;
+    const channel = {
+      delete: mock(async () => {
+        throw Object.assign(new Error("Unknown Channel"), {
+          code: RESTJSONErrorCodes.UnknownChannel,
+        });
+      }),
+    };
+    const client = { channels: { fetch: mock(async () => channel) } };
+
+    await cleanupExpiredTicket(client as any, ticket.id, 100);
+
+    expect(deleteTicketRow).toHaveBeenCalledWith(ticket.id);
+  });
+
+  test("expired cleanup removes the row for a confirmed missing channel", async () => {
+    ticket.status = "closed";
+    ticket.delete_after = 100;
+    const client = {
+      channels: {
+        fetch: mock(async () => {
+          throw Object.assign(new Error("Unknown Channel"), {
+            code: RESTJSONErrorCodes.UnknownChannel,
+          });
+        }),
+      },
+    };
+
+    await cleanupExpiredTicket(client as any, ticket.id, 100);
+
+    expect(deleteTicketRow).toHaveBeenCalledWith(ticket.id);
+  });
+
+  test("expired cleanup skips a ticket that was reopened", async () => {
+    ticket.status = "open";
+    ticket.delete_after = null;
+    const client = { channels: { fetch: mock(async () => null) } };
+
+    await cleanupExpiredTicket(client as any, ticket.id, 100);
+
+    expect(client.channels.fetch).not.toHaveBeenCalled();
+    expect(deleteTicketRow).not.toHaveBeenCalled();
   });
 });
 

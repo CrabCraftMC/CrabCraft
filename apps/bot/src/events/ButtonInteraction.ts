@@ -7,6 +7,7 @@ import {
   GuildMember,
   MessageFlags,
   ModalBuilder,
+  OverwriteType,
   TextChannel,
   TextInputBuilder,
   TextInputStyle,
@@ -34,6 +35,8 @@ import {
   TICKET_INFRACTION_BUTTON_PREFIX,
 } from "../utils/ticket.js";
 import { beginTicketOpen } from "../utils/ticketFlow.js";
+import { isUnknownChannelError } from "../utils/discordErrors.js";
+import { withTicketLifecycleLock } from "../utils/ticketLifecycle.js";
 import { buildDenyModal } from "../utils/denyReasons.js";
 import {
   SEASON_PLAY_BUTTON_ID,
@@ -65,17 +68,40 @@ async function normalizeTicketChannelName(
     .catch((e) => logger.error("Ticket: failed to add id to channel name:", e));
 }
 
+function matchesTicketChannelId(
+  channel: TextChannel,
+  ticketId: number,
+): boolean {
+  const paddedId = String(ticketId).padStart(4, "0");
+  return (
+    channel.name.endsWith(`-${paddedId}`) ||
+    channel.topic?.split("\n").includes(`- **Ticket ID**: #${paddedId}`) ===
+      true
+  );
+}
+
 async function unlockTicketChannel(
   channel: TextChannel,
   openerId: string,
-): Promise<void> {
+): Promise<boolean> {
+  let unlocked = true;
   await channel.permissionOverwrites
-    .edit(openerId, {
-      ViewChannel: true,
-      SendMessages: true,
-      ReadMessageHistory: true,
-    })
-    .catch((e) => logger.error("Ticket: failed to restore opener access:", e));
+    .edit(
+      openerId,
+      {
+        ViewChannel: true,
+        SendMessages: true,
+        ReadMessageHistory: true,
+      },
+      {
+        type: OverwriteType.Member,
+        reason: "Ticket reopened — opener access restored",
+      },
+    )
+    .catch((e) => {
+      unlocked = false;
+      logger.error("Ticket: failed to restore opener access:", e);
+    });
 
   const everyoneId = channel.guild.roles.everyone.id;
   for (const overwrite of channel.permissionOverwrites.cache.values()) {
@@ -84,15 +110,21 @@ async function unlockTicketChannel(
       .edit(
         overwrite.id,
         { SendMessages: true },
-        { reason: "Ticket reopened — channel unlocked" },
+        {
+          reason: "Ticket reopened — channel unlocked",
+          type: overwrite.type,
+        },
       )
-      .catch((e) =>
-        logger.error("Ticket: failed to unlock channel on reopen:", e),
-      );
+      .catch((e) => {
+        unlocked = false;
+        logger.error("Ticket: failed to unlock channel on reopen:", e);
+      });
   }
+  return unlocked;
 }
 
-async function lockTicketChannel(channel: TextChannel): Promise<void> {
+async function lockTicketChannel(channel: TextChannel): Promise<boolean> {
+  let locked = true;
   const everyoneId = channel.guild.roles.everyone.id;
   for (const overwrite of channel.permissionOverwrites.cache.values()) {
     if (overwrite.id === everyoneId) continue;
@@ -100,12 +132,17 @@ async function lockTicketChannel(channel: TextChannel): Promise<void> {
       .edit(
         overwrite.id,
         { SendMessages: false },
-        { reason: "Ticket closed — channel locked" },
+        {
+          reason: "Ticket closed — channel locked",
+          type: overwrite.type,
+        },
       )
       .catch((e) => {
+        locked = false;
         logger.error("Ticket: failed to lock channel on close:", e);
       });
   }
+  return locked;
 }
 
 async function hasActiveClosedTicketNotice(
@@ -174,14 +211,14 @@ async function performClosedTicketRepair(
   }
   if (!ticket) return "failed";
   if (ticket.status === "open") {
-    await unlockTicketChannel(channel, ticket.opener_discord_id);
-    return "open";
+    return (await unlockTicketChannel(channel, ticket.opener_discord_id))
+      ? "open"
+      : "failed";
   }
 
   try {
     if (await hasActiveClosedTicketNotice(channel, ticket.id)) {
-      await lockTicketChannel(channel);
-      return "closed";
+      return (await lockTicketChannel(channel)) ? "closed" : "failed";
     }
   } catch (e) {
     logger.error("Ticket: failed to verify closed controls:", e);
@@ -201,33 +238,7 @@ async function performClosedTicketRepair(
   );
   if (!noticePosted) return "failed";
 
-  await lockTicketChannel(channel);
-  return "closed";
-}
-
-const ticketLifecycleLocks = new Map<number, Promise<void>>();
-
-async function withTicketLifecycleLock<T>(
-  ticketId: number,
-  operation: () => Promise<T>,
-): Promise<T> {
-  const previous = ticketLifecycleLocks.get(ticketId) ?? Promise.resolve();
-  let release!: () => void;
-  const current = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const tail = previous.then(() => current);
-  ticketLifecycleLocks.set(ticketId, tail);
-
-  await previous;
-  try {
-    return await operation();
-  } finally {
-    release();
-    if (ticketLifecycleLocks.get(ticketId) === tail) {
-      ticketLifecycleLocks.delete(ticketId);
-    }
-  }
+  return (await lockTicketChannel(channel)) ? "closed" : "failed";
 }
 
 async function retireClosedTicketNotice(
@@ -375,7 +386,12 @@ async function handleTicketClose(
     return;
   }
 
-  await lockTicketChannel(ticketChannel);
+  if (!(await lockTicketChannel(ticketChannel))) {
+    await followUpTicketError(
+      interaction,
+      "Ticket closed, but some channel permissions could not be made read-only. Check the bot permissions, then click Close again.",
+    );
+  }
 }
 
 async function handleTicketReopen(
@@ -412,6 +428,13 @@ async function handleTicketReopen(
   // Another control may already have reopened this ticket. Retire the stale
   // notice and return a visible result instead of silently acknowledging it.
   if (ticket.status === "open") {
+    if (!(await unlockTicketChannel(ticketChannel, ticket.opener_discord_id))) {
+      await followUpTicketError(
+        interaction,
+        "This ticket is open, but its channel permissions could not be restored. Check the bot permissions and try again.",
+      );
+      return;
+    }
     const retired = await retireClosedTicketNotice(interaction, ticket.id);
     await interaction.followUp({
       components: [
@@ -426,9 +449,19 @@ async function handleTicketReopen(
     return;
   }
 
+  if (!(await unlockTicketChannel(ticketChannel, ticket.opener_discord_id))) {
+    await lockTicketChannel(ticketChannel);
+    await followUpTicketError(
+      interaction,
+      "Failed to restore the ticket channel permissions, so it was left closed. Check the bot permissions and try again.",
+    );
+    return;
+  }
+
   try {
     const reopened = await appDb.reopenTicket(ticket.id);
     if (!reopened) {
+      await lockTicketChannel(ticketChannel);
       await followUpTicketError(
         interaction,
         "The ticket changed while it was reopening. Please try again.",
@@ -438,11 +471,10 @@ async function handleTicketReopen(
     ticket = reopened;
   } catch (e) {
     logger.error("Ticket: reopen failed:", e);
+    await lockTicketChannel(ticketChannel);
     await followUpTicketError(interaction, "Failed to reopen. Please try again.");
     return;
   }
-
-  await unlockTicketChannel(ticketChannel, ticket.opener_discord_id);
 
   // The header's attached Close button remains available for the next close.
   // If Discord rejects the edit, remove this separate notice so its stale
@@ -476,27 +508,28 @@ async function handleTicketDelete(
     await followUpTicketError(interaction, "Failed to delete. Please try again.");
     return;
   }
-  if (!ticket) {
-    await followUpTicketError(interaction, "Ticket not found.");
-    return;
-  }
-  if (ticket.channel_id !== interaction.channelId) {
-    await followUpTicketError(
-      interaction,
-      "This button is not for this channel.",
-    );
-    return;
-  }
-  if (ticket.status !== "closed") {
-    await followUpTicketError(
-      interaction,
-      "This ticket is open and cannot be deleted.",
-    );
-    return;
-  }
   const ticketChannel = interaction.channel as TextChannel | null;
   if (!ticketChannel) {
     await followUpTicketError(interaction, "Ticket channel not found.");
+    return;
+  }
+  if (ticket) {
+    if (ticket.channel_id !== interaction.channelId) {
+      await followUpTicketError(
+        interaction,
+        "This button is not for this channel.",
+      );
+      return;
+    }
+    if (ticket.status !== "closed") {
+      await followUpTicketError(
+        interaction,
+        "This ticket is open and cannot be deleted.",
+      );
+      return;
+    }
+  } else if (!matchesTicketChannelId(ticketChannel, ticketId)) {
+    await followUpTicketError(interaction, "Ticket not found.");
     return;
   }
 
@@ -509,7 +542,7 @@ async function handleTicketDelete(
       await saveTranscriptToLog(
         ticketChannel,
         logChannel,
-        `ticket #${ticket.id} deleted by ${interaction.user.tag}`,
+        `ticket #${ticketId} deleted by ${interaction.user.tag}`,
       ).catch(() => null);
     }
   } catch (e) {
@@ -517,14 +550,34 @@ async function handleTicketDelete(
   }
 
   try {
+    await ticketChannel.delete(
+      `Ticket #${ticketId} deleted by ${interaction.user.tag}`,
+    );
+  } catch (e) {
+    if (isUnknownChannelError(e)) {
+      if (ticket) await appDb.deleteTicketRow(ticket.id).catch(() => null);
+      return;
+    }
+    logger.error("Ticket: failed to delete channel:", e);
+    await followUpTicketError(
+      interaction,
+      "Failed to delete the ticket channel. Please check the bot permissions and try again.",
+    );
+    return;
+  }
+
+  if (!ticket) {
+    logger.info(
+      `Ticket: deleted orphaned channel ${ticketChannel.id} for ticket #${ticketId}`,
+    );
+    return;
+  }
+
+  try {
     await appDb.deleteTicketRow(ticket.id);
   } catch (e) {
     logger.error("Ticket: failed to delete row:", e);
   }
-
-  await ticketChannel
-    .delete(`Ticket #${ticket.id} deleted by ${interaction.user.tag}`)
-    .catch((e) => logger.error("Ticket: failed to delete channel:", e));
 }
 
 export default class ButtonInteractionEvent extends Event {
