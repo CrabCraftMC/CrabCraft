@@ -97,6 +97,18 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     // No intake questions — clicking the button opens a ticket straight away.
     fields: [],
   },
+  council: {
+    category: "council",
+    label: "Council Inquiry",
+    emoji: "🏛️",
+    prefix: "ci",
+    buttonStyle: ButtonStyle.Secondary,
+    accent: 0x8f75b5,
+    modalTitle: "Council Inquiry",
+    headerTitle: "Council Inquiry",
+    maxOpen: 3,
+    fields: [],
+  },
   grief: {
     category: "grief",
     label: "Report Griefing / Stealing",
@@ -266,6 +278,7 @@ export function buildTriggerEmbed(): ContainerBuilder {
     "",
     "**Categories**",
     `${TICKET_CATEGORIES.general.emoji} **General Question** — ask about the server, voice chat, or anything else.`,
+    `${TICKET_CATEGORIES.council.emoji} **Council Inquiry** — ask a private question for the council.`,
     `${TICKET_CATEGORIES.grief.emoji} **Report Griefing / Stealing** — report a player who griefed or stole from you.`,
     `${TICKET_CATEGORIES.appeal.emoji} **Punishment Appeal** — appeal a ban, mute, or warning.`,
     "",
