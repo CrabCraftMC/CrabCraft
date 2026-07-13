@@ -150,7 +150,7 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
       name: buildChannelName(opener.username, meta),
       type: ChannelType.GuildText,
       parent: parentCategory.id,
-      topic: `Ticket opened by ${opener.username} — category: ${meta.category}`,
+      topic: `Ticket opened by ${opener.username}. Category: ${meta.category}`,
       reason: `Ticket opened by ${opener.username} (${meta.category})`,
       permissionOverwrites: [
         {

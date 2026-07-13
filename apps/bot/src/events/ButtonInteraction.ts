@@ -95,7 +95,7 @@ async function unlockTicketChannel(
       },
       {
         type: OverwriteType.Member,
-        reason: "Ticket reopened — opener access restored",
+        reason: "Ticket reopened: opener access restored",
       },
     )
     .catch((e) => {
@@ -111,7 +111,7 @@ async function unlockTicketChannel(
         overwrite.id,
         { SendMessages: true },
         {
-          reason: "Ticket reopened — channel unlocked",
+          reason: "Ticket reopened: channel unlocked",
           type: overwrite.type,
         },
       )
@@ -133,7 +133,7 @@ async function lockTicketChannel(channel: TextChannel): Promise<boolean> {
         overwrite.id,
         { SendMessages: false },
         {
-          reason: "Ticket closed — channel locked",
+          reason: "Ticket closed: channel locked",
           type: overwrite.type,
         },
       )
@@ -1250,7 +1250,7 @@ export default class ButtonInteractionEvent extends Event {
       const member = interaction.member as GuildMember | null;
       if (!member?.roles.cache.has(config.MOD_ROLE_ID)) {
         await interaction.reply({
-          components: [errorContainer("**Missing permissions** — only staff can reopen tickets.")],
+          components: [errorContainer("**Missing permissions:** only staff can reopen tickets.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         });
         return;
@@ -1271,7 +1271,7 @@ export default class ButtonInteractionEvent extends Event {
       const member = interaction.member as GuildMember | null;
       if (!member?.roles.cache.has(config.MOD_ROLE_ID)) {
         await interaction.reply({
-          components: [errorContainer("**Missing permissions** — only staff can delete tickets.")],
+          components: [errorContainer("**Missing permissions:** only staff can delete tickets.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         });
         return;

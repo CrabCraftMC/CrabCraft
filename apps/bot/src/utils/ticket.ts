@@ -160,7 +160,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
     fileField: {
       id: "evidence",
       label: "Evidence (screenshots / clips)",
-      description: "Optional — upload images or video clips of what happened.",
+      description: "Optional: upload images or video clips of what happened.",
       required: false,
       maxValues: 10,
     },
@@ -186,7 +186,6 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
         display: "Appeal",
         style: TextInputStyle.Paragraph,
         required: true,
-        placeholder: "Explain in detail. Be honest, staff will check the logs.",
         maxLength: 1500,
       },
     ],
@@ -277,10 +276,10 @@ export function buildTriggerEmbed(): ContainerBuilder {
     "Need help? Pick the option that best describes your issue and a private thread will be opened with the staff team.",
     "",
     "**Categories**",
-    `${TICKET_CATEGORIES.general.emoji} **General Question** — ask about the server, voice chat, or anything else.`,
-    `${TICKET_CATEGORIES.council.emoji} **Council Inquiry** — ask a private question for the council.`,
-    `${TICKET_CATEGORIES.grief.emoji} **Report Griefing / Stealing** — report a player who griefed or stole from you.`,
-    `${TICKET_CATEGORIES.appeal.emoji} **Punishment Appeal** — appeal a ban, mute, or warning.`,
+    `${TICKET_CATEGORIES.general.emoji} **General Question:** ask about the server, voice chat, or anything else.`,
+    `${TICKET_CATEGORIES.council.emoji} **Council Inquiry:** ask a private question for the council.`,
+    `${TICKET_CATEGORIES.grief.emoji} **Report Griefing / Stealing:** report a player who griefed or stole from you.`,
+    `${TICKET_CATEGORIES.appeal.emoji} **Punishment Appeal:** appeal a ban, mute, or warning.`,
     "",
     "-# Tickets are private. Only you and moderators can see them.",
   ];
@@ -312,7 +311,7 @@ const MANUAL_USERNAME_FIELD: TicketField = {
   display: "Minecraft username",
   style: TextInputStyle.Short,
   required: true,
-  placeholder: "We couldn't find a linked account — enter it here",
+  placeholder: "We couldn't find a linked account. Enter it here.",
   maxLength: 32,
 };
 

@@ -52,7 +52,7 @@ export default class NewTicketCommand extends SlashCommand {
     if (!executor?.roles.cache.has(config.MOD_ROLE_ID)) {
       await this.replyError(
         interaction,
-        "**Missing permissions** — only staff can open tickets for other users.",
+        "**Missing permissions:** only staff can open tickets for other users.",
       );
       return;
     }
@@ -62,7 +62,7 @@ export default class NewTicketCommand extends SlashCommand {
     if (meta.category !== "general") {
       await this.replyError(
         interaction,
-        `**Error!** You can only open **${TICKET_CATEGORIES.general.label}** tickets for another user — griefing and appeal tickets need the person's own form responses.`,
+        `**Error!** You can only open **${TICKET_CATEGORIES.general.label}** tickets for another user. Griefing and appeal tickets need the person's own form responses.`,
       );
       return;
     }

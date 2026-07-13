@@ -64,7 +64,12 @@ mock.module("../src/utils/appDb.js", () => ({
 const { default: ButtonInteractionEvent } = await import(
   "../src/events/ButtonInteraction.js"
 );
-const { buildChannelName, TICKET_CATEGORIES } = await import(
+const {
+  buildChannelName,
+  buildIntakeModal,
+  buildTriggerEmbed,
+  TICKET_CATEGORIES,
+} = await import(
   "../src/utils/ticket.js"
 );
 const { getLiveOpenTicketsForCategory, openTicket } = await import(
@@ -665,6 +670,17 @@ describe("ticket lifecycle controls", () => {
 });
 
 describe("ticket opening controls", () => {
+  test("ticket creation copy omits dash punctuation and appeal guidance", () => {
+    const copy = JSON.stringify([
+      buildTriggerEmbed().toJSON(),
+      buildIntakeModal(TICKET_CATEGORIES.appeal).toJSON(),
+    ]);
+
+    expect(copy).not.toContain("–");
+    expect(copy).not.toContain("—");
+    expect(copy).not.toContain("Be honest");
+  });
+
   function openingInteraction() {
     const headerMessage = { pin: mock(async () => {}) };
     const ticketChannel = {

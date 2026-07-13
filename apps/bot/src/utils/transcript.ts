@@ -358,7 +358,7 @@ function wrapInHtml(channelName: string, body: string): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Transcript — #${esc(channelName)}</title>
+<title>Transcript: #${esc(channelName)}</title>
 <style>
   /* ── Base ─────────────────────────────────────────── */
   :root {
