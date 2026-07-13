@@ -118,8 +118,7 @@ final class CustomPortalBounds {
     private static boolean isSafe(final Candidate candidate, final Safety safety) {
         final BlockPosition feet = candidate.destination().feetBlock();
         return safety.isPortal(candidate.portalBlock())
-                && safety.isPassable(feet)
-                && safety.isPassable(feet.above())
+                && safety.canOccupy(candidate.destination())
                 && safety.hasSupport(feet);
     }
 
@@ -130,15 +129,12 @@ final class CustomPortalBounds {
     interface Safety {
         boolean isPortal(BlockPosition block);
 
-        boolean isPassable(BlockPosition block);
+        boolean canOccupy(Destination destination);
 
         boolean hasSupport(BlockPosition feet);
     }
 
     record BlockPosition(int x, int y, int z) {
-        BlockPosition above() {
-            return new BlockPosition(this.x, this.y + 1, this.z);
-        }
     }
 
     record Destination(double x, double y, double z) {

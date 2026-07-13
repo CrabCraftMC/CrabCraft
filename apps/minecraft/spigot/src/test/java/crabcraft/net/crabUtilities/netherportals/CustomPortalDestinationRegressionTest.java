@@ -12,6 +12,9 @@ public final class CustomPortalDestinationRegressionTest {
         netherRoofLinkWorksInBothDirections();
         bothAxesAndNegativeCoordinatesUseCompleteBounds();
         obstructedSideFallsBackToTheClearSide();
+        mountedStackUsesEntitySizedClearance();
+        entityThatCannotFitKeepsPaperDestination();
+        oversizedPortalsSuppressOnlyPortalPigmen();
         portalCollapseExcludesVanillaSizes();
         portalCollapseOnlyAcceptsFrameBlocksInThePortalPlane();
         overlappingCollapseRequestsAreDetectable();
@@ -81,9 +84,67 @@ public final class CustomPortalDestinationRegressionTest {
                 check(destination.x() == 19.5, "Z-aligned portal chose its obstructed positive-X side");
             }
             check(safety.hasSupport(destination.feetBlock()), axis + " clear-side arrival was unsupported");
-            check(safety.isPassable(destination.feetBlock()) && safety.isPassable(destination.feetBlock().above()),
-                    axis + " clear-side arrival did not have two blocks of clearance");
+            check(safety.canOccupy(destination), axis + " clear-side arrival did not have enough clearance");
         }
+    }
+
+    private static void mountedStackUsesEntitySizedClearance() {
+        for (final PortalAxis axis : PortalAxis.values()) {
+            final CustomPortalBounds portal = rectangle(axis, 5, 20, 40, 24, 30);
+            final FakeSafety safety = new FakeSafety(portal);
+            safety.supportAllBottomLanes(portal);
+            safety.requireClearance(4);
+            safety.blockPositiveOutsideLane(portal, 2);
+
+            final double targetX = axis == PortalAxis.X ? 12.5 : 22.0;
+            final double targetZ = axis == PortalAxis.X ? 22.0 : 12.5;
+            final CustomPortalBounds.Destination destination = destination(portal, targetX, targetZ, safety);
+
+            if (axis == PortalAxis.X) {
+                check(destination.z() == 19.5,
+                        "X-aligned riding stack chose a side without enough vertical clearance");
+            } else {
+                check(destination.x() == 19.5,
+                        "Z-aligned riding stack chose a side without enough vertical clearance");
+            }
+            check(destination.y() == 40.0, axis + " riding stack did not arrive at the portal bottom");
+        }
+    }
+
+    private static void entityThatCannotFitKeepsPaperDestination() {
+        final CustomPortalBounds portal = rectangle(PortalAxis.X, 0, 5, 20, 64, 64);
+        final FakeSafety safety = new FakeSafety(portal);
+        safety.supportAllBottomLanes(portal);
+        safety.denyAllOccupancy();
+
+        check(portal.findSafeDestination(32.5, 5.5, safety).isEmpty(),
+                "an entity that cannot fit safely should retain Paper's original destination");
+    }
+
+    private static void oversizedPortalsSuppressOnlyPortalPigmen() {
+        final CustomPortalBounds normal = rectangle(PortalAxis.X, 0, 5, 20, 21, 21);
+        final CustomPortalBounds oversized = rectangle(PortalAxis.X, 0, 5, 20, 64, 64);
+
+        check(CustomNetherPortalListener.shouldSuppressPortalSpawn(
+                        org.bukkit.entity.EntityType.ZOMBIFIED_PIGLIN,
+                        org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NETHER_PORTAL,
+                        oversized),
+                "oversized portals should suppress their zombified piglin spawns");
+        check(!CustomNetherPortalListener.shouldSuppressPortalSpawn(
+                        org.bukkit.entity.EntityType.ZOMBIFIED_PIGLIN,
+                        org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NETHER_PORTAL,
+                        normal),
+                "vanilla-sized portals must retain zombified piglin spawning");
+        check(!CustomNetherPortalListener.shouldSuppressPortalSpawn(
+                        org.bukkit.entity.EntityType.ZOMBIFIED_PIGLIN,
+                        org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL,
+                        oversized),
+                "natural zombified piglin spawning must remain unchanged");
+        check(!CustomNetherPortalListener.shouldSuppressPortalSpawn(
+                        org.bukkit.entity.EntityType.ZOMBIE,
+                        org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NETHER_PORTAL,
+                        oversized),
+                "other entity types must not be suppressed");
     }
 
     private static void portalCollapseExcludesVanillaSizes() {
@@ -164,6 +225,8 @@ public final class CustomPortalDestinationRegressionTest {
         private final Set<CustomPortalBounds.BlockPosition> portalBlocks;
         private final Set<CustomPortalBounds.BlockPosition> supportedFeet = new HashSet<>();
         private final Set<CustomPortalBounds.BlockPosition> obstructed = new HashSet<>();
+        private int requiredClearance = 2;
+        private boolean denyAllOccupancy;
 
         private FakeSafety(final CustomPortalBounds portal) {
             this.portalBlocks = portal.blocks();
@@ -191,12 +254,26 @@ public final class CustomPortalDestinationRegressionTest {
         }
 
         private void blockPositiveOutsideLane(final CustomPortalBounds portal) {
+            this.blockPositiveOutsideLane(portal, 0);
+        }
+
+        private void blockPositiveOutsideLane(final CustomPortalBounds portal, final int heightOffset) {
             portal.blocks().stream()
                     .filter(block -> block.y() == portal.minY())
                     .map(block -> portal.axis() == PortalAxis.X
-                            ? new CustomPortalBounds.BlockPosition(block.x(), block.y(), block.z() + 1)
-                            : new CustomPortalBounds.BlockPosition(block.x() + 1, block.y(), block.z()))
+                            ? new CustomPortalBounds.BlockPosition(
+                                    block.x(), block.y() + heightOffset, block.z() + 1)
+                            : new CustomPortalBounds.BlockPosition(
+                                    block.x() + 1, block.y() + heightOffset, block.z()))
                     .forEach(this.obstructed::add);
+        }
+
+        private void requireClearance(final int blocks) {
+            this.requiredClearance = blocks;
+        }
+
+        private void denyAllOccupancy() {
+            this.denyAllOccupancy = true;
         }
 
         @Override
@@ -205,8 +282,19 @@ public final class CustomPortalDestinationRegressionTest {
         }
 
         @Override
-        public boolean isPassable(final CustomPortalBounds.BlockPosition block) {
-            return !this.obstructed.contains(block);
+        public boolean canOccupy(final CustomPortalBounds.Destination destination) {
+            if (this.denyAllOccupancy) {
+                return false;
+            }
+
+            final CustomPortalBounds.BlockPosition feet = destination.feetBlock();
+            for (int offset = 0; offset < this.requiredClearance; offset++) {
+                if (this.obstructed.contains(new CustomPortalBounds.BlockPosition(
+                        feet.x(), feet.y() + offset, feet.z()))) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         @Override

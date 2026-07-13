@@ -3,16 +3,24 @@ package crabcraft.net.crabUtilities.netherportals;
 import crabcraft.net.crabUtilities.CrabUtilities;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.PortalType;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityPortalEvent;
+import org.bukkit.event.entity.EntityPortalExitEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.util.BoundingBox;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;
@@ -21,9 +29,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Lets players build nether portals of custom sizes and non-rectangular shapes.
@@ -49,6 +60,9 @@ public class CustomNetherPortalListener implements Listener {
     // the worst-case flood so an absurd config value can't overflow the loop
     // bound or hang the server on ignite.
     private static final int MAX_DIMENSION = 256;
+    private static final int MAX_RIDING_STACK_ENTITIES = 64;
+    private static final double MAX_RIDING_STACK_SPAN = 16.0;
+    private static final double MAX_RIDING_STACK_VOLUME = 512.0;
     private static final int DESTINATION_PORTAL_SEARCH_RADIUS = 3;
     private static final int PORTAL_COLLAPSE_BATCH_SIZE = 4096;
     private static final Comparator<CustomPortalBounds.BlockPosition> PORTAL_COLLAPSE_ORDER = Comparator
@@ -63,6 +77,8 @@ public class CustomNetherPortalListener implements Listener {
     private final Deque<PendingPortalCollapse> pendingPortalCollapses = new ArrayDeque<>();
     private final Set<CustomPortalBounds> collapsingPortals =
             Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<UUID> pendingNetherPortalExits = new HashSet<>();
+    private boolean entityPortalMarkerCleanupScheduled;
     private boolean portalCollapseTaskScheduled;
     // Parsed config snapshot, cached so we don't rebuild the frame-material set
     // on every ignite. Rebuilt on demand and cleared by invalidate() on reload.
@@ -79,6 +95,11 @@ public class CustomNetherPortalListener implements Listener {
 
     private static boolean isInValidDimension(final World world) {
         return world.getEnvironment() == World.Environment.NETHER || world.getEnvironment() == World.Environment.NORMAL;
+    }
+
+    private static boolean isNetherDimensionPair(final World from, final World to) {
+        return from.getEnvironment() == World.Environment.NETHER && to.getEnvironment() == World.Environment.NORMAL
+                || from.getEnvironment() == World.Environment.NORMAL && to.getEnvironment() == World.Environment.NETHER;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -121,25 +142,82 @@ public class CustomNetherPortalListener implements Listener {
             return;
         }
 
-        final @Nullable Block portalSeed = this.findNearestPortalBlock(vanillaDestination);
+        this.findSafePortalDestination(vanillaDestination, event.getPlayer()).ifPresent(event::setTo);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEntityPortal(final EntityPortalEvent event) {
+        if (event.getPortalType() != PortalType.NETHER
+                || event.getEntity() instanceof Player
+                || !this.plugin.getConfig().getBoolean("tweaks.custom-nether-portals.enabled", false)) {
+            return;
+        }
+
+        final UUID entityId = event.getEntity().getUniqueId();
+        this.pendingNetherPortalExits.add(entityId);
+        if (this.entityPortalMarkerCleanupScheduled) {
+            return;
+        }
+        this.entityPortalMarkerCleanupScheduled = true;
+
+        // Portal resolution and EntityPortalExitEvent are synchronous. This
+        // next-tick removal only clears markers left by a later cancellation or
+        // by a portal search that did not find/create an exit.
+        this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
+            this.pendingNetherPortalExits.clear();
+            this.entityPortalMarkerCleanupScheduled = false;
+        });
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityPortalExit(final EntityPortalExitEvent event) {
+        final Entity entity = event.getEntity();
+        if (!this.pendingNetherPortalExits.remove(entity.getUniqueId())
+                || !this.plugin.getConfig().getBoolean("tweaks.custom-nether-portals.enabled", false)) {
+            return;
+        }
+
+        final @Nullable Location vanillaDestination = event.getTo();
+        if (vanillaDestination == null
+                || !isNetherDimensionPair(event.getFrom().getWorld(), vanillaDestination.getWorld())) {
+            return;
+        }
+
+        this.findSafePortalDestination(vanillaDestination, entity).ifPresent(event::setTo);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onCreatureSpawn(final CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.ZOMBIFIED_PIGLIN
+                || event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NETHER_PORTAL
+                || !this.plugin.getConfig().getBoolean("tweaks.custom-nether-portals.enabled", false)) {
+            return;
+        }
+
+        final Location spawnLocation = event.getEntity().getLocation();
+        if (!isInValidDimension(spawnLocation.getWorld())) {
+            return;
+        }
+
+        final @Nullable Block portalSeed = this.findNearestPortalBlock(spawnLocation);
         if (portalSeed == null) {
             return;
         }
 
         this.portalRegistry.findOrDiscover(portalSeed)
-                .filter(CustomPortalBounds::exceedsVanillaInteriorLimit)
-                .flatMap(bounds -> bounds.findSafeDestination(
-                        vanillaDestination.getX(),
-                        vanillaDestination.getZ(),
-                        new BukkitSafety(vanillaDestination.getWorld(), bounds.axis())
-                ))
-                .ifPresent(destination -> {
-                    final Location safeDestination = vanillaDestination.clone();
-                    safeDestination.setX(destination.x());
-                    safeDestination.setY(destination.y());
-                    safeDestination.setZ(destination.z());
-                    event.setTo(safeDestination);
-                });
+                .filter(bounds -> shouldSuppressPortalSpawn(
+                        event.getEntityType(), event.getSpawnReason(), bounds))
+                .ifPresent(bounds -> event.setCancelled(true));
+    }
+
+    static boolean shouldSuppressPortalSpawn(
+            final EntityType entityType,
+            final CreatureSpawnEvent.SpawnReason spawnReason,
+            final CustomPortalBounds bounds
+    ) {
+        return entityType == EntityType.ZOMBIFIED_PIGLIN
+                && spawnReason == CreatureSpawnEvent.SpawnReason.NETHER_PORTAL
+                && bounds.exceedsVanillaInteriorLimit();
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -194,6 +272,30 @@ public class CustomNetherPortalListener implements Listener {
             }
         }
         return null;
+    }
+
+    private Optional<Location> findSafePortalDestination(
+            final Location vanillaDestination,
+            final Entity entity
+    ) {
+        final @Nullable Block portalSeed = this.findNearestPortalBlock(vanillaDestination);
+        if (portalSeed == null) {
+            return Optional.empty();
+        }
+
+        return this.portalRegistry.findOrDiscover(portalSeed)
+                .filter(CustomPortalBounds::exceedsVanillaInteriorLimit)
+                .flatMap(bounds -> BukkitSafety.create(
+                                vanillaDestination.getWorld(), bounds.axis(), entity)
+                        .flatMap(safety -> bounds.findSafeDestination(
+                                vanillaDestination.getX(), vanillaDestination.getZ(), safety)))
+                .map(destination -> {
+                    final Location safeDestination = vanillaDestination.clone();
+                    safeDestination.setX(destination.x());
+                    safeDestination.setY(destination.y());
+                    safeDestination.setZ(destination.z());
+                    return safeDestination;
+                });
     }
 
     private @Nullable Block findNearestPortalBlock(final Location destination) {
@@ -310,21 +412,117 @@ public class CustomNetherPortalListener implements Listener {
         }
     }
 
-    private record BukkitSafety(World world, PortalAxis axis) implements CustomPortalBounds.Safety {
+    private record BukkitSafety(
+            World world,
+            PortalAxis axis,
+            RelativeBoundingBox occupancy
+    ) implements CustomPortalBounds.Safety {
+
+        private static Optional<BukkitSafety> create(
+                final World world,
+                final PortalAxis axis,
+                final Entity root
+        ) {
+            final Location rootLocation = root.getLocation();
+            final BoundingBox combinedBounds = root.getBoundingBox().clone();
+            final Deque<Entity> pending = new ArrayDeque<>(root.getPassengers());
+            final Set<UUID> visited = new HashSet<>();
+            visited.add(root.getUniqueId());
+
+            while (!pending.isEmpty()) {
+                final Entity passenger = pending.removeFirst();
+                if (!visited.add(passenger.getUniqueId())) {
+                    continue;
+                }
+                if (visited.size() > MAX_RIDING_STACK_ENTITIES) {
+                    return Optional.empty();
+                }
+
+                combinedBounds.union(passenger.getBoundingBox());
+                pending.addAll(passenger.getPassengers());
+            }
+
+            final RelativeBoundingBox occupancy = RelativeBoundingBox.from(combinedBounds, rootLocation);
+            if (occupancy.widthX() > MAX_RIDING_STACK_SPAN
+                    || occupancy.height() > MAX_RIDING_STACK_SPAN
+                    || occupancy.widthZ() > MAX_RIDING_STACK_SPAN
+                    || occupancy.volume() > MAX_RIDING_STACK_VOLUME) {
+                return Optional.empty();
+            }
+
+            return Optional.of(new BukkitSafety(world, axis, occupancy));
+        }
+
         @Override
         public boolean isPortal(final CustomPortalBounds.BlockPosition block) {
             return CustomPortalRegistry.axisOf(this.world.getBlockAt(block.x(), block.y(), block.z())) == this.axis;
         }
 
         @Override
-        public boolean isPassable(final CustomPortalBounds.BlockPosition block) {
-            return this.world.getBlockAt(block.x(), block.y(), block.z()).isPassable();
+        public boolean canOccupy(final CustomPortalBounds.Destination destination) {
+            return !this.world.hasCollisionsIn(this.occupancy.at(destination));
         }
 
         @Override
         public boolean hasSupport(final CustomPortalBounds.BlockPosition feet) {
             final Block support = this.world.getBlockAt(feet.x(), feet.y() - 1, feet.z());
             return !support.isPassable() && !support.getCollisionShape().getBoundingBoxes().isEmpty();
+        }
+    }
+
+    private record RelativeBoundingBox(
+            double minX,
+            double minY,
+            double minZ,
+            double maxX,
+            double maxY,
+            double maxZ
+    ) {
+        private static RelativeBoundingBox from(final BoundingBox bounds, final Location origin) {
+            // Portal exits may rotate vehicles by 90 degrees. A square
+            // horizontal footprint safely covers either orientation and any
+            // passenger offsets without having to predict Paper's rotation.
+            final double horizontalRadius = Math.max(
+                    Math.max(Math.abs(bounds.getMinX() - origin.getX()),
+                            Math.abs(bounds.getMaxX() - origin.getX())),
+                    Math.max(Math.abs(bounds.getMinZ() - origin.getZ()),
+                            Math.abs(bounds.getMaxZ() - origin.getZ()))
+            );
+            return new RelativeBoundingBox(
+                    -horizontalRadius,
+                    bounds.getMinY() - origin.getY(),
+                    -horizontalRadius,
+                    horizontalRadius,
+                    bounds.getMaxY() - origin.getY(),
+                    horizontalRadius
+            );
+        }
+
+        private double widthX() {
+            return this.maxX - this.minX;
+        }
+
+        private double height() {
+            return this.maxY - this.minY;
+        }
+
+        private double widthZ() {
+            return this.maxZ - this.minZ;
+        }
+
+        private double volume() {
+            return this.widthX() * this.height() * this.widthZ();
+        }
+
+        private BoundingBox at(final CustomPortalBounds.Destination destination) {
+            return new BoundingBox(
+                    destination.x() + this.minX,
+                    destination.y() + this.minY,
+                    destination.z() + this.minZ,
+                    destination.x() + this.maxX,
+                    destination.y() + this.maxY,
+                    destination.z() + this.maxZ
+            );
         }
     }
 
