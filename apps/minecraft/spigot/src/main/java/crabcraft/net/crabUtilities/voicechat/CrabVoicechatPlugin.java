@@ -13,13 +13,16 @@ import de.maxhenkel.voicechat.api.events.LeaveGroupEvent;
 import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
 import de.maxhenkel.voicechat.api.events.PlayerConnectedEvent;
 import de.maxhenkel.voicechat.api.events.PlayerDisconnectedEvent;
+import de.maxhenkel.voicechat.api.events.StaticSoundPacketEvent;
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
+import net.crabcraft.customdiscs.CDVoiceAddon;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -46,6 +49,11 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private final boolean crossServerEnabled;
     private final String thisBackend;
     private final List<String> persistentGroupNames;
+    private final boolean lofiEnabled;
+    private final String lofiUrl;
+    private final float lofiMusicVolume;
+    private final double lofiPlayerVolume;
+    private final UUID lofiGroupId;
 
     private VoicechatServerApi api;
     private RedisVoiceBus bus;
@@ -56,6 +64,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private BukkitTask rosterRebroadcastTask;
     private BukkitTask sweepTask;
     private Set<UUID> crossServerGroupIds = Set.of();
+    private LofiStreamPlayer lofiStreamPlayer;
+    private GroupSpeechAttenuator groupSpeechAttenuator;
 
     /** Velocity backend names we've already warned about mismatching this-backend. */
     private final Set<String> homeMismatchWarned = ConcurrentHashMap.newKeySet();
@@ -65,10 +75,22 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.logger = plugin.getLogger();
         this.crossServerEnabled = plugin.getConfig().getBoolean("voicechat.cross-server.enabled", true);
         this.thisBackend = plugin.getConfig().getString("voicechat.cross-server.this-backend", "");
+        this.lofiEnabled = plugin.getConfig().getBoolean("voicechat.lofi.enabled", true);
+        this.lofiUrl = plugin.getConfig().getString("voicechat.lofi.youtube-url", "");
+        this.lofiMusicVolume = (float) plugin.getConfig().getDouble("voicechat.lofi.music-volume", 0.5D);
+        this.lofiPlayerVolume = plugin.getConfig().getDouble("voicechat.lofi.player-volume", 0.25D);
+        this.lofiGroupId = deterministicGroupId("24/7 Lofi");
         List<String> configured = plugin.getConfig().getStringList("voicechat.cross-server.persistent-groups");
-        this.persistentGroupNames = configured.isEmpty()
+        this.persistentGroupNames = persistentGroupNames(configured, lofiEnabled);
+    }
+
+    static List<String> persistentGroupNames(List<String> configured, boolean lofiEnabled) {
+        List<String> names = new ArrayList<>(configured.isEmpty()
                 ? List.of("Global #1", "Global #2", "Global #3")
-                : configured;
+                : configured);
+        names.removeIf("24/7 Lofi"::equalsIgnoreCase);
+        if (lofiEnabled) names.add("24/7 Lofi");
+        return List.copyOf(names);
     }
 
     @Override
@@ -84,16 +106,20 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     @Override
     public void registerEvents(EventRegistration reg) {
         reg.registerEvent(VoicechatServerStartedEvent.class, this::onServerStarted);
+        if (lofiEnabled) reg.registerEvent(StaticSoundPacketEvent.class, this::onStaticSoundPacket);
+        if (crossServerEnabled || lofiEnabled) {
+            reg.registerEvent(PlayerConnectedEvent.class, this::onPlayerConnected);
+            reg.registerEvent(JoinGroupEvent.class, this::onJoinGroup);
+            reg.registerEvent(LeaveGroupEvent.class, this::onLeaveGroup);
+            reg.registerEvent(PlayerDisconnectedEvent.class, this::onPlayerDisconnect);
+        }
         if (!crossServerEnabled) return;
-        reg.registerEvent(PlayerConnectedEvent.class, this::onPlayerConnected);
-        reg.registerEvent(JoinGroupEvent.class, this::onJoinGroup);
-        reg.registerEvent(LeaveGroupEvent.class, this::onLeaveGroup);
         reg.registerEvent(MicrophonePacketEvent.class, this::onMicrophonePacket);
-        reg.registerEvent(PlayerDisconnectedEvent.class, this::onPlayerDisconnect);
     }
 
     private void onServerStarted(VoicechatServerStartedEvent event) {
         this.api = event.getVoicechat();
+        CDVoiceAddon.getInstance().register(api, lofiEnabled);
 
         Set<UUID> ids = new HashSet<>();
         for (String name : persistentGroupNames) {
@@ -109,6 +135,21 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         }
         this.crossServerGroupIds = Set.copyOf(ids);
 
+        if (lofiEnabled) {
+            this.groupSpeechAttenuator = new GroupSpeechAttenuator(
+                    api, lofiGroupId, lofiPlayerVolume, logger);
+            if (lofiUrl == null || lofiUrl.isBlank()) {
+                logger.warning("voicechat.lofi.enabled=true but youtube-url is empty; lofi playback disabled");
+            } else {
+                this.lofiStreamPlayer = new LofiStreamPlayer(
+                        api, lofiGroupId, lofiUrl, lofiMusicVolume, logger);
+                lofiStreamPlayer.start();
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    lofiStreamPlayer.reconcileTarget(api.getConnectionOf(player.getUniqueId()));
+                }
+            }
+        }
+
         if (!crossServerEnabled) return;
         if (thisBackend == null || thisBackend.isEmpty()) {
             logger.warning("voicechat.cross-server.enabled=true but this-backend is empty in config — "
@@ -123,7 +164,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.bus = new RedisVoiceBus(plugin);
         this.membership = new MembershipTracker();
         this.audioRelay = new AudioRelay(plugin, bus, membership, crossServerGroupIds,
-                thisBackend, logger);
+                thisBackend, logger, lofiEnabled ? lofiGroupId : null, lofiPlayerVolume);
         audioRelay.setApi(api);
         this.svcPackets = new SvcPacketSender(plugin);
         this.roster = new RosterTracker(plugin, svcPackets,
@@ -182,9 +223,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
      * </ol>
      */
     private void onPlayerConnected(PlayerConnectedEvent event) {
-        if (api == null || bus == null) return;
         VoicechatConnection conn = event.getConnection();
         if (conn == null) return;
+        if (lofiStreamPlayer != null) lofiStreamPlayer.reconcileTarget(conn);
+        if (api == null || bus == null) return;
         UUID playerId = conn.getPlayer().getUuid();
 
         // If this player was previously heard through a relay on this backend,
@@ -241,8 +283,12 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     }
 
     private void onJoinGroup(JoinGroupEvent event) {
-        if (membership == null) return;
         Group group = event.getGroup();
+        if (lofiStreamPlayer != null && event.getConnection() != null) {
+            lofiStreamPlayer.updateTarget(
+                    event.getConnection(), group == null ? null : group.getId());
+        }
+        if (membership == null) return;
         if (group == null || event.getConnection() == null) return;
 
         membership.onJoinGroupEvent(event);
@@ -269,6 +315,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     }
 
     private void onLeaveGroup(LeaveGroupEvent event) {
+        if (lofiStreamPlayer != null && event.getConnection() != null) {
+            lofiStreamPlayer.updateTarget(event.getConnection(), null);
+        }
         if (membership == null) return;
         Group group = event.getGroup();
         if (group != null && event.getConnection() != null
@@ -317,8 +366,14 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (audioRelay != null) audioRelay.onMicrophonePacketEvent(event);
     }
 
+    private void onStaticSoundPacket(StaticSoundPacketEvent event) {
+        if (groupSpeechAttenuator != null) groupSpeechAttenuator.onStaticSoundPacket(event);
+    }
+
     private void onPlayerDisconnect(PlayerDisconnectedEvent event) {
         UUID playerId = event.getPlayerUuid();
+        if (lofiStreamPlayer != null) lofiStreamPlayer.removeTarget(playerId);
+        if (groupSpeechAttenuator != null) groupSpeechAttenuator.remove(playerId);
         if (membership != null && bus != null) {
             for (UUID groupId : membership.getLocalGroupsOf(playerId)) {
                 if (!crossServerGroupIds.contains(groupId)) continue;
@@ -336,6 +391,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     /** Public hook so {@link CrabUtilities#onDisable()} can release resources. */
     public void shutdown() {
+        if (lofiStreamPlayer != null) lofiStreamPlayer.close();
+        if (groupSpeechAttenuator != null) groupSpeechAttenuator.close();
         for (BukkitTask task : new BukkitTask[]{rosterRebroadcastTask, sweepTask}) {
             if (task != null) {
                 try { task.cancel(); } catch (Exception ignored) {}
@@ -353,6 +410,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (roster != null) roster.shutdown();
         if (audioRelay != null) audioRelay.shutdown();
         if (bus != null) bus.shutdown();
+        CDVoiceAddon.getInstance().clear();
     }
 
     /**

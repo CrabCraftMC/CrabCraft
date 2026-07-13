@@ -1,0 +1,95 @@
+language:
+  prefix: ''
+  plugin:
+    messages:
+      update-available: '<#FC835C>A new version is available: <click:open_url:{0}{1}><hover:show_text:"<#FCD05C>{0}{1}<br><#FC835C>Click to open"><#FCD05C>{1}</hover></click>'
+  error:
+    command:
+      cant-perform: <#f77069>You can't run that command.
+      no-permission: <#f77069>You don't have permission to do that.
+      disc-name-empty: <#f77069>Please give the disc a name.
+      horn-name-empty: <#f77069>Please give the horn a name.
+      url-empty: <#f77069>Please paste a link first.
+    play:
+      no-matches: <#f77069>Couldn't find that track.
+      audio-load: <#f77069>Something went wrong loading that track.
+      busy: <#f77069>Too many custom tracks are playing. Try again shortly.
+      while-playing: <#f77069>Something went wrong playing that track.
+  command:
+    reload:
+      syntax: <#FC835C>/cd reload
+      description: <#FCD05C>Reload the configuration and language files.
+      messages:
+        successfully: <#77dd77>Reloaded successfully.
+    create:
+      syntax: <#FC835C>/disc create
+      description: <#FCD05C>Create a custom music disc.
+      dialog:
+        title: <#FCD05C>Create a Custom Disc
+        body: <#b0b0b0>Paste a link to YouTube, SoundCloud, Twitch, or a direct audio file.
+        input:
+          url: <#FCD05C>Link
+          name: <#FCD05C>Disc name
+          volume: <#FCD05C>Volume
+          distance: <#FCD05C>Range
+        button:
+          create: <#77dd77>Create
+          cancel: <#f77069>Cancel
+      messages:
+        error:
+          not-holding-disc: <#f77069>Hold a music disc in your hand first.
+        created: <#77dd77>Your custom disc is ready.
+        name: '<#FC835C>Name: <#FCD05C>{0}'
+        source: '<#FC835C>Source: <#FCD05C>{0}'
+        volume: '<#FC835C>Volume: <#FCD05C>{0}%'
+        distance: '<#FC835C>Range: <#FCD05C>{0} blocks'
+    edit:
+      syntax: <#FC835C>/disc edit
+      description: <#FCD05C>Edit the custom disc you are holding.
+      dialog:
+        title: <#FCD05C>Edit a Custom Disc
+      messages:
+        error:
+          not-custom-disc: <#f77069>Hold a custom disc to edit it.
+    horn:
+      create:
+        syntax: <#FC835C>/horn create
+        description: <#FCD05C>Create a custom goat horn.
+        dialog:
+          title: <#FCD05C>Create a Custom Horn
+          body: <#b0b0b0>Paste a link to YouTube, SoundCloud, Twitch, or a direct audio file. Sounds are capped to the 7s goat horn cooldown.
+          input:
+            url: <#FCD05C>Link
+            name: <#FCD05C>Horn name
+            volume: <#FCD05C>Volume
+          button:
+            create: <#77dd77>Create
+            cancel: <#f77069>Cancel
+        messages:
+          error:
+            not-holding-horn: <#f77069>Hold a goat horn in your hand first.
+          created: <#77dd77>Your custom goat horn is ready.
+          name: '<#FC835C>Name: <#FCD05C>{0}'
+          source: '<#FC835C>Source: <#FCD05C>{0}'
+          volume: '<#FC835C>Volume: <#FCD05C>{0}%'
+          length-warning: '<#FCD05C>Heads up: this track is longer than {0}s, so it will be cut off when blown.'
+      edit:
+        syntax: <#FC835C>/horn edit
+        description: <#FCD05C>Edit the custom goat horn you are holding.
+        dialog:
+          title: <#FCD05C>Edit a Custom Horn
+        messages:
+          error:
+            not-custom-horn: <#f77069>Hold a custom goat horn to edit it.
+    help:
+      syntax: <#FC835C>/cd help
+      description: <#FCD05C>Show the list of commands.
+      messages:
+        header: <#FC835C>Custom Discs
+        format: '{0}<#FCD05C>: {1}'
+        footer: <#b0b0b0>Hold a music disc and run /disc create to get started.
+  disc-name:
+    youtube: <#FF0000>YouTube disc
+    soundcloud: <#FF5500>SoundCloud disc
+    http: <#eb632d>Custom disc
+  now-playing: '<#FC835C>Now playing: <#FCD05C>{0}'

@@ -76,6 +76,13 @@ tasks.register('awardDyeCraftingRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.velocity.awards.AwardDyeCraftingRegressionTest')
 }
 
+tasks.register('awardSuspiciousBrushRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.awards.AwardSuspiciousBrushRegressionTest')
+}
+
 tasks.named('test') {
     failOnNoDiscoveredTests = false
 }
@@ -84,6 +91,7 @@ tasks.named('check') {
     dependsOn tasks.named('loginStreakCacheSeedRegressionTest')
     dependsOn tasks.named('awardAltExclusionRegressionTest')
     dependsOn tasks.named('awardDyeCraftingRegressionTest')
+    dependsOn tasks.named('awardSuspiciousBrushRegressionTest')
 }
 
 tasks.build.dependsOn(tasks.shadowJar)

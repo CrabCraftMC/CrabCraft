@@ -2,11 +2,13 @@ name: CrabUtilities
 version: '${version}'
 main: crabcraft.net.crabUtilities.CrabUtilities
 api-version: '1.21'
+provides: [CustomDiscs]
 authors: [Max]
 website: https://www.crabcraft.net
 softdepend:
   - Essentials
   - voicechat
+  - packetevents
   - PlaceholderAPI
   - BlueMap
 commands:
@@ -36,3 +38,24 @@ permissions:
   crabutilities.bluemap.marker:
     description: Create BlueMap markers by writing the marker keyword on a sign.
     default: true
+  customdiscs.help:
+    description: View CustomDiscs help.
+    default: true
+  customdiscs.reload:
+    description: Reload the custom-discs configuration.
+    default: op
+  customdiscs.create:
+    description: Create and edit custom discs and horns.
+    default: true
+  customdiscs.create.remote:
+    description: Use remote media URLs for custom audio.
+    default: true
+  customdiscs.create.remote.youtube:
+    description: Use YouTube URLs for custom audio.
+    default: true
+  customdiscs.create.remote.soundcloud:
+    description: Use SoundCloud URLs for custom audio.
+    default: true
+  customdiscs.create.remote.http:
+    description: Use direct HTTP URLs for custom audio.
+    default: op

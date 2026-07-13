@@ -54,6 +54,24 @@
     }
   },
   {
+    "id": "brush_suspicious",
+    "title": "Archaeologist",
+    "description": "Suspicious sand and gravel brushed",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/brush_suspicious.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:suspicious_gravel",
+        "minecraft:suspicious_sand"
+      ]
+    }
+  },
+  {
     "id": "breed",
     "title": "Matchmaker",
     "description": "Animals bred together",

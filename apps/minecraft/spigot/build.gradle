@@ -33,6 +33,18 @@ repositories {
         name = "bluecolored"
         url = uri("https://repo.bluecolored.de/releases")
     }
+    maven {
+        name = "codemc"
+        url = uri("https://repo.codemc.io/repository/maven-releases/")
+    }
+    maven {
+        name = "tcoded"
+        url = uri("https://repo.tcoded.com/releases")
+    }
+    maven {
+        name = "simple-yaml-mirror"
+        url = uri("https://repo.subkek.space/maven-public/")
+    }
 }
 
 dependencies {
@@ -48,7 +60,12 @@ dependencies {
     testImplementation("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("de.bluecolored:bluemap-api:2.7.7")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.11.2")
+    compileOnly("org.projectlombok:lombok:1.18.44")
+    annotationProcessor("org.projectlombok:lombok:1.18.44")
     implementation("redis.clients:jedis:5.1.0")
+    implementation("com.tcoded:FoliaLib:0.5.1")
+    implementation("me.carleslc:Simple-Yaml:1.8.4")
 }
 
 shadowJar {
@@ -58,6 +75,8 @@ shadowJar {
     relocate 'redis.clients.jedis', 'crabcraft.net.libs.jedis'
     relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
     relocate 'org.json', 'crabcraft.net.libs.json'
+    relocate 'com.tcoded.folialib', 'crabcraft.net.libs.folialib'
+    relocate 'org.simpleyaml', 'crabcraft.net.libs.simpleyaml'
 }
 
 tasks.jar {
@@ -121,6 +140,34 @@ tasks.register('nicknameRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.NicknameRegressionTest')
 }
 
+tasks.register('lofiVoicechatRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.voicechat.LofiVoicechatRegressionTest')
+}
+
+tasks.register('suspiciousBrushTrackerRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.awards.SuspiciousBrushTrackerRegressionTest')
+}
+
+tasks.register('customDiscsSecurityRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('net.crabcraft.customdiscs.util.CustomDiscsSecurityRegressionTest')
+}
+
+tasks.register('binaryProvisionerRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('net.crabcraft.customdiscs.audio.BinaryProvisionerRegressionTest')
+}
+
 tasks.named('test') {
     failOnNoDiscoveredTests = false
 }
@@ -133,6 +180,10 @@ tasks.named('check') {
     dependsOn tasks.named('xaeroLifecycleRegressionTest')
     dependsOn tasks.named('nicknameMessagesRegressionTest')
     dependsOn tasks.named('nicknameRegressionTest')
+    dependsOn tasks.named('lofiVoicechatRegressionTest')
+    dependsOn tasks.named('suspiciousBrushTrackerRegressionTest')
+    dependsOn tasks.named('customDiscsSecurityRegressionTest')
+    dependsOn tasks.named('binaryProvisionerRegressionTest')
 }
 
 processResources {

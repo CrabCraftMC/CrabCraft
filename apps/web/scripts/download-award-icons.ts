@@ -169,6 +169,7 @@ const ICON_MAP: Record<string, string> = {
 
   // Items / Interactions
   break_tools: "Wooden_Pickaxe",
+  brush_suspicious: "Brush",
   drink_milk: "Milk_Bucket",
   drop: "Dropper",
   enchant: "Enchanting_Table",

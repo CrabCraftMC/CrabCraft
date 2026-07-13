@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
+import crabcraft.net.crabUtilities.awards.SuspiciousBrushTracker;
 import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
 import crabcraft.net.crabUtilities.cauldron.CauldronRecipeListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
@@ -25,6 +26,7 @@ import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
 import crabcraft.net.crabUtilities.voicechat.CrabVoicechatPlugin;
 import de.maxhenkel.voicechat.api.BukkitVoicechatService;
+import net.crabcraft.customdiscs.CustomDiscs;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -58,6 +60,11 @@ public final class CrabUtilities extends JavaPlugin {
     private NicknameSync nicknameSync;
 
     @Override
+    public void onLoad() {
+        CustomDiscs.load(this);
+    }
+
+    @Override
     public void onEnable() {
         // Detect EssentialsX (optional) and register event listeners
         this.essentials = Bukkit.getPluginManager().getPlugin("Essentials");
@@ -70,6 +77,9 @@ public final class CrabUtilities extends JavaPlugin {
         saveDefaultConfig();
         mergeConfigDefaults();
         reloadConfig();
+
+        // Custom discs, horns and the shared yt-dlp/FFmpeg media pipeline.
+        CustomDiscs.enable();
 
         // SVC plugin-message channels — required to inject fake PlayerStatePackets
         // for cross-server group GUI roster.
@@ -120,6 +130,7 @@ public final class CrabUtilities extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ShulkerShellListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PlayerHeadDropsListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PersistentHeadsListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new SuspiciousBrushTracker(), this);
 
         // Unlock-all-recipes: unlock every recipe on join (and for anyone
         // already online). Caches the recipe key set; the cache is rebuilt and
@@ -302,7 +313,7 @@ public final class CrabUtilities extends JavaPlugin {
             }
         }
 
-        messages.add("Restart required for voicechat.cross-server and mod-protocols settings.");
+        messages.add("Restart required for voicechat (including 24/7 Lofi) and mod-protocols settings.");
         return messages;
     }
 
@@ -480,6 +491,8 @@ public final class CrabUtilities extends JavaPlugin {
             }
             getServer().getServicesManager().unregister(voicechatPlugin);
         }
+        // Voice-chat playback must stop before its shared media engine.
+        CustomDiscs.disable();
         stopLoginStreakCache();
         if (nicknameSync != null) {
             nicknameSync.shutdown();

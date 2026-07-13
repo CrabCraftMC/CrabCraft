@@ -49,8 +49,11 @@ class AudioRelay {
     private final Set<UUID> crossServerGroupIds;
     private final String thisBackend;
     private final Logger logger;
+    private final UUID attenuatedGroupId;
+    private final double attenuatedGroupGain;
 
     private VoicechatServerApi api;
+    private OpusVolumeScaler remoteVolumeScaler;
 
     private final Map<UUID, ChannelEntry> channels = new ConcurrentHashMap<>();
     private final Map<UUID, PlayerHomeCache> playerHomeCache = new ConcurrentHashMap<>();
@@ -73,16 +76,27 @@ class AudioRelay {
 
     AudioRelay(CrabUtilities plugin, RedisVoiceBus bus, MembershipTracker membership,
                Set<UUID> crossServerGroupIds, String thisBackend, Logger logger) {
+        this(plugin, bus, membership, crossServerGroupIds, thisBackend, logger, null, 1D);
+    }
+
+    AudioRelay(CrabUtilities plugin, RedisVoiceBus bus, MembershipTracker membership,
+               Set<UUID> crossServerGroupIds, String thisBackend, Logger logger,
+               UUID attenuatedGroupId, double attenuatedGroupGain) {
         this.plugin = plugin;
         this.bus = bus;
         this.membership = membership;
         this.crossServerGroupIds = crossServerGroupIds;
         this.thisBackend = thisBackend;
         this.logger = logger;
+        this.attenuatedGroupId = attenuatedGroupId;
+        this.attenuatedGroupGain = attenuatedGroupGain;
     }
 
     void setApi(VoicechatServerApi api) {
         this.api = api;
+        if (attenuatedGroupId != null && attenuatedGroupGain < 1D) {
+            this.remoteVolumeScaler = new OpusVolumeScaler(api, attenuatedGroupGain);
+        }
     }
 
     void start() {
@@ -100,6 +114,7 @@ class AudioRelay {
         }
         channels.clear();
         nativeSequenceNumbers.clear();
+        if (remoteVolumeScaler != null) remoteVolumeScaler.close();
     }
 
     /**
@@ -211,7 +226,11 @@ class AudioRelay {
             syncTargets(entry, localTargets);
             entry.lastUsed = System.currentTimeMillis();
             try {
-                entry.channel.send(frame.opus());
+                byte[] opus = frame.opus();
+                if (remoteVolumeScaler != null && groupId.equals(attenuatedGroupId)) {
+                    opus = remoteVolumeScaler.scaleNext(frame.speaker(), opus);
+                }
+                entry.channel.send(opus);
                 if (firstRelayLogged.add(frame.speaker())) {
                     logger.info("Now relaying audio from " + frame.speaker()
                             + " (backend='" + frame.homeBackend() + "') to "
@@ -240,6 +259,7 @@ class AudioRelay {
         firstRelayLogged.remove(speakerId);
         nullChannelLogged.remove(speakerId);
         originMismatchLogged.remove(speakerId);
+        if (remoteVolumeScaler != null) remoteVolumeScaler.remove(speakerId);
     }
 
     void onPlayerDisconnect(PlayerDisconnectedEvent event) {
