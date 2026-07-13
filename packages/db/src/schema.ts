@@ -262,6 +262,16 @@ export const mcLoginHistory = pgTable("mc_login_history", {
     .$defaultFn(() => Math.floor(Date.now() / 1000)),
 });
 
+// ── player_settings ────────────────────────────────────────────
+// Canonical per-player Minecraft settings written by the Velocity proxy.
+// `settings` remains text because Java stores the serialized JSON verbatim
+// so new preferences do not require a database migration.
+export const playerSettings = pgTable("player_settings", {
+  minecraft_uuid: text("minecraft_uuid").primaryKey(),
+  settings: text("settings").notNull(),
+  updated_at: integer("updated_at").notNull(),
+});
+
 // ── player_login_streaks ───────────────────────────────────────
 // All-time login streaks per Minecraft account. Updated by the
 // Velocity proxy after a player has been online long enough to qualify
