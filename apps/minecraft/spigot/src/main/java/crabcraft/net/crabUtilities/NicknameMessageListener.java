@@ -9,6 +9,7 @@ import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.event.HoverEvent.ShowEntity;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,12 +17,16 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerAdvancementDoneEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class NicknameMessageListener implements Listener {
+    private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
     private final CrabUtilities plugin;
 
     public NicknameMessageListener(CrabUtilities plugin) {
@@ -31,10 +36,12 @@ public class NicknameMessageListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDeath(PlayerDeathEvent event) {
         Component msg = event.deathMessage();
-        if (msg == null) return;
-        Component replaced = transformComponent(msg);
-        if (replaced != null) {
-            event.deathMessage(replaced);
+        if (msg != null) {
+            event.deathMessage(transformComponent(msg));
+        }
+        Component deathScreen = event.deathScreenMessageOverride();
+        if (deathScreen != null) {
+            event.deathScreenMessageOverride(transformComponent(deathScreen));
         }
     }
 
@@ -45,6 +52,28 @@ public class NicknameMessageListener implements Listener {
         Component replaced = transformComponent(msg);
         if (replaced != null) {
             event.message(replaced);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onJoin(PlayerJoinEvent event) {
+        // Velocity broadcasts the authoritative nickname after its cache/DB seed completes.
+        event.joinMessage(null);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onQuit(PlayerQuitEvent event) {
+        Component msg = event.quitMessage();
+        if (msg != null) {
+            event.quitMessage(transformComponent(msg));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onKick(PlayerKickEvent event) {
+        Component msg = event.leaveMessage();
+        if (msg != null) {
+            event.leaveMessage(transformComponent(msg));
         }
     }
 
@@ -106,8 +135,7 @@ public class NicknameMessageListener implements Listener {
                         if (insertion != null) out = out.insertion(insertion);
                         if (font != null) out = out.font(font);
 
-                        // Do NOT append original children, as they may include per-character colored text (causing duplicates)
-                        return out;
+                        return appendNonNameChildren(out, component, p.getName());
                     }
                 }
             }
@@ -130,14 +158,34 @@ public class NicknameMessageListener implements Listener {
                         if (insertion != null) out = out.insertion(insertion);
                         var font = component.style().font();
                         if (font != null) out = out.font(font);
-                        // Do NOT append original children to avoid duplicating the name
-                        return out;
+                        return appendNonNameChildren(out, component, p.getName());
                     }
                 }
             }
         }
 
         return component;
+    }
+
+    static Component appendNonNameChildren(Component nickname, Component original, String playerName) {
+        List<Component> children = original.children();
+        int skip = 0;
+        StringBuilder duplicateName = new StringBuilder();
+        for (Component child : children) {
+            String childText = PLAIN.serialize(child);
+            String candidate = duplicateName + childText;
+            if (!playerName.startsWith(candidate)) break;
+            duplicateName.append(childText);
+            skip++;
+            if (duplicateName.toString().equals(playerName)) break;
+        }
+        if (!duplicateName.toString().equals(playerName)) skip = 0;
+        if (skip == children.size()) return nickname;
+        Component result = Component.empty().style(original.style()).append(nickname);
+        for (int i = skip; i < children.size(); i++) {
+            result = result.append(children.get(i));
+        }
+        return result;
     }
 
     private Component nicknameFor(Player player) {

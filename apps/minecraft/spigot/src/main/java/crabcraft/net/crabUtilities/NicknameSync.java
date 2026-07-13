@@ -4,10 +4,13 @@ import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.User;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.ess3.api.events.AfkStatusChangeEvent;
 import net.ess3.api.events.NickChangeEvent;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import redis.clients.jedis.Jedis;
@@ -92,7 +95,7 @@ public class NicknameSync implements Listener {
      * When a player changes their nick via /nick, push it to Velocity
      * so it's cached and persisted to DB immediately.
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onNickChange(NickChangeEvent event) {
         Player player = event.getAffected().getBase();
         // Delay one tick so EssentialsX has finished updating internally
@@ -102,13 +105,25 @@ public class NicknameSync implements Listener {
         }, 1L);
     }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onAfkChange(AfkStatusChangeEvent event) {
+        Player player = event.getAffected().getBase();
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline()) return;
+            if (!(plugin.getEssentials() instanceof Essentials essentials)) return;
+            User user = essentials.getUser(player);
+            if (user == null || user.getNickname() == null) return;
+            refreshComponentDisplayNick(essentials, player, user.getNickname());
+        }, 1L);
+    }
+
     private void refreshOne(UUID uuid) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (Jedis jedis = pool.getResource()) {
                 String raw = jedis.hget(HASH_KEY, uuid.toString());
-                if (raw != null) applyNickname(uuid, raw);
+                if (hasAuthoritativeRedisValue(raw)) applyNickname(uuid, raw);
                 if (redisFailureLogged) {
                     plugin.getLogger().info("Nickname Redis connection recovered.");
                     redisFailureLogged = false;
@@ -144,6 +159,8 @@ public class NicknameSync implements Listener {
                 plugin.refreshMentionAutocomplete();
                 plugin.getLogger().info("Cleared nickname for " + target.getName());
             }
+            user.setDisplayNick();
+            refreshComponentDisplayNick(essentials, target, raw);
         };
         if (Bukkit.isPrimaryThread()) {
             task.run();
@@ -161,11 +178,7 @@ public class NicknameSync implements Listener {
         payload.addProperty("raw", nickname);
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (Jedis jedis = pool.getResource()) {
-                if (nickname.isEmpty()) {
-                    jedis.hdel(HASH_KEY, uuid.toString());
-                } else {
-                    jedis.hset(HASH_KEY, uuid.toString(), nickname);
-                }
+                jedis.hset(HASH_KEY, uuid.toString(), nickname);
                 jedis.publish(UPDATE_CHANNEL, payload.toString());
                 if (redisFailureLogged) {
                     plugin.getLogger().info("Nickname Redis publisher recovered.");
@@ -179,6 +192,28 @@ public class NicknameSync implements Listener {
                 }
             }
         });
+    }
+
+    static boolean hasAuthoritativeRedisValue(String stored) {
+        return stored != null;
+    }
+
+    static Component decoratedNickname(Component decorated, String raw) {
+        Component nickname = NicknameComponentResolver.fromRawNick(raw);
+        if (nickname == null) return decorated;
+        return decorated.replaceText(config -> config.matchLiteral(raw).replacement(nickname));
+    }
+
+    private static void refreshComponentDisplayNick(Essentials essentials, Player player, String raw) {
+        if (raw.isEmpty()) return;
+
+        if (essentials.getSettings().changeDisplayName()) {
+            player.displayName(decoratedNickname(player.displayName(), raw));
+        }
+        Component playerListName = player.playerListName();
+        if (playerListName != null && essentials.getSettings().changePlayerListName()) {
+            player.playerListName(decoratedNickname(playerListName, raw));
+        }
     }
 
     private void ingest(String json) {

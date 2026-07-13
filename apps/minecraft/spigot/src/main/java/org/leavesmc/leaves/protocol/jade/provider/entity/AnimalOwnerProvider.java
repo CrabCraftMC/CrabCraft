@@ -1,6 +1,8 @@
 package org.leavesmc.leaves.protocol.jade.provider.entity;
 
 import com.mojang.authlib.GameProfile;
+import crabcraft.net.crabUtilities.NicknameComponentResolver;
+import io.papermc.paper.adventure.PaperAdventure;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -15,6 +17,9 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.OwnableEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.leavesmc.leaves.protocol.jade.JadeProtocol;
 import org.leavesmc.leaves.protocol.jade.accessor.EntityAccessor;
 import org.leavesmc.leaves.protocol.jade.provider.StreamServerDataProvider;
@@ -40,12 +45,30 @@ public enum AnimalOwnerProvider implements StreamServerDataProvider<EntityAccess
     public Component streamData(@NotNull EntityAccessor accessor) {
         ServerLevel level = accessor.getLevel();
         UUID uuid = getOwnerUUID(accessor.getEntity());
+        Player player = uuid == null ? null : Bukkit.getPlayer(uuid);
+        if (player != null) {
+            Component nickname = lookupNickname(player);
+            if (nickname != null) {
+                return nickname;
+            }
+        }
         Entity entity = level.getEntity(uuid);
         if (entity != null) {
             return entity.getName();
         }
         String name = lookupPlayerName(uuid, level.getServer().services());
-        return name == null ? null : Component.literal(name);
+        if (name == null) {
+            return null;
+        }
+        return Component.literal(name);
+    }
+
+    @Nullable
+    private static Component lookupNickname(Player player) {
+        Plugin essentials = Bukkit.getPluginManager().getPlugin("Essentials");
+        net.kyori.adventure.text.Component nickname =
+                NicknameComponentResolver.forPlayer(essentials, player);
+        return nickname == null ? null : PaperAdventure.asVanilla(nickname);
     }
 
     @Nullable

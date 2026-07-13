@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities.voicechat;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
+import crabcraft.net.crabUtilities.NicknameComponentResolver;
 import de.maxhenkel.voicechat.api.Group;
 import de.maxhenkel.voicechat.api.VoicechatApi;
 import de.maxhenkel.voicechat.api.VoicechatConnection;
@@ -24,6 +25,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 public class CrabVoicechatPlugin implements VoicechatPlugin {
 
@@ -33,6 +35,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
      *  longer than 3x the rebroadcast interval so a routine server hop
      *  doesn't expire before the player reconnects. */
     private static final long PLAYER_GROUP_TTL_SECONDS = 90L;
+    // SVC also uses this label in recording filenames; 48 code points keeps
+    // even four-byte UTF-8 names below common per-file limits.
+    private static final int MAX_ROSTER_NAME_CODE_POINTS = 48;
+    private static final Pattern UNSAFE_ROSTER_NAME = Pattern.compile("[\\p{Cc}/\\\\:*?\"<>|]");
 
     private final CrabUtilities plugin;
     private final Logger logger;
@@ -158,7 +164,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                 Player p = Bukkit.getPlayer(localId);
                 if (p == null || !p.isOnline()) continue;
                 bus.publishRoster(VoiceMessages.encodeRosterJoin(
-                        groupId, localId, p.getName(), thisBackend));
+                        groupId, localId, voicechatName(p), thisBackend));
                 // Refresh the auto-rejoin TTL so a player who stays in
                 // a group keeps their persistence record alive.
                 bus.writePlayerGroup(localId, groupId, PLAYER_GROUP_TTL_SECONDS);
@@ -252,11 +258,11 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             Player bukkitPlayer = Bukkit.getPlayer(playerId);
             if (bukkitPlayer == null) return;
 
-            String name = bukkitPlayer.getName();
+            String name = voicechatName(bukkitPlayer);
             bus.publishRoster(VoiceMessages.encodeRosterJoin(
                     groupId, playerId, name, thisBackend));
             bus.writePlayerGroup(playerId, groupId, PLAYER_GROUP_TTL_SECONDS);
-            logger.info("Roster published: " + name + " joined " + groupId);
+            logger.info("Roster published: " + name + " (" + playerId + ") joined " + groupId);
 
             roster.catchUpNewLocalJoiner(groupId, bukkitPlayer);
         });
@@ -291,6 +297,20 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             }
         }
         membership.onLeaveGroupEvent(event);
+    }
+
+    private String voicechatName(Player player) {
+        return safeRosterName(
+                NicknameComponentResolver.plainNicknameOrName(plugin.getEssentials(), player),
+                player.getName());
+    }
+
+    static String safeRosterName(String name, String fallback) {
+        String safe = UNSAFE_ROSTER_NAME.matcher(name).replaceAll("_");
+        if (safe.codePointCount(0, safe.length()) > MAX_ROSTER_NAME_CODE_POINTS) {
+            safe = safe.substring(0, safe.offsetByCodePoints(0, MAX_ROSTER_NAME_CODE_POINTS));
+        }
+        return safe.isBlank() ? fallback : safe;
     }
 
     private void onMicrophonePacket(MicrophonePacketEvent event) {
