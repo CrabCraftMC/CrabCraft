@@ -1,7 +1,6 @@
 package crabcraft.net.crabUtilities.chat;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
-import crabcraft.net.crabUtilities.NicknameComponentResolver;
 import net.ess3.api.events.NickChangeEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -69,8 +68,9 @@ public class MentionAutocompleteListener implements Listener {
         }
 
         Set<String> completions = new LinkedHashSet<>();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            String name = mentionName(player);
+        MentionProcessor.AliasIndex aliases = MentionProcessor.aliasIndex(
+                Bukkit.getOnlinePlayers(), plugin.getEssentials());
+        for (String name : aliases.completionNames().values()) {
             if (!name.isEmpty()) {
                 completions.add(prefix + name);
             }
@@ -99,7 +99,4 @@ public class MentionAutocompleteListener implements Listener {
         }
     }
 
-    private String mentionName(Player player) {
-        return NicknameComponentResolver.plainNicknameOrName(plugin.getEssentials(), player);
-    }
 }

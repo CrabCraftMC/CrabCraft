@@ -22,7 +22,7 @@ public class MsgCommand {
 
     private static void register(CrabUtilitiesVelocity plugin, String primary, String... aliases) {
         LiteralCommandNode<CommandSource> node = BrigadierCommand.literalArgumentBuilder(primary)
-                .then(BrigadierCommand.requiredArgumentBuilder("target", StringArgumentType.word())
+                .then(BrigadierCommand.requiredArgumentBuilder("target", StringArgumentType.string())
                         .suggests(PlayerLookup.playerSuggestions(plugin))
                         .then(BrigadierCommand.requiredArgumentBuilder("message", StringArgumentType.greedyString())
                                 .executes(ctx -> {

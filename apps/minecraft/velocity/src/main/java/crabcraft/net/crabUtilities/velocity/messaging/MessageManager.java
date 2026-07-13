@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.velocity.messaging;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.proxy.Player;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
+import crabcraft.net.crabUtilities.velocity.NicknameComponentParser;
 import crabcraft.net.crabUtilities.velocity.PlayerSettingsService;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
@@ -10,7 +11,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.util.Map;
@@ -28,11 +28,6 @@ public class MessageManager {
             "<#f77069>That player isn't accepting private messages right now.";
 
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
-    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
-            .character('§')
-            .hexCharacter('#')
-            .hexColors()
-            .build();
 
     private final CrabUtilitiesVelocity plugin;
     private final Map<UUID, UUID> replyTargets = new ConcurrentHashMap<>();
@@ -149,7 +144,7 @@ public class MessageManager {
             String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
             ClickEvent click = ClickEvent.suggestCommand(messageCommand(player.getUsername()));
             if (raw != null) {
-                return LEGACY_SERIALIZER.deserialize(raw.replace('&', '§')).clickEvent(click);
+                return NicknameComponentParser.parse(raw).clickEvent(click);
             }
             return Component.text(player.getUsername()).clickEvent(click);
         }

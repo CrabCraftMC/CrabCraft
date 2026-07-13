@@ -10,6 +10,26 @@ import java.sql.SQLException;
 
 public class PostgresStatsWriter {
 
+    public enum NicknameLoadStatus {
+        FOUND,
+        ABSENT,
+        FAILED
+    }
+
+    public record NicknameLoadResult(NicknameLoadStatus status, String rawNickname) {
+        public static NicknameLoadResult found(String rawNickname) {
+            return new NicknameLoadResult(NicknameLoadStatus.FOUND, rawNickname);
+        }
+
+        public static NicknameLoadResult absent() {
+            return new NicknameLoadResult(NicknameLoadStatus.ABSENT, null);
+        }
+
+        public static NicknameLoadResult failed() {
+            return new NicknameLoadResult(NicknameLoadStatus.FAILED, null);
+        }
+    }
+
     private final HikariDataSource dataSource;
     private final Logger logger;
 
@@ -238,28 +258,27 @@ public class PostgresStatsWriter {
     }
 
     /**
-     * Loads the stored raw nickname for a player by minecraft_uuid, or
-     * {@code null} if the player has no nickname or isn't in the DB.
-     *
-     * Used to seed the proxy nickname cache on (re)join so the database is
-     * the source of truth, rather than whichever backend the player happens
-     * to land on. Without this, a backend whose local EssentialsX data has
-     * lost the nickname can silently revert it.
+     * Loads the stored raw nickname for a player by minecraft_uuid, keeping a
+     * missing nickname distinct from a database failure.
      */
-    public String loadRawNickname(String uuid) {
+    public NicknameLoadResult loadRawNickname(String uuid) {
         String sql = "SELECT nickname_raw FROM players WHERE minecraft_uuid = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, uuid);
             try (java.sql.ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString(1);
+                    String raw = rs.getString(1);
+                    return raw == null || raw.isEmpty()
+                            ? NicknameLoadResult.absent()
+                            : NicknameLoadResult.found(raw);
                 }
             }
         } catch (SQLException e) {
             logger.error("Failed to load nickname for {}", uuid, e);
+            return NicknameLoadResult.failed();
         }
-        return null;
+        return NicknameLoadResult.absent();
     }
 
     /**

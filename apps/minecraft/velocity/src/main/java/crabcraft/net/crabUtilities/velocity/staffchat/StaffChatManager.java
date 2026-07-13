@@ -3,11 +3,10 @@ package crabcraft.net.crabUtilities.velocity.staffchat;
 import com.velocitypowered.api.proxy.Player;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
 import crabcraft.net.crabUtilities.velocity.DiscordWebhook;
-import crabcraft.net.crabUtilities.velocity.NicknameCache;
+import crabcraft.net.crabUtilities.velocity.NicknameComponentParser;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.util.Set;
@@ -18,11 +17,6 @@ public class StaffChatManager {
 
     private static final String PERMISSION = "crabutilities.staffchat";
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
-    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
-            .character('§')
-            .hexCharacter('#')
-            .hexColors()
-            .build();
 
     private final CrabUtilitiesVelocity plugin;
     private final RedisStaffChat redis;
@@ -66,7 +60,7 @@ public class StaffChatManager {
 
     private void sendToDiscord(String senderName, UUID senderUuid, String message) {
         if (discordWebhook == null) return;
-        String plainName = NicknameCache.stripColors(senderName);
+        String plainName = NicknameComponentParser.plain(senderName);
         String avatarUrl = null;
         if (senderUuid != null && discordAvatarUrlTemplate != null && !discordAvatarUrlTemplate.isEmpty()) {
             avatarUrl = discordAvatarUrlTemplate.replace("{uuid}", senderUuid.toString());
@@ -76,7 +70,7 @@ public class StaffChatManager {
 
     public void displayMessage(String senderName, String message) {
         String format = plugin.getRedisStaffChat().getConfig().getStaffChatFormat();
-        Component senderComponent = LEGACY_SERIALIZER.deserialize(senderName.replace('&', '§'));
+        Component senderComponent = NicknameComponentParser.parse(senderName);
         Component component = MINI_MESSAGE.deserialize(format,
                 Placeholder.component("sender", senderComponent),
                 Placeholder.unparsed("message", message)

@@ -335,11 +335,11 @@ public class CrabUtilitiesVelocity {
     public LiteBansInfractionService getLiteBansInfractionService() { return liteBansInfractionService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
 
-    public void runDatabaseTask(String taskName, Runnable task) {
+    public boolean runDatabaseTask(String taskName, Runnable task) {
         ExecutorService executor = databaseExecutor;
         if (executor == null || executor.isShutdown()) {
             logger.warn("Skipping database task {} because the executor is stopped", taskName);
-            return;
+            return false;
         }
         try {
             executor.execute(() -> {
@@ -349,8 +349,10 @@ public class CrabUtilitiesVelocity {
                     logger.error("Database task {} failed", taskName, e);
                 }
             });
+            return true;
         } catch (RejectedExecutionException e) {
             logger.warn("Skipping database task {} because the executor queue is full", taskName);
+            return false;
         }
     }
 

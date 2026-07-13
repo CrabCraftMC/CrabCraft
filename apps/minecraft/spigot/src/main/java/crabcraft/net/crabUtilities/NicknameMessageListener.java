@@ -5,8 +5,6 @@ import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.TranslationArgument;
-import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.event.HoverEvent.ShowEntity;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -27,10 +25,31 @@ import java.util.UUID;
 
 public class NicknameMessageListener implements Listener {
     private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
-    private final CrabUtilities plugin;
+    private static final Component NO_BACKEND_LIFECYCLE_MESSAGE = Component.empty();
+    private final NicknameResolver nicknameResolver;
 
     public NicknameMessageListener(CrabUtilities plugin) {
-        this.plugin = plugin;
+        this(new NicknameResolver() {
+            @Override
+            public ResolvedNickname byUuid(UUID uuid) {
+                return resolve(Bukkit.getPlayer(uuid));
+            }
+
+            @Override
+            public ResolvedNickname byAccountName(String accountName) {
+                return resolve(Bukkit.getPlayerExact(accountName));
+            }
+
+            private ResolvedNickname resolve(Player player) {
+                if (player == null) return null;
+                Component nickname = NicknameComponentResolver.forPlayer(plugin.getEssentials(), player);
+                return nickname == null ? null : new ResolvedNickname(player.getName(), nickname);
+            }
+        });
+    }
+
+    NicknameMessageListener(NicknameResolver nicknameResolver) {
+        this.nicknameResolver = nicknameResolver;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -57,31 +76,30 @@ public class NicknameMessageListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onJoin(PlayerJoinEvent event) {
-        // Velocity broadcasts the authoritative nickname after its cache/DB seed completes.
-        event.joinMessage(null);
+        // Velocity owns lifecycle broadcasts after its authoritative nickname seed completes.
+        event.joinMessage(NO_BACKEND_LIFECYCLE_MESSAGE);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onQuit(PlayerQuitEvent event) {
-        Component msg = event.quitMessage();
-        if (msg != null) {
-            event.quitMessage(transformComponent(msg));
-        }
+        event.quitMessage(NO_BACKEND_LIFECYCLE_MESSAGE);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onKick(PlayerKickEvent event) {
-        Component msg = event.leaveMessage();
-        if (msg != null) {
-            event.leaveMessage(transformComponent(msg));
-        }
+        event.leaveMessage(NO_BACKEND_LIFECYCLE_MESSAGE);
     }
 
-    private Component transformComponent(Component input) {
-        // Rebuild recursively, replacing any player-entity components with their nick component
+    Component transformComponent(Component input) {
+        ResolvedNickname player = resolvePlayer(input);
+        if (player != null) {
+            // A SHOW_ENTITY wrapper and its children are one semantic player name. Replacing
+            // it before recursion prevents both the wrapper and nested account name from firing.
+            return replacePlayerComponent(input, player);
+        }
+
         Component afterChildren = input;
 
-        // First, transform children
         if (!input.children().isEmpty()) {
             List<Component> newChildren = new ArrayList<>(input.children().size());
             for (Component child : input.children()) {
@@ -90,7 +108,6 @@ public class NicknameMessageListener implements Listener {
             afterChildren = input.children(newChildren);
         }
 
-        // Then, handle translatable arguments (death/advancement messages are translatable)
         if (afterChildren instanceof TranslatableComponent tc) {
             List<ComponentLike> newArgs = new ArrayList<>(tc.arguments().size());
             for (TranslationArgument arg : tc.arguments()) {
@@ -100,95 +117,89 @@ public class NicknameMessageListener implements Listener {
                     continue;
                 }
 
-                Component argComp = like.asComponent();
-                argComp = transformComponent(argComp); // recurse in args too
-                argComp = maybeReplacePlayerNameComponent(argComp);
-                newArgs.add(TranslationArgument.component(argComp));
+                newArgs.add(TranslationArgument.component(transformComponent(like.asComponent())));
             }
             afterChildren = tc.toBuilder().arguments(newArgs).build();
         }
 
-        // Finally, try replacing this exact component if it matches a player name component
-        return maybeReplacePlayerNameComponent(afterChildren);
+        return afterChildren;
     }
 
-    private Component maybeReplacePlayerNameComponent(Component component) {
-        // Detect player components via hover show_entity containing a player UUID
-        Style style = component.style();
-        HoverEvent<?> hover = style.hoverEvent();
+    private ResolvedNickname resolvePlayer(Component component) {
+        HoverEvent<?> hover = component.style().hoverEvent();
         if (hover != null && hover.action() == HoverEvent.Action.SHOW_ENTITY) {
             ShowEntity show = (ShowEntity) hover.value();
-            UUID id = show.id();
-            if (id != null) {
-                Player p = Bukkit.getPlayer(id);
-                if (p != null) {
-                    Component nick = nicknameFor(p);
-                    if (nick != null) {
-                        // Preserve hover/click/insertion/font from original component, but let nickname provide its own colors/formatting
-                        ClickEvent click = style.clickEvent();
-                        String insertion = style.insertion();
-                        var font = style.font();
-
-                        Component out = nick;
-                        if (hover != null) out = out.hoverEvent(hover);
-                        if (click != null) out = out.clickEvent(click);
-                        if (insertion != null) out = out.insertion(insertion);
-                        if (font != null) out = out.font(font);
-
-                        return appendNonNameChildren(out, component, p.getName());
-                    }
-                }
-            }
+            ResolvedNickname player = nicknameResolver.byUuid(show.id());
+            if (player != null) return player;
         }
 
-        // As a fallback, if it's a plain text component exactly equal to an online player's name, replace it
         if (component instanceof TextComponent tc) {
             String content = tc.content();
-            if (!content.isEmpty()) {
-                Player p = Bukkit.getPlayerExact(content);
-                if (p != null) {
-                    Component nick = nicknameFor(p);
-                    if (nick != null) {
-                        Component out = nick;
-                        HoverEvent<?> hv = component.style().hoverEvent();
-                        if (hv != null) out = out.hoverEvent(hv);
-                        ClickEvent click = component.style().clickEvent();
-                        if (click != null) out = out.clickEvent(click);
-                        String insertion = component.style().insertion();
-                        if (insertion != null) out = out.insertion(insertion);
-                        var font = component.style().font();
-                        if (font != null) out = out.font(font);
-                        return appendNonNameChildren(out, component, p.getName());
-                    }
-                }
+            if (!content.isEmpty()) return nicknameResolver.byAccountName(content);
+        }
+
+        return null;
+    }
+
+    private Component replacePlayerComponent(Component original, ResolvedNickname player) {
+        List<Component> children = original.children();
+        NameSpan nameSpan = findNameSpan(children, player.accountName());
+        boolean accountNameAtRoot = original instanceof TextComponent text
+                && text.content().equals(player.accountName());
+
+        if (accountNameAtRoot || nameSpan != null) {
+            List<Component> replacedChildren = new ArrayList<>(children.size() + 1);
+            if (nameSpan == null) {
+                replacedChildren.add(player.nickname());
+                replacedChildren.addAll(children);
+            } else {
+                replacedChildren.addAll(children.subList(0, nameSpan.start()));
+                replacedChildren.add(player.nickname());
+                replacedChildren.addAll(children.subList(nameSpan.end(), children.size()));
+            }
+
+            if (accountNameAtRoot) {
+                return ((TextComponent) original).content("").children(replacedChildren);
+            }
+            return original.children(replacedChildren);
+        }
+
+        if (PLAIN.serialize(original).equals(player.accountName())) {
+            return Component.empty().style(original.style()).append(player.nickname());
+        }
+
+        // No account-name subtree means this wrapper was already transformed.
+        return original;
+    }
+
+    private static NameSpan findNameSpan(List<Component> children, String accountName) {
+        for (int i = 0; i < children.size(); i++) {
+            if (PLAIN.serialize(children.get(i)).equals(accountName)) {
+                return new NameSpan(i, i + 1);
             }
         }
 
-        return component;
+        for (int start = 0; start < children.size(); start++) {
+            StringBuilder candidate = new StringBuilder();
+            for (int end = start; end < children.size(); end++) {
+                candidate.append(PLAIN.serialize(children.get(end)));
+                String text = candidate.toString();
+                if (text.equals(accountName)) return new NameSpan(start, end + 1);
+                if (!accountName.startsWith(text)) break;
+            }
+        }
+        return null;
     }
 
-    static Component appendNonNameChildren(Component nickname, Component original, String playerName) {
-        List<Component> children = original.children();
-        int skip = 0;
-        StringBuilder duplicateName = new StringBuilder();
-        for (Component child : children) {
-            String childText = PLAIN.serialize(child);
-            String candidate = duplicateName + childText;
-            if (!playerName.startsWith(candidate)) break;
-            duplicateName.append(childText);
-            skip++;
-            if (duplicateName.toString().equals(playerName)) break;
-        }
-        if (!duplicateName.toString().equals(playerName)) skip = 0;
-        if (skip == children.size()) return nickname;
-        Component result = Component.empty().style(original.style()).append(nickname);
-        for (int i = skip; i < children.size(); i++) {
-            result = result.append(children.get(i));
-        }
-        return result;
+    interface NicknameResolver {
+        ResolvedNickname byUuid(UUID uuid);
+
+        ResolvedNickname byAccountName(String accountName);
     }
 
-    private Component nicknameFor(Player player) {
-        return NicknameComponentResolver.forPlayer(plugin.getEssentials(), player);
+    record ResolvedNickname(String accountName, Component nickname) {
+    }
+
+    private record NameSpan(int start, int end) {
     }
 }

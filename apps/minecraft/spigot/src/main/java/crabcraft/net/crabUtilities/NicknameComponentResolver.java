@@ -4,12 +4,15 @@ import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.User;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.util.Locale;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,7 +38,14 @@ public final class NicknameComponentResolver {
             .useUnusualXRepeatedCharacterHexFormat()
             .build();
 
-    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.builder()
+            .tags(TagResolver.resolver(
+                    StandardTags.color(),
+                    StandardTags.decorations(),
+                    StandardTags.gradient(),
+                    StandardTags.rainbow(),
+                    StandardTags.reset()))
+            .build();
     private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
 
     private NicknameComponentResolver() {
@@ -57,6 +67,15 @@ public final class NicknameComponentResolver {
         return fromRawNick(user.getNickname());
     }
 
+    /** Resolves an EssentialsX user by UUID, including offline users. */
+    public static Component forUniqueId(Plugin essentialsPlugin, UUID uuid) {
+        if (!(essentialsPlugin instanceof Essentials essentials) || uuid == null) {
+            return null;
+        }
+        User user = essentials.getUser(uuid);
+        return user == null ? null : fromRawNick(user.getNickname());
+    }
+
     /** Returns the player's plain nickname, falling back to their account name. */
     public static String plainNicknameOrName(Plugin essentialsPlugin, Player player) {
         String nickname = plain(forPlayer(essentialsPlugin, player));
@@ -72,27 +91,22 @@ public final class NicknameComponentResolver {
             return null;
         }
 
-        // 1) If the nickname looks like MiniMessage (e.g. <#RRGGBB> or gradients), parse it as such.
-        if (looksLikeMiniMessage(raw)) {
-            try {
+        // Only enable formatting tags that are safe and useful in a nickname.
+        try {
+            if (!MINI_MESSAGE.stripTags(raw).equals(raw)) {
                 return MINI_MESSAGE.deserialize(raw);
-            } catch (Exception ignored) {
-                // Fall through to legacy parsing.
             }
+        } catch (Exception ignored) {
+            // Fall through to legacy parsing.
         }
 
-        // 2) Legacy parsing with hex support (&#RRGGBB, &x&..., §x§...).
+        // Legacy parsing with hex support (&#RRGGBB, &x&..., §x§...).
         String processed = convertAmpersandHex(raw.replace('§', '&'));
         try {
             return LEGACY.deserialize(processed);
         } catch (Exception ex) {
             return Component.text(raw);
         }
-    }
-
-    private static boolean looksLikeMiniMessage(String s) {
-        return s.contains("<#") || s.contains("</gradient>") || s.contains("<gradient:")
-                || s.contains("<rainbow>") || s.contains("</rainbow>");
     }
 
     private static String convertAmpersandHex(String input) {

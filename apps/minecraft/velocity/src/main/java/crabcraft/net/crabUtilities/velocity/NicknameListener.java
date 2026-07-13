@@ -9,12 +9,23 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
+import java.util.List;
 import java.util.UUID;
 
 public class NicknameListener {
 
     public static final String HASH_KEY = "crabutilities:nicknames";
     public static final String UPDATE_CHANNEL = "crabutilities:nicknames-updates";
+    private static final String PUBLISH_IF_ABSENT_SCRIPT = """
+            local current = redis.call('HGET', KEYS[1], ARGV[1])
+            if current == false then
+                current = ARGV[2]
+                redis.call('HSET', KEYS[1], ARGV[1], current)
+            end
+            local payload = cjson.encode({uuid = ARGV[1], raw = current})
+            redis.call('PUBLISH', ARGV[3], payload)
+            return current
+            """;
 
     private final CrabUtilitiesVelocity plugin;
     private final VelocityConfig config;
@@ -80,19 +91,23 @@ public class NicknameListener {
         subscriberThread.start();
     }
 
-    public void publishNickname(UUID uuid, String raw) {
+    public void publishNickname(UUID uuid, String raw, long expectedVersion) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
 
         String nickname = raw == null ? "" : raw;
-        JsonObject payload = new JsonObject();
-        payload.addProperty("uuid", uuid.toString());
-        payload.addProperty("raw", nickname);
 
         plugin.getServer().getScheduler().buildTask(plugin, () -> {
+            if (!plugin.getNicknameCache().isVersion(uuid, expectedVersion)) return;
             try (Jedis jedis = pool.getResource()) {
-                jedis.hset(HASH_KEY, uuid.toString(), nickname);
-                jedis.publish(UPDATE_CHANNEL, payload.toString());
+                String actual = (String) jedis.eval(
+                        PUBLISH_IF_ABSENT_SCRIPT,
+                        List.of(HASH_KEY),
+                        List.of(uuid.toString(), nickname, UPDATE_CHANNEL));
+                if (reconcilePublishedNickname(
+                        plugin.getNicknameCache(), uuid, expectedVersion, nickname, actual)) {
+                    persist(uuid);
+                }
                 if (redisFailureLogged) {
                     plugin.getLogger().info("Nickname Redis publisher recovered.");
                     redisFailureLogged = false;
@@ -106,6 +121,12 @@ public class NicknameListener {
                 }
             }
         }).schedule();
+    }
+
+    static boolean reconcilePublishedNickname(NicknameCache cache, UUID uuid, long expectedVersion,
+                                               String proposed, String actual) {
+        return !proposed.equals(actual)
+                && cache.commitIfVersion(uuid, expectedVersion, actual);
     }
 
     public String loadRawNickname(UUID uuid) {

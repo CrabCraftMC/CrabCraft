@@ -1,6 +1,5 @@
 package org.leavesmc.leaves.protocol.jade.provider.entity;
 
-import com.mojang.authlib.GameProfile;
 import crabcraft.net.crabUtilities.NicknameComponentResolver;
 import io.papermc.paper.adventure.PaperAdventure;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -18,7 +17,6 @@ import net.minecraft.world.entity.OwnableEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.leavesmc.leaves.protocol.jade.JadeProtocol;
 import org.leavesmc.leaves.protocol.jade.accessor.EntityAccessor;
@@ -45,12 +43,9 @@ public enum AnimalOwnerProvider implements StreamServerDataProvider<EntityAccess
     public Component streamData(@NotNull EntityAccessor accessor) {
         ServerLevel level = accessor.getLevel();
         UUID uuid = getOwnerUUID(accessor.getEntity());
-        Player player = uuid == null ? null : Bukkit.getPlayer(uuid);
-        if (player != null) {
-            Component nickname = lookupNickname(player);
-            if (nickname != null) {
-                return nickname;
-            }
+        Component nickname = lookupNickname(uuid);
+        if (nickname != null) {
+            return nickname;
         }
         Entity entity = level.getEntity(uuid);
         if (entity != null) {
@@ -64,10 +59,10 @@ public enum AnimalOwnerProvider implements StreamServerDataProvider<EntityAccess
     }
 
     @Nullable
-    private static Component lookupNickname(Player player) {
+    private static Component lookupNickname(@Nullable UUID uuid) {
         Plugin essentials = Bukkit.getPluginManager().getPlugin("Essentials");
         net.kyori.adventure.text.Component nickname =
-                NicknameComponentResolver.forPlayer(essentials, player);
+                NicknameComponentResolver.forUniqueId(essentials, uuid);
         return nickname == null ? null : PaperAdventure.asVanilla(nickname);
     }
 
@@ -76,12 +71,7 @@ public enum AnimalOwnerProvider implements StreamServerDataProvider<EntityAccess
         if (uuid == null) {
             return null;
         }
-        String name = services.nameToIdCache().get(uuid).map(NameAndId::name).orElse(null);
-        if (name != null) {
-            return name;
-        }
-        GameProfile profile = services.profileResolver().fetchById(uuid).orElse(null);
-        return profile == null ? null : profile.name();
+        return services.nameToIdCache().get(uuid).map(NameAndId::name).orElse(null);
     }
 
     @Override

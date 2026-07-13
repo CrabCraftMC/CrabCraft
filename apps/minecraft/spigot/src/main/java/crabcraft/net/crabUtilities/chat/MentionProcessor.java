@@ -10,10 +10,19 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Scans a chat component for {@code <prefix>name} mention tokens
@@ -28,23 +37,18 @@ import java.util.regex.Pattern;
 public class MentionProcessor {
 
     private final boolean enabled;
+    private final String prefix;
     private final String highlightFormat;
     private final MiniMessage miniMessage;
-    private final Pattern pattern;
     private final Plugin essentialsPlugin;
 
     public MentionProcessor(boolean enabled, String prefix, String highlightFormat,
                             MiniMessage miniMessage, Plugin essentialsPlugin) {
         this.enabled = enabled;
+        this.prefix = prefix;
         this.highlightFormat = highlightFormat;
         this.miniMessage = miniMessage;
         this.essentialsPlugin = essentialsPlugin;
-        // \B before the (quoted) prefix so it isn't part of a longer word,
-        // then capture a run of word chars as the name, ending on a word
-        // boundary. Case-insensitive so @steve matches Steve.
-        this.pattern = Pattern.compile(
-                "\\B" + Pattern.quote(prefix) + "(\\w+)\\b",
-                Pattern.CASE_INSENSITIVE);
     }
 
     /**
@@ -52,6 +56,17 @@ public class MentionProcessor {
      * ping (the sender is always excluded).
      */
     public record Result(Component message, Set<UUID> mentioned) {}
+
+    record MentionIdentity(UUID uuid, String username, String nickname) {}
+
+    record MentionTarget(UUID uuid, String username) {}
+
+    record AliasIndex(Map<String, MentionTarget> targets, List<String> aliases,
+                      Map<UUID, String> completionNames) {
+        MentionTarget target(String alias) {
+            return targets.get(normalize(alias));
+        }
+    }
 
     /**
      * Builds the message component and the mention set. When mentions are
@@ -62,45 +77,106 @@ public class MentionProcessor {
             return new Result(input, new HashSet<>());
         }
 
+        AliasIndex aliases = aliasIndex(Bukkit.getOnlinePlayers(), essentialsPlugin);
+        if (aliases.aliases().isEmpty()) {
+            return new Result(input, new HashSet<>());
+        }
+
         Set<UUID> mentioned = new HashSet<>();
+        Pattern mentionPattern = mentionPattern(prefix, aliases.aliases());
         Component message = input.replaceText(config -> config
-                .match(pattern)
+                .match(mentionPattern)
                 .replacement((match, builder) -> {
                     String token = match.group();   // includes the prefix, e.g. "@Steve"
-                    String name = match.group(1);   // captured word, e.g. "Steve"
-                    Player target = matchOnline(name);
+                    String name = match.group(1);
+                    MentionTarget target = aliases.target(name);
                     if (target != null) {
-                        if (!target.getUniqueId().equals(senderUuid)) {
-                            mentioned.add(target.getUniqueId());
+                        if (!target.uuid().equals(senderUuid)) {
+                            mentioned.add(target.uuid());
                         }
                         return miniMessage.deserialize(
                                 highlightFormat, Placeholder.unparsed("name", token))
-                                .clickEvent(ClickEvent.suggestCommand(messageCommand(target.getName())));
+                                .clickEvent(ClickEvent.suggestCommand(messageCommand(target.username())));
                     }
                     return builder;
                 }));
         return new Result(message, mentioned);
     }
 
-    /**
-     * Resolves a captured name to an online local player by account name or
-     * the plain text of their display name (covers nicks), case-insensitively.
-     */
-    private Player matchOnline(String name) {
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (p.getName().equalsIgnoreCase(name)) {
-                return p;
-            }
-            Component nickname = NicknameComponentResolver.forPlayer(essentialsPlugin, p);
-            if (nickname != null && PlainTextComponentSerializer.plainText().serialize(nickname).equalsIgnoreCase(name)) {
-                return p;
-            }
-            String display = PlainTextComponentSerializer.plainText().serialize(p.displayName());
-            if (display.equalsIgnoreCase(name)) {
-                return p;
+    static AliasIndex aliasIndex(Iterable<? extends Player> players, Plugin essentialsPlugin) {
+        PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
+        List<MentionIdentity> identities = new ArrayList<>();
+        for (Player player : players) {
+            Component nickname = NicknameComponentResolver.forPlayer(essentialsPlugin, player);
+            String nicknameText = nickname == null ? null : plain.serialize(nickname).trim();
+            identities.add(new MentionIdentity(
+                    player.getUniqueId(), player.getName(),
+                    nicknameText == null || nicknameText.isEmpty() ? null : nicknameText));
+        }
+        return buildAliasIndex(identities);
+    }
+
+    static AliasIndex buildAliasIndex(List<MentionIdentity> identities) {
+        Map<String, MentionTarget> canonicalTargets = new LinkedHashMap<>();
+        Map<String, String> aliasSpellings = new LinkedHashMap<>();
+        for (MentionIdentity identity : identities) {
+            String key = normalize(identity.username());
+            canonicalTargets.put(key, new MentionTarget(identity.uuid(), identity.username()));
+            aliasSpellings.putIfAbsent(key, identity.username());
+        }
+
+        Map<String, MentionTarget> targets = new LinkedHashMap<>(canonicalTargets);
+        Set<String> ambiguous = new LinkedHashSet<>();
+        for (MentionIdentity identity : identities) {
+            String nickname = cleanNickname(identity.nickname());
+            if (nickname == null) continue;
+
+            String key = normalize(nickname);
+            aliasSpellings.putIfAbsent(key, nickname);
+            if (canonicalTargets.containsKey(key) || ambiguous.contains(key)) continue;
+
+            MentionTarget existing = targets.get(key);
+            if (existing == null) {
+                targets.put(key, new MentionTarget(identity.uuid(), identity.username()));
+            } else if (!existing.uuid().equals(identity.uuid())) {
+                targets.remove(key);
+                ambiguous.add(key);
             }
         }
-        return null;
+
+        Map<UUID, String> completionNames = new LinkedHashMap<>();
+        for (MentionIdentity identity : identities) {
+            String nickname = cleanNickname(identity.nickname());
+            MentionTarget target = nickname == null ? null : targets.get(normalize(nickname));
+            completionNames.put(identity.uuid(), target != null && target.uuid().equals(identity.uuid())
+                    ? nickname : identity.username());
+        }
+
+        return new AliasIndex(
+                Collections.unmodifiableMap(new LinkedHashMap<>(targets)),
+                List.copyOf(aliasSpellings.values()),
+                Collections.unmodifiableMap(completionNames));
+    }
+
+    static Pattern mentionPattern(String prefix, List<String> aliases) {
+        String alternatives = aliases.stream()
+                .sorted(Comparator.comparingInt(String::length).reversed())
+                .map(Pattern::quote)
+                .collect(Collectors.joining("|"));
+        return Pattern.compile(
+                "(?<![\\p{L}\\p{M}\\p{N}_-])" + Pattern.quote(prefix)
+                        + "(" + alternatives + ")(?![\\p{L}\\p{M}\\p{N}_-])",
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    }
+
+    private static String cleanNickname(String nickname) {
+        if (nickname == null) return null;
+        String cleaned = nickname.trim();
+        return cleaned.isEmpty() ? null : cleaned;
+    }
+
+    private static String normalize(String alias) {
+        return alias.toLowerCase(Locale.ROOT);
     }
 
     private static String messageCommand(String username) {

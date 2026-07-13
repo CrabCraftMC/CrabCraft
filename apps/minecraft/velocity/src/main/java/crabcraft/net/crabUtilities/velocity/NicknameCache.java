@@ -3,41 +3,90 @@ package crabcraft.net.crabUtilities.velocity;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class NicknameCache {
 
-    // Matches all Minecraft color code formats and MiniMessage tags
-    private static final Pattern COLOR_PATTERN = Pattern.compile(
-            "(?i)§x(§[0-9a-f]){6}|&x(&[0-9a-f]){6}|&#[0-9a-f]{6}|[&§][0-9a-fk-orx]|<[^>]+>"
-    );
+    public record Snapshot(boolean loaded, String rawNickname, long version) {}
 
-    private final Map<UUID, String> nicknames = new ConcurrentHashMap<>();
+    private record Entry(boolean loaded, String rawNickname, long version) {}
+
+    private final Map<UUID, Entry> nicknames = new ConcurrentHashMap<>();
+    private final AtomicLong versions = new AtomicLong();
 
     public void setNickname(UUID uuid, String rawNickname) {
-        if (rawNickname == null || rawNickname.isEmpty()) {
-            nicknames.remove(uuid);
-        } else {
-            nicknames.put(uuid, rawNickname);
-        }
+        String normalized = rawNickname == null ? "" : rawNickname;
+        nicknames.compute(uuid, (id, current) ->
+                new Entry(true, normalized, versions.incrementAndGet()));
     }
 
     public String getRawNickname(UUID uuid) {
-        return nicknames.get(uuid);
+        Entry entry = nicknames.get(uuid);
+        return entry == null || !entry.loaded() || entry.rawNickname().isEmpty()
+                ? null
+                : entry.rawNickname();
     }
 
     public String getPlainNickname(UUID uuid) {
-        String raw = nicknames.get(uuid);
+        String raw = getRawNickname(uuid);
         if (raw == null) return null;
         return stripColors(raw);
     }
 
+    public boolean isLoaded(UUID uuid) {
+        Entry entry = nicknames.get(uuid);
+        return entry != null && entry.loaded();
+    }
+
+    public Snapshot snapshot(UUID uuid) {
+        Entry entry = nicknames.get(uuid);
+        return entry == null
+                ? new Snapshot(false, null, 0L)
+                : snapshot(entry);
+    }
+
+    public Snapshot beginLoad(UUID uuid) {
+        Entry entry = nicknames.computeIfAbsent(uuid,
+                id -> new Entry(false, "", versions.incrementAndGet()));
+        return snapshot(entry);
+    }
+
+    public boolean commitIfVersion(UUID uuid, long expectedVersion, String rawNickname) {
+        String normalized = rawNickname == null ? "" : rawNickname;
+        AtomicBoolean committed = new AtomicBoolean();
+        nicknames.compute(uuid, (id, current) -> {
+            if (current == null || current.version() != expectedVersion) return current;
+            committed.set(true);
+            return new Entry(true, normalized, versions.incrementAndGet());
+        });
+        return committed.get();
+    }
+
+    public boolean discardIfUnloadedVersion(UUID uuid, long expectedVersion) {
+        AtomicBoolean discarded = new AtomicBoolean();
+        nicknames.computeIfPresent(uuid, (id, current) -> {
+            if (current.loaded() || current.version() != expectedVersion) return current;
+            discarded.set(true);
+            return null;
+        });
+        return discarded.get();
+    }
+
+    public boolean isVersion(UUID uuid, long version) {
+        Entry entry = nicknames.get(uuid);
+        return entry != null && entry.loaded() && entry.version() == version;
+    }
+
     public static String stripColors(String text) {
-        if (text == null) return null;
-        return COLOR_PATTERN.matcher(text).replaceAll("");
+        return NicknameComponentParser.plain(text);
     }
 
     public void remove(UUID uuid) {
         nicknames.remove(uuid);
+    }
+
+    private static Snapshot snapshot(Entry entry) {
+        return new Snapshot(entry.loaded(), entry.loaded() ? entry.rawNickname() : null, entry.version());
     }
 }

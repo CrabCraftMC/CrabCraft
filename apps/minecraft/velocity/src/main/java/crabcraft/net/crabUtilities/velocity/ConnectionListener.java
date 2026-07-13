@@ -16,7 +16,6 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.time.Duration;
 import java.util.Set;
@@ -30,11 +29,6 @@ import java.util.function.Supplier;
 public class ConnectionListener {
 
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
-    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
-            .character('§')
-            .hexCharacter('#')
-            .hexColors()
-            .build();
     private static final String ALT_GROUP = "alt";
     private static final int MAX_JADE_HANDSHAKE_SIZE = 256;
     private static final MinecraftChannelIdentifier JADE_CLIENT_HANDSHAKE =
@@ -42,6 +36,7 @@ public class ConnectionListener {
 
     private final CrabUtilitiesVelocity plugin;
     private final Set<UUID> announcedPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> nicknameSeeds = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, ActiveStreakSession> activeStreakSessions = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, byte[]> jadeHandshakes = new ConcurrentHashMap<>();
 
@@ -77,9 +72,9 @@ public class ConnectionListener {
             settingsService.onLogin(player.getUniqueId());
         }
 
-        // Seed the authoritative nickname from the database into Redis/proxy
+        // Seed the authoritative nickname from Redis/database into the proxy
         // cache so backends never need to report local EssentialsX state.
-        plugin.runDatabaseTask("nickname-seed", () -> seedNickname(player));
+        ensureNicknameSeed(player);
 
         // Start tracking cumulative online time for today's streak credit.
         // The streak itself is only recorded once the player reaches the
@@ -156,10 +151,12 @@ public class ConnectionListener {
 
         String currentServerName = currentServer.getServerInfo().getName();
 
-        // Publish cached nicknames immediately; first-join cache misses are
-        // published by the DB seed below so a transient miss cannot clear one.
-        if (previousServer != null || plugin.getNicknameCache().getRawNickname(player.getUniqueId()) != null) {
+        // Publish cached nickname state immediately. Unknown state must not be
+        // sent as a clear while its Redis/database seed is still in flight.
+        if (plugin.getNicknameCache().isLoaded(player.getUniqueId())) {
             publishNicknameToBackends(player);
+        } else {
+            ensureNicknameSeed(player);
         }
 
         if (previousServer == null) {
@@ -167,14 +164,14 @@ public class ConnectionListener {
             if (isIgnored(currentServerName)) return;
 
             // Check if nickname is already cached.
-            if (plugin.getNicknameCache().getRawNickname(player.getUniqueId()) != null) {
+            if (plugin.getNicknameCache().isLoaded(player.getUniqueId())) {
                 broadcastJoin(player);
                 return;
             }
 
             // Wait for the DB/Redis seed, with timeout fallback.
             CompletableFuture<Void> pending = plugin.getPendingJoinManager().register(player.getUniqueId());
-            plugin.runDatabaseTask("nickname-post-connect-seed", () -> seedNickname(player));
+            ensureNicknameSeed(player);
             pending.orTimeout(2, TimeUnit.SECONDS)
                     .whenComplete((result, throwable) -> {
                         plugin.getServer().getScheduler()
@@ -231,6 +228,7 @@ public class ConnectionListener {
 
     public void shutdown() {
         jadeHandshakes.clear();
+        nicknameSeeds.clear();
         plugin.getServer().getChannelRegistrar().unregister(JADE_CLIENT_HANDSHAKE);
         long now = epochSeconds();
         for (var entry : activeStreakSessions.entrySet()) {
@@ -415,7 +413,7 @@ public class ConnectionListener {
     private Component getDisplayName(Player player) {
         String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
         if (raw != null) {
-            return LEGACY_SERIALIZER.deserialize(raw.replace('&', '§'));
+            return NicknameComponentParser.parse(raw);
         }
         return Component.text(player.getUsername());
     }
@@ -435,45 +433,98 @@ public class ConnectionListener {
         return result;
     }
 
-    private void seedNickname(Player player) {
+    private void ensureNicknameSeed(Player player) {
         UUID id = player.getUniqueId();
-        String cached = plugin.getNicknameCache().getRawNickname(id);
-        if (cached != null) {
-            publishNickname(id, cached);
+        if (plugin.getNicknameCache().isLoaded(id)) {
             plugin.getPendingJoinManager().complete(id);
             return;
         }
+        if (!nicknameSeeds.add(id)) return;
 
-        NicknameListener listener = plugin.getNicknameListener();
-        if (listener != null) {
-            String redisRaw = listener.loadRawNickname(id);
-            if (redisRaw != null) {
-                plugin.getNicknameCache().setNickname(id, redisRaw);
-                listener.persist(id);
-                plugin.getPendingJoinManager().complete(id);
-                return;
+        boolean queued = plugin.runDatabaseTask("nickname-seed", () -> {
+            try {
+                seedNickname(player);
+            } finally {
+                finishNicknameSeed(player);
             }
+        });
+        if (!queued) {
+            nicknameSeeds.remove(id);
+            plugin.getPendingJoinManager().complete(id);
         }
+    }
 
-        String raw = plugin.getPgWriter().loadRawNickname(id.toString());
-        if (raw != null && !raw.isEmpty()) {
-            plugin.getNicknameCache().setNickname(id, raw);
-        } else {
-            plugin.getNicknameCache().remove(id);
-            raw = "";
+    private void finishNicknameSeed(Player seededPlayer) {
+        UUID id = seededPlayer.getUniqueId();
+        nicknameSeeds.remove(id);
+
+        Player currentPlayer = plugin.getServer().getPlayer(id)
+                .filter(Player::isActive)
+                .orElse(null);
+        if (currentPlayer != null
+                && currentPlayer != seededPlayer
+                && !plugin.getNicknameCache().isLoaded(id)) {
+            ensureNicknameSeed(currentPlayer);
+            return;
         }
-        publishNickname(id, raw);
         plugin.getPendingJoinManager().complete(id);
     }
 
-    private void publishNicknameToBackends(Player player) {
-        String raw = plugin.getNicknameCache().getRawNickname(player.getUniqueId());
-        publishNickname(player.getUniqueId(), raw == null ? "" : raw);
+    private void seedNickname(Player player) {
+        if (!player.isActive()) return;
+
+        UUID id = player.getUniqueId();
+        NicknameCache cache = plugin.getNicknameCache();
+        NicknameCache.Snapshot started = cache.beginLoad(id);
+        try {
+            if (started.loaded()) {
+                publishNickname(id, started);
+                return;
+            }
+
+            NicknameListener listener = plugin.getNicknameListener();
+            if (listener != null) {
+                String redisRaw = listener.loadRawNickname(id);
+                if (redisRaw != null) {
+                    if (player.isActive() && cache.commitIfVersion(id, started.version(), redisRaw)) {
+                        listener.persist(id);
+                    }
+                    return;
+                }
+            }
+
+            var result = plugin.getPgWriter().loadRawNickname(id.toString());
+            if (!player.isActive()) return;
+            if (commitNicknameLoad(cache, id, started.version(), result)) {
+                publishNicknameToBackends(player);
+            }
+        } finally {
+            if (!player.isActive() && !started.loaded()) {
+                cache.discardIfUnloadedVersion(id, started.version());
+            }
+        }
     }
 
-    private void publishNickname(UUID uuid, String raw) {
+    private void publishNicknameToBackends(Player player) {
+        UUID id = player.getUniqueId();
+        NicknameCache.Snapshot snapshot = plugin.getNicknameCache().snapshot(id);
+        if (snapshot.loaded()) publishNickname(id, snapshot);
+    }
+
+    private void publishNickname(UUID uuid, NicknameCache.Snapshot snapshot) {
         NicknameListener listener = plugin.getNicknameListener();
-        if (listener != null) listener.publishNickname(uuid, raw);
+        if (listener != null) {
+            listener.publishNickname(uuid, snapshot.rawNickname(), snapshot.version());
+        }
+    }
+
+    static boolean commitNicknameLoad(NicknameCache cache, UUID id, long expectedVersion,
+                                      crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter.NicknameLoadResult result) {
+        return switch (result.status()) {
+            case FOUND -> cache.commitIfVersion(id, expectedVersion, result.rawNickname());
+            case ABSENT -> cache.commitIfVersion(id, expectedVersion, "");
+            case FAILED -> false;
+        };
     }
 
     private boolean isIgnored(String serverName) {

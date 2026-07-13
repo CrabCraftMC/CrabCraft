@@ -24,6 +24,7 @@ repositories {
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
     annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    testCompileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
     compileOnly("com.google.code.gson:gson:2.10.1")
     compileOnly("net.luckperms:api:5.5")
@@ -62,6 +63,20 @@ tasks.register('loginStreakCacheSeedRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.velocity.LoginStreakCacheSeedRegressionTest')
 }
 
+tasks.register('nicknameRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.NicknameRegressionTest')
+}
+
+tasks.register('playerLookupRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.messaging.PlayerLookupRegressionTest')
+}
+
 tasks.register('awardAltExclusionRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -89,6 +104,8 @@ tasks.named('test') {
 
 tasks.named('check') {
     dependsOn tasks.named('loginStreakCacheSeedRegressionTest')
+    dependsOn tasks.named('nicknameRegressionTest')
+    dependsOn tasks.named('playerLookupRegressionTest')
     dependsOn tasks.named('awardAltExclusionRegressionTest')
     dependsOn tasks.named('awardDyeCraftingRegressionTest')
     dependsOn tasks.named('awardSuspiciousBrushRegressionTest')

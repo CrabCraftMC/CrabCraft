@@ -7,6 +7,8 @@ import com.google.gson.JsonParser;
 import net.ess3.api.events.AfkStatusChangeEvent;
 import net.ess3.api.events.NickChangeEvent;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.PatternReplacementResult;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,6 +21,8 @@ import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 public class NicknameSync implements Listener {
 
@@ -101,6 +105,9 @@ public class NicknameSync implements Listener {
         // Delay one tick so EssentialsX has finished updating internally
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             String newNick = event.getValue() != null ? event.getValue() : "";
+            if (player.isOnline() && plugin.getEssentials() instanceof Essentials essentials) {
+                refreshComponentDisplayNick(essentials, player, newNick);
+            }
             publishNickname(player.getUniqueId(), newNick);
         }, 1L);
     }
@@ -108,12 +115,19 @@ public class NicknameSync implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onAfkChange(AfkStatusChangeEvent event) {
         Player player = event.getAffected().getBase();
+        if (!(plugin.getEssentials() instanceof Essentials essentials)) return;
+        User user = essentials.getUser(player);
+        if (user == null || user.getNickname() == null) return;
+
+        // Essentials broadcasts the AFK change immediately after this event.
+        refreshComponentDisplayNick(essentials, player, user.getNickname());
+
+        // Essentials then calls setDisplayNick() again, so repair that final value too.
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline()) return;
-            if (!(plugin.getEssentials() instanceof Essentials essentials)) return;
-            User user = essentials.getUser(player);
-            if (user == null || user.getNickname() == null) return;
-            refreshComponentDisplayNick(essentials, player, user.getNickname());
+            User currentUser = essentials.getUser(player);
+            if (currentUser == null || currentUser.getNickname() == null) return;
+            refreshComponentDisplayNick(essentials, player, currentUser.getNickname());
         }, 1L);
     }
 
@@ -201,7 +215,36 @@ public class NicknameSync implements Listener {
     static Component decoratedNickname(Component decorated, String raw) {
         Component nickname = NicknameComponentResolver.fromRawNick(raw);
         if (nickname == null) return decorated;
-        return decorated.replaceText(config -> config.matchLiteral(raw).replacement(nickname));
+
+        Component rawReplacement = replaceLastMatch(
+                decorated, Pattern.compile(Pattern.quote(raw)), nickname);
+        if (rawReplacement != null) return rawReplacement;
+
+        String visibleNickname = PlainTextComponentSerializer.plainText().serialize(nickname);
+        if (visibleNickname.isEmpty()) return decorated;
+        Pattern visibleName = Pattern.compile(
+                "(?<![\\p{L}\\p{M}\\p{N}_-])" + Pattern.quote(visibleNickname)
+                        + "(?![\\p{L}\\p{M}\\p{N}_-])");
+        Component visibleReplacement = replaceLastMatch(decorated, visibleName, nickname);
+        return visibleReplacement == null ? decorated : visibleReplacement;
+    }
+
+    private static Component replaceLastMatch(Component source, Pattern pattern, Component replacement) {
+        AtomicInteger matchCount = new AtomicInteger();
+        source.replaceText(config -> config.match(pattern)
+                .condition((match, seen, replaced) -> {
+                    matchCount.set(seen);
+                    return PatternReplacementResult.CONTINUE;
+                })
+                .replacement(replacement));
+
+        int lastMatch = matchCount.get();
+        if (lastMatch == 0) return null;
+        return source.replaceText(config -> config.match(pattern)
+                .condition((match, seen, replaced) -> seen == lastMatch
+                        ? PatternReplacementResult.REPLACE
+                        : PatternReplacementResult.CONTINUE)
+                .replacement(replacement));
     }
 
     private static void refreshComponentDisplayNick(Essentials essentials, Player player, String raw) {
