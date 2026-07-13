@@ -189,6 +189,7 @@ export default class AdminCommand extends SlashCommand {
     if (logChannel) {
       await logChannel.send({
         content: logAccept(applicant.id, minecraftUsername, UUID, `${executor}`),
+        allowedMentions: { parse: [] },
       });
     }
 

@@ -177,6 +177,7 @@ export default class ModalInteractionEvent extends Event {
               interaction.user.id,
               "Age requirement not met (must be 17+)",
             ),
+            allowedMentions: { parse: [] },
           }).catch(() => null);
         }
         return;
@@ -607,6 +608,7 @@ export default class ModalInteractionEvent extends Event {
       if (logChannel) {
         await logChannel.send({
           content: logDeny(applicantId ?? "unknown", minecraftUsername, reason, `${interaction.user}`),
+          allowedMentions: { parse: [] },
         }).catch(() => null);
       }
 
@@ -693,6 +695,7 @@ export default class ModalInteractionEvent extends Event {
       if (logChannel) {
         await logChannel.send({
           content: logAutoReject(interaction.user.id, "Already a member"),
+          allowedMentions: { parse: [] },
         }).catch(() => null);
       }
       return;

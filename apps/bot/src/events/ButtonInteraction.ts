@@ -1060,6 +1060,7 @@ export default class ButtonInteractionEvent extends Event {
       if (logChannel) {
         await logChannel.send({
           content: logAccept(applicant.id, minecraftUsername, UUID, `${interaction.member}`),
+          allowedMentions: { parse: [] },
         }).catch((e: unknown) => logger.error("Failed to send accept log:", e));
       }
 
