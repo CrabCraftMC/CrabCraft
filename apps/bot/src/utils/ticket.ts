@@ -28,6 +28,8 @@ export const TICKET_INFRACTION_BUTTON_PREFIX = "ticket_infraction";
 export interface CategoryMeta {
   category: TicketCategory;
   label: string;
+  /** Compact label used on the ticket panel button. */
+  buttonLabel: string;
   emoji: string;
   /** Short prefix used in thread channel names. */
   prefix: string;
@@ -87,6 +89,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   general: {
     category: "general",
     label: "General Question",
+    buttonLabel: "General",
     emoji: "<:dialogue:1521557009936158883>",
     prefix: "gq",
     buttonStyle: ButtonStyle.Secondary,
@@ -100,6 +103,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   council: {
     category: "council",
     label: "Council Inquiry",
+    buttonLabel: "Council",
     emoji: "<:scroll:1521560432291352777>",
     prefix: "ci",
     buttonStyle: ButtonStyle.Secondary,
@@ -112,6 +116,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   grief: {
     category: "grief",
     label: "Report Griefing / Stealing",
+    buttonLabel: "Griefing",
     emoji: "<:chest:1521557150919299325>",
     prefix: "rg",
     buttonStyle: ButtonStyle.Secondary,
@@ -168,6 +173,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   appeal: {
     category: "appeal",
     label: "Punishment Appeal",
+    buttonLabel: "Appeal",
     emoji: "<:judge_gavel:1521556773641650358>",
     prefix: "pa",
     buttonStyle: ButtonStyle.Secondary,
@@ -294,7 +300,7 @@ export function buildTriggerButtons(): ActionRowBuilder<ButtonBuilder> {
     ...Object.values(TICKET_CATEGORIES).map((meta) =>
       new ButtonBuilder()
         .setCustomId(`ticket_open:${meta.category}`)
-        .setLabel(meta.label)
+        .setLabel(meta.buttonLabel)
         .setEmoji(meta.emoji)
         .setStyle(meta.buttonStyle),
     ),

@@ -67,6 +67,7 @@ const { default: ButtonInteractionEvent } = await import(
 const {
   buildChannelName,
   buildIntakeModal,
+  buildTriggerButtons,
   buildTriggerEmbed,
   TICKET_CATEGORIES,
 } = await import(
@@ -670,6 +671,14 @@ describe("ticket lifecycle controls", () => {
 });
 
 describe("ticket opening controls", () => {
+  test("uses compact labels for a single ticket button row", () => {
+    expect(
+      buttonData({ components: [buildTriggerButtons()] }).map(
+        (button) => button.label,
+      ),
+    ).toEqual(["General", "Council", "Griefing", "Appeal"]);
+  });
+
   test("ticket creation copy omits dash punctuation and appeal guidance", () => {
     const copy = JSON.stringify([
       buildTriggerEmbed().toJSON(),
