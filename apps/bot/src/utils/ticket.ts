@@ -116,7 +116,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   grief: {
     category: "grief",
     label: "Report Griefing / Stealing",
-    buttonLabel: "Report Griefing/Stealing",
+    buttonLabel: "Report Griefing / Stealing",
     emoji: "<:chest:1521557150919299325>",
     prefix: "rg",
     buttonStyle: ButtonStyle.Secondary,

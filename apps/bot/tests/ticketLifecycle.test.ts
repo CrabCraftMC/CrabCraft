@@ -679,7 +679,7 @@ describe("ticket opening controls", () => {
     ).toEqual([
       "General",
       "Council",
-      "Report Griefing/Stealing",
+      "Report Griefing / Stealing",
       "Punishment Appeal",
     ]);
   });
