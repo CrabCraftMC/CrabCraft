@@ -33,6 +33,7 @@ final class PortalShapeFinder {
     private final Plugin plugin;
     private final PortalSettings settings;
     private final PortalAxis axis;
+    private final CustomPortalRegistry registry;
     // Weakly-consistent concurrent sets so the flood can add newly discovered
     // interior blocks while an outer iteration over the same set is in flight,
     // without a ConcurrentModificationException. Everything runs on the main
@@ -41,10 +42,17 @@ final class PortalShapeFinder {
     private final Set<Block> portalInterior;
     private final Set<Long> checkedLocations;
 
-    PortalShapeFinder(final Plugin plugin, final Block first, final PortalAxis axis, final PortalSettings settings) {
+    PortalShapeFinder(
+            final Plugin plugin,
+            final Block first,
+            final PortalAxis axis,
+            final PortalSettings settings,
+            final CustomPortalRegistry registry
+    ) {
         this.plugin = plugin;
         this.settings = settings;
         this.axis = axis;
+        this.registry = registry;
         this.portalInterior = ConcurrentHashMap.newKeySet();
         this.portalInterior.add(first);
         this.checkedLocations = ConcurrentHashMap.newKeySet();
@@ -114,10 +122,13 @@ final class PortalShapeFinder {
 
             // Defer the block changes a tick so we don't mutate the world from
             // inside the ignite event.
-            this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> this.portalInterior.forEach(block -> {
-                block.setType(Material.NETHER_PORTAL);
-                this.axis.applyTo(block);
-            }), 1L);
+            this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
+                this.portalInterior.forEach(block -> {
+                    block.setType(Material.NETHER_PORTAL);
+                    this.axis.applyTo(block);
+                });
+                this.registry.register(this.portalInterior.iterator().next().getWorld(), this.axis, this.portalInterior);
+            }, 1L);
             return true;
         }
         return false;

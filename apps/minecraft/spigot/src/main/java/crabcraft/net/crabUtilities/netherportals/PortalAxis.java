@@ -37,6 +37,18 @@ enum PortalAxis {
         this.right = right;
     }
 
+    static @Nullable PortalAxis from(final Axis axis) {
+        return switch (axis) {
+            case X -> X;
+            case Z -> Z;
+            default -> null;
+        };
+    }
+
+    boolean isInPlane(final BlockFace face) {
+        return face == BlockFace.UP || face == BlockFace.DOWN || face == this.left || face == this.right;
+    }
+
     /**
      * True when a frame block is reached in both directions along this axis
      * within the configured max width — i.e. the ignited block sits between two

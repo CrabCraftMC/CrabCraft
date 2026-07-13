@@ -175,6 +175,13 @@ tasks.register('jadeProtocolRegressionTest', JavaExec) {
     mainClass.set('org.leavesmc.leaves.protocol.jade.payload.ReceiveDataPayloadRegressionTest')
 }
 
+tasks.register('customPortalDestinationRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.netherportals.CustomPortalDestinationRegressionTest')
+}
+
 tasks.register('customDiscsSecurityRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -206,6 +213,7 @@ tasks.named('check') {
     dependsOn tasks.named('suspiciousBrushTrackerRegressionTest')
     dependsOn tasks.named('experienceClumpsRegressionTest')
     dependsOn tasks.named('jadeProtocolRegressionTest')
+    dependsOn tasks.named('customPortalDestinationRegressionTest')
     dependsOn tasks.named('customDiscsSecurityRegressionTest')
     dependsOn tasks.named('binaryProvisionerRegressionTest')
 }
