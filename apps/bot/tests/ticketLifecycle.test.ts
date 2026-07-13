@@ -11,7 +11,7 @@ let ticket: {
   channel_id: string;
   opener_discord_id: string;
   opener_discord_username: string;
-  category: "general" | "grief" | "appeal";
+  category: "general" | "council" | "grief" | "appeal";
   closed_by_discord_id: string | null;
   closed_at: number | null;
   delete_after: number | null;
@@ -35,6 +35,7 @@ const listOpenTicketsForUser = mock(async () => [ticket]);
 mock.module("../src/utils/config.js", () => ({
   default: {
     MOD_ROLE_ID: "mod",
+    COUNCIL_ROLE_ID: "council",
     TICKET_CATEGORY_ID: "ticket-category",
     DISCORD_DATABASE_URL: "unused",
     CRABCRAFT_API_URL: "https://example.test",
@@ -714,6 +715,34 @@ describe("ticket opening controls", () => {
       "ticket_close:2",
     ]);
     expect(headerMessage.pin).toHaveBeenCalledTimes(1);
+  });
+
+  test("grants the council role access to council inquiries", async () => {
+    const { interaction } = openingInteraction();
+
+    await openTicket({
+      interaction: interaction as any,
+      meta: TICKET_CATEGORIES.council,
+      player: {
+        discordId: "opener",
+        discordTag: "Steve",
+        minecraftUsername: null,
+        minecraftUuid: null,
+        isWhitelisted: false,
+        skinUrl: null,
+      },
+      intake: {},
+    });
+
+    const createOptions = interaction.guild.channels.create.mock.calls[0]![0];
+    expect(
+      createOptions.permissionOverwrites.map(({ id }: { id: string }) => id),
+    ).toEqual([
+      interaction.guild.roles.everyone,
+      "opener",
+      "mod",
+      "council",
+    ]);
   });
 
   test("removes a ticket when its attached opening message cannot be sent", async () => {

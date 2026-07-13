@@ -120,6 +120,10 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
     username: interaction.user.username,
   };
   const onBehalf = opener.id !== interaction.user.id;
+  const staffRoleIds =
+    meta.category === "council"
+      ? [config.MOD_ROLE_ID, config.COUNCIL_ROLE_ID]
+      : [config.MOD_ROLE_ID];
 
   // Resolve the ticket category. Each ticket is its own text channel created
   // beneath this category.
@@ -161,15 +165,15 @@ export async function openTicket(params: OpenTicketParams): Promise<void> {
             PermissionFlagsBits.ReadMessageHistory,
           ],
         },
-        {
-          id: config.MOD_ROLE_ID,
+        ...staffRoleIds.map((roleId) => ({
+          id: roleId,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
             PermissionFlagsBits.ReadMessageHistory,
             PermissionFlagsBits.ManageMessages,
           ],
-        },
+        })),
       ],
     })) as TextChannel;
   } catch (e) {

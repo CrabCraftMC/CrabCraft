@@ -8,6 +8,7 @@ const CONFIG_PATH = path.resolve(__dirname, "../../config.json");
 interface IdConfig {
   roles: {
     mod: string;
+    council: string;
     punished: string;
     live?: string;
     currentSeason?: string;
@@ -55,6 +56,7 @@ if (missingEnv.length > 0) {
 
 const REQUIRED_IDS: Array<[string, string | undefined]> = [
   ["roles.mod", ids.roles?.mod],
+  ["roles.council", ids.roles?.council],
   ["roles.punished", ids.roles?.punished],
   ["channels.applicationCategory", ids.channels?.applicationCategory],
   ["channels.log", ids.channels?.log],
@@ -92,6 +94,7 @@ interface IConfig {
 
   // Discord IDs (config.json)
   MOD_ROLE_ID: string;
+  COUNCIL_ROLE_ID: string;
   PUNISHED_ROLE_ID: string;
   LIVE_ROLE_ID: string;
   CURRENT_SEASON_ROLE_ID: string;
@@ -124,6 +127,7 @@ const config: IConfig = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
 
   MOD_ROLE_ID: ids.roles.mod,
+  COUNCIL_ROLE_ID: ids.roles.council,
   PUNISHED_ROLE_ID: ids.roles.punished,
   LIVE_ROLE_ID: ids.roles.live ?? "",
   CURRENT_SEASON_ROLE_ID: ids.roles.currentSeason ?? "",

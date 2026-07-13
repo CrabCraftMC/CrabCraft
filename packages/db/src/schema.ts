@@ -381,6 +381,7 @@ export const playerAlts = pgTable(
 // ── tickets ────────────────────────────────────────────────────
 export const ticketCategoryEnum = pgEnum("ticket_category", [
   "general",
+  "council",
   "grief",
   "appeal",
 ]);
