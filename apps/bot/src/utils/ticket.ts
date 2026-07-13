@@ -100,7 +100,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   council: {
     category: "council",
     label: "Council Inquiry",
-    emoji: "🏛️",
+    emoji: "<:scroll:1521560432291352777>",
     prefix: "ci",
     buttonStyle: ButtonStyle.Secondary,
     accent: 0x8f75b5,
