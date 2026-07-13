@@ -41,7 +41,7 @@ public final class XaeroBootstrap {
             return;
         }
 
-        plugin.getServer().getPluginManager().registerEvents(new XaeroIntegration(), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new XaeroIntegration(plugin), plugin);
 
         // Payloads go out over the NMS connection, but register the channels with
         // Bukkit's messenger too for bookkeeping (mirrors the Jade port).
