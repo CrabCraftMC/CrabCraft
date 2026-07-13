@@ -174,8 +174,7 @@ public class JadeProtocol {
             int requestedId = payload.data().id();
             CompoundTag identity = new CompoundTag();
             identity.putInt("EntityId", requestedId);
-            CompoundTag tag = payload.data().data().copy();
-            tag.putInt("EntityId", requestedId);
+            CompoundTag tag = createResponseTag(identity, payload.data().data());
 
             try {
                 Entity requested = CommonUtil.wrapPartEntityParent(
@@ -218,9 +217,7 @@ public class JadeProtocol {
         BlockHitResult hit = payload.data().hit();
         BlockPos pos = hit.getBlockPos();
         CompoundTag identity = createBlockIdentity(pos);
-        CompoundTag tag = payload.data().data().copy();
-        tag.remove("BlockId");
-        org.jadepaper.JadeNbtUtils.writeBlockPosToTag(pos, tag);
+        CompoundTag tag = createResponseTag(identity, payload.data().data());
 
         try {
             if (!isValidBlockTarget(player, hit)) {
@@ -289,6 +286,15 @@ public class JadeProtocol {
         CompoundTag tag = new CompoundTag();
         org.jadepaper.JadeNbtUtils.writeBlockPosToTag(pos, tag);
         return tag;
+    }
+
+    /** Starts a response with trusted identity plus Jade's allowlisted client request controls. */
+    static CompoundTag createResponseTag(CompoundTag identity, CompoundTag requestData) {
+        CompoundTag response = identity.copy();
+        if (requestData.getBooleanOr("SortItems", false)) {
+            response.putBoolean("SortItems", true);
+        }
+        return response;
     }
 
     private static boolean isValidBlockTarget(ServerPlayer player, BlockHitResult hit) {
