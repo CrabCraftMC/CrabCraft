@@ -26,16 +26,18 @@ public class GlobalChatListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
+        String rawMessage = PlainTextComponentSerializer.plainText().serialize(event.message());
+
         // Servers that haven't opted into global chat keep their chat local.
         if (!service.isEnabled()) {
+            event.message(SafeChatMiniMessage.deserialize(rawMessage));
             return;
         }
 
         UUID id = event.getPlayer().getUniqueId();
-        String plain = PlainTextComponentSerializer.plainText().serialize(event.message());
 
         // We own delivery on a global server, so cancel the vanilla broadcast.
         event.setCancelled(true);
-        service.handleLocalChat(id, plain);
+        service.handleLocalChat(id, rawMessage);
     }
 }

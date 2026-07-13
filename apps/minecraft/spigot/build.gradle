@@ -119,6 +119,13 @@ tasks.register('globalChatLinkRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.chat.GlobalChatLinkRegressionTest')
 }
 
+tasks.register('chatMiniMessageRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.chat.ChatMiniMessageRegressionTest')
+}
+
 tasks.register('xaeroLifecycleRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -154,6 +161,20 @@ tasks.register('suspiciousBrushTrackerRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.awards.SuspiciousBrushTrackerRegressionTest')
 }
 
+tasks.register('experienceClumpsRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListenerRegressionTest')
+}
+
+tasks.register('jadeProtocolRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('org.leavesmc.leaves.protocol.jade.payload.ReceiveDataPayloadRegressionTest')
+}
+
 tasks.register('customDiscsSecurityRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -177,11 +198,14 @@ tasks.named('check') {
     dependsOn tasks.named('loginStreakCacheRegressionTest')
     dependsOn tasks.named('statsPushPathRegressionTest')
     dependsOn tasks.named('globalChatLinkRegressionTest')
+    dependsOn tasks.named('chatMiniMessageRegressionTest')
     dependsOn tasks.named('xaeroLifecycleRegressionTest')
     dependsOn tasks.named('nicknameMessagesRegressionTest')
     dependsOn tasks.named('nicknameRegressionTest')
     dependsOn tasks.named('lofiVoicechatRegressionTest')
     dependsOn tasks.named('suspiciousBrushTrackerRegressionTest')
+    dependsOn tasks.named('experienceClumpsRegressionTest')
+    dependsOn tasks.named('jadeProtocolRegressionTest')
     dependsOn tasks.named('customDiscsSecurityRegressionTest')
     dependsOn tasks.named('binaryProvisionerRegressionTest')
 }

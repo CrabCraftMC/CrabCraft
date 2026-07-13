@@ -35,12 +35,15 @@ mod-protocols:
     # proxy. 0 generates a random id on first start and writes it back here.
     server-id: 0
 
-# Sync this server's normal chat across the network via Redis. Servers left
-# off keep their chat local. Staff chat is unaffected.
+# Player chat accepts colours plus bold, italic, underline and strikethrough.
+# Interactive/data MiniMessage tags such as click, hover, insertion and font
+# are rejected. Plain URLs remain non-interactive text.
+#
+# Sync normal chat across the network via Redis. Servers left off keep their
+# chat local. Staff chat is unaffected.
 global-chat:
   enabled: false
   # MiniMessage format. Placeholders: <display_name>, <username>, <message>.
-  # Player text fills <message> and is never parsed as MiniMessage.
   format: "<display_name><gray>:</gray> <message>"
   mentions:
     enabled: true
@@ -155,4 +158,9 @@ tweaks:
 
   # Player heads keep their custom name and lore when broken and replaced.
   persistent-heads:
+    enabled: false
+
+  # Merge nearby experience orbs as they spawn to reduce entity counts during PVP.
+  # Uses the same three-block search radius as PVPClumps.
+  pvp-clumps:
     enabled: false

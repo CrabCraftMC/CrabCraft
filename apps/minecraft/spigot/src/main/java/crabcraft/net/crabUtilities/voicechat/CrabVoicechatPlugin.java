@@ -33,6 +33,8 @@ import java.util.regex.Pattern;
 public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     public static final String PLUGIN_ID = "crabutilities";
+    static final String LOFI_GROUP_NAME = "Lofi 24/7 CrabFM";
+    private static final String LOFI_GROUP_ID_SEED = "24/7 Lofi";
 
     /** TTL on the {@code crabcraft:svc:player-group:&lt;uuid&gt;} key. Slightly
      *  longer than 3x the rebroadcast interval so a routine server hop
@@ -79,7 +81,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.lofiUrl = plugin.getConfig().getString("voicechat.lofi.youtube-url", "");
         this.lofiMusicVolume = (float) plugin.getConfig().getDouble("voicechat.lofi.music-volume", 0.5D);
         this.lofiPlayerVolume = plugin.getConfig().getDouble("voicechat.lofi.player-volume", 0.25D);
-        this.lofiGroupId = deterministicGroupId("24/7 Lofi");
+        // Keep the original seed so renaming the group does not invalidate
+        // cross-server membership or saved auto-rejoin data.
+        this.lofiGroupId = deterministicGroupId(LOFI_GROUP_ID_SEED);
         List<String> configured = plugin.getConfig().getStringList("voicechat.cross-server.persistent-groups");
         this.persistentGroupNames = persistentGroupNames(configured, lofiEnabled);
     }
@@ -88,8 +92,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         List<String> names = new ArrayList<>(configured.isEmpty()
                 ? List.of("Global #1", "Global #2", "Global #3")
                 : configured);
-        names.removeIf("24/7 Lofi"::equalsIgnoreCase);
-        if (lofiEnabled) names.add("24/7 Lofi");
+        names.removeIf(name -> LOFI_GROUP_ID_SEED.equalsIgnoreCase(name)
+                || LOFI_GROUP_NAME.equalsIgnoreCase(name));
+        if (lofiEnabled) names.add(LOFI_GROUP_NAME);
         return List.copyOf(names);
     }
 
@@ -123,7 +128,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
         Set<UUID> ids = new HashSet<>();
         for (String name : persistentGroupNames) {
-            UUID id = deterministicGroupId(name);
+            UUID id = LOFI_GROUP_NAME.equals(name) ? lofiGroupId : deterministicGroupId(name);
             ids.add(id);
             Group group = api.groupBuilder()
                     .setId(id)

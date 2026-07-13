@@ -135,12 +135,14 @@ public final class JadeMessenger {
 
         @Override
         public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte @NotNull [] data) {
+            RegistryFriendlyByteBuf buf = decorate(data);
             try {
-                RegistryFriendlyByteBuf buf = decorate(data);
                 T payload = codec.decode(buf);
                 handler.accept(((CraftPlayer) player).getHandle(), payload);
             } catch (Exception e) {
                 JadeBootstrap.LOGGER.warn("Failed to decode payload on channel {}: {}", channel, e.toString());
+            } finally {
+                buf.release();
             }
         }
     }

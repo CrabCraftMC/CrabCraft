@@ -27,7 +27,7 @@ public final class CDVoiceAddon {
     registerCategory(api, MUSIC_DISC_CATEGORY, "Music Discs", "customdiscs/music_disc_category.png");
     registerCategory(api, GOAT_HORN_CATEGORY, "Goat Horns", "customdiscs/goat_horn_category.png");
     if (lofiEnabled) {
-      registerCategory(api, LOFI_CATEGORY, "24/7 Lofi", "customdiscs/music_disc_category.png");
+      registerCategory(api, LOFI_CATEGORY, "Lofi 24/7 CrabFM", "customdiscs/music_disc_category.png");
     }
   }
 

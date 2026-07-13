@@ -4,11 +4,14 @@ import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.LoginEvent;
+import com.velocitypowered.api.event.connection.PluginMessageEvent;
 import com.velocitypowered.api.event.player.ServerPostConnectEvent;
 import com.velocitypowered.api.scheduler.ScheduledTask;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.node.types.InheritanceNode;
 import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.ServerConnection;
+import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -33,13 +36,33 @@ public class ConnectionListener {
             .hexColors()
             .build();
     private static final String ALT_GROUP = "alt";
+    private static final int MAX_JADE_HANDSHAKE_SIZE = 256;
+    private static final MinecraftChannelIdentifier JADE_CLIENT_HANDSHAKE =
+            MinecraftChannelIdentifier.from("jade:client_handshake");
 
     private final CrabUtilitiesVelocity plugin;
     private final Set<UUID> announcedPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, ActiveStreakSession> activeStreakSessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, byte[]> jadeHandshakes = new ConcurrentHashMap<>();
 
     public ConnectionListener(CrabUtilitiesVelocity plugin) {
         this.plugin = plugin;
+        plugin.getServer().getChannelRegistrar().register(JADE_CLIENT_HANDSHAKE);
+    }
+
+    @Subscribe(order = PostOrder.EARLY)
+    public void onPluginMessage(PluginMessageEvent event) {
+        if (!JADE_CLIENT_HANDSHAKE.equals(event.getIdentifier())
+                || !(event.getSource() instanceof Player player)
+                || !(event.getTarget() instanceof ServerConnection)) {
+            return;
+        }
+
+        event.setResult(PluginMessageEvent.ForwardResult.forward());
+        byte[] data = event.getData();
+        if (data.length <= MAX_JADE_HANDSHAKE_SIZE) {
+            jadeHandshakes.put(player.getUniqueId(), data);
+        }
     }
 
     @Subscribe(order = PostOrder.EARLY)
@@ -118,10 +141,18 @@ public class ConnectionListener {
         Player player = event.getPlayer();
         RegisteredServer previousServer = event.getPreviousServer();
 
-        RegisteredServer currentServer = player.getCurrentServer()
-                .map(conn -> conn.getServer())
-                .orElse(null);
-        if (currentServer == null) return;
+        ServerConnection currentConnection = player.getCurrentServer().orElse(null);
+        if (currentConnection == null) return;
+        RegisteredServer currentServer = currentConnection.getServer();
+
+        if (previousServer != null) {
+            byte[] handshake = jadeHandshakes.get(player.getUniqueId());
+            if (handshake != null
+                    && !currentConnection.sendPluginMessage(JADE_CLIENT_HANDSHAKE, handshake)) {
+                plugin.getLogger().warn("Could not replay Jade handshake for {} to {}",
+                        player.getUsername(), currentServer.getServerInfo().getName());
+            }
+        }
 
         String currentServerName = currentServer.getServerInfo().getName();
 
@@ -171,6 +202,7 @@ public class ConnectionListener {
     @Subscribe(order = PostOrder.EARLY)
     public void onDisconnect(DisconnectEvent event) {
         Player player = event.getPlayer();
+        jadeHandshakes.remove(player.getUniqueId());
         finishLoginStreakSession(player.getUniqueId());
 
         var settingsService = plugin.getPlayerSettingsService();
@@ -198,6 +230,8 @@ public class ConnectionListener {
     }
 
     public void shutdown() {
+        jadeHandshakes.clear();
+        plugin.getServer().getChannelRegistrar().unregister(JADE_CLIENT_HANDSHAKE);
         long now = epochSeconds();
         for (var entry : activeStreakSessions.entrySet()) {
             UUID playerId = entry.getKey();

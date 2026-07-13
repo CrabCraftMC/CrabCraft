@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.entity.*;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.jadepaper.JadeMessenger;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
@@ -158,6 +159,7 @@ public class JadeProtocol {
 
     public static void resendHandshake(ServerPlayer player) {
         JadeMessenger.send(player, new ServerHandshakePayload(Collections.emptyMap(), shearableBlocks, blockDataProviders.mappedIds(), entityDataProviders.mappedIds()));
+        enabledPlayers.add(player);
     }
 
     public static void onPlayerLeave(ServerPlayer player) {
@@ -169,41 +171,43 @@ public class JadeProtocol {
             return;
         }
         Bukkit.getGlobalRegionScheduler().run(JadeBootstrap.INSTANCE, (task) -> {
-            Entity requested = CommonUtil.wrapPartEntityParent(
-                    CommonUtil.getPartEntity(player.level().getEntity(payload.data().id()), payload.data().partIndex()));
-            if (!isValidEntityTarget(player, requested)) {
-                return;
-            }
+            int requestedId = payload.data().id();
+            CompoundTag identity = new CompoundTag();
+            identity.putInt("EntityId", requestedId);
+            CompoundTag tag = payload.data().data().copy();
+            tag.putInt("EntityId", requestedId);
 
-            EntityAccessor accessor = payload.data().unpack(player);
-            if (accessor == null) {
-                return;
-            }
-
-            Entity entity = accessor.getEntity();
-            if (!isValidEntityTarget(player, entity)) {
-                return;
-            }
-
-            List<ServerDataProvider<EntityAccessor>> providers = entityDataProviders.get(entity);
-            if (providers.isEmpty()) {
-                return;
-            }
-
-            CompoundTag tag = new CompoundTag();
-            for (ServerDataProvider<EntityAccessor> provider : providers) {
-                if (!payload.dataProviders().contains(provider)) {
-                    continue;
+            try {
+                Entity requested = CommonUtil.wrapPartEntityParent(
+                        CommonUtil.getPartEntity(player.level().getEntity(requestedId), payload.data().partIndex()));
+                if (!isValidEntityTarget(player, requested)) {
+                    return;
                 }
-                try {
-                    provider.appendServerData(tag, accessor);
-                } catch (Exception e) {
-                    JadeBootstrap.LOGGER.warn("Error while saving data for entity {}", entity);
-                }
-            }
-            tag.putInt("EntityId", entity.getId());
 
-            JadeMessenger.send(player, new ReceiveDataPayload(tag));
+                EntityAccessor accessor = payload.data().unpack(player);
+                Entity entity = accessor.getEntity();
+                if (!isValidEntityTarget(player, entity)) {
+                    return;
+                }
+
+                identity.putInt("EntityId", entity.getId());
+                tag.putInt("EntityId", entity.getId());
+                List<ServerDataProvider<EntityAccessor>> providers = entityDataProviders.get(entity);
+                for (ServerDataProvider<EntityAccessor> provider : providers) {
+                    if (!payload.dataProviders().contains(provider)) {
+                        continue;
+                    }
+                    try {
+                        provider.appendServerData(tag, accessor);
+                    } catch (Exception e) {
+                        JadeBootstrap.LOGGER.warn("Error while saving data for entity {}", entity);
+                    }
+                }
+            } catch (Exception e) {
+                JadeBootstrap.LOGGER.warn("Error while collecting Jade data for entity {}", requestedId, e);
+            } finally {
+                ReceiveDataPayload.send(player, tag, identity);
+            }
         });
     }
 
@@ -211,21 +215,25 @@ public class JadeProtocol {
         if (!enabledPlayers.contains(player)) {
             return;
         }
-        Bukkit.getGlobalRegionScheduler().run(JadeBootstrap.INSTANCE, (task) -> {
-            BlockHitResult hit = payload.data().hit();
-            if (!isValidBlockHit(player, hit)) {
+        BlockHitResult hit = payload.data().hit();
+        BlockPos pos = hit.getBlockPos();
+        CompoundTag identity = createBlockIdentity(pos);
+        CompoundTag tag = payload.data().data().copy();
+        tag.remove("BlockId");
+        org.jadepaper.JadeNbtUtils.writeBlockPosToTag(pos, tag);
+
+        try {
+            if (!isValidBlockTarget(player, hit)) {
                 return;
             }
 
             BlockAccessor accessor = payload.data().unpack(player);
-            if (accessor == null) {
-                return;
-            }
-
-            BlockPos pos = accessor.getPosition();
             Block block = accessor.getBlock();
-            BlockEntity blockEntity = accessor.getBlockEntity();
+            String blockId = BuiltInRegistries.BLOCK.getKey(block).toString();
+            identity.putString("BlockId", blockId);
+            tag.putString("BlockId", blockId);
 
+            BlockEntity blockEntity = accessor.getBlockEntity();
             List<ServerDataProvider<BlockAccessor>> providers;
             if (blockEntity != null) {
                 providers = blockDataProviders.getMerged(block, blockEntity);
@@ -233,11 +241,6 @@ public class JadeProtocol {
                 providers = blockDataProviders.first.get(block);
             }
 
-            if (providers.isEmpty()) {
-                return;
-            }
-
-            CompoundTag tag = new CompoundTag();
             for (ServerDataProvider<BlockAccessor> provider : providers) {
                 if (!payload.dataProviders().contains(provider)) {
                     continue;
@@ -248,11 +251,11 @@ public class JadeProtocol {
                     JadeBootstrap.LOGGER.warn("Error while saving data for block {}", accessor.getBlockState());
                 }
             }
-            org.jadepaper.JadeNbtUtils.writeBlockPosToTag(pos, tag);
-            tag.putString("BlockId", BuiltInRegistries.BLOCK.getKey(block).toString());
-
-            JadeMessenger.send(player, new ReceiveDataPayload(tag));
-        });
+        } catch (Exception e) {
+            JadeBootstrap.LOGGER.warn("Error while collecting Jade data for block at {}", pos, e);
+        } finally {
+            ReceiveDataPayload.send(player, tag, identity);
+        }
     }
 
     public static void onServerReload() {
@@ -282,21 +285,29 @@ public class JadeProtocol {
         return player.distanceToSqr(entity) <= maxDistance && player.hasLineOfSight(entity);
     }
 
-    private static boolean isValidBlockHit(ServerPlayer player, BlockHitResult hit) {
-        if (hit == null) {
-            return false;
-        }
+    private static CompoundTag createBlockIdentity(BlockPos pos) {
+        CompoundTag tag = new CompoundTag();
+        org.jadepaper.JadeNbtUtils.writeBlockPosToTag(pos, tag);
+        return tag;
+    }
+
+    private static boolean isValidBlockTarget(ServerPlayer player, BlockHitResult hit) {
         BlockPos pos = hit.getBlockPos();
         if (!player.level().isLoaded(pos)) {
             return false;
         }
-        double maxDistance = Mth.square(player.blockInteractionRange() + REQUEST_MARGIN);
-        if (pos.distSqr(player.blockPosition()) > maxDistance) {
+        double maxReach = player.blockInteractionRange() + REQUEST_MARGIN;
+        if (pos.distSqr(player.blockPosition()) > Mth.square(maxReach)) {
+            return false;
+        }
+        Vec3 eyePosition = player.getEyePosition();
+        Vec3 direction = hit.getLocation().subtract(eyePosition);
+        if (direction.lengthSqr() < 1.0E-6D) {
             return false;
         }
         BlockHitResult serverHit = player.level().clip(new ClipContext(
-                player.getEyePosition(),
-                hit.getLocation(),
+                eyePosition,
+                eyePosition.add(direction.normalize().scale(maxReach)),
                 ClipContext.Block.OUTLINE,
                 ClipContext.Fluid.NONE,
                 player));

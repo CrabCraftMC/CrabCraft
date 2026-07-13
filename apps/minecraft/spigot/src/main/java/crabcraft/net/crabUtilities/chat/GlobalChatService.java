@@ -19,10 +19,8 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
-import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 /**
  * Formats this backend's chat and bridges it to other opted-in backends
@@ -34,16 +32,14 @@ import java.util.regex.Pattern;
  * {@code NoClassDefFoundError} on shutdown, and async publishes via
  * {@code Bukkit.getScheduler().runTaskAsynchronously}.
  *
- * <p>Each line is rendered with MiniMessage from the configured format,
- * with player text bound through {@link Placeholder} so it is never parsed
- * as MiniMessage. Delivery and ping sounds run on the main thread.
+ * <p>Each line is rendered with MiniMessage from the configured format. Player
+ * text is first parsed by {@link SafeChatMiniMessage}'s visual-only whitelist,
+ * then bound through {@link Placeholder#component}. Delivery and ping sounds
+ * run on the main thread.
  */
 public class GlobalChatService {
 
     private static final String CHANNEL = "crabutilities:globalchat";
-    private static final Pattern URL_PATTERN = Pattern.compile(
-            "(?i)\\bhttps?://(?:[^\\s<>()\"']*[^\\s<>()\"'.,!?;:])");
-
     private final CrabUtilities plugin;
     private final String host;
     private final int port;
@@ -163,42 +159,28 @@ public class GlobalChatService {
 
     /**
      * Renders one chat line from the configured format. The display name and
-     * message component are bound via {@link Placeholder#component} and the
-     * username via {@link Placeholder#unparsed}, so nothing the player typed
-     * is parsed as MiniMessage.
+     * safely parsed message are bound via {@link Placeholder#component}; the
+     * username uses {@link Placeholder#unparsed}.
      *
      * <p>Must run on the main thread because mention resolution walks the
      * online Bukkit player list and reads display names.
      */
-    public RenderedLine renderLine(Component displayName, String username, String plainMessage, UUID senderUuid) {
-        MentionProcessor.Result mention = mentionProcessor.process(plainMessage, senderUuid);
+    public RenderedLine renderLine(Component displayName, String username, String rawMessage, UUID senderUuid) {
+        Component styledMessage = SafeChatMiniMessage.deserialize(rawMessage);
+        MentionProcessor.Result mention = mentionProcessor.process(styledMessage, senderUuid);
         Component clickableDisplayName = displayName.clickEvent(ClickEvent.suggestCommand(messageCommand(username)));
         Component line = miniMessage.deserialize(format,
                 Placeholder.component("display_name", clickableDisplayName),
                 Placeholder.unparsed("username", username),
-                Placeholder.component("message", linkifyUrls(mention.message())));
+                Placeholder.component("message", mention.message()));
         return new RenderedLine(line, mention.mentioned());
-    }
-
-    static Component linkifyUrls(Component message) {
-        return message.replaceText(config -> config
-                .match(URL_PATTERN)
-                .replacement((match, builder) -> {
-                    String url = match.group();
-                    try {
-                        if (URI.create(url).getHost() == null) return builder;
-                    } catch (IllegalArgumentException ignored) {
-                        return builder;
-                    }
-                    return builder.clickEvent(ClickEvent.openUrl(url));
-                }));
     }
 
     private static String messageCommand(String username) {
         return "/msg " + username + " ";
     }
 
-    public void handleLocalChat(UUID senderUuid, String plainMessage) {
+    public void handleLocalChat(UUID senderUuid, String rawMessage) {
         runOnMain(() -> {
             if (stopped) {
                 return;
@@ -216,10 +198,10 @@ public class GlobalChatService {
             if (displayName == null) {
                 displayName = player.displayName();
             }
-            RenderedLine rendered = renderLine(displayName, username, plainMessage, senderUuid);
+            RenderedLine rendered = renderLine(displayName, username, rawMessage, senderUuid);
 
             deliverLocally(rendered.line(), rendered.mentioned());
-            publish(senderUuid, username, displayName, plainMessage);
+            publish(senderUuid, username, displayName, rawMessage);
         });
     }
 
@@ -247,7 +229,7 @@ public class GlobalChatService {
      * with the gson Component serializer; {@code origin} is this process's
      * serverId so receivers can drop their own echoes.
      */
-    public void publish(UUID senderUuid, String username, Component displayName, String plainMessage) {
+    public void publish(UUID senderUuid, String username, Component displayName, String rawMessage) {
         if (stopped) return;
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
@@ -256,7 +238,7 @@ public class GlobalChatService {
         envelope.addProperty("uuid", senderUuid.toString());
         envelope.addProperty("username", username);
         envelope.addProperty("displayName", GsonComponentSerializer.gson().serialize(displayName));
-        envelope.addProperty("message", plainMessage);
+        envelope.addProperty("message", rawMessage);
         String payload = envelope.toString();
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {

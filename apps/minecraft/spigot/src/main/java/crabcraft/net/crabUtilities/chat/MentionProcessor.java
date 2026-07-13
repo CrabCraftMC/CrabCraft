@@ -13,18 +13,17 @@ import org.bukkit.plugin.Plugin;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Scans a plain chat message for {@code <prefix>name} mention tokens
+ * Scans a chat component for {@code <prefix>name} mention tokens
  * (e.g. {@code @Steve}), highlighting any that resolve to an online local
  * player and recording who to ping.
  *
- * <p>Player text is never parsed as MiniMessage: plain runs are turned
- * into {@link Component#text(String)} and only the configured highlight
- * wrapping is deserialized, with the matched token bound through
- * {@link Placeholder#unparsed} so a name can't inject tags.
+ * <p>The incoming component may contain safe player-selected colours and
+ * decorations. Mention replacements preserve the surrounding component tree;
+ * only the configured highlight is deserialized, with the matched token bound
+ * through {@link Placeholder#unparsed} so a name can't inject tags.
  */
 public class MentionProcessor {
 
@@ -49,50 +48,37 @@ public class MentionProcessor {
     }
 
     /**
-     * Holds the assembled message component (plain runs plus highlighted
-     * mention tokens) and the set of local players to ping (the sender is
-     * always excluded).
+     * Holds the assembled message component and the set of local players to
+     * ping (the sender is always excluded).
      */
     public record Result(Component message, Set<UUID> mentioned) {}
 
     /**
      * Builds the message component and the mention set. When mentions are
-     * disabled the message is returned verbatim as plain text with an empty
-     * set.
+     * disabled the supplied component is returned unchanged.
      */
-    public Result process(String plainMessage, UUID senderUuid) {
+    public Result process(Component input, UUID senderUuid) {
         if (!enabled) {
-            return new Result(Component.text(plainMessage), new HashSet<>());
+            return new Result(input, new HashSet<>());
         }
 
         Set<UUID> mentioned = new HashSet<>();
-        Component message = Component.empty();
-        Matcher matcher = pattern.matcher(plainMessage);
-        int last = 0;
-        while (matcher.find()) {
-            // Plain text before this token is appended verbatim (never parsed).
-            if (matcher.start() > last) {
-                message = message.append(Component.text(plainMessage.substring(last, matcher.start())));
-            }
-            String token = matcher.group();   // includes the prefix, e.g. "@Steve"
-            String name = matcher.group(1);   // captured word, e.g. "Steve"
-            Player target = matchOnline(name);
-            if (target != null) {
-                if (!target.getUniqueId().equals(senderUuid)) {
-                    mentioned.add(target.getUniqueId());
-                }
-                message = message.append(miniMessage.deserialize(
-                        highlightFormat, Placeholder.unparsed("name", token))
-                        .clickEvent(ClickEvent.suggestCommand(messageCommand(target.getName()))));
-            } else {
-                // No match — leave the raw token as plain text.
-                message = message.append(Component.text(token));
-            }
-            last = matcher.end();
-        }
-        if (last < plainMessage.length()) {
-            message = message.append(Component.text(plainMessage.substring(last)));
-        }
+        Component message = input.replaceText(config -> config
+                .match(pattern)
+                .replacement((match, builder) -> {
+                    String token = match.group();   // includes the prefix, e.g. "@Steve"
+                    String name = match.group(1);   // captured word, e.g. "Steve"
+                    Player target = matchOnline(name);
+                    if (target != null) {
+                        if (!target.getUniqueId().equals(senderUuid)) {
+                            mentioned.add(target.getUniqueId());
+                        }
+                        return miniMessage.deserialize(
+                                highlightFormat, Placeholder.unparsed("name", token))
+                                .clickEvent(ClickEvent.suggestCommand(messageCommand(target.getName())));
+                    }
+                    return builder;
+                }));
         return new Result(message, mentioned);
     }
 

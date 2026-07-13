@@ -25,16 +25,22 @@ final class LofiVoicechatRegressionTest {
     }
 
     private static void verifyGroupSelection() {
-        List<String> enabled = CrabVoicechatPlugin.persistentGroupNames(List.of("Global #1"), true);
-        check(enabled.equals(List.of("Global #1", "24/7 Lofi")),
-                "enabled lofi group was not added exactly once");
+        List<String> enabled = CrabVoicechatPlugin.persistentGroupNames(
+                List.of("Global #1", "Global #2", "Global #3"), true);
+        check(enabled.equals(List.of(
+                        "Global #1", "Global #2", "Global #3", CrabVoicechatPlugin.LOFI_GROUP_NAME)),
+                "enabled lofi group was not added after the three global groups");
+        check(enabled.stream().sorted().toList().equals(enabled),
+                "Simple Voice Chat's alphabetical ordering would not place lofi fourth");
         List<String> disabled = CrabVoicechatPlugin.persistentGroupNames(
-                List.of("Global #1", "24/7 Lofi"), false);
+                List.of("Global #1", "24/7 Lofi", CrabVoicechatPlugin.LOFI_GROUP_NAME), false);
         check(disabled.equals(List.of("Global #1")), "disabled lofi group was still created");
 
         UUID first = CrabVoicechatPlugin.deterministicGroupId("24/7 Lofi");
         UUID second = CrabVoicechatPlugin.deterministicGroupId("24/7 Lofi");
         check(first.equals(second), "lofi group ID was not deterministic across backends");
+        check(CrabVoicechatPlugin.LOFI_GROUP_NAME.length() == 16,
+                "lofi group name exceeds Simple Voice Chat's plugin API limit");
     }
 
     private static void verifySpeechRoutingSelection() {
