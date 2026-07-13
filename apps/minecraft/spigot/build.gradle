@@ -100,6 +100,13 @@ tasks.register('globalChatLinkRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.chat.GlobalChatLinkRegressionTest')
 }
 
+tasks.register('xaeroLifecycleRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.xaero.XaeroLifecycleRegressionTest')
+}
+
 tasks.named('test') {
     failOnNoDiscoveredTests = false
 }
@@ -109,6 +116,7 @@ tasks.named('check') {
     dependsOn tasks.named('loginStreakCacheRegressionTest')
     dependsOn tasks.named('statsPushPathRegressionTest')
     dependsOn tasks.named('globalChatLinkRegressionTest')
+    dependsOn tasks.named('xaeroLifecycleRegressionTest')
 }
 
 processResources {
