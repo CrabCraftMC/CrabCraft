@@ -116,7 +116,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   grief: {
     category: "grief",
     label: "Report Griefing / Stealing",
-    buttonLabel: "Griefing",
+    buttonLabel: "Report Griefing/Stealing",
     emoji: "<:chest:1521557150919299325>",
     prefix: "rg",
     buttonStyle: ButtonStyle.Secondary,
@@ -173,7 +173,7 @@ export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
   appeal: {
     category: "appeal",
     label: "Punishment Appeal",
-    buttonLabel: "Appeal",
+    buttonLabel: "Punishment Appeal",
     emoji: "<:judge_gavel:1521556773641650358>",
     prefix: "pa",
     buttonStyle: ButtonStyle.Secondary,

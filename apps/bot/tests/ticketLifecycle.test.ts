@@ -671,12 +671,17 @@ describe("ticket lifecycle controls", () => {
 });
 
 describe("ticket opening controls", () => {
-  test("uses compact labels for a single ticket button row", () => {
+  test("uses the requested labels for the ticket button row", () => {
     expect(
       buttonData({ components: [buildTriggerButtons()] }).map(
         (button) => button.label,
       ),
-    ).toEqual(["General", "Council", "Griefing", "Appeal"]);
+    ).toEqual([
+      "General",
+      "Council",
+      "Report Griefing/Stealing",
+      "Punishment Appeal",
+    ]);
   });
 
   test("ticket creation copy omits dash punctuation and appeal guidance", () => {
