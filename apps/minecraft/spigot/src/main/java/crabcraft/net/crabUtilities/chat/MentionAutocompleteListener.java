@@ -3,11 +3,10 @@ package crabcraft.net.crabUtilities.chat;
 import crabcraft.net.crabUtilities.CrabUtilities;
 import crabcraft.net.crabUtilities.NicknameComponentResolver;
 import net.ess3.api.events.NickChangeEvent;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -20,8 +19,6 @@ import java.util.Set;
 import java.util.UUID;
 
 public class MentionAutocompleteListener implements Listener {
-
-    private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
 
     private final CrabUtilities plugin;
     private final Map<UUID, Set<String>> sentCompletions = new HashMap<>();
@@ -41,7 +38,7 @@ public class MentionAutocompleteListener implements Listener {
         Bukkit.getScheduler().runTask(plugin, this::refreshAll);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onNickChange(NickChangeEvent event) {
         Bukkit.getScheduler().runTaskLater(plugin, this::refreshAll, 2L);
     }
@@ -103,12 +100,6 @@ public class MentionAutocompleteListener implements Listener {
     }
 
     private String mentionName(Player player) {
-        Component nickname = NicknameComponentResolver.forPlayer(plugin.getEssentials(), player);
-        if (nickname == null) {
-            return player.getName();
-        }
-
-        String plain = PLAIN.serialize(nickname).trim();
-        return plain.isEmpty() ? player.getName() : plain;
+        return NicknameComponentResolver.plainNicknameOrName(plugin.getEssentials(), player);
     }
 }

@@ -5,6 +5,7 @@ import com.earth2me.essentials.User;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -35,6 +36,7 @@ public final class NicknameComponentResolver {
             .build();
 
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
 
     private NicknameComponentResolver() {
     }
@@ -53,6 +55,12 @@ public final class NicknameComponentResolver {
             return null;
         }
         return fromRawNick(user.getNickname());
+    }
+
+    /** Returns the player's plain nickname, falling back to their account name. */
+    public static String plainNicknameOrName(Plugin essentialsPlugin, Player player) {
+        String nickname = plain(forPlayer(essentialsPlugin, player));
+        return nickname == null ? player.getName() : nickname;
     }
 
     /**
@@ -100,5 +108,13 @@ public final class NicknameComponentResolver {
         }
         m.appendTail(sb);
         return sb.toString();
+    }
+
+    private static String plain(Component component) {
+        if (component == null) {
+            return null;
+        }
+        String plain = PLAIN.serialize(component).trim();
+        return plain.isEmpty() ? null : plain;
     }
 }

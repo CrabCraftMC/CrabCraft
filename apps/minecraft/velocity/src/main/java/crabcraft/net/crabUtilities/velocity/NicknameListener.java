@@ -91,11 +91,7 @@ public class NicknameListener {
 
         plugin.getServer().getScheduler().buildTask(plugin, () -> {
             try (Jedis jedis = pool.getResource()) {
-                if (nickname.isEmpty()) {
-                    jedis.hdel(HASH_KEY, uuid.toString());
-                } else {
-                    jedis.hset(HASH_KEY, uuid.toString(), nickname);
-                }
+                jedis.hset(HASH_KEY, uuid.toString(), nickname);
                 jedis.publish(UPDATE_CHANNEL, payload.toString());
                 if (redisFailureLogged) {
                     plugin.getLogger().info("Nickname Redis publisher recovered.");

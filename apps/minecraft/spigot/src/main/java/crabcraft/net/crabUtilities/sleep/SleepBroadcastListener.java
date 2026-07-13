@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities.sleep;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
+import crabcraft.net.crabUtilities.NicknameComponentResolver;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -28,9 +29,8 @@ import java.util.List;
  * still reports who was in bed. We simply collect the sleeping players in the
  * affected world and format the announcement from them.
  *
- * <p>The player name fills a MiniMessage {@link Placeholder#unparsed} so names
- * (which can contain arbitrary text via nicknames elsewhere) are never parsed
- * as MiniMessage tags.
+ * <p>Player names fill MiniMessage component placeholders so styled nicknames
+ * are preserved without parsing nickname text as MiniMessage tags.
  */
 public class SleepBroadcastListener implements Listener {
 
@@ -40,6 +40,7 @@ public class SleepBroadcastListener implements Listener {
             "<#FCD05C><player></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>";
     private static final String DEFAULT_MULTIPLE_FORMAT =
             "<#FCD05C><players></#FCD05C><#b0b0b0> slept to skip the night.</#b0b0b0>";
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
 
     /**
      * {@code TimeSkipEvent#getSkipReason()}, resolved reflectively — or
@@ -57,7 +58,6 @@ public class SleepBroadcastListener implements Listener {
     private static final Method GET_SKIP_REASON = resolveGetSkipReason();
 
     private final CrabUtilities plugin;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public SleepBroadcastListener(CrabUtilities plugin) {
         this.plugin = plugin;
@@ -97,10 +97,11 @@ public class SleepBroadcastListener implements Listener {
             return;
         }
 
-        List<String> sleepers = new ArrayList<>();
+        List<Component> sleepers = new ArrayList<>();
         for (Player player : event.getWorld().getPlayers()) {
             if (player.isSleeping()) {
-                sleepers.add(player.getName());
+                Component nickname = NicknameComponentResolver.forPlayer(plugin.getEssentials(), player);
+                sleepers.add(nickname != null ? nickname : Component.text(player.getName()));
             }
         }
         if (sleepers.isEmpty()) {
@@ -111,42 +112,47 @@ public class SleepBroadcastListener implements Listener {
             return;
         }
 
-        Component message;
+        String format;
         if (sleepers.size() == 1) {
-            String format = plugin.getConfig().getString(
+            format = plugin.getConfig().getString(
                     "tweaks.sleep-broadcast.single-format", DEFAULT_SINGLE_FORMAT);
-            message = miniMessage.deserialize(format,
-                    Placeholder.unparsed("player", sleepers.get(0)));
         } else {
-            String format = plugin.getConfig().getString(
+            format = plugin.getConfig().getString(
                     "tweaks.sleep-broadcast.multiple-format", DEFAULT_MULTIPLE_FORMAT);
-            message = miniMessage.deserialize(format,
-                    Placeholder.unparsed("players", joinNames(sleepers)),
-                    Placeholder.unparsed("count", String.valueOf(sleepers.size())));
         }
+        Bukkit.broadcast(formatMessage(format, sleepers));
+    }
 
-        Bukkit.broadcast(message);
+    static Component formatMessage(String format, List<Component> sleepers) {
+        if (sleepers.size() == 1) {
+            return MINI_MESSAGE.deserialize(format,
+                    Placeholder.component("player", sleepers.get(0)));
+        }
+        return MINI_MESSAGE.deserialize(format,
+                Placeholder.component("players", joinNames(sleepers)),
+                Placeholder.unparsed("count", String.valueOf(sleepers.size())));
     }
 
     /**
      * Joins names into a natural, human-readable list: {@code "A and B"} for
      * two, {@code "A, B, and C"} for three or more.
      */
-    private static String joinNames(List<String> names) {
+    static Component joinNames(List<Component> names) {
         int size = names.size();
         if (size == 2) {
-            return names.get(0) + " and " + names.get(1);
+            return Component.empty().append(names.get(0))
+                    .append(Component.text(" and ")).append(names.get(1));
         }
-        StringBuilder builder = new StringBuilder();
+        Component result = Component.empty();
         for (int i = 0; i < size; i++) {
             if (i > 0) {
-                builder.append(", ");
+                result = result.append(Component.text(", "));
             }
             if (i == size - 1) {
-                builder.append("and ");
+                result = result.append(Component.text("and "));
             }
-            builder.append(names.get(i));
+            result = result.append(names.get(i));
         }
-        return builder.toString();
+        return result;
     }
 }

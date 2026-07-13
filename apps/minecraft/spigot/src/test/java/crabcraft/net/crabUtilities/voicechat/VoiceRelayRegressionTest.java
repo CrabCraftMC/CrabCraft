@@ -23,6 +23,19 @@ final class VoiceRelayRegressionTest {
         check(stop.speaker().equals(speaker), "stop-frame speaker changed");
         check(stop.opus().length == 0, "zero-length stop frame was not preserved");
 
+        VoiceMessages.RosterJoin roster = VoiceMessages.decodeRosterJoin(
+                VoiceMessages.encodeRosterJoin(UUID.randomUUID(), speaker, "Crabby", "survival"));
+        check(roster != null && roster.name().equals("Crabby"),
+                "voice roster did not preserve a nickname display label");
+
+        String safeName = CrabVoicechatPlugin.safeRosterName(
+                "Crab\0/\\:*?\"<>|\n", "Steve");
+        check(safeName.chars().noneMatch(c -> c < 32 || c == 127 || "/\\:*?\"<>|".indexOf(c) >= 0),
+                "voice roster nickname retained a delimiter or unsafe filename character");
+        String cappedName = CrabVoicechatPlugin.safeRosterName("🦀".repeat(49), "Steve");
+        check(cappedName.codePointCount(0, cappedName.length()) == 48,
+                "voice roster nickname exceeded the display-name cap");
+
         verifyNativeStopUsesNextSequence();
     }
 
