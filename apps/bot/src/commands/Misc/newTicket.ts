@@ -58,11 +58,11 @@ export default class NewTicketCommand extends SlashCommand {
     }
 
     // Griefing/appeal tickets rely on the reporter's own form answers, which we
-    // can't collect on their behalf — so staff may only open General tickets.
-    if (meta.category !== "general") {
+    // can't collect on their behalf. General and Council tickets have no form.
+    if (meta.category !== "general" && meta.category !== "council") {
       await this.replyError(
         interaction,
-        `**Error!** You can only open **${TICKET_CATEGORIES.general.label}** tickets for another user. Griefing and appeal tickets need the person's own form responses.`,
+        `**Error!** You can only open **${TICKET_CATEGORIES.general.label}** or **${TICKET_CATEGORIES.council.label}** tickets for another user. Griefing and appeal tickets need the person's own form responses.`,
       );
       return;
     }

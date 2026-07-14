@@ -64,6 +64,9 @@ mock.module("../src/utils/appDb.js", () => ({
 const { default: ButtonInteractionEvent } = await import(
   "../src/events/ButtonInteraction.js"
 );
+const { default: NewTicketCommand } = await import(
+  "../src/commands/Misc/newTicket.js"
+);
 const {
   buildChannelName,
   buildIntakeModal,
@@ -671,6 +674,32 @@ describe("ticket lifecycle controls", () => {
 });
 
 describe("ticket opening controls", () => {
+  test("allows moderators to open council inquiries for another user", async () => {
+    const { interaction, ticketChannel } = openingInteraction();
+    interaction.user = { id: "moderator", username: "Moderator" };
+    interaction.options = {
+      getString: (name: string) => (name === "category" ? "council" : null),
+      getUser: () => ({ id: "target" }),
+    };
+    interaction.client = {
+      channels: { fetch: mock(async () => null) },
+    };
+    interaction.deferReply = mock(async () => {});
+    interaction.guild.members = {
+      fetch: mock(async (id: string) =>
+        id === "moderator"
+          ? { roles: { cache: { has: () => true } } }
+          : { user: { tag: "Target", username: "Target" } },
+      ),
+    };
+
+    await new NewTicketCommand().execute(interaction as any);
+
+    expect(interaction.deferReply).toHaveBeenCalledTimes(1);
+    expect(interaction.guild.channels.create).toHaveBeenCalledTimes(1);
+    expect(ticketChannel.setName).toHaveBeenCalledWith("target-council-0002");
+  });
+
   test("uses the requested labels for the ticket button row", () => {
     expect(
       buttonData({ components: [buildTriggerButtons()] }).map(
