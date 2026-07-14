@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useWebHaptics } from "web-haptics/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,7 +15,25 @@ interface OnlinePlayer {
 }
 
 const HEAD_SIZE = 28;
-const MAX_VISIBLE = 21; // ~3 rows of 7
+const PLAYER_GAP = 6;
+const PLAYER_ROWS = 3;
+const MORE_LABEL_WIDTH = 72;
+const INITIAL_VISIBLE = 21;
+
+function getVisiblePlayerCount(containerWidth: number, playerCount: number) {
+  if (containerWidth <= 0 || playerCount <= 0) return 0;
+  const playersPerRow = Math.max(
+    1,
+    Math.floor((containerWidth + PLAYER_GAP) / (HEAD_SIZE + PLAYER_GAP))
+  );
+  const capacity = playersPerRow * PLAYER_ROWS;
+  if (playerCount <= capacity) return playerCount;
+
+  const overflowSlots = Math.ceil(
+    (MORE_LABEL_WIDTH + PLAYER_GAP) / (HEAD_SIZE + PLAYER_GAP)
+  );
+  return Math.max(0, capacity - overflowSlots);
+}
 
 export default function CopyIPCard({
   onlinePlayers,
@@ -27,6 +45,8 @@ export default function CopyIPCard({
   const [players, setPlayers] = useState(onlinePlayerList);
   const [count, setCount] = useState(onlinePlayers);
   const [copied, setCopied] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const playerListRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{
     name: string;
     nickname_raw?: string;
@@ -55,6 +75,20 @@ export default function CopyIPCard({
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    const playerList = playerListRef.current;
+    if (!playerList) return;
+
+    const updateVisibleCount = () => {
+      setVisibleCount(getVisiblePlayerCount(playerList.clientWidth, players.length));
+    };
+
+    updateVisibleCount();
+    const observer = new ResizeObserver(updateVisibleCount);
+    observer.observe(playerList);
+    return () => observer.disconnect();
+  }, [players.length]);
+
   const { trigger } = useWebHaptics();
 
   const handleCopy = () => {
@@ -64,8 +98,8 @@ export default function CopyIPCard({
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const visible = players.slice(0, MAX_VISIBLE);
-  const overflow = players.length - MAX_VISIBLE;
+  const visible = players.slice(0, visibleCount);
+  const overflow = players.length - visible.length;
 
   return (
     <>
@@ -99,8 +133,11 @@ export default function CopyIPCard({
             <span className="text-white font-bold">{count}</span>{" "}
             players online
           </p>
-          {visible.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
+          {players.length > 0 && (
+            <div
+              ref={playerListRef}
+              className="mt-3 flex max-w-full flex-wrap gap-1.5 sm:w-[calc(100%-9rem)] lg:w-[calc(100%-11rem)]"
+            >
               {visible.map((p) => (
                 <Link
                   key={p.uuid}
@@ -127,7 +164,7 @@ export default function CopyIPCard({
                 </Link>
               ))}
               {overflow > 0 && (
-                <span className="flex items-center text-xs font-bold text-white/70 pl-1">
+                <span className="flex w-[72px] shrink-0 items-center pl-1 text-xs font-bold text-white/70">
                   +{overflow} more
                 </span>
               )}
