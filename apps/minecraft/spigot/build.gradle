@@ -60,7 +60,8 @@ dependencies {
     testImplementation("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("de.bluecolored:bluemap-api:2.7.7")
-    compileOnly("com.github.retrooper:packetevents-spigot:2.11.2")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
+    testCompileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
     compileOnly("org.projectlombok:lombok:1.18.44")
     annotationProcessor("org.projectlombok:lombok:1.18.44")
     implementation("redis.clients:jedis:5.1.0")
@@ -182,6 +183,20 @@ tasks.register('jadeResponseIsolationRegressionTest', JavaExec) {
     mainClass.set('org.leavesmc.leaves.protocol.jade.JadeResponseIsolationRegressionTest')
 }
 
+tasks.register('jadeItemStorageEncodingRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('org.leavesmc.leaves.protocol.jade.provider.JadeItemStorageEncodingRegressionTest')
+}
+
+tasks.register('jadeClientProtocolPayloadRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.jade.JadeClientProtocolPayloadRegressionTest')
+}
+
 tasks.register('customPortalDestinationRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -221,6 +236,8 @@ tasks.named('check') {
     dependsOn tasks.named('experienceClumpsRegressionTest')
     dependsOn tasks.named('jadeProtocolRegressionTest')
     dependsOn tasks.named('jadeResponseIsolationRegressionTest')
+    dependsOn tasks.named('jadeItemStorageEncodingRegressionTest')
+    dependsOn tasks.named('jadeClientProtocolPayloadRegressionTest')
     dependsOn tasks.named('customPortalDestinationRegressionTest')
     dependsOn tasks.named('customDiscsSecurityRegressionTest')
     dependsOn tasks.named('binaryProvisionerRegressionTest')

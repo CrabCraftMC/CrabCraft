@@ -17,6 +17,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
@@ -33,6 +34,9 @@ public class ConnectionListener {
     private static final int MAX_JADE_HANDSHAKE_SIZE = 256;
     private static final MinecraftChannelIdentifier JADE_CLIENT_HANDSHAKE =
             MinecraftChannelIdentifier.from("jade:client_handshake");
+    // The backend needs the pre-translation protocol to encode Jade's embedded registry IDs.
+    private static final MinecraftChannelIdentifier CLIENT_PROTOCOL =
+            MinecraftChannelIdentifier.from("crabcraft:client_protocol");
 
     private final CrabUtilitiesVelocity plugin;
     private final Set<UUID> announcedPlayers = ConcurrentHashMap.newKeySet();
@@ -42,17 +46,25 @@ public class ConnectionListener {
 
     public ConnectionListener(CrabUtilitiesVelocity plugin) {
         this.plugin = plugin;
-        plugin.getServer().getChannelRegistrar().register(JADE_CLIENT_HANDSHAKE);
+        plugin.getServer().getChannelRegistrar().register(JADE_CLIENT_HANDSHAKE, CLIENT_PROTOCOL);
     }
 
     @Subscribe(order = PostOrder.EARLY)
     public void onPluginMessage(PluginMessageEvent event) {
+        if (CLIENT_PROTOCOL.equals(event.getIdentifier())) {
+            event.setResult(PluginMessageEvent.ForwardResult.handled());
+            return;
+        }
         if (!JADE_CLIENT_HANDSHAKE.equals(event.getIdentifier())
                 || !(event.getSource() instanceof Player player)
-                || !(event.getTarget() instanceof ServerConnection)) {
+                || !(event.getTarget() instanceof ServerConnection connection)) {
             return;
         }
 
+        if (!sendClientProtocol(player, connection)) {
+            event.setResult(PluginMessageEvent.ForwardResult.handled());
+            return;
+        }
         event.setResult(PluginMessageEvent.ForwardResult.forward());
         byte[] data = event.getData();
         if (data.length <= MAX_JADE_HANDSHAKE_SIZE) {
@@ -142,10 +154,12 @@ public class ConnectionListener {
 
         if (previousServer != null) {
             byte[] handshake = jadeHandshakes.get(player.getUniqueId());
-            if (handshake != null
-                    && !currentConnection.sendPluginMessage(JADE_CLIENT_HANDSHAKE, handshake)) {
-                plugin.getLogger().warn("Could not replay Jade handshake for {} to {}",
-                        player.getUsername(), currentServer.getServerInfo().getName());
+            if (handshake != null) {
+                if (sendClientProtocol(player, currentConnection)
+                        && !currentConnection.sendPluginMessage(JADE_CLIENT_HANDSHAKE, handshake)) {
+                    plugin.getLogger().warn("Could not replay Jade handshake for {} to {}",
+                            player.getUsername(), currentServer.getServerInfo().getName());
+                }
             }
         }
 
@@ -229,7 +243,7 @@ public class ConnectionListener {
     public void shutdown() {
         jadeHandshakes.clear();
         nicknameSeeds.clear();
-        plugin.getServer().getChannelRegistrar().unregister(JADE_CLIENT_HANDSHAKE);
+        plugin.getServer().getChannelRegistrar().unregister(JADE_CLIENT_HANDSHAKE, CLIENT_PROTOCOL);
         long now = epochSeconds();
         for (var entry : activeStreakSessions.entrySet()) {
             UUID playerId = entry.getKey();
@@ -241,6 +255,21 @@ public class ConnectionListener {
                 recordLoginStreakPlaytime(session, segment, false);
             }
         }
+    }
+
+    private boolean sendClientProtocol(Player player, ServerConnection connection) {
+        boolean sent = connection.sendPluginMessage(
+                CLIENT_PROTOCOL,
+                encodeClientProtocol(player.getProtocolVersion().getProtocol()));
+        if (!sent) {
+            plugin.getLogger().warn("Could not send client protocol for {} to {}",
+                    player.getUsername(), connection.getServer().getServerInfo().getName());
+        }
+        return sent;
+    }
+
+    static byte[] encodeClientProtocol(int protocol) {
+        return ByteBuffer.allocate(Integer.BYTES).putInt(protocol).array();
     }
 
     private void startLoginStreakSession(Player player) {

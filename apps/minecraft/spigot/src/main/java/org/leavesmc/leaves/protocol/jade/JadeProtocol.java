@@ -1,5 +1,6 @@
 package org.leavesmc.leaves.protocol.jade;
 
+import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -21,6 +22,7 @@ import net.minecraft.world.entity.animal.frog.Tadpole;
 import net.minecraft.world.entity.animal.golem.CopperGolem;
 import net.minecraft.world.entity.animal.sniffer.Sniffer;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ClipContext;
@@ -66,7 +68,9 @@ import org.leavesmc.leaves.protocol.jade.util.WrappedHierarchyLookup;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class JadeProtocol {
@@ -77,6 +81,7 @@ public class JadeProtocol {
     public static final PairHierarchyLookup<ServerDataProvider<BlockAccessor>> blockDataProviders = new PairHierarchyLookup<>(new HierarchyLookup<>(Block.class), new HierarchyLookup<>(BlockEntity.class));
     public static final WrappedHierarchyLookup<ServerExtensionProvider<ItemStack>> itemStorageProviders = WrappedHierarchyLookup.forAccessor();
     private static final Set<ServerPlayer> enabledPlayers = ConcurrentHashMap.newKeySet();
+    private static final Map<UUID, Integer> clientProtocols = new ConcurrentHashMap<>();
     private static final double REQUEST_MARGIN = 1.0D;
 
     public static PriorityStore<Identifier, JadeProvider> priorities;
@@ -164,6 +169,24 @@ public class JadeProtocol {
 
     public static void onPlayerLeave(ServerPlayer player) {
         enabledPlayers.remove(player);
+        clientProtocols.remove(player.getUUID());
+    }
+
+    public static void setClientProtocol(UUID playerId, int protocol) {
+        clientProtocols.put(playerId, protocol);
+    }
+
+    public static int getClientProtocol(Player player) {
+        return clientProtocols.getOrDefault(
+                player.getUUID(), ((org.bukkit.entity.Player) player.getBukkitEntity()).getProtocolVersion());
+    }
+
+    public static int getServerProtocol() {
+        return SharedConstants.getProtocolVersion();
+    }
+
+    public static boolean isPacketEventsAvailable() {
+        return Bukkit.getPluginManager().isPluginEnabled("packetevents");
     }
 
     public static void requestEntityData(ServerPlayer player, RequestEntityPayload payload) {

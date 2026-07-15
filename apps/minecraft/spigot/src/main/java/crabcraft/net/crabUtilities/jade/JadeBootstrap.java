@@ -11,6 +11,8 @@ import org.leavesmc.leaves.protocol.jade.payload.ServerHandshakePayload;
 import org.jadepaper.JadeMessenger;
 import org.slf4j.Logger;
 
+import java.nio.ByteBuffer;
+
 /**
  * Static holder + initialiser for the in-tree Jade server-side companion.
  *
@@ -20,6 +22,8 @@ import org.slf4j.Logger;
  * class so the bigger plugin can drive the lifecycle.
  */
 public final class JadeBootstrap {
+
+    private static final String CLIENT_PROTOCOL_CHANNEL = "crabcraft:client_protocol";
 
     public static JavaPlugin INSTANCE;
     public static Logger LOGGER;
@@ -45,11 +49,27 @@ public final class JadeBootstrap {
         JadeMessenger.registerOutgoing(plugin, ServerHandshakePayload.class);
         JadeMessenger.registerOutgoing(plugin, ReceiveDataPayload.class);
 
+        plugin.getServer().getMessenger().registerIncomingPluginChannel(
+                plugin, CLIENT_PROTOCOL_CHANNEL, (channel, player, data) -> {
+                    int protocol = decodeClientProtocol(data);
+                    if (protocol > 0) {
+                        JadeProtocol.setClientProtocol(player.getUniqueId(), protocol);
+                    }
+                });
+
         JadeIntegration integration = new JadeIntegration();
         plugin.getServer().getPluginManager().registerEvents(integration, plugin);
         var command = plugin.getCommand("jadehandshake");
         if (command != null) command.setExecutor(integration);
 
         plugin.getLogger().info("Jade integration enabled (protocol v" + JadeProtocol.PROTOCOL_VERSION + ")");
+    }
+
+    static int decodeClientProtocol(byte[] data) {
+        if (data.length != Integer.BYTES) {
+            return -1;
+        }
+        int protocol = ByteBuffer.wrap(data).getInt();
+        return protocol > 0 ? protocol : -1;
     }
 }
