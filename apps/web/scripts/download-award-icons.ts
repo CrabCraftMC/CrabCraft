@@ -228,6 +228,7 @@ const ICON_MAP: Record<string, string> = {
   eat_meat: "Cooked_Beef",
   eat_rawmeat: "Raw_Beef",
   eat_soup: "Mushroom_Stew",
+  eat_sweet_berries: "Sweet_Berries",
   eat_veggie: "Carrot",
   eat_cake: "Cake",
   harvest_bamboo: "Bamboo",

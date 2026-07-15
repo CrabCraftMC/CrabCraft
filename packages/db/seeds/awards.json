@@ -3915,5 +3915,21 @@
         "minecraft:.+_spear"
       ]
     }
+  },
+  {
+    "id": "eat_sweet_berries",
+    "title": "Jam Buds",
+    "description": "Sweet berries eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_sweet_berries.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:sweet_berries"
+      ]
+    }
   }
 ]
