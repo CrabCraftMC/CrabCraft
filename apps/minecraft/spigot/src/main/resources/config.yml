@@ -37,7 +37,7 @@ mod-protocols:
 
 # Player chat accepts colours plus bold, italic, underline and strikethrough.
 # Interactive/data MiniMessage tags such as click, hover, insertion and font
-# are rejected. Plain URLs remain non-interactive text.
+# are rejected. Plain HTTP and HTTPS URLs become clickable links.
 #
 # Sync normal chat across the network via Redis. Servers left off keep their
 # chat local. Staff chat is unaffected.

@@ -19,8 +19,10 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
+import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Formats this backend's chat and bridges it to other opted-in backends
@@ -40,6 +42,8 @@ import java.util.UUID;
 public class GlobalChatService {
 
     private static final String CHANNEL = "crabutilities:globalchat";
+    private static final Pattern URL_PATTERN = Pattern.compile(
+            "(?i)\\bhttps?://(?:[^\\s<>()\"']*[^\\s<>()\"'.,!?;:])");
     private final CrabUtilities plugin;
     private final String host;
     private final int port;
@@ -172,8 +176,22 @@ public class GlobalChatService {
         Component line = miniMessage.deserialize(format,
                 Placeholder.component("display_name", clickableDisplayName),
                 Placeholder.unparsed("username", username),
-                Placeholder.component("message", mention.message()));
+                Placeholder.component("message", linkifyUrls(mention.message())));
         return new RenderedLine(line, mention.mentioned());
+    }
+
+    static Component linkifyUrls(Component message) {
+        return message.replaceText(config -> config
+                .match(URL_PATTERN)
+                .replacement((match, builder) -> {
+                    String url = match.group();
+                    try {
+                        if (URI.create(url).getHost() == null) return builder;
+                    } catch (IllegalArgumentException ignored) {
+                        return builder;
+                    }
+                    return builder.clickEvent(ClickEvent.openUrl(url));
+                }));
     }
 
     private static String messageCommand(String username) {
