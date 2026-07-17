@@ -1,0 +1,37 @@
+name: Gradle Dependency Submission
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/minecraft/**/*.gradle"
+      - "apps/minecraft/**/*.gradle.kts"
+      - "apps/minecraft/gradle/**"
+      - "apps/minecraft/gradle.properties"
+      - "apps/minecraft/gradlew"
+      - ".github/workflows/gradle-dependency-submission.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gradle-dependency-submission
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    name: Submit Gradle dependency graph
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/dependency-submission@v6
+        with:
+          build-root-directory: apps/minecraft
+          dependency-graph: generate-and-submit
