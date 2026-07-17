@@ -1,8 +1,9 @@
 /**
  * Seed the `awards` table from packages/db/seeds/awards.json.
  *
- * Idempotent: upserts on `id`. Safe to re-run; preserves the
- * runtime-editable `enabled` flag across re-runs so admins can
+ * Idempotent: upserts on `id`, then disables awards missing from
+ * the seed file. Safe to re-run; preserves the runtime-editable
+ * `enabled` flag for awards still present in the seed so admins can
  * disable an award without the next seed re-enabling it.
  *
  * Usage (from repo root):
@@ -12,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { sql } from "drizzle-orm";
+import { notInArray, sql } from "drizzle-orm";
 
 import { db } from "../src/client";
 import { awards } from "../src/schema";
@@ -42,6 +43,11 @@ async function main() {
   }
 
   const rows = JSON.parse(readFileSync(SEED_FILE, "utf8")) as SeedRow[];
+  if (rows.length === 0) {
+    throw new Error(`Refusing to seed from empty awards file: ${SEED_FILE}`);
+  }
+
+  const seedIds = rows.map((row) => row.id);
   let seeded = 0;
 
   for (let i = 0; i < rows.length; i++) {
@@ -77,7 +83,18 @@ async function main() {
     seeded += 1;
   }
 
-  console.log(`Seeded ${seeded} awards from ${SEED_FILE}`);
+  const disabled = await db
+    .update(awards)
+    .set({
+      enabled: false,
+      updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+    })
+    .where(notInArray(awards.id, seedIds))
+    .returning({ id: awards.id });
+
+  console.log(
+    `Seeded ${seeded} awards from ${SEED_FILE}; disabled ${disabled.length} awards missing from seed`,
+  );
   process.exit(0);
 }
 
