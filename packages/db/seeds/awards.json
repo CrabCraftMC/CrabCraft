@@ -301,6 +301,24 @@
     }
   },
   {
+    "id": "craft_fireworks",
+    "title": "Pyrotechnician",
+    "description": "Firework rockets and stars crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_fireworks.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:firework_rocket",
+        "minecraft:firework_star"
+      ]
+    }
+  },
+  {
     "id": "craft_glowstone",
     "title": "Bright Idea",
     "description": "Glowstone blocks crafted",
@@ -371,6 +389,46 @@
       "path": [
         "minecraft:crafted",
         "minecraft:paper"
+      ]
+    }
+  },
+  {
+    "id": "craft_potent_sulfur",
+    "title": "Cave Chemist",
+    "description": "Potent Sulfur crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_potent_sulfur.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:potent_sulfur"
+      ]
+    }
+  },
+  {
+    "id": "craft_rails",
+    "title": "Rail Works",
+    "description": "Rails and minecarts crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_rails.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:rail",
+        "minecraft:powered_rail",
+        "minecraft:detector_rail",
+        "minecraft:activator_rail",
+        "minecraft:minecart",
+        "minecraft:chest_minecart",
+        "minecraft:furnace_minecart",
+        "minecraft:hopper_minecart",
+        "minecraft:tnt_minecart"
       ]
     }
   },
@@ -566,6 +624,21 @@
     }
   },
   {
+    "id": "damage_absorbed",
+    "title": "Absorbent",
+    "description": "Damage absorbed by absorption hearts",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_absorbed.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_absorbed"
+      ]
+    }
+  },
+  {
     "id": "damage_dealt",
     "title": "Heavy Hitter",
     "description": "Total damage dealt to mobs",
@@ -581,6 +654,36 @@
     }
   },
   {
+    "id": "damage_dealt_absorbed",
+    "title": "Bubble Breaker",
+    "description": "Damage dealt into absorption hearts",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_dealt_absorbed.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_dealt_absorbed"
+      ]
+    }
+  },
+  {
+    "id": "damage_dealt_resisted",
+    "title": "Hard Knocks",
+    "description": "Damage dealt through resistance",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_dealt_resisted.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_dealt_resisted"
+      ]
+    }
+  },
+  {
     "id": "damage_shield",
     "title": "Shielded",
     "description": "Damage blocked with a shield",
@@ -592,6 +695,21 @@
       "path": [
         "minecraft:custom",
         "minecraft:damage_blocked_by_shield"
+      ]
+    }
+  },
+  {
+    "id": "damage_resisted",
+    "title": "Iron Will",
+    "description": "Damage resisted",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_resisted.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_resisted"
       ]
     }
   },
@@ -979,6 +1097,24 @@
     }
   },
   {
+    "id": "interact_cauldron",
+    "title": "Cauldron Keeper",
+    "description": "Cauldrons filled or used",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_cauldron.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:custom"
+      ],
+      "patterns": [
+        "minecraft:fill_cauldron",
+        "minecraft:use_cauldron"
+      ]
+    }
+  },
+  {
     "id": "interact_grindstone",
     "title": "Grinder",
     "description": "Times used a grindstone",
@@ -994,6 +1130,25 @@
     }
   },
   {
+    "id": "interact_inspectors",
+    "title": "Inspector Gadget",
+    "description": "Dispensers, droppers and hoppers inspected",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_inspectors.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:custom"
+      ],
+      "patterns": [
+        "minecraft:inspect_dispenser",
+        "minecraft:inspect_dropper",
+        "minecraft:inspect_hopper"
+      ]
+    }
+  },
+  {
     "id": "interact_lectern",
     "title": "Page Turner",
     "description": "Times used a lectern",
@@ -1005,6 +1160,25 @@
       "path": [
         "minecraft:custom",
         "minecraft:interact_with_lectern"
+      ]
+    }
+  },
+  {
+    "id": "interact_laundry",
+    "title": "Laundry Day",
+    "description": "Armor, banners and shulker boxes cleaned",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_laundry.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:custom"
+      ],
+      "patterns": [
+        "minecraft:clean_armor",
+        "minecraft:clean_banner",
+        "minecraft:clean_shulker_box"
       ]
     }
   },
@@ -1571,6 +1745,21 @@
     }
   },
   {
+    "id": "kill_player",
+    "title": "Player Slayer",
+    "description": "Players killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_player.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:player_kills"
+      ]
+    }
+  },
+  {
     "id": "kill_pig",
     "title": "Pork Producer",
     "description": "Pigs killed",
@@ -1939,6 +2128,21 @@
       "path": [
         "minecraft:killed",
         "minecraft:wither_skeleton"
+      ]
+    }
+  },
+  {
+    "id": "kill_wither",
+    "title": "Wither Wrecker",
+    "description": "Withers killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_wither.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:wither"
       ]
     }
   },
@@ -2441,6 +2645,21 @@
     }
   },
   {
+    "id": "mine_resin_clump",
+    "title": "Resin Runner",
+    "description": "Resin clumps mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_resin_clump.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:resin_clump"
+      ]
+    }
+  },
+  {
     "id": "mine_snow",
     "title": "Snow Shoveler",
     "description": "Snow layers cleared",
@@ -2498,6 +2717,23 @@
         "minecraft:smooth_basalt",
         "minecraft:stone",
         "minecraft:tuff"
+      ]
+    }
+  },
+  {
+    "id": "mine_total",
+    "title": "World Eater",
+    "description": "Total blocks mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_total.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:.*"
       ]
     }
   },
@@ -2625,6 +2861,44 @@
     }
   },
   {
+    "id": "place_color_blocks",
+    "title": "Color Blocked",
+    "description": "Concrete, terracotta and glazed terracotta placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_color_blocks.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_concrete",
+        "minecraft:.+_concrete_powder",
+        "minecraft:.+_terracotta",
+        "minecraft:.+_glazed_terracotta",
+        "minecraft:terracotta"
+      ]
+    }
+  },
+  {
+    "id": "place_copper",
+    "title": "Copper Skyline",
+    "description": "Copper-family blocks placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_copper.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*copper.*"
+      ]
+    }
+  },
+  {
     "id": "place_chorus_flower",
     "title": "End Gardener",
     "description": "Chorus flowers planted",
@@ -2654,6 +2928,45 @@
       "patterns": [
         "minecraft:dropper",
         "minecraft:hopper"
+      ]
+    }
+  },
+  {
+    "id": "place_decor",
+    "title": "Set Dresser",
+    "description": "Paintings, item frames and armor stands placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_decor.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:painting",
+        "minecraft:item_frame",
+        "minecraft:glow_item_frame",
+        "minecraft:armor_stand"
+      ]
+    }
+  },
+  {
+    "id": "place_doors",
+    "title": "Open & Shut",
+    "description": "Doors, trapdoors and fence gates placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_doors.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*_door",
+        "minecraft:.*_trapdoor",
+        "minecraft:.*_fence_gate"
       ]
     }
   },
@@ -2722,6 +3035,27 @@
     }
   },
   {
+    "id": "place_lights",
+    "title": "Light Fantastic",
+    "description": "Froglights, sea lanterns, end rods, shroomlights and copper bulbs placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_lights.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*_froglight",
+        "minecraft:sea_lantern",
+        "minecraft:end_rod",
+        "minecraft:shroomlight",
+        "minecraft:.*copper_bulb"
+      ]
+    }
+  },
+  {
     "id": "place_lightning_rod",
     "title": "Storm Catcher",
     "description": "Lightning rods placed",
@@ -2748,6 +3082,77 @@
       "path": [
         "minecraft:used",
         "minecraft:lodestone"
+      ]
+    }
+  },
+  {
+    "id": "place_masonry",
+    "title": "Master Mason",
+    "description": "Stone, deepslate, tuff and brick blocks placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_masonry.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:stone",
+        "minecraft:smooth_stone",
+        "minecraft:stone_bricks",
+        "minecraft:cracked_stone_bricks",
+        "minecraft:mossy_stone_bricks",
+        "minecraft:chiseled_stone_bricks",
+        "minecraft:deepslate",
+        "minecraft:cobbled_deepslate",
+        "minecraft:polished_deepslate",
+        "minecraft:deepslate_bricks",
+        "minecraft:cracked_deepslate_bricks",
+        "minecraft:deepslate_tiles",
+        "minecraft:cracked_deepslate_tiles",
+        "minecraft:chiseled_deepslate",
+        "minecraft:tuff",
+        "minecraft:polished_tuff",
+        "minecraft:tuff_bricks",
+        "minecraft:chiseled_tuff",
+        "minecraft:bricks",
+        "minecraft:mud_bricks",
+        "minecraft:nether_bricks",
+        "minecraft:red_nether_bricks",
+        "minecraft:end_stone_bricks",
+        "minecraft:prismarine_bricks",
+        "minecraft:quartz_bricks"
+      ]
+    }
+  },
+  {
+    "id": "place_plants",
+    "title": "Living Walls",
+    "description": "Leaves, moss, vines and plant decor placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_plants.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*_leaves",
+        "minecraft:moss_block",
+        "minecraft:moss_carpet",
+        "minecraft:pale_moss_block",
+        "minecraft:pale_moss_carpet",
+        "minecraft:vine",
+        "minecraft:weeping_vines",
+        "minecraft:twisting_vines",
+        "minecraft:glow_lichen",
+        "minecraft:hanging_roots",
+        "minecraft:big_dripleaf",
+        "minecraft:small_dripleaf",
+        "minecraft:spore_blossom",
+        "minecraft:lily_pad"
       ]
     }
   },
@@ -2832,6 +3237,23 @@
       ],
       "patterns": [
         "minecraft:.*sign"
+      ]
+    }
+  },
+  {
+    "id": "place_slabs",
+    "title": "Half Measures",
+    "description": "Slabs placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_slabs.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*_slab"
       ]
     }
   },
@@ -3146,6 +3568,21 @@
     }
   },
   {
+    "id": "use_bone_meal",
+    "title": "Green Thumb",
+    "description": "Bone meal used",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_bone_meal.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:bone_meal"
+      ]
+    }
+  },
+  {
     "id": "use_bow",
     "title": "Bow Master",
     "description": "Arrows shot from a bow",
@@ -3289,6 +3726,21 @@
     }
   },
   {
+    "id": "use_golden_dandelion",
+    "title": "Forever Young",
+    "description": "Golden dandelions used",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_golden_dandelion.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:golden_dandelion"
+      ]
+    }
+  },
+  {
     "id": "use_hoe",
     "title": "Soil Tiller",
     "description": "Blocks tilled with a hoe",
@@ -3332,6 +3784,21 @@
       "path": [
         "minecraft:used",
         "minecraft:lava_bucket"
+      ]
+    }
+  },
+  {
+    "id": "use_name_tag",
+    "title": "Name Giver",
+    "description": "Name tags used",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_name_tag.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:name_tag"
       ]
     }
   },
