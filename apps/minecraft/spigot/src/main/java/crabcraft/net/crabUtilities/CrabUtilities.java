@@ -4,6 +4,7 @@ import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
 import crabcraft.net.crabUtilities.awards.SuspiciousBrushTracker;
 import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
 import crabcraft.net.crabUtilities.cauldron.CauldronRecipeListener;
+import crabcraft.net.crabUtilities.chat.EssentialsMentionAutocompleteListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
@@ -25,8 +26,7 @@ import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListener;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
-import crabcraft.net.crabUtilities.voicechat.CrabVoicechatPlugin;
-import de.maxhenkel.voicechat.api.BukkitVoicechatService;
+import crabcraft.net.crabUtilities.voicechat.VoicechatIntegration;
 import net.crabcraft.customdiscs.CustomDiscs;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.Configuration;
@@ -44,7 +44,7 @@ public final class CrabUtilities extends JavaPlugin {
     private Plugin essentials; // Optional: present when EssentialsX is installed
     private StatsPushTask statsPushTask;
     private UpdateService updateService;
-    private CrabVoicechatPlugin voicechatPlugin;
+    private AutoCloseable voicechatRegistration;
     private LoginStreakCache loginStreakCache;
     private LoginStreakExpansion loginStreakExpansion;
     private GlobalChatService globalChatService;
@@ -99,11 +99,19 @@ public final class CrabUtilities extends JavaPlugin {
 
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);
-        this.nicknameSync = new NicknameSync(this);
-        Bukkit.getPluginManager().registerEvents(nicknameSync, this);
-        nicknameSync.start();
+        if (essentials != null) {
+            this.nicknameSync = new NicknameSync(this);
+            Bukkit.getPluginManager().registerEvents(nicknameSync, this);
+            nicknameSync.start();
+        } else {
+            getLogger().info("EssentialsX not detected — nickname Redis sync disabled.");
+        }
         this.mentionAutocompleteListener = new MentionAutocompleteListener(this);
         Bukkit.getPluginManager().registerEvents(mentionAutocompleteListener, this);
+        if (essentials != null) {
+            Bukkit.getPluginManager().registerEvents(
+                    new EssentialsMentionAutocompleteListener(this, mentionAutocompleteListener), this);
+        }
         mentionAutocompleteListener.refreshAll();
 
         // Sleep broadcast: announce who slept when the night is skipped. Opt-in
@@ -181,11 +189,12 @@ public final class CrabUtilities extends JavaPlugin {
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
         // Soft dependency — skipped silently if the SVC plugin isn't installed.
-        BukkitVoicechatService voicechatService = getServer().getServicesManager().load(BukkitVoicechatService.class);
-        if (voicechatService != null) {
-            this.voicechatPlugin = new CrabVoicechatPlugin(this);
-            voicechatService.registerPlugin(voicechatPlugin);
-            getLogger().info("Registered Simple Voice Chat plugin");
+        if (Bukkit.getPluginManager().getPlugin("voicechat") != null) {
+            try {
+                this.voicechatRegistration = VoicechatIntegration.register(this);
+            } catch (LinkageError e) {
+                getLogger().warning("Simple Voice Chat present but API classes not usable: " + e.getMessage());
+            }
         }
 
         getLogger().info("CrabUtilities enabled. EssentialsX present: " + (essentials != null));
@@ -485,14 +494,14 @@ public final class CrabUtilities extends JavaPlugin {
         if (updateService != null) {
             updateService.shutdown();
         }
-        if (voicechatPlugin != null) {
+        if (voicechatRegistration != null) {
             // Never let voice-bridge cleanup abort the rest of onDisable.
             try {
-                voicechatPlugin.shutdown();
+                voicechatRegistration.close();
             } catch (Exception e) {
                 getLogger().warning("Voice bridge shutdown failed: " + e.getMessage());
             }
-            getServer().getServicesManager().unregister(voicechatPlugin);
+            voicechatRegistration = null;
         }
         // Voice-chat playback must stop before its shared media engine.
         CustomDiscs.disable();

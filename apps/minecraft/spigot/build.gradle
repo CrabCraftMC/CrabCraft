@@ -1,6 +1,6 @@
 plugins {
     id 'io.papermc.paperweight.userdev' version '2.0.0-beta.21'
-    id("xyz.jpenilla.run-paper") version "2.3.1"
+    id("xyz.jpenilla.run-paper") version "3.0.2"
     id 'com.gradleup.shadow'
 }
 
@@ -150,6 +150,13 @@ tasks.register('nicknameRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.NicknameRegressionTest')
 }
 
+tasks.register('nicknameSoftDependencyRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass.set('crabcraft.net.crabUtilities.NicknameSoftDependencyRegressionTest')
+}
+
 tasks.register('lofiVoicechatRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -233,6 +240,7 @@ tasks.named('check') {
     dependsOn tasks.named('xaeroLifecycleRegressionTest')
     dependsOn tasks.named('nicknameMessagesRegressionTest')
     dependsOn tasks.named('nicknameRegressionTest')
+    dependsOn tasks.named('nicknameSoftDependencyRegressionTest')
     dependsOn tasks.named('lofiVoicechatRegressionTest')
     dependsOn tasks.named('suspiciousBrushTrackerRegressionTest')
     dependsOn tasks.named('experienceClumpsRegressionTest')

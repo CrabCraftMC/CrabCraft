@@ -1,7 +1,5 @@
 package crabcraft.net.crabUtilities;
 
-import com.earth2me.essentials.Essentials;
-import com.earth2me.essentials.User;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -57,23 +55,18 @@ public final class NicknameComponentResolver {
      * (callers should fall back to a plain name in that case).
      */
     public static Component forPlayer(Plugin essentialsPlugin, Player player) {
-        if (!(essentialsPlugin instanceof Essentials essentials)) {
+        if (essentialsPlugin == null) {
             return null;
         }
-        User user = essentials.getUser(player);
-        if (user == null) {
-            return null;
-        }
-        return fromRawNick(user.getNickname());
+        return EssentialsNicknameResolver.forPlayer(essentialsPlugin, player);
     }
 
     /** Resolves an EssentialsX user by UUID, including offline users. */
     public static Component forUniqueId(Plugin essentialsPlugin, UUID uuid) {
-        if (!(essentialsPlugin instanceof Essentials essentials) || uuid == null) {
+        if (essentialsPlugin == null || uuid == null) {
             return null;
         }
-        User user = essentials.getUser(uuid);
-        return user == null ? null : fromRawNick(user.getNickname());
+        return EssentialsNicknameResolver.forUniqueId(essentialsPlugin, uuid);
     }
 
     /** Returns the player's plain nickname, falling back to their account name. */

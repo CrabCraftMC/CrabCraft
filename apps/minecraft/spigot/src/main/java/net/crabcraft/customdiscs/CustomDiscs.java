@@ -1,12 +1,5 @@
 package net.crabcraft.customdiscs;
 
-import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.event.PacketListener;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
-import com.github.retrooper.packetevents.event.PacketSendEvent;
-import com.github.retrooper.packetevents.protocol.packettype.PacketType;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockEntityData;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEffect;
 import com.tcoded.folialib.FoliaLib;
 import crabcraft.net.crabUtilities.CrabUtilities;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
@@ -26,7 +19,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.ServicePriority;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jspecify.annotations.NonNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,6 +40,7 @@ public final class CustomDiscs {
   private final YamlLanguage language = new YamlLanguage();
   private final FoliaLib foliaLib;
   private final CustomDiscsAPI apiProvider = new CustomDiscsAPIImpl();
+  private AutoCloseable packetEventsRegistration;
   private boolean audioStarted;
   private boolean enabled;
 
@@ -93,7 +86,7 @@ public final class CustomDiscs {
 
     feature.registerEvents();
     feature.registerCommands();
-    feature.registerPacketListener();
+    feature.packetEventsRegistration = PacketEventsIntegration.register();
     feature.enabled = true;
 
     info("Custom discs feature enabled inside CrabUtilities");
@@ -101,6 +94,14 @@ public final class CustomDiscs {
 
   public static synchronized void disable() {
     if (instance == null) return;
+    if (instance.packetEventsRegistration != null) {
+      try {
+        instance.packetEventsRegistration.close();
+      } catch (Exception e) {
+        warn("PacketEvents listener shutdown failed: {}", e.getMessage());
+      }
+      instance.packetEventsRegistration = null;
+    }
     if (instance.audioStarted) {
       AudioEngine.getInstance().shutdown();
       instance.audioStarted = false;
@@ -147,31 +148,6 @@ public final class CustomDiscs {
     manager.registerEvents(PlayerHandler.getInstance(), javaPlugin);
     manager.registerEvents(new HopperHandler(), javaPlugin);
     manager.registerEvents(new HornHandler(), javaPlugin);
-  }
-
-  private void registerPacketListener() {
-    PacketEvents.getAPI().getEventManager().registerListener(new PacketListener() {
-      @Override
-      public void onPacketSend(@NonNull PacketSendEvent event) {
-        if (event.getPacketType() == PacketType.Play.Server.EFFECT) {
-          var packet = new WrapperPlayServerEffect(event);
-          if (packet.getType() == 1010) {
-            var pos = packet.getPosition();
-            var player = (org.bukkit.entity.Player) event.getPlayer();
-            var block = player.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
-            if (AudioEngine.getInstance().isPlaying(block)) event.setCancelled(true);
-          }
-        }
-
-        if (event.getPacketType() == PacketType.Play.Server.BLOCK_ENTITY_DATA) {
-          var packet = new WrapperPlayServerBlockEntityData(event);
-          var pos = packet.getPosition();
-          var player = (org.bukkit.entity.Player) event.getPlayer();
-          var block = player.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
-          if (AudioEngine.getInstance().isPlaying(block)) event.setCancelled(true);
-        }
-      }
-    }, PacketListenerPriority.HIGHEST);
   }
 
   private void migrateLegacyData() {

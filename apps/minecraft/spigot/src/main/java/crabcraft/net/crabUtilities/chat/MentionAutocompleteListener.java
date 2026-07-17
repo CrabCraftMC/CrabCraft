@@ -1,11 +1,9 @@
 package crabcraft.net.crabUtilities.chat;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
-import net.ess3.api.events.NickChangeEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -35,11 +33,6 @@ public class MentionAutocompleteListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         sentCompletions.remove(event.getPlayer().getUniqueId());
         Bukkit.getScheduler().runTask(plugin, this::refreshAll);
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onNickChange(NickChangeEvent event) {
-        Bukkit.getScheduler().runTaskLater(plugin, this::refreshAll, 2L);
     }
 
     public void refreshAll() {
