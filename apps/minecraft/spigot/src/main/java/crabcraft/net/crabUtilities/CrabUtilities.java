@@ -21,6 +21,8 @@ import crabcraft.net.crabUtilities.settings.PhantomManager;
 import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
 import crabcraft.net.crabUtilities.settings.SettingsCommand;
 import crabcraft.net.crabUtilities.settings.SettingsDialog;
+import crabcraft.net.crabUtilities.slime.SlimeCommand;
+import crabcraft.net.crabUtilities.slime.SlimeMapListener;
 import crabcraft.net.crabUtilities.sleep.SleepBroadcastListener;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListener;
@@ -147,6 +149,7 @@ public final class CrabUtilities extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ExperienceClumpListener(this), this);
         Bukkit.getPluginManager().registerEvents(new SharedVillagerDiscountListener(this), this);
         Bukkit.getPluginManager().registerEvents(new SuspiciousBrushTracker(), this);
+        Bukkit.getPluginManager().registerEvents(new SlimeMapListener(), this);
 
         // Unlock-all-recipes: unlock every recipe on join (and for anyone
         // already online). Caches the recipe key set; the cache is rebuilt and
@@ -164,6 +167,10 @@ public final class CrabUtilities extends JavaPlugin {
         ReloadCommand reloadCommand = new ReloadCommand(this, updateCommand);
         getCommand("crabutilities").setExecutor(reloadCommand);
         getCommand("crabutilities").setTabCompleter(reloadCommand);
+
+        SlimeCommand slimeCommand = new SlimeCommand();
+        getCommand("slime").setExecutor(slimeCommand);
+        getCommand("slime").setTabCompleter(slimeCommand);
 
         startStatsPushTask();
 

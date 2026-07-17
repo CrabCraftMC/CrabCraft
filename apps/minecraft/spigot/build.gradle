@@ -178,6 +178,13 @@ tasks.register('experienceClumpsRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListenerRegressionTest')
 }
 
+tasks.register('slimeMapRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.slime.SlimeMapRegressionTest')
+}
+
 tasks.register('viewDistanceManagerRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -258,6 +265,7 @@ tasks.named('check') {
     dependsOn tasks.named('lofiVoicechatRegressionTest')
     dependsOn tasks.named('suspiciousBrushTrackerRegressionTest')
     dependsOn tasks.named('experienceClumpsRegressionTest')
+    dependsOn tasks.named('slimeMapRegressionTest')
     dependsOn tasks.named('viewDistanceManagerRegressionTest')
     dependsOn tasks.named('sharedVillagerDiscountsRegressionTest')
     dependsOn tasks.named('jadeProtocolRegressionTest')

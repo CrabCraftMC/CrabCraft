@@ -22,6 +22,9 @@ commands:
     description: Open your personal settings menu (phantoms, chat pings, messages, locator bar).
     usage: /settings [phantoms <on|off|safe>|mentions <on|off>|messages <on|off>|locatorbar <on|off>]
     permission: crabutilities.settings
+  slime:
+    description: Show nearby slime chunks or check the chunk you are standing in.
+    usage: /slime <map|chunk>
 permissions:
   crabutilities.reload:
     description: Reload CrabUtilities configuration.
@@ -34,6 +37,12 @@ permissions:
     default: true
   crabutilities.settings:
     description: Use the /settings menu to configure personal preferences.
+    default: true
+  crabutilities.slime.map:
+    description: Open the nearby slime-chunk map.
+    default: true
+  crabutilities.slime.chunk:
+    description: Check whether the current chunk is a slime chunk.
     default: true
   crabutilities.bluemap.marker:
     description: Create BlueMap markers by writing the marker keyword on a sign.
