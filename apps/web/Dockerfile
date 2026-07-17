@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM oven/bun:1.2.15 AS deps
+FROM oven/bun:1.3.14 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/bot/package.json ./apps/bot/
@@ -11,7 +11,7 @@ COPY packages/tsconfig/package.json ./packages/tsconfig/
 RUN bun install --frozen-lockfile
 
 # Stage 2: Build
-FROM oven/bun:1.2.15 AS builder
+FROM oven/bun:1.3.14 AS builder
 WORKDIR /app
 
 # Copy source first, then overlay installed node_modules
