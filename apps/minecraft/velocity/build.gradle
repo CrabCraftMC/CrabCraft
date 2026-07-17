@@ -39,6 +39,7 @@ shadowJar {
     configurations = [project.configurations.runtimeClasspath]
     archiveClassifier.set('')
     archiveVersion.set('')
+    addMultiReleaseAttribute.set(false)
     relocate 'redis.clients.jedis', 'crabcraft.net.libs.jedis'
     relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
     relocate 'org.json', 'crabcraft.net.libs.json'
@@ -50,6 +51,9 @@ shadowJar {
     // plugin its own classloader so there's no conflict to shade around.
 
     mergeServiceFiles()
+    filesMatching('META-INF/services/**') {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 }
 
 tasks.jar {

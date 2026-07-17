@@ -73,6 +73,8 @@ shadowJar {
     configurations = [project.configurations.runtimeClasspath]
     archiveClassifier.set('')
     archiveVersion.set('')
+    addMultiReleaseAttribute.set(false)
+    exclude 'META-INF/versions/9/org/yaml/snakeyaml/internal/Logger*.class'
     relocate 'redis.clients.jedis', 'crabcraft.net.libs.jedis'
     relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
     relocate 'org.json', 'crabcraft.net.libs.json'
