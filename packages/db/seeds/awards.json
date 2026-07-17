@@ -119,6 +119,21 @@
     }
   },
   {
+    "id": "collect_potato",
+    "title": "Absolute Spud",
+    "description": "Potatoes collected",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/collect_potato.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:picked_up",
+        "minecraft:potato"
+      ]
+    }
+  },
+  {
     "id": "collect_shroom",
     "title": "Shroom Gatherer",
     "description": "Mushrooms picked up",
@@ -301,6 +316,21 @@
     }
   },
   {
+    "id": "craft_honey_block",
+    "title": "Honey I'm Home",
+    "description": "Honey blocks crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_honey_block.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:honey_block"
+      ]
+    }
+  },
+  {
     "id": "craft_mineral_block",
     "title": "Block Press",
     "description": "Mineral blocks compressed",
@@ -356,6 +386,34 @@
       "path": [
         "minecraft:crafted",
         "minecraft:recovery_compass"
+      ]
+    }
+  },
+  {
+    "id": "craft_redstone_components",
+    "title": "Redstone Crafter",
+    "description": "Redstone components crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_redstone_components.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_pressure_plate",
+        "minecraft:.+button",
+        "minecraft:comparator",
+        "minecraft:daylight_detector.*",
+        "minecraft:detector_rail",
+        "minecraft:lever",
+        "minecraft:observer",
+        "minecraft:redstone",
+        "minecraft:redstone_torch",
+        "minecraft:repeater",
+        "minecraft:sculk_sensor",
+        "minecraft:target"
       ]
     }
   },
@@ -2286,6 +2344,21 @@
     }
   },
   {
+    "id": "mine_lectern",
+    "title": "Librarian Reroller",
+    "description": "Lecterns mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_lectern.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:lectern"
+      ]
+    }
+  },
+  {
     "id": "mine_nether_foliage",
     "title": "Nether Trimmer",
     "description": "Nether roots and sprouts cleared",
@@ -3129,10 +3202,14 @@
     "bucket": "items",
     "icon": "/awards/icons/use_egg.png",
     "reader": {
-      "type": "int",
+      "type": "match-sum",
       "path": [
-        "minecraft:used",
-        "minecraft:egg"
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:egg",
+        "minecraft:brown_egg",
+        "minecraft:blue_egg"
       ]
     }
   },

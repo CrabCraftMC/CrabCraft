@@ -112,6 +112,13 @@ tasks.register('awardSweetBerriesRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.velocity.awards.AwardSweetBerriesRegressionTest')
 }
 
+tasks.register('awardNewDefinitionsRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.awards.AwardNewDefinitionsRegressionTest')
+}
+
 tasks.named('test') {
     failOnNoDiscoveredTests = false
 }
@@ -125,6 +132,7 @@ tasks.named('check') {
     dependsOn tasks.named('awardDyeCraftingRegressionTest')
     dependsOn tasks.named('awardSuspiciousBrushRegressionTest')
     dependsOn tasks.named('awardSweetBerriesRegressionTest')
+    dependsOn tasks.named('awardNewDefinitionsRegressionTest')
 }
 
 tasks.build.dependsOn(tasks.shadowJar)

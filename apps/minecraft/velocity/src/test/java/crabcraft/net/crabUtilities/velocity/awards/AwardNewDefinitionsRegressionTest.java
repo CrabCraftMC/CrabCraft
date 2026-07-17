@@ -1,0 +1,106 @@
+package crabcraft.net.crabUtilities.velocity.awards;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+final class AwardNewDefinitionsRegressionTest {
+
+    public static void main(String[] args) throws Exception {
+        Map<String, JsonObject> rows = loadSeedRows();
+        checkTitle(rows, "collect_potato", "Absolute Spud");
+        checkTitle(rows, "craft_honey_block", "Honey I'm Home");
+        checkTitle(rows, "craft_redstone_components", "Redstone Crafter");
+        checkTitle(rows, "mine_lectern", "Librarian Reroller");
+
+        Map<String, AwardDefinition> definitions = new HashMap<>();
+        for (JsonObject row : rows.values()) {
+            AwardDefinition definition = definitionFrom(row);
+            definitions.put(definition.id, definition);
+        }
+
+        Map<String, Double> scores = new AwardEvaluator(definitions).evaluate(
+                JsonParser.parseString("""
+                        {"stats":{
+                          "minecraft:picked_up":{"minecraft:potato":23},
+                          "minecraft:crafted":{
+                            "minecraft:honey_block":7,
+                            "minecraft:comparator":3,
+                            "minecraft:repeater":5,
+                            "minecraft:observer":2,
+                            "minecraft:crafting_table":99
+                          },
+                          "minecraft:mined":{"minecraft:lectern":11},
+                          "minecraft:used":{
+                            "minecraft:egg":13,
+                            "minecraft:brown_egg":17,
+                            "minecraft:blue_egg":19,
+                            "minecraft:snowball":97
+                          }
+                        }}
+                        """).getAsJsonObject());
+
+        check(scores.get("collect_potato") == 23d, "Absolute Spud read the wrong score");
+        check(scores.get("craft_honey_block") == 7d, "Honey I'm Home read the wrong score");
+        check(scores.get("craft_redstone_components") == 10d,
+                "Redstone Crafter did not sum only redstone components");
+        check(scores.get("mine_lectern") == 11d, "Librarian Reroller read the wrong score");
+        check(scores.get("use_egg") == 49d,
+                "Egg Tosser did not sum normal, brown, and blue eggs");
+    }
+
+    private static Map<String, JsonObject> loadSeedRows() throws Exception {
+        Map<String, JsonObject> rowsById = new HashMap<>();
+        try (var input = AwardNewDefinitionsRegressionTest.class
+                .getResourceAsStream("/crabcraft/awards.json")) {
+            check(input != null, "bundled awards seed is missing");
+            JsonArray rows = JsonParser.parseReader(
+                    new InputStreamReader(input, StandardCharsets.UTF_8)).getAsJsonArray();
+            for (var element : rows) {
+                JsonObject row = element.getAsJsonObject();
+                String id = row.get("id").getAsString();
+                if (id.equals("collect_potato")
+                        || id.equals("craft_honey_block")
+                        || id.equals("craft_redstone_components")
+                        || id.equals("mine_lectern")
+                        || id.equals("use_egg")) {
+                    rowsById.put(id, row);
+                }
+            }
+        }
+        check(rowsById.size() == 5, "one or more new award definitions are missing");
+        return rowsById;
+    }
+
+    private static AwardDefinition definitionFrom(JsonObject row) {
+        JsonObject reader = row.getAsJsonObject("reader");
+        AwardDefinition definition = new AwardDefinition();
+        definition.id = row.get("id").getAsString();
+        definition.reader = new AwardDefinition.Reader();
+        definition.reader.type = reader.get("type").getAsString();
+        definition.reader.path = reader.getAsJsonArray("path").asList().stream()
+                .map(element -> element.getAsString())
+                .toList();
+        if (reader.has("patterns")) {
+            definition.reader.patterns = reader.getAsJsonArray("patterns").asList().stream()
+                    .map(element -> element.getAsString())
+                    .toList();
+        }
+        return definition;
+    }
+
+    private static void checkTitle(Map<String, JsonObject> rows, String id, String title) {
+        check(rows.containsKey(id), id + " is missing from the award seed");
+        check(rows.get(id).get("title").getAsString().equals(title),
+                id + " has an unexpected title");
+    }
+
+    private static void check(boolean condition, String message) {
+        if (!condition) throw new AssertionError(message);
+    }
+}
