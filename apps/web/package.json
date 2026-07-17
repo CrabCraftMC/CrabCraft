@@ -42,7 +42,7 @@
   "devDependencies": {
     "@crabcraft/tsconfig": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.185.1",
