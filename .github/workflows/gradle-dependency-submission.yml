@@ -33,5 +33,6 @@ jobs:
 
       - uses: gradle/actions/dependency-submission@v6
         with:
+          cache-provider: basic
           build-root-directory: apps/minecraft
           dependency-graph: generate-and-submit

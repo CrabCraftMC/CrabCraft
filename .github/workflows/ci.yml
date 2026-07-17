@@ -121,7 +121,9 @@ jobs:
           java-version: "25"
           distribution: "temurin"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
 
       - name: Validate tag matches gradle.properties version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -240,10 +242,11 @@ jobs:
           java-version: "25"
           distribution: "temurin"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
         with:
-          # Reuse the cache populated by build-plugin (same run) via
-          # restore-keys; do not write a second ~319MB entry.
+          cache-provider: basic
+          # Reuse the exact cache populated by build-plugin (same run);
+          # do not write a second ~319MB entry.
           cache-read-only: true
 
       - name: Rebuild plugin JARs with new version
