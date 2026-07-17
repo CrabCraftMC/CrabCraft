@@ -669,21 +669,6 @@
     }
   },
   {
-    "id": "damage_dealt_resisted",
-    "title": "Hard Knocks",
-    "description": "Damage dealt through resistance",
-    "unit": "tenths_of_heart",
-    "bucket": "combat",
-    "icon": "/awards/icons/damage_dealt_resisted.png",
-    "reader": {
-      "type": "int",
-      "path": [
-        "minecraft:custom",
-        "minecraft:damage_dealt_resisted"
-      ]
-    }
-  },
-  {
     "id": "damage_shield",
     "title": "Shielded",
     "description": "Damage blocked with a shield",
@@ -1160,25 +1145,6 @@
       "path": [
         "minecraft:custom",
         "minecraft:interact_with_lectern"
-      ]
-    }
-  },
-  {
-    "id": "interact_laundry",
-    "title": "Laundry Day",
-    "description": "Armor, banners and shulker boxes cleaned",
-    "unit": "int",
-    "bucket": "items",
-    "icon": "/awards/icons/interact_laundry.png",
-    "reader": {
-      "type": "match-sum",
-      "path": [
-        "minecraft:custom"
-      ],
-      "patterns": [
-        "minecraft:clean_armor",
-        "minecraft:clean_banner",
-        "minecraft:clean_shulker_box"
       ]
     }
   },
@@ -3784,21 +3750,6 @@
       "path": [
         "minecraft:used",
         "minecraft:lava_bucket"
-      ]
-    }
-  },
-  {
-    "id": "use_name_tag",
-    "title": "Name Giver",
-    "description": "Name tags used",
-    "unit": "int",
-    "bucket": "items",
-    "icon": "/awards/icons/use_name_tag.png",
-    "reader": {
-      "type": "int",
-      "path": [
-        "minecraft:used",
-        "minecraft:name_tag"
       ]
     }
   },
