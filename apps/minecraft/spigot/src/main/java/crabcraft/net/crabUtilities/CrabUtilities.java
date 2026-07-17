@@ -26,6 +26,7 @@ import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListener;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
+import crabcraft.net.crabUtilities.viewdistance.ViewDistanceManager;
 import crabcraft.net.crabUtilities.voicechat.VoicechatIntegration;
 import net.crabcraft.customdiscs.CustomDiscs;
 import org.bukkit.Bukkit;
@@ -59,6 +60,7 @@ public final class CrabUtilities extends JavaPlugin {
     private UnlockAllRecipesManager unlockAllRecipesManager;
     private CustomNetherPortalListener customNetherPortalListener;
     private NicknameSync nicknameSync;
+    private ViewDistanceManager viewDistanceManager;
 
     @Override
     public void onLoad() {
@@ -186,6 +188,10 @@ public final class CrabUtilities extends JavaPlugin {
         // flying_speed modifier makes the ghast faster. Disabled by default.
         startHappyGhastSpeed();
 
+        // Adapt simulation and view distances to server tick time. Disabled by
+        // default; the manager owns its tick listener and repeating task.
+        startViewDistanceManager();
+
         // Simple Voice Chat integration: creates persistent open groups with
         // deterministic UUIDs and bridges voice across backends via Redis.
         // Soft dependency — skipped silently if the SVC plugin isn't installed.
@@ -304,6 +310,16 @@ public final class CrabUtilities extends JavaPlugin {
         messages.add(happyGhastSpeedManager != null
                 ? "Happy ghast ridden speed boost active (x" + happyGhastSpeedManager.getMultiplier() + ")."
                 : "Happy ghast ridden speed boost inactive (disabled in config).");
+
+        stopViewDistanceManager();
+        startViewDistanceManager();
+        messages.add(viewDistanceManager != null
+                ? "Adaptive view distance active (simulation "
+                        + viewDistanceManager.getMinimumSimulationDistance() + "–"
+                        + viewDistanceManager.getMaximumSimulationDistance() + ", view "
+                        + viewDistanceManager.getMinimumViewDistance() + "–"
+                        + viewDistanceManager.getMaximumViewDistance() + ")."
+                : "Adaptive view distance inactive (disabled or invalid config).");
 
         if (unlockAllRecipesManager != null) {
             unlockAllRecipesManager.refresh();
@@ -477,6 +493,27 @@ public final class CrabUtilities extends JavaPlugin {
         }
     }
 
+    private void startViewDistanceManager() {
+        ViewDistanceManager manager = new ViewDistanceManager(this);
+        if (!manager.isEnabled()) {
+            return;
+        }
+        this.viewDistanceManager = manager;
+        manager.start();
+        getLogger().info("Adaptive view distance enabled (simulation "
+                + manager.getMinimumSimulationDistance() + "–"
+                + manager.getMaximumSimulationDistance() + ", view "
+                + manager.getMinimumViewDistance() + "–"
+                + manager.getMaximumViewDistance() + ")");
+    }
+
+    private void stopViewDistanceManager() {
+        if (viewDistanceManager != null) {
+            viewDistanceManager.shutdown();
+            viewDistanceManager = null;
+        }
+    }
+
     private void stopGlobalChatService() {
         if (globalChatListener != null) {
             HandlerList.unregisterAll(globalChatListener);
@@ -514,5 +551,6 @@ public final class CrabUtilities extends JavaPlugin {
         stopPlayerSettings();
         stopSignMarkers();
         stopHappyGhastSpeed();
+        stopViewDistanceManager();
     }
 }

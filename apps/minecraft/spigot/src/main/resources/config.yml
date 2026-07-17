@@ -119,6 +119,19 @@ tweaks:
       max-portal-width: 23
       max-portal-height: 23
 
+  # Reactively lower simulation/view distances when tick time is high and
+  # cautiously raise them again after performance has remained healthy.
+  # Uses ViewDistanceTweaks' reactive defaults: check every 30 seconds,
+  # decrease at 47+ MSPT, and increase at 40- MSPT after 10 passed checks.
+  view-distance:
+    enabled: false
+    simulation-distance:
+      minimum: 6
+      maximum: 12
+    view-distance:
+      minimum: 8
+      maximum: 16
+
   # Faster happy ghasts while ridden; unridden ghasts stay vanilla.
   happy-ghast:
     ridden-speed-boost:
