@@ -31,7 +31,7 @@ dependencies {
     compileOnly("com.gitlab.ruany:LiteBansAPI:0.6.1")
 
     implementation("redis.clients:jedis:5.1.0")
-    implementation("org.postgresql:postgresql:42.7.4")
+    implementation("org.postgresql:postgresql:42.7.13")
     implementation("com.zaxxer:HikariCP:7.1.0")
 }
 
