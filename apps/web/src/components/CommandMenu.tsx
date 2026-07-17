@@ -5,7 +5,7 @@ import { useWebHaptics } from "web-haptics/react";
 import { useRouter } from "next/navigation";
 import {
   Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight, BookOpen,
-  Boxes, Sparkles, Search, ExternalLink,
+  Boxes, Sparkles, Search, ExternalLink, ImageIcon,
 } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import { Instagram } from "lucide-react";
@@ -14,7 +14,7 @@ import config from "@/data/site-config.json";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight, BookOpen,
-  Boxes, Sparkles,
+  Boxes, Sparkles, ImageIcon,
   youtube: FaYoutube, instagram: Instagram, tiktok: FaTiktok, discord: FaDiscord,
 };
 

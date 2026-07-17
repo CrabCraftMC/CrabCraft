@@ -13,6 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/awards`, changeFrequency: "daily", priority: 0.8 },
     { url: `${BASE_URL}/tools/rgb-nickname`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/block-gradient`, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE_URL}/tools/pixel-art-generator`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/circle-generator`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/stack-calculator`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/beacon-calculator`, changeFrequency: "monthly", priority: 0.6 },

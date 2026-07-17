@@ -10,12 +10,12 @@ import { signIn, signOut } from "next-auth/react";
 import PixelIcon from "./PixelIcon";
 import { Button } from "./ui/button";
 import Squircle from "./Squircle";
-import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings } from "lucide-react";
+import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings, ImageIcon } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import config from "../data/site-config.json";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles,
+    Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, ImageIcon,
     youtube: FaYoutube,
     instagram: Instagram,
     tiktok: FaTiktok,

@@ -33,6 +33,11 @@
                 "icon": "Rainbow"
             },
             {
+                "name": "Pixel Art Generator",
+                "url": "/tools/pixel-art-generator",
+                "icon": "ImageIcon"
+            },
+            {
                 "name": "Circle Generator",
                 "url": "/tools/circle-generator",
                 "icon": "Circle"
