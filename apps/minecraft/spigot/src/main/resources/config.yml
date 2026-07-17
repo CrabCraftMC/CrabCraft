@@ -152,6 +152,13 @@ tweaks:
   unlock-all-recipes:
     enabled: false
 
+  # Share discounts earned by curing a zombie villager or winning a raid with
+  # nearby players. Cure discounts apply to the cured villager; raid discounts
+  # copy the Hero of the Village effect around the raid center.
+  shared-villager-discounts:
+    enabled: false
+    radius: 100.0
+
   # Stop endermen picking up or placing blocks (endermen only, unlike the
   # mobGriefing game rule).
   enderman-grief:

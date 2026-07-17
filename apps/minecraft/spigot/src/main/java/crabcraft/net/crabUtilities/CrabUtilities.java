@@ -27,6 +27,7 @@ import crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListener;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
 import crabcraft.net.crabUtilities.update.UpdateService;
 import crabcraft.net.crabUtilities.viewdistance.ViewDistanceManager;
+import crabcraft.net.crabUtilities.villagers.SharedVillagerDiscountListener;
 import crabcraft.net.crabUtilities.voicechat.VoicechatIntegration;
 import net.crabcraft.customdiscs.CustomDiscs;
 import org.bukkit.Bukkit;
@@ -137,12 +138,14 @@ public final class CrabUtilities extends JavaPlugin {
         //   - Player heads dropping on player kills
         //   - Player heads keeping their name/lore when broken and replaced
         //   - Nearby experience orbs clumping together when they spawn
+        //   - Villager cure and raid discounts shared with nearby players
         Bukkit.getPluginManager().registerEvents(new CauldronRecipeListener(this), this);
         Bukkit.getPluginManager().registerEvents(new EndermanGriefListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ShulkerShellListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PlayerHeadDropsListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PersistentHeadsListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ExperienceClumpListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new SharedVillagerDiscountListener(this), this);
         Bukkit.getPluginManager().registerEvents(new SuspiciousBrushTracker(), this);
 
         // Unlock-all-recipes: unlock every recipe on join (and for anyone

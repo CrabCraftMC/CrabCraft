@@ -185,6 +185,13 @@ tasks.register('viewDistanceManagerRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.viewdistance.ViewDistanceManagerRegressionTest')
 }
 
+tasks.register('sharedVillagerDiscountsRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.villagers.SharedVillagerDiscountListenerRegressionTest')
+}
+
 tasks.register('jadeProtocolRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -252,6 +259,7 @@ tasks.named('check') {
     dependsOn tasks.named('suspiciousBrushTrackerRegressionTest')
     dependsOn tasks.named('experienceClumpsRegressionTest')
     dependsOn tasks.named('viewDistanceManagerRegressionTest')
+    dependsOn tasks.named('sharedVillagerDiscountsRegressionTest')
     dependsOn tasks.named('jadeProtocolRegressionTest')
     dependsOn tasks.named('jadeResponseIsolationRegressionTest')
     dependsOn tasks.named('jadeItemStorageEncodingRegressionTest')
