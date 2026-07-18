@@ -150,6 +150,7 @@ const ICON_MAP: Record<string, string> = {
   craft_armor: "Diamond_Chestplate",
   craft_beacon: "Beacon",
   craft_bookshelf: "Bookshelf",
+  craft_buttons: "Stone_Button",
   craft_bread: "Bread",
   craft_bundle: "Bundle",
   craft_clock: "Clock",
@@ -159,6 +160,7 @@ const ICON_MAP: Record<string, string> = {
   craft_fireworks: "Firework_Star",
   craft_glowstone: "Glowstone",
   craft_honey_block: "Honey_Block",
+  craft_lead: "Lead",
   craft_mineral_block: "Diamond_Block",
   craft_paper: "Paper",
   craft_potent_sulfur: "Potent_Sulfur",
@@ -240,6 +242,7 @@ const ICON_MAP: Record<string, string> = {
   // Food
   collect_berries: "Sweet_Berries",
   collect_shroom: "Red_Mushroom",
+  eat_bread: "Bread",
   eat_cookie: "Cookie",
   eat_fish: "Cooked_Cod",
   eat_junkfood: "Poisonous_Potato",

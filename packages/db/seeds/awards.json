@@ -205,6 +205,23 @@
     }
   },
   {
+    "id": "craft_buttons",
+    "title": "Pushy",
+    "description": "Buttons crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_buttons.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.*button"
+      ]
+    }
+  },
+  {
     "id": "craft_bread",
     "title": "Oven Fresh",
     "description": "Breads, cakes and cookies baked",
@@ -345,6 +362,21 @@
       "path": [
         "minecraft:crafted",
         "minecraft:honey_block"
+      ]
+    }
+  },
+  {
+    "id": "craft_lead",
+    "title": "With Strings Attached",
+    "description": "Leads crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_lead.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:lead"
       ]
     }
   },
@@ -770,6 +802,21 @@
       "path": [
         "minecraft:custom",
         "minecraft:drop"
+      ]
+    }
+  },
+  {
+    "id": "eat_bread",
+    "title": "Crushin' a Loaf",
+    "description": "Bread eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_bread.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:bread"
       ]
     }
   },
