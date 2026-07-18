@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 
 /** Continuously resolves and plays one live stream to local members of the lofi group. */
 final class LofiStreamPlayer implements AutoCloseable {
-    private static final long RETRY_SECONDS = 5L;
+    static final long RETRY_SECONDS = TimeUnit.MINUTES.toSeconds(5L);
     private static final UUID CHANNEL_ID = UUID.nameUUIDFromBytes(
             "crabcraft:svc:lofi:stream".getBytes(StandardCharsets.UTF_8));
 
@@ -42,6 +42,7 @@ final class LofiStreamPlayer implements AutoCloseable {
     private volatile AudioEngine.OpenedStream stream;
     private volatile OpusEncoder encoder;
     private volatile AudioPlayer player;
+    private boolean resolutionFailureLogged;
 
     LofiStreamPlayer(VoicechatServerApi api, UUID groupId, String sourceUrl,
                      float musicVolume, Logger logger) {
@@ -120,11 +121,15 @@ final class LofiStreamPlayer implements AutoCloseable {
                         .openStream(sourceUrl, musicVolume, forceRefresh);
                 forceRefresh = true;
                 if (opened == null) {
-                    logger.warning("Could not resolve the 24/7 Lofi stream; retrying in "
-                            + RETRY_SECONDS + " seconds");
+                    if (!resolutionFailureLogged) {
+                        logger.warning("Could not resolve the 24/7 Lofi stream; retrying every "
+                                + TimeUnit.SECONDS.toMinutes(RETRY_SECONDS) + " minutes");
+                        resolutionFailureLogged = true;
+                    }
                     waitBeforeRetry();
                     continue;
                 }
+                resolutionFailureLogged = false;
 
                 CountDownLatch stopped = new CountDownLatch(1);
                 OpusEncoder openedEncoder = api.createEncoder(OpusEncoderMode.AUDIO);

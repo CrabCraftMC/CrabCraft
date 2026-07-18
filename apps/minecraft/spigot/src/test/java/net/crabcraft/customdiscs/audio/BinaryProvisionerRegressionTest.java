@@ -5,6 +5,7 @@ import java.nio.file.Files;
 public final class BinaryProvisionerRegressionTest {
 
   public static void main(String[] args) throws Exception {
+    verifyRepeatedResolverFailuresAreDeduplicated();
     var file = Files.createTempFile("crabutilities-sha256", ".bin");
     try {
       check(BinaryProvisioner.hasSha256(file,
@@ -16,6 +17,16 @@ public final class BinaryProvisionerRegressionTest {
     } finally {
       Files.deleteIfExists(file);
     }
+  }
+
+  private static void verifyRepeatedResolverFailuresAreDeduplicated() {
+    TrackResolver resolver = new TrackResolver(null);
+    check(resolver.shouldLogFailure("https://example.invalid/live", "authentication required"),
+      "the first resolver failure should be logged");
+    check(!resolver.shouldLogFailure("https://example.invalid/live", "authentication required"),
+      "an identical resolver failure should not be logged repeatedly");
+    check(resolver.shouldLogFailure("https://example.invalid/live", "timed out"),
+      "a changed resolver failure should be logged");
   }
 
   private static void check(boolean condition, String message) {

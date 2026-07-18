@@ -21,6 +21,7 @@ final class LofiVoicechatRegressionTest {
         verifySpeechRoutingSelection();
         verifyVolumeScaling();
         verifyLofiChannelTargets();
+        verifyFailureRetryRate();
         verifyDefaultsAndLegacyNamespace();
     }
 
@@ -71,6 +72,11 @@ final class LofiVoicechatRegressionTest {
                 "75% speech reduction did not produce a 25% signal");
         check(speech[2] == 8_192 && speech[3] == -8_192,
                 "speech volume scaling changed endpoint rounding");
+    }
+
+    private static void verifyFailureRetryRate() {
+        check(LofiStreamPlayer.RETRY_SECONDS >= 300L,
+                "lofi resolution failures would retry often enough to flood the console");
     }
 
     private static void verifyLofiChannelTargets() {

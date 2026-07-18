@@ -16,6 +16,7 @@ public final class TrackResolver {
 
   private final BinaryProvisioner binaries;
   private final Map<CacheKey, CacheEntry> cache = new ConcurrentHashMap<>();
+  private final Map<String, String> loggedFailures = new ConcurrentHashMap<>();
 
   public TrackResolver(BinaryProvisioner binaries) {
     this.binaries = binaries;
@@ -44,7 +45,10 @@ public final class TrackResolver {
     if (forceRefresh) cache.remove(key);
     CacheEntry cached = cache.get(key);
     if (cached != null) {
-      if (cached.expiresAtNanos() > now) return cached.track();
+      if (cached.expiresAtNanos() > now) {
+        loggedFailures.remove(url);
+        return cached.track();
+      }
       cache.remove(key, cached);
     }
 
@@ -79,7 +83,10 @@ public final class TrackResolver {
     // that failure is transient, so retry the same command a few times before giving up.
     for (int attempt = 1; attempt <= BinaryProvisioner.SELF_EXTRACT_ATTEMPTS; attempt++) {
       Attempt result = runOnce(cmd, url);
-      if (result.track() != null) return result.track();
+      if (result.track() != null) {
+        loggedFailures.remove(url);
+        return result.track();
+      }
       if (!result.retryable()) return null; // hard failure, already logged
       if (attempt == BinaryProvisioner.SELF_EXTRACT_ATTEMPTS) {
         CustomDiscs.warn("yt-dlp self-extraction still failing after {} attempts for {}",
@@ -107,21 +114,27 @@ public final class TrackResolver {
       boolean done = p.waitFor(30, TimeUnit.SECONDS);
       if (!done) {
         p.destroyForcibly();
-        CustomDiscs.warn("yt-dlp timed out resolving {}", url);
+        if (shouldLogFailure(url, "timeout")) {
+          CustomDiscs.warn("yt-dlp timed out resolving {}", url);
+        }
         return new Attempt(null, false);
       }
       if (p.exitValue() != 0) {
         String err = new String(p.getErrorStream().readAllBytes(), StandardCharsets.UTF_8).trim();
         if (BinaryProvisioner.isSelfExtractionError(err)) return new Attempt(null, true);
-        CustomDiscs.warn("yt-dlp failed (exit {}) for {}: {}", p.exitValue(), url,
-          err.length() > 200 ? err.substring(0, 200) : err);
+        String summary = err.length() > 200 ? err.substring(0, 200) : err;
+        if (shouldLogFailure(url, "exit " + p.exitValue() + ": " + summary)) {
+          CustomDiscs.warn("yt-dlp failed (exit {}) for {}: {}", p.exitValue(), url, summary);
+        }
         return new Attempt(null, false);
       }
       List<String> lines = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8).lines().map(String::trim)
         .filter(s -> !s.isEmpty()).toList();
       String streamUrl = lines.stream().filter(s -> s.startsWith("http")).findFirst().orElse(null);
       if (streamUrl == null) {
-        CustomDiscs.warn("yt-dlp returned no stream URL for {}", url);
+        if (shouldLogFailure(url, "no stream URL")) {
+          CustomDiscs.warn("yt-dlp returned no stream URL for {}", url);
+        }
         return new Attempt(null, false);
       }
       // Non-URL lines are, in print order: title first, then duration (e.g. "212.0" or "NA").
@@ -133,9 +146,15 @@ public final class TrackResolver {
       Thread.currentThread().interrupt();
       return new Attempt(null, false);
     } catch (Exception e) {
-      CustomDiscs.warn("yt-dlp error for {}: {}", url, e.getMessage());
+      if (shouldLogFailure(url, "error: " + e.getMessage())) {
+        CustomDiscs.warn("yt-dlp error for {}: {}", url, e.getMessage());
+      }
       return new Attempt(null, false);
     }
+  }
+
+  boolean shouldLogFailure(String url, String failure) {
+    return !failure.equals(loggedFailures.put(url, failure));
   }
 
   /** Parses yt-dlp's {@code %(duration)s} (seconds, possibly a float or "NA"); null when unparseable. */
