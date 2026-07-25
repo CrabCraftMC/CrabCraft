@@ -1,0 +1,27 @@
+{
+  "guildId": "",
+  "roles": {
+    "mod": "",
+    "council": "",
+    "punished": "",
+    "live": "",
+    "currentSeason": ""
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": "",
+    "punishmentStream": "crabcraft:punishments",
+    "punishmentGroup": "crabcraft-bot"
+  },
+  "channels": {
+    "applicationCategory": "",
+    "log": "",
+    "ticketLog": "",
+    "leaderboard": "",
+    "wiki": "",
+    "starboard": "",
+    "counting": "",
+    "ticketCategory": ""
+  }
+}

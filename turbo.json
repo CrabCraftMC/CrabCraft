@@ -1,0 +1,44 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**",
+        "jars/**",
+        "spigot/build/libs/**",
+        "velocity/build/libs/**"
+      ],
+      "env": ["DATABASE_URL", "NODE_ENV", "NEXT_PUBLIC_*"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "persistent": true,
+      "cache": false
+    },
+    "clean": {
+      "cache": false
+    },
+    "db:generate": { "cache": false },
+    "db:migrate": { "cache": false },
+    "db:push": { "cache": false }
+  },
+  "globalEnv": [
+    "DATABASE_URL",
+    "AUTH_SECRET",
+    "AUTH_DISCORD_ID",
+    "AUTH_DISCORD_SECRET"
+  ],
+  "globalPassThroughEnv": [
+    "DISCORD_BOT_TOKEN",
+    "DISCORD_DATABASE_URL",
+    "CRABCRAFT_API_URL",
+    "YOUTUBE_API_KEY",
+    "TWITCH_CLIENT_ID",
+    "TWITCH_CLIENT_SECRET",
+    "OPENAI_API_KEY",
+    "GIT_COMMIT_SHA"
+  ]
+}

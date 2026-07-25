@@ -1,0 +1,700 @@
+import {
+  ActionRowBuilder,
+  AttachmentBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ContainerBuilder,
+  EmbedBuilder,
+  FileBuilder,
+  FileUploadBuilder,
+  LabelBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  resolveColor,
+} from "discord.js";
+import mysql from "./database.js";
+import logger from "./logger.js";
+import * as appDb from "./appDb.js";
+import type { TicketCategory } from "./appDb.js";
+import type { PublicInfraction, TicketInfractionInfo } from "./infractions.js";
+
+export const TICKET_INFRACTION_BUTTON_PREFIX = "ticket_infraction";
+
+// ── Category metadata ──────────────────────────────────────────────
+
+export interface CategoryMeta {
+  category: TicketCategory;
+  label: string;
+  /** Compact label used on the ticket panel button. */
+  buttonLabel: string;
+  emoji: string;
+  /** Short prefix used in thread channel names. */
+  prefix: string;
+  /** Discord button style on the trigger embed. */
+  buttonStyle: ButtonStyle;
+  /** Softer container accent colour. */
+  accent: number;
+  modalTitle: string;
+  fields: TicketField[];
+  /** Optional file-upload field appended to the modal (e.g. evidence). */
+  fileField?: TicketFileField;
+  /** Heading shown at the top of the ticket thread once opened. */
+  headerTitle: string;
+  /** Max simultaneous open tickets a single user may have in this category. */
+  maxOpen: number;
+}
+
+export interface TicketField {
+  /** Modal customId for the input. */
+  id: string;
+  /** Label shown in the modal. */
+  label: string;
+  /** Field name shown in the ticket header in the thread. */
+  display: string;
+  style: TextInputStyle;
+  required: boolean;
+  placeholder?: string;
+  maxLength?: number;
+}
+
+export interface TicketFileField {
+  /** Modal customId for the file-upload component. */
+  id: string;
+  /** Label shown above the upload control in the modal. */
+  label: string;
+  /** Helper text shown under the label. */
+  description?: string;
+  required: boolean;
+  /** Max number of files (Discord allows up to 10). */
+  maxValues: number;
+}
+
+/** Player context shown in the ticket header for linked openers. */
+export interface TicketHeaderPlayer {
+  minecraftUsername: string | null;
+  minecraftUuid: string | null;
+}
+
+/** A file uploaded with a ticket (e.g. griefing evidence). */
+export interface EvidenceFile {
+  url: string;
+  name: string;
+  contentType: string | null;
+}
+
+export const TICKET_CATEGORIES: Record<TicketCategory, CategoryMeta> = {
+  general: {
+    category: "general",
+    label: "General Question",
+    buttonLabel: "General",
+    emoji: "<:dialogue:1521557009936158883>",
+    prefix: "gq",
+    buttonStyle: ButtonStyle.Secondary,
+    accent: 0x7584d6,
+    modalTitle: "General Question",
+    headerTitle: "General Question",
+    maxOpen: 3,
+    // No intake questions — clicking the button opens a ticket straight away.
+    fields: [],
+  },
+  council: {
+    category: "council",
+    label: "Council Inquiry",
+    buttonLabel: "Council",
+    emoji: "<:scroll:1521560432291352777>",
+    prefix: "ci",
+    buttonStyle: ButtonStyle.Secondary,
+    accent: 0x8f75b5,
+    modalTitle: "Council Inquiry",
+    headerTitle: "Council Inquiry",
+    maxOpen: 3,
+    fields: [],
+  },
+  grief: {
+    category: "grief",
+    label: "Report Griefing / Stealing",
+    buttonLabel: "Report Griefing / Stealing",
+    emoji: "<:chest:1521557150919299325>",
+    prefix: "rg",
+    buttonStyle: ButtonStyle.Secondary,
+    accent: 0xc46f62,
+    modalTitle: "Report Griefing / Stealing",
+    headerTitle: "Griefing / Stealing Report",
+    maxOpen: 3,
+    fields: [
+      {
+        id: "offender",
+        label: "Offender's Minecraft username",
+        display: "Offender",
+        style: TextInputStyle.Short,
+        required: false,
+        placeholder: "Steve",
+        maxLength: 32,
+      },
+      {
+        id: "location",
+        label: "Location / coordinates",
+        display: "Location",
+        style: TextInputStyle.Short,
+        required: false,
+        placeholder: "e.g. Overworld 1234 64 -512 (or a base name)",
+        maxLength: 100,
+      },
+      {
+        id: "when",
+        label: "When did it happen?",
+        display: "When",
+        style: TextInputStyle.Short,
+        required: false,
+        placeholder: "e.g. Today around 8pm UTC",
+        maxLength: 100,
+      },
+      {
+        id: "description",
+        label: "What happened?",
+        display: "Description",
+        style: TextInputStyle.Paragraph,
+        required: true,
+        placeholder: "Describe what was griefed/stolen and any context…",
+        maxLength: 1500,
+      },
+    ],
+    fileField: {
+      id: "evidence",
+      label: "Evidence (screenshots / clips)",
+      description: "Optional: upload images or video clips of what happened.",
+      required: false,
+      maxValues: 10,
+    },
+  },
+  appeal: {
+    category: "appeal",
+    label: "Punishment Appeal",
+    buttonLabel: "Punishment Appeal",
+    emoji: "<:judge_gavel:1521556773641650358>",
+    prefix: "pa",
+    buttonStyle: ButtonStyle.Secondary,
+    accent: 0xc5a45d,
+    modalTitle: "Punishment Appeal",
+    headerTitle: "Punishment Appeal",
+    maxOpen: 1,
+    // We only show punishment history for the appellant's verified Minecraft
+    // link, so the modal asks solely for their case.
+    fields: [
+      {
+        id: "appeal",
+        label: "Why should your infraction be removed?",
+        display: "Appeal",
+        style: TextInputStyle.Paragraph,
+        required: true,
+        maxLength: 1500,
+      },
+    ],
+  },
+};
+
+export function getCategoryMeta(category: string): CategoryMeta | null {
+  return TICKET_CATEGORIES[category as TicketCategory] ?? null;
+}
+
+/**
+ * The "you've hit the open-ticket limit for this category" notice, listing the
+ * user's existing ticket channels so they can jump straight to them.
+ */
+export function buildTicketLimitNotice(
+  meta: CategoryMeta,
+  openChannelIds: string[],
+): string {
+  const links = openChannelIds.map((id) => `<#${id}>`).join("\n");
+  return [
+    `**You've reached the maximum tickets that can be opened at one time for ${meta.label}.**`,
+    "Please use one of your open tickets before making another:",
+    links,
+  ].join("\n");
+}
+
+// ── Player info helper ────────────────────────────────────────────
+
+export interface PlayerInfo {
+  discordId: string;
+  discordTag: string;
+  minecraftUsername: string | null;
+  minecraftUuid: string | null;
+  isWhitelisted: boolean;
+  skinUrl: string | null;
+}
+
+/** Pull minimal player context for a ticket header. Never throws. */
+export async function getPlayerInfo(
+  discordId: string,
+  discordTag: string,
+): Promise<PlayerInfo> {
+  let minecraftUsername: string | null = null;
+  let minecraftUuid: string | null = null;
+  let isWhitelisted = false;
+
+  try {
+    const link = await appDb.getPlayerLink(discordId);
+    if (link) {
+      minecraftUsername = link.minecraft_username;
+      minecraftUuid = link.minecraft_uuid;
+    }
+  } catch (e) {
+    logger.error("Ticket: failed to load player row:", e);
+  }
+
+  try {
+    const rows = await mysql.query(
+      "SELECT uuid FROM discordsrv_accounts WHERE discord = ? LIMIT 1",
+      [discordId],
+    );
+    if (rows.length > 0) {
+      isWhitelisted = true;
+      if (!minecraftUuid && rows[0].uuid) minecraftUuid = rows[0].uuid;
+    }
+  } catch (e) {
+    logger.error("Ticket: failed to check whitelist status:", e);
+  }
+
+  return {
+    discordId,
+    discordTag,
+    minecraftUsername,
+    minecraftUuid,
+    isWhitelisted,
+    skinUrl: minecraftUuid
+      ? `https://api.mineatar.io/body/full/${minecraftUuid}?scale=8`
+      : null,
+  };
+}
+
+// ── Builders ──────────────────────────────────────────────────────
+
+/** The public-facing trigger embed posted via /admin send. */
+export function buildTriggerEmbed(): ContainerBuilder {
+  const lines = [
+    "## Open a Support Ticket",
+    "Need help? Pick the option that best describes your issue and a private thread will be opened with the staff team.",
+    "",
+    "**Categories**",
+    `${TICKET_CATEGORIES.general.emoji} **General Question:** ask about the server, voice chat, or anything else.`,
+    `${TICKET_CATEGORIES.council.emoji} **Council Inquiry:** ask a private question for the council.`,
+    `${TICKET_CATEGORIES.grief.emoji} **Report Griefing / Stealing:** report a player who griefed or stole from you.`,
+    `${TICKET_CATEGORIES.appeal.emoji} **Punishment Appeal:** appeal a ban, mute, or warning.`,
+    "",
+    "-# Tickets are private. Only you and moderators can see them.",
+  ];
+  return new ContainerBuilder()
+    .setAccentColor(0xf96039)
+    .addTextDisplayComponents((td) => td.setContent(lines.join("\n")));
+}
+
+/** Action row of category buttons for the trigger embed. */
+export function buildTriggerButtons(): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    ...Object.values(TICKET_CATEGORIES).map((meta) =>
+      new ButtonBuilder()
+        .setCustomId(`ticket_open:${meta.category}`)
+        .setLabel(meta.buttonLabel)
+        .setEmoji(meta.emoji)
+        .setStyle(meta.buttonStyle),
+    ),
+  );
+}
+
+/** The intake modal shown when a user clicks a category button. */
+export function buildIntakeModal(meta: CategoryMeta): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(`ticket_modal:${meta.category}`)
+    .setTitle(meta.modalTitle);
+
+  for (const field of meta.fields) {
+    const input = new TextInputBuilder()
+      .setCustomId(field.id)
+      .setStyle(field.style)
+      .setRequired(field.required);
+    if (field.placeholder) input.setPlaceholder(field.placeholder);
+    if (field.maxLength) input.setMaxLength(field.maxLength);
+    modal.addLabelComponents(
+      new LabelBuilder().setLabel(field.label).setTextInputComponent(input),
+    );
+  }
+
+  if (meta.fileField) {
+    const upload = new FileUploadBuilder()
+      .setCustomId(meta.fileField.id)
+      .setRequired(meta.fileField.required)
+      .setMinValues(meta.fileField.required ? 1 : 0)
+      .setMaxValues(meta.fileField.maxValues);
+    const label = new LabelBuilder()
+      .setLabel(meta.fileField.label)
+      .setFileUploadComponent(upload);
+    if (meta.fileField.description) {
+      label.setDescription(meta.fileField.description);
+    }
+    modal.addLabelComponents(label);
+  }
+
+  return modal;
+}
+
+/**
+ * The header container posted in the channel when a ticket opens. Leads with the
+ * category (custom emoji + `〉` + title), the ticket id and opener, then each
+ * intake question with its answer in a code block.
+ */
+export function buildTicketHeader(
+  meta: CategoryMeta,
+  ticketId: number,
+  openedByDiscordId: string,
+  intake: Record<string, string>,
+  player?: TicketHeaderPlayer,
+  forDiscordId?: string,
+): ContainerBuilder {
+  const lines = [
+    `## ${meta.emoji}  〉${meta.headerTitle}`,
+    `**Ticket ID:** \`#${String(ticketId).padStart(4, "0")}\``,
+    `**Opened by:** <@${openedByDiscordId}>`,
+  ];
+  // Staff opened this on someone else's behalf — show who it's for.
+  if (forDiscordId) lines.push(`**For:** <@${forDiscordId}>`);
+
+  // Minecraft account we have on file for linked openers, after a blank line.
+  if (player && (player.minecraftUsername || player.minecraftUuid)) {
+    lines.push("");
+    if (player.minecraftUsername) {
+      lines.push(`**Minecraft username:** \`${player.minecraftUsername}\``);
+    }
+    if (player.minecraftUuid) {
+      lines.push(`**Minecraft UUID:** \`${player.minecraftUuid}\``);
+    }
+  }
+
+  // One question/answer block per submitted field. Kept tightly packed: a single
+  // blank line before the section, none between the individual question blocks.
+  const qa: string[] = [];
+  for (const field of meta.fields) {
+    const value = intake[field.id];
+    if (!value) continue;
+    qa.push(`**${field.label}**`, codeBlock(value));
+  }
+  if (qa.length > 0) lines.push("", ...qa);
+
+  return new ContainerBuilder()
+    .setAccentColor(meta.accent)
+    .addTextDisplayComponents((td) => td.setContent(lines.join("\n")));
+}
+
+/**
+ * Append uploaded evidence to a ticket header container so it rides in the same
+ * message: images/videos as an inline media gallery, and any other file as a
+ * native File component. Returns the attachments that must be sent alongside the
+ * message (File components reference re-uploaded `attachment://` files).
+ */
+export function appendEvidence(
+  container: ContainerBuilder,
+  evidence: EvidenceFile[],
+): AttachmentBuilder[] {
+  if (evidence.length === 0) return [];
+
+  const isMedia = (f: EvidenceFile) =>
+    f.contentType?.startsWith("image/") || f.contentType?.startsWith("video/");
+  const media = evidence.filter(isMedia);
+  const other = evidence.filter((f) => !isMedia(f));
+
+  container.addTextDisplayComponents((td) => td.setContent("**Evidence**"));
+
+  if (media.length > 0) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        ...media.map((f) =>
+          new MediaGalleryItemBuilder()
+            .setURL(f.url)
+            .setDescription(f.name.slice(0, 256)),
+        ),
+      ),
+    );
+  }
+
+  // File components can only reference uploaded attachments, so re-attach the
+  // non-media files and point each File component at its attachment:// name.
+  const attachments: AttachmentBuilder[] = [];
+  other.forEach((f, index) => {
+    const name = sanitizeAttachmentName(f.name, index);
+    attachments.push(new AttachmentBuilder(f.url, { name }));
+    container.addFileComponents(new FileBuilder().setURL(`attachment://${name}`));
+  });
+  return attachments;
+}
+
+/** A unique, Discord-safe attachment filename (must match the attachment:// ref). */
+function sanitizeAttachmentName(name: string, index: number): string {
+  const cleaned = name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "file";
+  return `${index}-${cleaned}`;
+}
+
+/** Wrap a value in a fenced code block, neutralising any closing fence. */
+function codeBlock(value: string): string {
+  return `\`\`\`\n${value.replace(/```/g, "ʼʼʼ")}\n\`\`\``;
+}
+
+/** A ready-to-send message payload: a standard embed plus optional pager row. */
+export interface InfractionEmbedMessage {
+  embeds: EmbedBuilder[];
+  components: ActionRowBuilder<ButtonBuilder>[];
+}
+
+/**
+ * The appeal punishment record, rendered as a standard Discord embed titled
+ * "{username}'s Infractions". One punishment is shown at a time with embed
+ * fields; Prev/Next buttons page through the record when there's more than one.
+ * Returns null when there's nothing to render (non-appeal tickets).
+ */
+export function buildInfractionEmbedMessage(
+  ticketId: number,
+  info: TicketInfractionInfo | null | undefined,
+  page = 0,
+): InfractionEmbedMessage | null {
+  if (!info) return null;
+
+  const name = safeText(info.username, 32);
+  const baseEmbed = () =>
+    new EmbedBuilder().setTitle(`${name}'s punishment history`);
+
+  if (info.error) {
+    return {
+      embeds: [
+        baseEmbed()
+          .setColor(0x95a5a6)
+          .setDescription(
+            `Could not load punishment history.\n${safeText(info.error, 240)}`,
+          ),
+      ],
+      components: [],
+    };
+  }
+
+  if (!info.infractions || info.infractions.length === 0) {
+    return {
+      embeds: [
+        baseEmbed().setColor(0x57f287).setDescription("No punishments on record."),
+      ],
+      components: [],
+    };
+  }
+
+  const lastPage = info.infractions.length - 1;
+  const safePage = Math.max(0, Math.min(page, lastPage));
+  const infraction = info.infractions[safePage];
+  if (!infraction) return null;
+
+  const createdAt =
+    infraction.created_at > 0 ? `<t:${infraction.created_at}:f>` : "Unknown";
+
+  const valueLines = [
+    `**Status:** ${infractionStatus(infraction)}`,
+    `**Moderator:** \`${safeText(infraction.staff ?? "Unknown", 200)}\``,
+  ];
+  if (infraction.removed) {
+    valueLines.push(
+      `**Removed by:** \`${safeText(infraction.removed_by ?? "Unknown", 200)}\``,
+    );
+  }
+  valueLines.push(
+    `**Reason:** \`${safeText(infraction.reason ?? "No reason given", 900)}\``,
+    `**Created at:** ${createdAt}`,
+  );
+
+  // Footer intentionally omitted — the page count is shown on the pager button.
+  const embed = baseEmbed()
+    .setColor(0xf77069)
+    .addFields({
+      name: `#${infraction.id} ${formatInfractionType(infraction.type)}`,
+      value: valueLines.join("\n"),
+    });
+
+  const components =
+    info.infractions.length > 1
+      ? [buildInfractionNavigation(ticketId, safePage, lastPage)]
+      : [];
+
+  return { embeds: [embed], components };
+}
+
+function buildInfractionNavigation(
+  ticketId: number,
+  page: number,
+  lastPage: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${TICKET_INFRACTION_BUTTON_PREFIX}:${ticketId}:${page - 1}`)
+      .setLabel("Previous")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === 0),
+    new ButtonBuilder()
+      .setCustomId(`${TICKET_INFRACTION_BUTTON_PREFIX}:${ticketId}:current`)
+      .setLabel(`${page + 1} of ${lastPage + 1}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`${TICKET_INFRACTION_BUTTON_PREFIX}:${ticketId}:${page + 1}`)
+      .setLabel("Next")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === lastPage),
+  );
+}
+
+function formatInfractionType(type: PublicInfraction["type"]): string {
+  switch (type) {
+    case "ban":
+      return "Ban";
+    case "mute":
+      return "Mute";
+    case "warning":
+      return "Warning";
+    case "kick":
+      return "Kick";
+  }
+}
+
+function infractionStatus(infraction: PublicInfraction): string {
+  const now = Math.floor(Date.now() / 1000);
+  if (infraction.removed) {
+    return infraction.removed_at
+      ? `Removed (<t:${infraction.removed_at}:R>)`
+      : "Removed";
+  }
+  // An expiry in the past means the punishment has lapsed, regardless of the
+  // stored `active` flag (which can lag behind).
+  if (infraction.expires_at != null && infraction.expires_at <= now) {
+    return `Expired (<t:${infraction.expires_at}:R>)`;
+  }
+  if (infraction.active === false) return "Inactive";
+  return "Active";
+}
+
+function safeText(value: string, maxLength: number): string {
+  const cleaned = value
+    .replace(/@/g, "@\u200b")
+    .replace(/`/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.length > maxLength
+    ? `${cleaned.slice(0, Math.max(0, maxLength - 1))}…`
+    : cleaned;
+}
+
+/** Action row for staff: just Close. */
+export function buildStaffButtons(
+  ticketId: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket_close:${ticketId}`)
+      .setLabel("Close Ticket")
+      .setStyle(ButtonStyle.Danger),
+  );
+}
+
+/** Custom emoji shown on the closed-ticket notice. */
+const TICKET_CLOSED_EMOJI = "<:hourglass:1521560454189809886>";
+
+/** Container shown once a ticket is closed; references the delete countdown. */
+export function buildClosedNotice(
+  closedByMention: string,
+  deleteAtEpochSeconds: number,
+): ContainerBuilder {
+  return new ContainerBuilder()
+    .setAccentColor(resolveColor("DarkButNotBlack"))
+    .addTextDisplayComponents((td) =>
+      td.setContent(
+        `### ${TICKET_CLOSED_EMOJI} 〉Ticket closed\nThis ticket was closed by ${closedByMention}. The channel is now read-only and will be automatically deleted <t:${deleteAtEpochSeconds}:R>.`,
+      ),
+    );
+}
+
+/** Reopen + Delete buttons shown alongside the closed notice. */
+export function buildClosedTicketButtons(
+  ticketId: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket_reopen:${ticketId}`)
+      .setLabel("Reopen Ticket")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`ticket_delete:${ticketId}`)
+      .setLabel("Delete Ticket")
+      .setStyle(ButtonStyle.Danger),
+  );
+}
+
+/** Container posted when a ticket is reopened. */
+export function buildReopenedNotice(
+  reopenedByMention: string,
+): ContainerBuilder {
+  return new ContainerBuilder()
+    .setAccentColor(resolveColor("Green"))
+    .addTextDisplayComponents((td) =>
+      td.setContent(
+        `### Ticket reopened\nThis ticket was reopened by ${reopenedByMention}. The channel is no longer read-only.`,
+      ),
+    );
+}
+
+/** Same Reopen + Delete row, both disabled after the ticket is reopened. */
+export function buildDisabledClosedTicketButtons(
+  ticketId: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ticket_reopen:${ticketId}`)
+      .setLabel("Reopen Ticket")
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`ticket_delete:${ticketId}`)
+      .setLabel("Delete Ticket")
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(true),
+  );
+}
+
+/** The structured topic set on a ticket channel. */
+export function buildTicketTopic(opts: {
+  ticketId: number;
+  openerName: string;
+  meta: CategoryMeta;
+  openedAtEpochSeconds: number;
+}): string {
+  return [
+    `- **Ticket ID**: #${String(opts.ticketId).padStart(4, "0")}`,
+    `- **Ticket opened**: ${opts.openerName}`,
+    `- **Category**: ${opts.meta.label}`,
+    `- **Opened At**: <t:${opts.openedAtEpochSeconds}:f>`,
+  ].join("\n");
+}
+
+/**
+ * Build a channel name like `steve-grief-0042`. Discord allows up to 100 chars;
+ * usernames are sanitised to letters/numbers/dash/underscore.
+ */
+export function buildChannelName(
+  username: string,
+  meta: CategoryMeta,
+  ticketId?: number,
+): string {
+  const suffix = `-${meta.category}${
+    ticketId == null ? "" : `-${String(ticketId).padStart(4, "0")}`
+  }`;
+  const safe = username
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100 - suffix.length) || "user";
+  return `${safe}${suffix}`;
+}

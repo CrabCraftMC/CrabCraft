@@ -1,0 +1,136 @@
+{
+    "site": {
+        "name": "CrabCraft",
+        "disclaimer": "Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft"
+    },
+    "navbar": {
+        "links": [
+            {
+                "name": "Home",
+                "url": "/",
+                "icon": "Home"
+            },
+            {
+                "name": "Leaderboard",
+                "url": "/leaderboard",
+                "icon": "BarChart3"
+            },
+            {
+                "name": "Awards",
+                "url": "/awards",
+                "icon": "Trophy"
+            }
+        ],
+        "tools": [
+            {
+                "name": "RGB Nickname",
+                "url": "/tools/rgb-nickname",
+                "icon": "Palette"
+            },
+            {
+                "name": "Block Gradient",
+                "url": "/tools/block-gradient",
+                "icon": "Rainbow"
+            },
+            {
+                "name": "Pixel Art Generator",
+                "url": "/tools/pixel-art-generator",
+                "icon": "ImageIcon"
+            },
+            {
+                "name": "Circle Generator",
+                "url": "/tools/circle-generator",
+                "icon": "Circle"
+            },
+            {
+                "name": "Stack Calculator",
+                "url": "/tools/stack-calculator",
+                "icon": "Boxes"
+            },
+            {
+                "name": "Beacon Calculator",
+                "url": "/tools/beacon-calculator",
+                "icon": "Sparkles"
+            },
+            {
+                "name": "XP Levels",
+                "url": "/tools/xp-calculator",
+                "icon": "Trophy"
+            },
+            {
+                "name": "Enchantment Planner",
+                "url": "/tools/enchantment-planner",
+                "icon": "BookOpen"
+            },
+            {
+                "name": "Portal Coordinates",
+                "url": "/tools/portal-calculator",
+                "icon": "ArrowLeftRight"
+            }
+        ],
+        "socials": [
+            {
+                "platform": "youtube",
+                "url": "https://www.youtube.com/@CrabCraftMC"
+            },
+            {
+                "platform": "tiktok",
+                "url": "https://www.tiktok.com/@playcrabcraft"
+            },
+            {
+                "platform": "instagram",
+                "url": "https://www.instagram.com/crabcraftmc/"
+            },
+            {
+                "platform": "discord",
+                "url": "https://discord.crabcraft.net"
+            }
+        ]
+    },
+    "home": {
+        "hero": [
+            {
+                "title": "APPLY",
+                "subtitle": "Apply Now",
+                "description": "Apply to get whitelisted and start playing",
+                "buttonText": "APPLY",
+                "url": "https://discord.crabcraft.net",
+                "bgGradient": "from-[#F97316] to-[#FB923C]",
+                "image": "/welcome.webp",
+                "imageScale": "scale-50 sm:scale-60 lg:scale-75",
+                "colSpan": "lg:col-span-4",
+                "bgTextSize": "text-[60px] sm:text-[80px] md:text-[100px] lg:text-[150px]",
+                "bgTextPos": "-translate-y-1/2",
+                "buttonBg": "bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 drop-shadow-md"
+            },
+            {
+                "title": "LIVE MAP",
+                "subtitle": "Live Map",
+                "description": "Explore the world in real time with our interactive live map",
+                "buttonText": "VIEW",
+                "url": "https://map.crabcraft.net",
+                "bgGradient": "from-[#006BFF] to-[#29C6FF]",
+                "image": "/explorer.webp",
+                "imageScale": "scale-50 sm:scale-60 lg:scale-75",
+                "colSpan": "lg:col-span-2",
+                "bgTextSize": "text-[40px] sm:text-[50px] md:text-[55px] lg:text-[65px]",
+                "bgTextPos": "-translate-y-1/2",
+                "buttonBg": "bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 drop-shadow-md"
+            },
+            {
+                "title": "READ WIKI",
+                "subtitle": "Wiki",
+                "description": "Learn everything about CrabCraft",
+                "buttonText": "READ",
+                "url": "https://wiki.crabcraft.net",
+                "bgGradient": "from-[#1E701E] to-[#388E3C]",
+                "image": "/wiki-player.webp",
+                "imageScale": "scale-50 sm:scale-58 lg:scale-68",
+                "colSpan": "lg:col-span-2",
+                "bgTextSize": "text-[35px] sm:text-[40px] md:text-[42px] lg:text-[50px]",
+                "bgTextPos": "-translate-y-1/2",
+                "buttonBg": "bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 drop-shadow-md"
+            }
+        ]
+    }
+}

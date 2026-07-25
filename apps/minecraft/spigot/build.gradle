@@ -1,0 +1,191 @@
+plugins {
+    id 'io.papermc.paperweight.userdev' version '2.0.0-beta.21'
+    id("xyz.jpenilla.run-paper") version "3.0.2"
+    id 'com.gradleup.shadow'
+}
+
+base {
+    archivesName = 'CrabUtilities'
+}
+
+repositories {
+    maven {
+        name = "spigotmc-repo"
+        url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"
+    }
+    maven {
+        name = "essentialsx"
+        url = uri("https://repo.essentialsx.net/releases/")
+    }
+    maven {
+        name = "papermc"
+        url = uri("https://repo.papermc.io/repository/maven-public/")
+    }
+    maven {
+        name = "henkelmax.public"
+        url = uri("https://maven.maxhenkel.de/repository/public")
+    }
+    maven {
+        name = "placeholderapi"
+        url = uri("https://repo.extendedclip.com/content/repositories/placeholderapi/")
+    }
+    maven {
+        name = "bluecolored"
+        url = uri("https://repo.bluecolored.de/releases")
+    }
+    maven {
+        name = "codemc"
+        url = uri("https://repo.codemc.io/repository/maven-releases/")
+    }
+}
+
+dependencies {
+    paperweight.paperDevBundle("26.1.2.build.72-stable")
+    compileOnly("net.essentialsx:EssentialsX:2.20.1") {
+        // EssentialsX 2.20.1 transitively pulls spigot-api:1.20.1 which conflicts
+        // with paper-api:26.1.2 on the org.spigotmc:spigot-api capability.
+        exclude group: "org.spigotmc", module: "spigot-api"
+    }
+    compileOnly("net.kyori:adventure-text-serializer-legacy:4.17.0")
+    compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
+    compileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.13")
+    testImplementation("de.maxhenkel.voicechat:voicechat-api:2.6.13")
+    compileOnly("me.clip:placeholderapi:2.11.6")
+    compileOnly("de.bluecolored:bluemap-api:2.7.7")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
+    testCompileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
+    compileOnly("org.projectlombok:lombok:1.18.46")
+    annotationProcessor("org.projectlombok:lombok:1.18.46")
+    implementation("redis.clients:jedis:5.1.0")
+}
+
+shadowJar {
+    configurations = [project.configurations.runtimeClasspath]
+    archiveClassifier.set('')
+    archiveVersion.set('')
+    addMultiReleaseAttribute.set(false)
+    exclude 'META-INF/versions/9/org/yaml/snakeyaml/internal/Logger*.class'
+    relocate 'redis.clients.jedis', 'crabcraft.net.libs.jedis'
+    relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
+    relocate 'org.json', 'crabcraft.net.libs.json'
+}
+
+tasks.jar {
+    archiveClassifier.set('slim')
+}
+
+tasks.build.dependsOn(tasks.shadowJar)
+
+tasks {
+    runServer {
+        minecraftVersion("26.1.2")
+    }
+}
+
+def regressionTests = [
+    voiceRelayRegressionTest: 'crabcraft.net.crabUtilities.voicechat.VoiceRelayRegressionTest',
+    loginStreakCacheRegressionTest: 'crabcraft.net.crabUtilities.LoginStreakCacheRegressionTest',
+    statsPushPathRegressionTest: 'crabcraft.net.crabUtilities.StatsPushPathRegressionTest',
+    globalChatLinkRegressionTest: 'crabcraft.net.crabUtilities.chat.GlobalChatLinkRegressionTest',
+    chatMiniMessageRegressionTest: 'crabcraft.net.crabUtilities.chat.ChatMiniMessageRegressionTest',
+    reloadCommandRegressionTest: 'crabcraft.net.crabUtilities.ReloadCommandRegressionTest',
+    crabMessagesRegressionTest: 'crabcraft.net.crabUtilities.CrabMessagesRegressionTest',
+    xaeroLifecycleRegressionTest: 'crabcraft.net.crabUtilities.xaero.XaeroLifecycleRegressionTest',
+    nicknameMessagesRegressionTest: 'crabcraft.net.crabUtilities.sleep.NicknameMessagesRegressionTest',
+    nicknameRegressionTest: 'crabcraft.net.crabUtilities.NicknameRegressionTest',
+    nicknameSoftDependencyRegressionTest: 'crabcraft.net.crabUtilities.NicknameSoftDependencyRegressionTest',
+    playerVisibilityRegressionTest: 'crabcraft.net.crabUtilities.PlayerVisibilityRegressionTest',
+    lofiVoicechatRegressionTest: 'crabcraft.net.crabUtilities.voicechat.LofiVoicechatRegressionTest',
+    suspiciousBrushTrackerRegressionTest: 'crabcraft.net.crabUtilities.awards.SuspiciousBrushTrackerRegressionTest',
+    experienceClumpsRegressionTest: 'crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListenerRegressionTest',
+    slimeMapRegressionTest: 'crabcraft.net.crabUtilities.slime.SlimeMapRegressionTest',
+    viewDistanceManagerRegressionTest: 'crabcraft.net.crabUtilities.viewdistance.ViewDistanceManagerRegressionTest',
+    sharedVillagerDiscountsRegressionTest: 'crabcraft.net.crabUtilities.villagers.SharedVillagerDiscountListenerRegressionTest',
+    jadeProtocolRegressionTest: 'crabcraft.net.crabUtilities.jade.protocol.payload.ReceiveDataPayloadRegressionTest',
+    jadeResponseIsolationRegressionTest: 'crabcraft.net.crabUtilities.jade.protocol.JadeResponseIsolationRegressionTest',
+    jadeItemStorageEncodingRegressionTest: 'crabcraft.net.crabUtilities.jade.protocol.provider.JadeItemStorageEncodingRegressionTest',
+    jadeClientProtocolPayloadRegressionTest: 'crabcraft.net.crabUtilities.jade.JadeClientProtocolPayloadRegressionTest',
+    jadeLifecycleRegressionTest: 'crabcraft.net.crabUtilities.jade.JadeLifecycleRegressionTest',
+    jadeInventoryPolicyRegressionTest: 'crabcraft.net.crabUtilities.jade.protocol.JadeInventoryPolicyRegressionTest',
+    jadeMessengerWarningLimiterRegressionTest: 'crabcraft.net.crabUtilities.jade.protocol.JadeMessengerWarningLimiterRegressionTest',
+    jadeLootTableCompatibilityRegressionTest: 'crabcraft.net.crabUtilities.jade.protocol.util.LootTableMineableCollectorRegressionTest',
+    customPortalDestinationRegressionTest: 'crabcraft.net.crabUtilities.netherportals.CustomPortalDestinationRegressionTest',
+    mediaFeatureSecurityRegressionTest: 'crabcraft.net.crabUtilities.media.util.MediaFeatureSecurityRegressionTest',
+    mediaCompatibilityRegressionTest: 'crabcraft.net.crabUtilities.media.MediaCompatibilityRegressionTest',
+    mediaSecurityRegressionTest: 'crabcraft.net.crabUtilities.media.audio.MediaSecurityRegressionTest',
+    literalTitleRegressionTest: 'crabcraft.net.crabUtilities.media.language.LiteralTitleRegressionTest',
+    hopperSecurityRegressionTest: 'crabcraft.net.crabUtilities.media.event.HopperSecurityRegressionTest',
+    binaryProvisionerRegressionTest: 'crabcraft.net.crabUtilities.media.audio.BinaryProvisionerRegressionTest',
+    moduleConfigManagerRegressionTest: 'crabcraft.net.crabUtilities.config.ModuleConfigManagerRegressionTest',
+    accurateBlockPlacementRegressionTest: 'crabcraft.net.crabUtilities.accurateplacement.AccurateBlockPlacementRegressionTest',
+    appleSkinLifecycleRegressionTest: 'crabcraft.net.crabUtilities.appleskin.AppleSkinLifecycleRegressionTest',
+]
+def runtimeOnlyRegressionTests = [
+    'voiceRelayRegressionTest',
+    'nicknameSoftDependencyRegressionTest',
+] as Set
+
+regressionTests.each { taskName, testClass ->
+    tasks.register(taskName, JavaExec) {
+        group = 'verification'
+        dependsOn tasks.named('testClasses')
+        classpath = sourceSets.test.runtimeClasspath
+        if (!runtimeOnlyRegressionTests.contains(taskName)) {
+            classpath += sourceSets.main.compileClasspath
+        }
+        mainClass.set(testClass)
+    }
+}
+
+tasks.register('pluginJarContentsRegressionTest') {
+    group = 'verification'
+    dependsOn tasks.named('shadowJar')
+
+    doLast {
+        Set<String> expected = new TreeSet<>()
+        sourceSets.main.output.classesDirs.files.each { root ->
+            if (!root.isDirectory()) return
+            fileTree(root).matching { include '**/*.class' }.visit { details ->
+                if (!details.directory) expected.add(details.relativePath.pathString)
+            }
+        }
+
+        Set<String> packaged = new HashSet<>()
+        File archive = tasks.named('shadowJar').get().archiveFile.get().asFile
+        zipTree(archive).visit { details ->
+            if (!details.directory && details.relativePath.pathString.endsWith('.class')) {
+                packaged.add(details.relativePath.pathString)
+            }
+        }
+
+        Set<String> missing = expected.findAll { !packaged.contains(it) }
+        if (!missing.isEmpty()) {
+            throw new GradleException(
+                "Production plugin JAR is missing compiled classes: " + missing.join(', '))
+        }
+    }
+}
+
+tasks.named('test') {
+    failOnNoDiscoveredTests = false
+}
+
+tasks.named('check') {
+    dependsOn regressionTests.keySet()
+    dependsOn tasks.named('pluginJarContentsRegressionTest')
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset = 'UTF-8'
+    from(rootProject.file('../../LICENSE')) {
+        into 'META-INF'
+    }
+    from(rootProject.file('../../THIRD_PARTY_NOTICES.md')) {
+        into 'META-INF'
+    }
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}

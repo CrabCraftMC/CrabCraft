@@ -1,0 +1,80 @@
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  channel: "crabutilities:staffchat"
+  punishment-stream: "crabcraft:punishments"
+  punishment-watch-interval-seconds: 10
+
+# Simple Voice Chat cross-server bridge - proxy side. Tracks which backend
+# each player is on so backends can validate inbound voice frames.
+voicechat:
+  cross-server:
+    enabled: true
+    # TTL for the player-home Redis key; keep longer than the server-switch
+    # window. Refreshed on every switch.
+    player-home-ttl-seconds: 300
+
+api:
+  port: 8080
+
+staff-chat:
+  # MiniMessage. Placeholders: <sender>, <message>
+  format: "<dark_gray>[<aqua>SC</aqua>]</dark_gray> <gray><sender></gray> <dark_gray>></dark_gray> <white><message></white>"
+  # Discord relay for staff chat. Empty webhook-url disables it.
+  # avatar-url placeholder: {uuid}
+  discord:
+    webhook-url: ""
+    avatar-url: "https://mc-heads.net/head/{uuid}"
+
+private-messages:
+  # Placeholders: <target>, <message>
+  outgoing-format: "<gold>(to <target>) <white><message>"
+  # Placeholders: <sender>, <message>
+  incoming-format: "<gold>(from <sender>) <white><message>"
+  # /socialspy format. Placeholders: <sender>, <target>, <message>
+  spy-format: "<gray>[SPY] (<sender> → <target>) <white><message>"
+  player-not-found: "<red>Player not found or not online."
+  no-reply-target: "<red>You have no one to reply to."
+  self-error: "<red>You can't message yourself."
+  # Sound played to the recipient on an incoming DM.
+  incoming-sound:
+    enabled: true
+    sound: "minecraft:entity.experience_orb.pickup"
+    volume: 1.0
+    pitch: 1.0
+
+join-leave-messages:
+  # Servers that should NOT trigger join/leave/swap messages.
+  ignored-servers: []
+  # Placeholders: <name>, <username>
+  first-join: "<yellow><name> joined the game for the first time</yellow>"
+  # Discord webhook. Empty webhook-url disables it.
+  # Placeholders: {name}, {username}, {server}
+  discord:
+    webhook-url: ""
+    join: "{name} joined the game"
+    leave: "{name} left the game"
+    swap: "{name} swapped to the {server} server"
+    first-join: "{name} joined the game for the first time!"
+
+database:
+  url: "jdbc:postgresql://localhost:5432/crabcraft"
+  username: "crabcraft"
+  password: ""
+
+# All-time login streaks. A "day" is a fixed 24h window rolling over at
+# reset-hour-utc:00 UTC; a player must be online required-play-minutes total
+# (across sessions) within that day to earn +1. One missed day is forgiven;
+# two in a row resets the streak to 1.
+login-streaks:
+  reset-hour-utc: 6
+  required-play-minutes: 10
+
+auto-update:
+  enabled: true
+  check-interval-hours: 6
+  include-prereleases: false
+  github-repo: "CrabCraftMC/CrabCraft"
+  # Optional PAT; unauthenticated requests are limited to 60/hour.
+  github-token: ""

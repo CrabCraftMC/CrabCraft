@@ -1,0 +1,324 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+  scrollbar-gutter: stable;
+}
+
+:root {
+  --background: #fbf6ee;
+  --foreground: #171717;
+  --paper: #fbf6ee;
+  --paper-2: #f2ebde;
+  --line: #e3d9c6;
+}
+
+.dark {
+  --background: #1a1412;
+  --foreground: #f5f0eb;
+  --paper: #1a1412;
+  --paper-2: #231c17;
+  --line: #3a2e24;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-line: var(--line);
+
+  --font-sans: var(--font-sans), sans-serif;
+  --font-mono: var(--font-mono), monospace;
+  --font-mc: var(--font-sans), sans-serif;
+}
+
+.no-trans * {
+  transition: none !important;
+}
+
+body {
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.card-hover {
+  transition: scale 0.2s ease, filter 0.2s ease;
+}
+.card-hover:hover {
+  scale: 1.02;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.15));
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Gentle idle bob for the join mascot */
+@keyframes mascot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.mascot-bob {
+  animation: mascot-bob 2.8s ease-in-out infinite;
+}
+.mascot-bob:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-bob {
+    animation: none;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  opacity: 0;
+  animation: fade-up 0.6s ease-out forwards;
+}
+
+
+
+/* Compact react-colorful picker used in the colour tools */
+.rgb-swatch-picker .react-colorful {
+  width: 100%;
+  height: 168px;
+}
+.rgb-swatch-picker .react-colorful__saturation {
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+.rgb-swatch-picker .react-colorful__hue {
+  height: 18px;
+  border-radius: 0 0 0.5rem 0.5rem;
+  margin-top: 8px;
+}
+.rgb-swatch-picker .react-colorful__pointer {
+  width: 16px;
+  height: 16px;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+}
+
+.block-texture {
+  image-rendering: pixelated;
+  object-fit: cover;
+  object-position: top;
+  aspect-ratio: 1;
+}
+
+.checkerboard {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(45deg, var(--line) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--line) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--line) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--line) 75%);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+}
+
+.themed-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(249 115 22 / 0.4) transparent;
+}
+.themed-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.themed-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.themed-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(249 115 22 / 0.4);
+  border-radius: 3px;
+}
+.themed-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(249 115 22 / 0.6);
+}
+
+/* Modern range slider */
+input[type="range"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 100%;
+  height: 6px !important;
+  border-radius: 999px !important;
+  background: rgb(0 0 0 / 0.1) !important;
+  outline: none !important;
+  cursor: pointer;
+  accent-color: rgb(249 115 22) !important;
+}
+
+.dark input[type="range"] {
+  background: rgb(255 255 255 / 0.1) !important;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  background: rgb(249 115 22) !important;
+  border: 2px solid white !important;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgb(249 115 22 / 0.4) !important;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.05);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  background: rgb(249 115 22) !important;
+  border: 2px solid white !important;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgb(249 115 22 / 0.4) !important;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px !important;
+  border-radius: 999px !important;
+  background: rgb(0 0 0 / 0.1) !important;
+}
+
+.dark input[type="range"]::-moz-range-track {
+  background: rgb(255 255 255 / 0.1) !important;
+}
+
+.dark input[type="range"]::-webkit-slider-thumb,
+.dark input[type="range"]::-moz-range-thumb {
+  border-color: #1a1412 !important;
+}
+
+::selection {
+  background-color: rgb(249 115 22 / 0.3);
+  color: inherit;
+}
+
+/* ===== Holographic / iridescent treatment for 100% completers ===== */
+
+@keyframes holo-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+@keyframes holo-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes holo-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}
+
+/* Animated rainbow gradient background — for fills */
+.holo-bg {
+  background-image: linear-gradient(
+    115deg,
+    #ffd166 0%,
+    #ff6ec7 22%,
+    #7ee8fa 45%,
+    #b794f6 68%,
+    #ffd166 100%
+  );
+  background-size: 220% 100%;
+  animation: holo-shift 4.5s ease-in-out infinite;
+}
+
+/* Conic shimmer overlay — paint inside any positioned element by adding
+   the .holo-shimmer class. Works on top of any background via mix-blend. */
+.holo-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.holo-shimmer::before {
+  content: "";
+  position: absolute;
+  inset: -55%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 105, 180, 0.55),
+    rgba(255, 209, 102, 0.55),
+    rgba(126, 232, 250, 0.55),
+    rgba(168, 144, 255, 0.55),
+    rgba(255, 105, 180, 0.55)
+  );
+  animation: holo-spin 7s linear infinite, holo-pulse 3.5s ease-in-out infinite;
+  mix-blend-mode: color-dodge;
+  pointer-events: none;
+  z-index: 1;
+  filter: blur(14px) saturate(1.4);
+}
+.dark .holo-shimmer::before {
+  mix-blend-mode: screen;
+}
+
+/* A second, subtler chromatic-edge layer for cards with their own bg. */
+.holo-edge {
+  position: relative;
+}
+.holo-edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    115deg,
+    #ff7eb6,
+    #ffd166,
+    #7ee8fa,
+    #b794f6,
+    #ff7eb6
+  );
+  background-size: 220% 100%;
+  animation: holo-shift 4.5s ease-in-out infinite;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}

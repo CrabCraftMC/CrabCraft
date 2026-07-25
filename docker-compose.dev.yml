@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crabcraft}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crabcraft_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-crabcraft}
+    volumes:
+      # Keep PostgreSQL 18 data separate from volumes created by older majors.
+      - pg18_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  pg18_data:
+  redis_data:

@@ -1,0 +1,614 @@
+import SlashCommand from "../../structures/SlashCommand.js";
+import { errorContainer, primaryContainer, logAccept, logAdminWipe } from "../../utils/embeds.js";
+import config from "../../utils/config.js";
+import mysql from "../../utils/database.js";
+import * as appDb from "../../utils/appDb.js";
+import { resolveUsername, fetchPlayerName } from "../../utils/mojang.js";
+import { deleteAllAltsForUser } from "../../utils/appDb.js";
+import {
+  buildApplicationHubButton,
+  buildApplicationHubContainer,
+} from "../../utils/applicationChannel.js";
+import { buildTriggerButtons, buildTriggerEmbed } from "../../utils/ticket.js";
+import { buildSeasonAccessMessage } from "../../utils/seasonAccess.js";
+import { buildRulesInfoComponents } from "../../utils/rulesInfo.js";
+import {
+  fetchLeaderboardData,
+  buildLeaderboardComponents,
+  DEFAULT_LEADERBOARD_SEASON,
+} from "../../utils/leaderboard.js";
+import {
+  saveLeaderboardState,
+  loadLeaderboardState,
+} from "../../utils/leaderboardState.js";
+import { syncLeaderboardEmojis } from "../../utils/playerEmoji.js";
+import {
+  SlashCommandBuilder,
+  type ChatInputCommandInteraction,
+  type RESTPostAPIApplicationCommandsJSONBody,
+  ChannelType,
+  PermissionFlagsBits,
+  MessageFlags,
+  type GuildMember,
+  type NewsChannel,
+  type TextChannel,
+} from "discord.js";
+
+
+export default class AdminCommand extends SlashCommand {
+  constructor() {
+    super("admin", "Administrative utilities", {
+      guildOnly: true,
+      cooldown: 5,
+    });
+  }
+
+  async execute(interaction: ChatInputCommandInteraction) {
+    if (!interaction.guild) {
+      await interaction.reply({
+        components: [
+          errorContainer("**Error!** This command can only be used in a server"),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const executor = await interaction.guild!.members.fetch(
+      interaction.user.id,
+    );
+    if (!executor.roles.cache.has(config.MOD_ROLE_ID)) {
+      await interaction.reply({
+        components: [errorContainer("**Missing permissions**")],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const sub = interaction.options.getSubcommand(true);
+    switch (sub) {
+      case "whitelist":
+        await this.handleWhitelist(interaction, executor);
+        break;
+
+      case "wipe-discord":
+        await this.handleWipeDiscord(interaction, executor);
+        break;
+
+      case "wipe-minecraft":
+        await this.handleWipeMinecraft(interaction, executor);
+        break;
+
+      case "send":
+        await this.handleSend(interaction);
+        break;
+
+      default:
+        await interaction.reply({
+          components: [errorContainer("**Error!** Unknown subcommand")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        break;
+    }
+  }
+
+  private async handleWhitelist(
+    interaction: ChatInputCommandInteraction,
+    executor: GuildMember,
+  ) {
+    const targetUser = interaction.options.getUser("user", true);
+    const minecraftUsername = interaction.options
+      .getString("username", true)
+      .trim();
+
+    const resolved = await resolveUsername(minecraftUsername);
+    if (!resolved) {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            `**Sorry**, the provided username: \`${minecraftUsername}\` is not a valid Minecraft Java username.`,
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const applicant = await interaction
+      .guild!.members.fetch(targetUser.id)
+      .catch(() => null);
+    if (!applicant) {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            "**Error!** The specified Discord user is not in this server.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const UUID = resolved.uuid;
+
+    try {
+      const existing = await mysql.query(
+        "SELECT * FROM discordsrv_accounts WHERE uuid = ? OR discord = ?",
+        [UUID, targetUser.id],
+      );
+      if (existing.length > 0) {
+        await interaction.reply({
+          components: [
+            errorContainer(
+              "**Error!** This Discord user or Minecraft account is already linked/whitelisted.",
+            ),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+    } catch {
+      // Fallthrough
+    }
+
+    try {
+      await mysql.query(
+        "INSERT INTO discordsrv_accounts (uuid, discord) VALUES (?, ?)",
+        [UUID, targetUser.id],
+      );
+    } catch {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            "**Error!** Unable to add this user to the whitelist. They may already be whitelisted.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Membership itself lives in the whitelist database; the only role a new
+    // member needs is the current season's (the same one the season access
+    // button hands out).
+    if (config.CURRENT_SEASON_ROLE_ID) {
+      await applicant.roles.add(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
+    }
+
+    await appDb.upsertUser({
+      discordId: applicant.id,
+      discordUsername: applicant.user.username,
+      minecraftUsername: minecraftUsername,
+      minecraftUuid: UUID,
+    });
+
+    const logChannel = await interaction.guild!.channels
+      .fetch(config.LOG_CHANNEL_ID)
+      .catch(() => null) as TextChannel | null;
+    if (logChannel) {
+      await logChannel.send({
+        content: logAccept(applicant.id, minecraftUsername, `${executor}`),
+        allowedMentions: { parse: [] },
+      });
+    }
+
+    await interaction.reply({
+      components: [
+        primaryContainer(
+          `## User Whitelisted\nSuccessfully whitelisted <@${applicant.id}> as \`${minecraftUsername}\`.`,
+        ),
+      ],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    });
+  }
+
+  private async handleWipeDiscord(
+    interaction: ChatInputCommandInteraction,
+    executor: GuildMember,
+  ) {
+    const targetUser = interaction.options.getUser("user", true);
+
+    let rows: any[] = [];
+    try {
+      rows = await mysql.query(
+        "SELECT * FROM discordsrv_accounts WHERE discord = ?",
+        [targetUser.id],
+      );
+    } catch {
+      // ignore
+    }
+
+    if (rows.length === 0) {
+      await interaction.reply({
+        components: [errorContainer("No data found for that Discord user.")],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const playerName = await fetchPlayerName(rows[0].uuid as string);
+
+    try {
+      await mysql.query(
+        "DELETE FROM discordsrv_accounts WHERE discord = ?",
+        [targetUser.id],
+      );
+    } catch {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            "**Error!** Failed to wipe data for that Discord user.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Also remove any alt accounts
+    try {
+      await deleteAllAltsForUser(targetUser.id);
+    } catch {
+      // Non-critical — continue with wipe
+    }
+
+    // Unlink the Minecraft account in the app database too, otherwise the
+    // account stays claimed as their primary and can't be re-linked or added
+    // as someone's alt.
+    try {
+      await appDb.clearPlayerMinecraftLinkByDiscordId(targetUser.id);
+    } catch {
+      // Non-critical — continue with wipe
+    }
+
+    const member = await interaction
+      .guild!.members.fetch(targetUser.id)
+      .catch(() => null);
+    if (member && config.CURRENT_SEASON_ROLE_ID) {
+      await member.roles.remove(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
+    }
+
+    const logChannel = await interaction.guild!.channels
+      .fetch(config.LOG_CHANNEL_ID)
+      .catch(() => null) as TextChannel | null;
+    if (logChannel) {
+      await logChannel.send({
+        content: logAdminWipe(`<@${targetUser.id}>`, playerName, `${executor}`),
+      });
+    }
+
+    await interaction.reply({
+      components: [
+        primaryContainer(
+          `## Wipe Complete\nData wiped for <@${targetUser.id}>. Removed linked Minecraft account \`${playerName}\` from the database.`,
+        ),
+      ],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    });
+  }
+
+  private async handleWipeMinecraft(
+    interaction: ChatInputCommandInteraction,
+    executor: GuildMember,
+  ) {
+    const minecraftUsername = interaction.options
+      .getString("username", true)
+      .trim();
+
+    const resolved = await resolveUsername(minecraftUsername);
+    if (!resolved) {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            `**Sorry**, the provided username: \`${minecraftUsername}\` is not a valid Minecraft Java username.`,
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const UUID = resolved.uuid;
+
+    let linkedDiscordId: string | undefined = undefined;
+    try {
+      const rows = await mysql.query(
+        "SELECT * FROM discordsrv_accounts WHERE uuid = ?",
+        [UUID],
+      );
+      if (rows.length > 0) linkedDiscordId = rows[0].discord;
+    } catch {
+      // ignore
+    }
+
+    try {
+      await mysql.query(
+        "DELETE FROM discordsrv_accounts WHERE uuid = ?",
+        [UUID],
+      );
+    } catch {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            "**Error!** Failed to wipe data for that Minecraft account.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Also remove any alt accounts for the linked Discord user
+    if (linkedDiscordId) {
+      try {
+        await deleteAllAltsForUser(linkedDiscordId);
+      } catch {
+        // Non-critical — continue with wipe
+      }
+    }
+
+    // Unlink the account in the app database too, otherwise it stays claimed
+    // as someone's primary and can't be re-linked or added as an alt.
+    try {
+      await appDb.clearPlayerMinecraftLinkByUuid(UUID);
+    } catch {
+      // Non-critical — continue with wipe
+    }
+
+    if (linkedDiscordId) {
+      const member = await interaction
+        .guild!.members.fetch(linkedDiscordId)
+        .catch(() => null);
+      if (member && config.CURRENT_SEASON_ROLE_ID) {
+        await member.roles.remove(config.CURRENT_SEASON_ROLE_ID).catch(() => null);
+      }
+    }
+
+    const logChannel = await interaction.guild!.channels
+      .fetch(config.LOG_CHANNEL_ID)
+      .catch(() => null) as TextChannel | null;
+    if (logChannel) {
+      await logChannel.send({
+        content: logAdminWipe(
+          linkedDiscordId ? `<@${linkedDiscordId}>` : `\`${minecraftUsername}\``,
+          minecraftUsername,
+          `${executor}`,
+          linkedDiscordId ? `Linked Discord <@${linkedDiscordId}> removed.` : undefined,
+        ),
+      });
+    }
+
+    await interaction.reply({
+      components: [
+        primaryContainer(
+          `## Wipe Complete\nData wiped for Minecraft user \`${minecraftUsername}\`${linkedDiscordId ? ` (Linked Discord: <@${linkedDiscordId}>)` : ""}.`,
+        ),
+      ],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    });
+  }
+
+  /** Post one of the server panels/embeds in the current channel. */
+  private async handleSend(interaction: ChatInputCommandInteraction) {
+    const which = interaction.options.getString("message", true);
+
+    const channel = interaction.channel;
+    if (
+      !channel ||
+      (channel.type !== ChannelType.GuildText &&
+        channel.type !== ChannelType.GuildAnnouncement)
+    ) {
+      await interaction.reply({
+        components: [
+          errorContainer(
+            "**Error!** This must be run in a text or announcement channel.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    const textChannel = channel as TextChannel | NewsChannel;
+
+    // The leaderboard is stateful (its message is tracked + auto-updated),
+    // so it has its own flow.
+    if (which === "leaderboard") {
+      await this.sendLeaderboard(interaction, textChannel);
+      return;
+    }
+
+    let label: string;
+    try {
+      switch (which) {
+        case "application_hub":
+          await textChannel.send({
+            components: [
+              buildApplicationHubContainer(),
+              buildApplicationHubButton(),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Application hub";
+          break;
+
+        case "season_access":
+          // Deliberately a normal message (not Components V2): the text
+          // renders full width and the event link unfurls into its card.
+          await textChannel.send({
+            ...buildSeasonAccessMessage(),
+            // Ping @everyone, but render the role mentions without pinging.
+            allowedMentions: { parse: ["everyone"] },
+          });
+          label = "Season access panel";
+          break;
+
+        case "rules_info":
+          await textChannel.send({
+            components: buildRulesInfoComponents(),
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Rules & info";
+          break;
+
+        case "ticket_panel":
+          await textChannel.send({
+            components: [buildTriggerEmbed(), buildTriggerButtons()],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          label = "Ticket panel";
+          break;
+
+        default:
+          await interaction.reply({
+            components: [errorContainer("**Error!** Unknown panel.")],
+            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          });
+          return;
+      }
+    } catch (e) {
+      await interaction.reply({
+        components: [
+          errorContainer(`**Error!** Failed to post the panel: ${(e as Error).message}`),
+        ],
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await interaction.reply({
+      components: [primaryContainer(`${label} posted.`)],
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    });
+  }
+
+  /** Post a fresh leaderboard message and register it for auto-updates. */
+  private async sendLeaderboard(
+    interaction: ChatInputCommandInteraction,
+    channel: TextChannel | NewsChannel,
+  ) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const prior = await loadLeaderboardState();
+    const season =
+      interaction.options.getInteger("season") ??
+      prior.season ??
+      DEFAULT_LEADERBOARD_SEASON;
+
+    const data = await fetchLeaderboardData(season);
+    if (!data) {
+      await interaction.editReply({
+        components: [errorContainer("Failed to fetch leaderboard data.")],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
+    }
+
+    try {
+      const emojiMap = await syncLeaderboardEmojis(
+        interaction.client,
+        data.topPlayers,
+      );
+      const message = await channel.send({
+        components: buildLeaderboardComponents(data, emojiMap, season),
+        flags: MessageFlags.IsComponentsV2,
+      });
+      await saveLeaderboardState({
+        channelId: channel.id,
+        messageId: message.id,
+        season,
+      });
+      await interaction.editReply({
+        components: [
+          primaryContainer(
+            `## Leaderboard Created\nLeaderboard posted in <#${channel.id}> showing season ${season}. It will update every 5 minutes.`,
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
+    } catch {
+      await interaction.editReply({
+        components: [
+          errorContainer(
+            "Failed to send the leaderboard message. Check bot permissions.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
+    }
+  }
+
+  async build(): Promise<RESTPostAPIApplicationCommandsJSONBody> {
+    const builder = new SlashCommandBuilder()
+      .setName(this.name)
+      .setDescription(this.description)
+      .addSubcommand((sub) =>
+        sub
+          .setName("whitelist")
+          .setDescription("Whitelist a Discord user with a Minecraft username")
+          .addUserOption((opt) =>
+            opt
+              .setName("user")
+              .setDescription("The Discord user to whitelist")
+              .setRequired(true),
+          )
+          .addStringOption((opt) =>
+            opt
+              .setName("username")
+              .setDescription("The user's Minecraft Java username")
+              .setRequired(true),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("wipe-discord")
+          .setDescription("Wipe data for a Discord user")
+          .addUserOption((opt) =>
+            opt
+              .setName("user")
+              .setDescription("The Discord user to wipe")
+              .setRequired(true),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("wipe-minecraft")
+          .setDescription("Wipe data for a Minecraft username")
+          .addStringOption((opt) =>
+            opt
+              .setName("username")
+              .setDescription("The Minecraft Java username to wipe")
+              .setRequired(true),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("send")
+          .setDescription("Post a panel/embed in this channel")
+          .addStringOption((opt) =>
+            opt
+              .setName("message")
+              .setDescription("Which panel to send")
+              .setRequired(true)
+              .addChoices(
+                { name: "Application Hub", value: "application_hub" },
+                { name: "Season Access", value: "season_access" },
+                { name: "Rules & Info", value: "rules_info" },
+                { name: "Ticket Panel", value: "ticket_panel" },
+                { name: "Leaderboard", value: "leaderboard" },
+              ),
+          )
+          .addIntegerOption((opt) =>
+            opt
+              .setName("season")
+              .setDescription(
+                "Season ID for the leaderboard panel (default: last used)",
+              )
+              .setMinValue(1),
+          ),
+      )
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+      .setDMPermission(false);
+
+    return builder.toJSON();
+  }
+}

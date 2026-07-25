@@ -1,0 +1,8 @@
+{
+  "name": "@crabcraft/minecraft",
+  "private": true,
+  "scripts": {
+    "build": "./gradlew build",
+    "clean": "./gradlew clean"
+  }
+}

@@ -1,0 +1,91 @@
+# CrabUtilities - Optional Gameplay Tweaks
+
+# All tweaks are disabled by default.
+tweaks:
+  # Announce who slept when the night is skipped.
+  sleep-broadcast:
+    enabled: false
+    # Placeholder: <player>.
+    single-format: "<#FCD05C><player><#F4F1EA> slept to skip the night."
+    # Placeholders: <players>, <count>.
+    multiple-format: "<#FCD05C><players><#F4F1EA> slept to skip the night."
+
+  # Portals of any shape/size bounded by frame material, not just the vanilla
+  # rectangle. Port of VanillaTweaks' Custom Nether Portals.
+  custom-nether-portals:
+    enabled: false
+    frame-materials:
+      - "OBSIDIAN"
+      - "CRYING_OBSIDIAN"
+    size:
+      min-portal-blocks: 6
+      max-portal-width: 23
+      max-portal-height: 23
+
+  # Reactively lower simulation/view distances when tick time is high and
+  # cautiously raise them again after performance has remained healthy.
+  # Uses ViewDistanceTweaks' reactive defaults: check every 30 seconds,
+  # decrease at 47+ MSPT, and increase at 40- MSPT after 10 passed checks.
+  # The client-facing radius stays at the larger configured maximum so routine
+  # adjustments can stream chunks in and out without rebuilding all terrain.
+  view-distance:
+    enabled: false
+    simulation-distance:
+      minimum: 6
+      maximum: 12
+    view-distance:
+      minimum: 8
+      maximum: 16
+
+  # Faster happy ghasts while ridden; unridden ghasts stay vanilla.
+  happy-ghast:
+    ridden-speed-boost:
+      enabled: false
+      # Multiple of vanilla ridden speed. Must be positive; 1.0 = no change.
+      multiplier: 2.0
+
+  # Toss an item into a water cauldron to transform it in place.
+  cauldron:
+    # Concrete powder -> concrete.
+    concrete:
+      enabled: false
+    # Dirt / coarse dirt / rooted dirt -> mud.
+    mud:
+      enabled: false
+
+  # Auto-unlock every server recipe on join so nothing has to be discovered.
+  unlock-all-recipes:
+    enabled: false
+
+  # Share discounts earned by curing a zombie villager or winning a raid with
+  # nearby players. Cure discounts apply to the cured villager; raid discounts
+  # copy the Hero of the Village effect around the raid centre.
+  shared-villager-discounts:
+    enabled: false
+    radius: 100.0
+
+  # Stop endermen picking up or placing blocks (endermen only, unlike the
+  # mobGriefing game rule).
+  enderman-grief:
+    prevent: false
+
+  # Scale shulker shell drops by who scored the kill, so hand-farming beats
+  # automatic farms. Vanilla drop chance/Looting are unchanged; the amount is
+  # multiplied only after a shell actually drops. 1 = vanilla.
+  shulker-shells:
+    enabled: false
+    player-kill-multiplier: 2
+    other-multiplier: 1
+
+  # Drop the killed player's head on player kills. The head lore records the killer.
+  player-head-drops:
+    enabled: false
+
+  # Player heads keep their custom name and lore when broken and replaced.
+  persistent-heads:
+    enabled: false
+
+  # Merge nearby experience orbs as they spawn to reduce entity counts during PVP.
+  # Uses the same three-block search radius as PVPClumps.
+  pvp-clumps:
+    enabled: false

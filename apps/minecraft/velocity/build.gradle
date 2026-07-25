@@ -1,0 +1,134 @@
+plugins {
+    id 'com.gradleup.shadow'
+}
+
+base {
+    archivesName = 'CrabUtilities-Velocity'
+}
+
+repositories {
+    maven {
+        name = "papermc"
+        url = uri("https://repo.papermc.io/repository/maven-public/")
+    }
+    maven {
+        name = "luckperms"
+        url = uri("https://repo.lucko.me/")
+    }
+    maven {
+        name = "jitpack"
+        url = uri("https://jitpack.io")
+    }
+}
+
+dependencies {
+    compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    testCompileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    compileOnly("org.spongepowered:configurate-yaml:4.1.2")
+    compileOnly("com.google.code.gson:gson:2.10.1")
+    compileOnly("net.luckperms:api:5.5")
+    compileOnly("com.gitlab.ruany:LiteBansAPI:0.6.1")
+
+    implementation("redis.clients:jedis:5.1.0")
+    implementation("org.postgresql:postgresql:42.7.13")
+    implementation("com.zaxxer:HikariCP:7.1.0")
+}
+
+shadowJar {
+    configurations = [project.configurations.runtimeClasspath]
+    archiveClassifier.set('')
+    archiveVersion.set('')
+    addMultiReleaseAttribute.set(false)
+    relocate 'redis.clients.jedis', 'crabcraft.net.libs.jedis'
+    relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
+    relocate 'org.json', 'crabcraft.net.libs.json'
+    relocate 'com.zaxxer.hikari', 'crabcraft.net.libs.hikari'
+    // NB: org.postgresql is intentionally NOT relocated. Shadow can't
+    // reliably rewrite the JDBC driver's ServiceLoader entry when the
+    // package is moved, which makes HikariCP fail with "No suitable
+    // driver for jdbc:postgresql:..." at runtime. Velocity gives each
+    // plugin its own classloader so there's no conflict to shade around.
+
+    mergeServiceFiles()
+    filesMatching('META-INF/services/**') {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+}
+
+tasks.jar {
+    archiveClassifier.set('slim')
+}
+
+def regressionTests = [
+        loginStreakCacheSeedRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.LoginStreakCacheSeedRegressionTest',
+        nicknameRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.NicknameRegressionTest',
+        jadeClientProtocolPayloadRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.JadeClientProtocolPayloadRegressionTest',
+        playerLookupRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.messaging.PlayerLookupRegressionTest',
+        webServerRequestBodyRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.api.WebServerRequestBodyRegressionTest',
+        awardAltExclusionRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.awards.AwardAltExclusionRegressionTest',
+        awardDyeCraftingRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.awards.AwardDyeCraftingRegressionTest',
+        awardSuspiciousBrushRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.awards.AwardSuspiciousBrushRegressionTest',
+        awardSweetBerriesRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.awards.AwardSweetBerriesRegressionTest',
+        awardNewDefinitionsRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.awards.AwardNewDefinitionsRegressionTest',
+]
+
+regressionTests.each { taskName, testClass ->
+    tasks.register(taskName, JavaExec) {
+        group = 'verification'
+        dependsOn tasks.named('testClasses')
+        classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+        mainClass.set(testClass)
+    }
+}
+
+tasks.named('test') {
+    failOnNoDiscoveredTests = false
+}
+
+tasks.named('check') {
+    dependsOn regressionTests.keySet()
+}
+
+tasks.build.dependsOn(tasks.shadowJar)
+
+// Bundle the single source-of-truth award seed file into the plugin JAR
+// so the plugin can populate an empty awards table without requiring
+// 'bun run seed:awards' to have been run first.
+processResources {
+    from(file("${rootDir}/../../packages/db/seeds/awards.json")) {
+        into "crabcraft"
+    }
+}
+
+def generatedSrcDir = layout.buildDirectory.dir("generated/sources/buildinfo/java")
+
+tasks.register('generateBuildInfo') {
+    outputs.dir(generatedSrcDir)
+    inputs.property('version', project.version)
+    doLast {
+        def file = generatedSrcDir.get()
+                .file("crabcraft/net/crabUtilities/velocity/BuildInfo.java").asFile
+        file.parentFile.mkdirs()
+        file.text = """package crabcraft.net.crabUtilities.velocity;
+
+public final class BuildInfo {
+    public static final String VERSION = \"${project.version}\";
+    private BuildInfo() {}
+}
+"""
+    }
+}
+
+sourceSets.main.java.srcDirs += generatedSrcDir
+tasks.named('compileJava').configure { dependsOn('generateBuildInfo') }

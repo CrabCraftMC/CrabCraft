@@ -1,0 +1,28 @@
+{
+  "name": "@crabcraft/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schema": "./src/schema.ts",
+    "./client": "./src/client.ts",
+    "./queries/bot": "./src/queries/bot.ts",
+    "./queries/web": "./src/queries/web.ts",
+    "./queries/auth": "./src/queries/auth.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@crabcraft/shared": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@crabcraft/tsconfig": "workspace:*",
+    "drizzle-kit": "^0.31.0",
+    "typescript": "^5.8.0"
+  }
+}
