@@ -28,6 +28,8 @@ ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
 WORKDIR /app/apps/web
 RUN bun run build
 
+FROM infisical/cli:0.43.114 AS infisical
+
 # Stage 3: Production runtime
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -39,6 +41,7 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
     apk add --no-cache libc6-compat
 
+COPY --from=infisical /bin/infisical /usr/local/bin/infisical
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
