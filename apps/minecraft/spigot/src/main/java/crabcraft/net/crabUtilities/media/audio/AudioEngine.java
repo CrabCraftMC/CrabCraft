@@ -59,6 +59,9 @@ public final class AudioEngine {
   private volatile HornAudioCache hornCache;
   private volatile MediaDestinationPolicy destinationPolicy;
   private volatile MediaPolicyProxy policyProxy;
+  private volatile TrackResolver lofiResolver;
+  private volatile MediaDestinationPolicy lofiDestinationPolicy;
+  private volatile MediaPolicyProxy lofiPolicyProxy;
 
   private static ThreadFactory audioThreadFactory() {
     AtomicInteger nextThread = new AtomicInteger(1);
@@ -106,16 +109,26 @@ public final class AudioEngine {
     if (binaries != null) return;
     BinaryProvisioner b = new BinaryProvisioner();
     MediaDestinationPolicy policy = new MediaDestinationPolicy();
-    final MediaPolicyProxy proxy;
+    MediaDestinationPolicy trustedLofiPolicy =
+      MediaDestinationPolicy.forTrustedLofiConfiguration();
+    MediaPolicyProxy proxy = null;
+    MediaPolicyProxy trustedLofiProxy = null;
     try {
       proxy = new MediaPolicyProxy(policy, plugin.getMediaConfig().getYtDlpProxy());
+      trustedLofiProxy = new MediaPolicyProxy(
+        trustedLofiPolicy, plugin.getMediaConfig().getYtDlpProxy());
     } catch (IOException e) {
+      if (proxy != null) proxy.close();
+      if (trustedLofiProxy != null) trustedLofiProxy.close();
       MediaFeature.error("Could not start the media destination policy: {}", e.getMessage());
       return;
     }
     this.destinationPolicy = policy;
     this.policyProxy = proxy;
     this.resolver = new TrackResolver(b, policy, proxy);
+    this.lofiDestinationPolicy = trustedLofiPolicy;
+    this.lofiPolicyProxy = trustedLofiProxy;
+    this.lofiResolver = new TrackResolver(b, trustedLofiPolicy, trustedLofiProxy);
     this.hornCache = new HornAudioCache(new File(plugin.getDataFolder(), "horn-cache"));
     this.binaries = b;
   }
@@ -123,23 +136,29 @@ public final class AudioEngine {
   /** Applies reloadable media-network settings without changing the loopback proxy address. */
   public synchronized boolean reloadMediaPolicy() {
     MediaPolicyProxy currentProxy = policyProxy;
+    MediaPolicyProxy currentLofiProxy = lofiPolicyProxy;
     BinaryProvisioner currentBinaries = binaries;
-    if (currentProxy == null || currentBinaries == null) return true;
+    if (currentProxy == null || currentLofiProxy == null || currentBinaries == null) return true;
 
     MediaDestinationPolicy newPolicy = new MediaDestinationPolicy();
+    MediaDestinationPolicy newLofiPolicy =
+      MediaDestinationPolicy.forTrustedLofiConfiguration();
     try {
       currentProxy.reconfigure(newPolicy, plugin.getMediaConfig().getYtDlpProxy());
+      currentLofiProxy.reconfigure(newLofiPolicy, plugin.getMediaConfig().getYtDlpProxy());
     } catch (IOException e) {
       MediaFeature.error("Could not reload the media destination policy: {}", e.getMessage());
       return false;
     }
     destinationPolicy = newPolicy;
     resolver = new TrackResolver(currentBinaries, newPolicy, currentProxy);
+    lofiDestinationPolicy = newLofiPolicy;
+    lofiResolver = new TrackResolver(currentBinaries, newLofiPolicy, currentLofiProxy);
     return true;
   }
 
   public boolean isReady() {
-    return binaries != null && binaries.isReady() && policyProxy != null;
+    return binaries != null && binaries.isReady() && policyProxy != null && lofiPolicyProxy != null;
   }
 
   /**
@@ -157,6 +176,27 @@ public final class AudioEngine {
     return new OpenedStream(track, pcm);
   }
 
+  /**
+   * Opens the administrator-configured lofi stream. Unlike player-provided media, this source may
+   * resolve to a protected network because only {@code voicechat.lofi.youtube-url} can reach it.
+   */
+  public OpenedStream openLofiStream(String identifier, float volume, boolean forceRefresh)
+      throws IOException {
+    TrackResolver currentResolver = lofiResolver;
+    BinaryProvisioner currentBinaries = binaries;
+    MediaDestinationPolicy currentPolicy = lofiDestinationPolicy;
+    MediaPolicyProxy currentProxy = lofiPolicyProxy;
+    if (currentResolver == null || currentBinaries == null || !currentBinaries.isReady()
+        || currentPolicy == null || currentProxy == null) {
+      return null;
+    }
+    TrackResolver.ResolvedTrack track = currentResolver.resolve(identifier, forceRefresh);
+    if (track == null) return null;
+    FfmpegPcmStream pcm = new FfmpegPcmStream(currentBinaries.getFfmpegPath(), track.streamUrl(),
+      volume, currentPolicy, currentProxy);
+    return new OpenedStream(track, pcm);
+  }
+
   public record OpenedStream(TrackResolver.ResolvedTrack track, FfmpegPcmStream pcm)
     implements AutoCloseable {
     @Override public void close() { pcm.close(); }
@@ -168,6 +208,9 @@ public final class AudioEngine {
     MediaPolicyProxy proxy = policyProxy;
     policyProxy = null;
     if (proxy != null) proxy.close();
+    MediaPolicyProxy trustedLofiProxy = lofiPolicyProxy;
+    lofiPolicyProxy = null;
+    if (trustedLofiProxy != null) trustedLofiProxy.close();
   }
 
   public void play(@NotNull Block block, @NotNull String identifier) {
