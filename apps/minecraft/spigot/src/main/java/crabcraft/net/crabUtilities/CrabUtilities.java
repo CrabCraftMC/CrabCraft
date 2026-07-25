@@ -9,6 +9,7 @@ import crabcraft.net.crabUtilities.chat.EssentialsMentionAutocompleteListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
+import crabcraft.net.crabUtilities.chat.bridge.PaperChatBridge;
 import crabcraft.net.crabUtilities.config.ModuleConfigManager;
 import crabcraft.net.crabUtilities.enderman.EndermanGriefListener;
 import crabcraft.net.crabUtilities.happyghast.HappyGhastSpeedManager;
@@ -56,6 +57,7 @@ public final class CrabUtilities extends JavaPlugin {
     private LoginStreakExpansion loginStreakExpansion;
     private GlobalChatService globalChatService;
     private GlobalChatListener globalChatListener;
+    private PaperChatBridge chatBridge;
     private MentionAutocompleteListener mentionAutocompleteListener;
     private PlayerSettingsService playerSettingsService;
     private PhantomManager phantomManager;
@@ -177,6 +179,12 @@ public final class CrabUtilities extends JavaPlugin {
         SlimeCommand slimeCommand = new SlimeCommand();
         getCommand("slime").setExecutor(slimeCommand);
         getCommand("slime").setTabCompleter(slimeCommand);
+
+        // Private and staff chat enter through Paper so InteractiveChat, emoji
+        // plugins and other local processors see them before Velocity routes
+        // them across the network.
+        this.chatBridge = new PaperChatBridge(this);
+        chatBridge.start();
 
         startStatsPushTask();
 
@@ -630,6 +638,10 @@ public final class CrabUtilities extends JavaPlugin {
         if (nicknameSync != null) {
             nicknameSync.shutdown();
             nicknameSync = null;
+        }
+        if (chatBridge != null) {
+            chatBridge.shutdown();
+            chatBridge = null;
         }
         stopGlobalChatService();
         stopPlayerSettings();

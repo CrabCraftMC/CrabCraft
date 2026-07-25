@@ -18,13 +18,14 @@ public class StaffChatToggleCommand {
                     Player player = (Player) ctx.getSource();
                     boolean nowEnabled = plugin.getStaffChatManager().toggle(player.getUniqueId());
 
+                    Component result;
                     if (nowEnabled) {
-                        player.sendMessage(Component.text(
-                                "Staff chat enabled.", NamedTextColor.GREEN));
+                        result = Component.text("Staff chat enabled.", NamedTextColor.GREEN);
                     } else {
-                        player.sendMessage(Component.text(
-                                "Staff chat disabled.", NamedTextColor.RED));
+                        result = Component.text("Staff chat disabled.", NamedTextColor.RED);
                     }
+                    plugin.getChatBridge().syncStaffState(player, nowEnabled);
+                    plugin.getMessageManager().deliver(player, result);
                     return 1;
                 })
                 .build();

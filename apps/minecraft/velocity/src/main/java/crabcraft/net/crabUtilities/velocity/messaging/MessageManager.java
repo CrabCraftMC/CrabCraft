@@ -14,6 +14,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,10 +38,34 @@ public class MessageManager {
         this.plugin = plugin;
     }
 
-    public void send(CommandSource source, Player target, String message) {
+    public void sendToName(Player source, String targetName, Component message) {
+        Optional<Player> target = PlayerLookup.resolve(plugin, targetName);
+        if (target.isEmpty()) {
+            deliver(source, MINI_MESSAGE.deserialize(plugin.getConfig().getMsgPlayerNotFound()));
+            return;
+        }
+        send(source, target.get(), message);
+    }
+
+    public void reply(Player source, Component message) {
+        UUID partner = replyTargets.get(source.getUniqueId());
+        if (partner == null) {
+            deliver(source, MINI_MESSAGE.deserialize(plugin.getConfig().getMsgNoReplyTarget()));
+            return;
+        }
+
+        Optional<Player> target = plugin.getServer().getPlayer(partner);
+        if (target.isEmpty()) {
+            deliver(source, MINI_MESSAGE.deserialize(plugin.getConfig().getMsgPlayerNotFound()));
+            return;
+        }
+        send(source, target.get(), message);
+    }
+
+    public void send(CommandSource source, Player target, Component message) {
         UUID senderId = source instanceof Player p ? p.getUniqueId() : CONSOLE_UUID;
         if (senderId.equals(target.getUniqueId())) {
-            source.sendMessage(MINI_MESSAGE.deserialize(plugin.getConfig().getMsgSelfError()));
+            deliver(source, MINI_MESSAGE.deserialize(plugin.getConfig().getMsgSelfError()));
             return;
         }
 
@@ -50,7 +75,7 @@ public class MessageManager {
         if (settingsService != null
                 && !settingsService.acceptsMessages(target.getUniqueId())
                 && !source.hasPermission(BYPASS_DND_PERMISSION)) {
-            source.sendMessage(MINI_MESSAGE.deserialize(NOT_ACCEPTING_MESSAGE));
+            deliver(source, MINI_MESSAGE.deserialize(NOT_ACCEPTING_MESSAGE));
             return;
         }
 
@@ -59,15 +84,15 @@ public class MessageManager {
 
         Component outgoing = MINI_MESSAGE.deserialize(plugin.getConfig().getMsgOutgoingFormat(),
                 Placeholder.component("target", targetComponent),
-                Placeholder.unparsed("message", message)
+                Placeholder.component("message", message)
         );
         Component incoming = MINI_MESSAGE.deserialize(plugin.getConfig().getMsgIncomingFormat(),
                 Placeholder.component("sender", senderComponent),
-                Placeholder.unparsed("message", message)
+                Placeholder.component("message", message)
         );
 
-        source.sendMessage(outgoing);
-        target.sendMessage(incoming);
+        deliver(source, outgoing);
+        deliver(target, incoming);
         playIncomingSound(target);
 
         replyTargets.put(senderId, target.getUniqueId());
@@ -77,7 +102,8 @@ public class MessageManager {
 
         String plainSender = PlainTextComponentSerializer.plainText().serialize(senderComponent);
         String plainTarget = PlainTextComponentSerializer.plainText().serialize(targetComponent);
-        plugin.getLogger().info("[MSG] {} -> {}: {}", plainSender, plainTarget, message);
+        String plainMessage = PlainTextComponentSerializer.plainText().serialize(message);
+        plugin.getLogger().info("[MSG] {} -> {}: {}", plainSender, plainTarget, plainMessage);
     }
 
     private void playIncomingSound(Player target) {
@@ -93,22 +119,37 @@ public class MessageManager {
     }
 
     private void broadcastToSpies(Component senderComponent, Component targetComponent,
-                                  String message, UUID senderId, UUID targetId) {
+                                  Component message, UUID senderId, UUID targetId) {
         if (socialSpies.isEmpty()) return;
 
         Component spyMessage = MINI_MESSAGE.deserialize(plugin.getConfig().getMsgSpyFormat(),
                 Placeholder.component("sender", senderComponent),
                 Placeholder.component("target", targetComponent),
-                Placeholder.unparsed("message", message)
+                Placeholder.component("message", message)
         );
 
         for (UUID spyId : socialSpies) {
             if (spyId.equals(senderId) || spyId.equals(targetId)) continue;
             plugin.getServer().getPlayer(spyId).ifPresent(spy -> {
                 if (spy.hasPermission(SOCIALSPY_PERMISSION)) {
-                    spy.sendMessage(spyMessage);
+                    deliver(spy, spyMessage);
                 }
             });
+        }
+    }
+
+    public void deliver(Player player, Component component) {
+        VelocityChatBridge bridge = plugin.getChatBridge();
+        if (bridge == null || !bridge.deliver(player, component)) {
+            player.sendMessage(component);
+        }
+    }
+
+    private void deliver(CommandSource source, Component component) {
+        if (source instanceof Player player) {
+            deliver(player, component);
+        } else {
+            source.sendMessage(component);
         }
     }
 
@@ -122,10 +163,6 @@ public class MessageManager {
 
     public void clearSpy(UUID uuid) {
         socialSpies.remove(uuid);
-    }
-
-    public UUID getReplyTarget(UUID uuid) {
-        return replyTargets.get(uuid);
     }
 
     public void clearReplyTargets(UUID uuid) {

@@ -23,13 +23,10 @@ import crabcraft.net.crabUtilities.velocity.awards.AwardSeeder;
 import crabcraft.net.crabUtilities.velocity.db.PlayerSettingsRepository;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
-import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
-import crabcraft.net.crabUtilities.velocity.messaging.ReplyCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
+import crabcraft.net.crabUtilities.velocity.messaging.VelocityChatBridge;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
 import crabcraft.net.crabUtilities.velocity.voicechat.PlayerLocationTracker;
-import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
-import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatListener;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
 import crabcraft.net.crabUtilities.velocity.db.AltQueryService;
@@ -67,6 +64,7 @@ public class CrabUtilitiesVelocity {
     private PlayerLocationTracker playerLocationTracker;
     private StaffChatManager staffChatManager;
     private MessageManager messageManager;
+    private VelocityChatBridge chatBridge;
     private WebServer webServer;
     private NicknameCache nicknameCache;
     private NicknameListener nicknameListener;
@@ -122,15 +120,13 @@ public class CrabUtilitiesVelocity {
         }
 
         startRuntimeConsumers(config);
+        this.chatBridge = new VelocityChatBridge(this);
+        chatBridge.start();
 
-        StaffChatCommand.register(this);
         StaffChatToggleCommand.register(this);
-        MsgCommand.register(this);
-        ReplyCommand.register(this);
         SocialSpyCommand.register(this);
         ReloadCommand.register(this);
 
-        server.getEventManager().register(this, new StaffChatListener(this));
         this.connectionListener = new ConnectionListener(this);
         server.getEventManager().register(this, connectionListener);
 
@@ -144,6 +140,10 @@ public class CrabUtilitiesVelocity {
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
         synchronized (lifecycleLock) {
+            if (chatBridge != null) {
+                chatBridge.shutdown();
+                chatBridge = null;
+            }
             if (connectionListener != null) {
                 connectionListener.shutdown();
             }
@@ -252,6 +252,7 @@ public class CrabUtilitiesVelocity {
     public Path getDataDirectory() { return dataDirectory; }
     public StaffChatManager getStaffChatManager() { return staffChatManager; }
     public MessageManager getMessageManager() { return messageManager; }
+    public VelocityChatBridge getChatBridge() { return chatBridge; }
     public NicknameCache getNicknameCache() { return nicknameCache; }
     public NicknameListener getNicknameListener() { return nicknameListener; }
     public PendingJoinManager getPendingJoinManager() { return pendingJoinManager; }

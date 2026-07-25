@@ -32,6 +32,10 @@ public class StaffChatManager {
         this.discordAvatarUrlTemplate = discordAvatarUrlTemplate;
     }
 
+    public boolean hasPermission(Player player) {
+        return player.hasPermission(PERMISSION);
+    }
+
     public boolean isEnabled(UUID uuid) {
         return !disabledPlayers.contains(uuid);
     }
@@ -45,36 +49,38 @@ public class StaffChatManager {
         }
     }
 
-    public void sendMessage(String senderName, UUID senderUuid, String message) {
+    public void sendMessage(String senderName, UUID senderUuid, Component message) {
         redis.publish(senderName, message);
         sendToDiscord(senderName, senderUuid, message);
     }
 
-    private void sendToDiscord(String senderName, UUID senderUuid, String message) {
+    private void sendToDiscord(String senderName, UUID senderUuid, Component message) {
         if (discordWebhook == null) return;
         String plainName = NicknameComponentParser.plain(senderName);
+        String plainMessage = PlainTextComponentSerializer.plainText().serialize(message);
         String avatarUrl = null;
         if (senderUuid != null && discordAvatarUrlTemplate != null && !discordAvatarUrlTemplate.isEmpty()) {
             avatarUrl = discordAvatarUrlTemplate.replace("{uuid}", senderUuid.toString());
         }
-        discordWebhook.send(message, plainName, avatarUrl);
+        discordWebhook.send(plainMessage, plainName, avatarUrl);
     }
 
-    public void displayMessage(String senderName, String message) {
+    public void displayMessage(String senderName, Component message) {
         String format = plugin.getConfig().getStaffChatFormat();
         Component senderComponent = NicknameComponentParser.parse(senderName);
         Component component = MINI_MESSAGE.deserialize(format,
                 Placeholder.component("sender", senderComponent),
-                Placeholder.unparsed("message", message)
+                Placeholder.component("message", message)
         );
 
         for (Player player : plugin.getServer().getAllPlayers()) {
             if (player.hasPermission(PERMISSION) && isEnabled(player.getUniqueId())) {
-                player.sendMessage(component);
+                plugin.getMessageManager().deliver(player, component);
             }
         }
 
         String plainSender = PlainTextComponentSerializer.plainText().serialize(senderComponent);
-        plugin.getLogger().info("[StaffChat] {}: {}", plainSender, message);
+        String plainMessage = PlainTextComponentSerializer.plainText().serialize(message);
+        plugin.getLogger().info("[StaffChat] {}: {}", plainSender, plainMessage);
     }
 }
