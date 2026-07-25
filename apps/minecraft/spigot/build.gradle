@@ -46,8 +46,8 @@ dependencies {
         // with paper-api:26.1.2 on the org.spigotmc:spigot-api capability.
         exclude group: "org.spigotmc", module: "spigot-api"
     }
-    compileOnly("net.kyori:adventure-text-serializer-legacy:4.17.0")
-    compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
+    compileOnly("net.kyori:adventure-text-serializer-legacy:5.2.0")
+    compileOnly("net.kyori:adventure-text-minimessage:5.2.0")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     testImplementation("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     compileOnly("me.clip:placeholderapi:2.11.6")
