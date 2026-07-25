@@ -37,24 +37,35 @@ public final class MediaDestinationPolicy {
   }
 
   private final Resolver resolver;
+  private final boolean allowProtectedNetworks;
 
   public MediaDestinationPolicy() {
-    this(InetAddress::getAllByName);
+    this(InetAddress::getAllByName, false);
   }
 
   MediaDestinationPolicy(Resolver resolver) {
+    this(resolver, false);
+  }
+
+  private MediaDestinationPolicy(Resolver resolver, boolean allowProtectedNetworks) {
     this.resolver = resolver;
+    this.allowProtectedNetworks = allowProtectedNetworks;
+  }
+
+  /** Creates the protected-network exception used only by the administrator-owned lofi source. */
+  static MediaDestinationPolicy forTrustedLofiConfiguration() {
+    return new MediaDestinationPolicy(InetAddress::getAllByName, true);
   }
 
   public ApprovedDestination approve(String value) throws IOException {
-    return approve(value, false);
+    return approve(value, allowProtectedNetworks);
   }
 
   ApprovedDestination approveConfiguredProxy(String value) throws IOException {
     return approve(value, true);
   }
 
-  private ApprovedDestination approve(String value, boolean configuredProxy) throws IOException {
+  private ApprovedDestination approve(String value, boolean allowProtected) throws IOException {
     final URI uri;
     try {
       uri = new URI(value);
@@ -75,7 +86,7 @@ public final class MediaDestinationPolicy {
 
     InetAddress[] addresses = resolver.resolve(host);
     if (addresses.length == 0) throw new IOException("media destination did not resolve");
-    if (!configuredProxy
+    if (!allowProtected
         && Arrays.stream(addresses).anyMatch(MediaDestinationPolicy::isProtected)) {
       throw new IOException("media destination resolves to a protected network");
     }

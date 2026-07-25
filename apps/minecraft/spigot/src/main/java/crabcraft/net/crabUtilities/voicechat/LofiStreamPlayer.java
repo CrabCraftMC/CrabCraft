@@ -118,7 +118,7 @@ final class LofiStreamPlayer implements AutoCloseable {
                 }
 
                 AudioEngine.OpenedStream opened = AudioEngine.getInstance()
-                        .openStream(sourceUrl, musicVolume, forceRefresh);
+                        .openLofiStream(sourceUrl, musicVolume, forceRefresh);
                 forceRefresh = true;
                 if (opened == null) {
                     if (!resolutionFailureLogged) {

@@ -13,6 +13,7 @@ public final class MediaSecurityRegressionTest {
   public static void main(String[] args) throws Exception {
     verifyStructuredResolverOutput();
     verifyProtectedDestinations();
+    verifyTrustedConfigurationDestinations();
     verifyProtectedUpstreamProxyIsSeparatedFromDestinations();
     verifyRedirectRequestsAreRevalidated();
     verifyPolicyProxyCanBeReloaded();
@@ -77,6 +78,41 @@ public final class MediaSecurityRegressionTest {
     });
     expectRejected(() -> rebindingPolicy.approve("https://media.example/audio"),
       "mixed public/private DNS result was accepted");
+  }
+
+  private static void verifyTrustedConfigurationDestinations() throws Exception {
+    MediaDestinationPolicy trustedPolicy =
+      MediaDestinationPolicy.forTrustedLofiConfiguration();
+    trustedPolicy.approve("http://100.109.83.5/audio");
+    trustedPolicy.approve("http://127.0.0.1/audio");
+    expectRejected(() -> trustedPolicy.approve("file:///etc/passwd"),
+      "trusted configuration accepted a non-HTTP media protocol");
+    expectRejected(() -> trustedPolicy.approve("http://user:password@127.0.0.1/audio"),
+      "trusted configuration accepted URL credentials");
+
+    try (ServerSocket destination = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
+         MediaPolicyProxy proxy = new MediaPolicyProxy(trustedPolicy, "")) {
+      AtomicReference<Throwable> responderFailure = new AtomicReference<>();
+      Thread responder = new Thread(() -> {
+        try (Socket socket = destination.accept()) {
+          readRequestHeaders(socket);
+          socket.getOutputStream().write(
+            "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n"
+              .getBytes(StandardCharsets.ISO_8859_1));
+        } catch (Throwable t) {
+          responderFailure.set(t);
+        }
+      }, "trusted-config-media-test");
+      responder.start();
+
+      String target = "http://127.0.0.1:" + destination.getLocalPort() + "/audio";
+      check(proxyRequest(proxy, target).startsWith("HTTP/1.1 204"),
+        "the trusted configuration proxy rejected a protected destination");
+      responder.join(2_000);
+      check(!responder.isAlive(), "the trusted configuration proxy did not reach its destination");
+      check(responderFailure.get() == null,
+        "the trusted configuration proxy request failed: " + responderFailure.get());
+    }
   }
 
   private static void verifyProtectedUpstreamProxyIsSeparatedFromDestinations() throws Exception {

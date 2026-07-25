@@ -3,9 +3,10 @@
 # Simple Voice Chat cross-server bridge. Forwards opus frames between backends
 # over Redis so members of a persistent group hear each other across servers.
 voicechat:
-  # Persistent cross-server group with a continuously playing YouTube Live source.
+  # Persistent cross-server group with a continuously playing administrator-configured source.
   lofi:
     enabled: true
+    # Accepts HTTP(S) media on public or private networks. Never populate this from player input.
     youtube-url: "https://www.youtube.com/watch?v=8TIVlFtcRDU"
     # Linear volume multipliers: 0.5 = 50%; 0.25 = 75% quieter.
     music-volume: 0.5
