@@ -140,7 +140,7 @@ export const playerSeasonStats = pgTable(
 // ── awards ──────────────────────────────────────────────────────
 // Award definitions. Runtime-editable: admins can add/rename/disable
 // awards without redeploying. Evaluated by the Velocity plugin against
-// each player's stats/<uuid>.json.
+// each player's vanilla stats and optional plugin-provided metrics.
 export const awards = pgTable("awards", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
@@ -148,9 +148,9 @@ export const awards = pgTable("awards", {
   unit: text("unit").notNull(), // int | ticks | cm | tenths_of_heart
   bucket: text("bucket").notNull(), // combat | mining | crafting | building | items | food | movement | misc
   icon: text("icon").notNull(),
-  // Reader spec used by the plugin to extract a value from
-  // stats/<uuid>.json. Schema mirrors MinecraftStats' JSON readers.
-  reader_type: text("reader_type").notNull(), // int | match-sum
+  // Reader spec used by the plugin to extract a value. Standard readers
+  // mirror MinecraftStats; custom-int reads optional plugin metrics.
+  reader_type: text("reader_type").notNull(), // int | match-sum | custom-int
   reader_path: jsonb("reader_path").notNull(), // string[]
   reader_patterns: jsonb("reader_patterns"), // string[] | null
   enabled: boolean("enabled").notNull().default(true),

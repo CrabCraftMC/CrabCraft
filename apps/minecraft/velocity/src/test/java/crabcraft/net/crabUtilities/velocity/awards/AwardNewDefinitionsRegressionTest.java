@@ -16,7 +16,12 @@ final class AwardNewDefinitionsRegressionTest {
         checkTitle(rows, "collect_potato", "Absolute Spud");
         checkTitle(rows, "craft_honey_block", "Honey I'm Home");
         checkTitle(rows, "craft_redstone_components", "Redstone Crafter");
+        checkTitle(rows, "mine_ground", "Excavator");
         checkTitle(rows, "mine_lectern", "Librarian Reroller");
+        checkTitle(rows, "xp_level", "Level Headed");
+        check(rows.get("xp_level").getAsJsonObject("reader").get("type").getAsString()
+                        .equals("custom-int"),
+                "Level Headed does not use the custom reader");
 
         Map<String, AwardDefinition> definitions = new HashMap<>();
         for (JsonObject row : rows.values()) {
@@ -24,34 +29,62 @@ final class AwardNewDefinitionsRegressionTest {
             definitions.put(definition.id, definition);
         }
 
-        Map<String, Double> scores = new AwardEvaluator(definitions).evaluate(
-                JsonParser.parseString("""
-                        {"stats":{
-                          "minecraft:picked_up":{"minecraft:potato":23},
-                          "minecraft:crafted":{
-                            "minecraft:honey_block":7,
-                            "minecraft:comparator":3,
-                            "minecraft:repeater":5,
-                            "minecraft:observer":2,
-                            "minecraft:crafting_table":99
-                          },
-                          "minecraft:mined":{"minecraft:lectern":11},
-                          "minecraft:used":{
-                            "minecraft:egg":13,
-                            "minecraft:brown_egg":17,
-                            "minecraft:blue_egg":19,
-                            "minecraft:snowball":97
-                          }
-                        }}
-                        """).getAsJsonObject());
+        JsonObject stats = JsonParser.parseString("""
+                {"stats":{
+                  "minecraft:picked_up":{"minecraft:potato":23},
+                  "minecraft:crafted":{
+                    "minecraft:honey_block":7,
+                    "minecraft:comparator":3,
+                    "minecraft:repeater":5,
+                    "minecraft:observer":2,
+                    "minecraft:crafting_table":99
+                  },
+                  "minecraft:mined":{
+                    "minecraft:clay":29,
+                    "minecraft:lectern":11
+                  },
+                  "minecraft:used":{
+                    "minecraft:egg":13,
+                    "minecraft:brown_egg":17,
+                    "minecraft:blue_egg":19,
+                    "minecraft:snowball":97
+                  }
+                }}
+                """).getAsJsonObject();
+        JsonObject customMetrics = new JsonObject();
+        customMetrics.addProperty("xp_level", 42);
+
+        AwardEvaluator evaluator = new AwardEvaluator(definitions);
+        Map<String, Double> scores = evaluator.evaluate(stats, customMetrics);
 
         check(scores.get("collect_potato") == 23d, "Absolute Spud read the wrong score");
         check(scores.get("craft_honey_block") == 7d, "Honey I'm Home read the wrong score");
         check(scores.get("craft_redstone_components") == 10d,
                 "Redstone Crafter did not sum only redstone components");
+        check(scores.get("mine_ground") == 29d,
+                "Excavator did not count mined clay");
         check(scores.get("mine_lectern") == 11d, "Librarian Reroller read the wrong score");
         check(scores.get("use_egg") == 49d,
                 "Egg Tosser did not sum normal, brown, and blue eggs");
+        check(scores.get("xp_level") == 42d,
+                "Level Headed did not read the custom XP level");
+
+        JsonObject zeroMetrics = new JsonObject();
+        zeroMetrics.addProperty("xp_level", 0);
+        Map<String, Double> zeroScores = evaluator.evaluate(stats, zeroMetrics);
+        check(zeroScores.containsKey("xp_level") && zeroScores.get("xp_level") == 0d,
+                "an explicit zero XP level was treated as missing");
+
+        Map<String, Double> missingScores = evaluator.evaluate(stats, new JsonObject());
+        check(!missingScores.containsKey("xp_level"),
+                "a missing XP level would overwrite the last valid score");
+        check(missingScores.get("collect_potato") == 23d,
+                "missing custom metrics suppressed vanilla award scores");
+
+        JsonObject invalidMetrics = new JsonObject();
+        invalidMetrics.addProperty("xp_level", "42");
+        check(!evaluator.evaluate(stats, invalidMetrics).containsKey("xp_level"),
+                "a non-numeric XP level was accepted");
     }
 
     private static Map<String, JsonObject> loadSeedRows() throws Exception {
@@ -67,13 +100,15 @@ final class AwardNewDefinitionsRegressionTest {
                 if (id.equals("collect_potato")
                         || id.equals("craft_honey_block")
                         || id.equals("craft_redstone_components")
+                        || id.equals("mine_ground")
                         || id.equals("mine_lectern")
-                        || id.equals("use_egg")) {
+                        || id.equals("use_egg")
+                        || id.equals("xp_level")) {
                     rowsById.put(id, row);
                 }
             }
         }
-        check(rowsById.size() == 5, "one or more new award definitions are missing");
+        check(rowsById.size() == 7, "one or more award definitions are missing");
         return rowsById;
     }
 

@@ -298,6 +298,11 @@ const ICON_MAP: Record<string, string> = {
   talk_villager: "Villager_Spawn_Egg",
   sneak_time: "Leather_Boots",
   fish_caught: "Fishing_Rod",
+  xp_level: "Bottle_o'_Enchanting",
+};
+
+const ICON_URL_OVERRIDES: Record<string, string> = {
+  xp_level: "https://minecraft.wiki/images/ItemSprite_bottle-o%27-enchanting.png",
 };
 
 const WIKI_BASE = "https://minecraft.wiki/images/Invicon_";
@@ -317,7 +322,7 @@ async function main() {
 
     // Force re-download all icons
 
-    const url = `${WIKI_BASE}${wikiName}.png`;
+    const url = ICON_URL_OVERRIDES[awardId] ?? `${WIKI_BASE}${wikiName}.png`;
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": "CrabCraft-AwardIconDownloader/1.0" },

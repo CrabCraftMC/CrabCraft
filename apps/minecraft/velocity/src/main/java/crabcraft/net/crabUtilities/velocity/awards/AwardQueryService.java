@@ -61,7 +61,7 @@ public final class AwardQueryService {
                           SELECT 1 FROM player_alts alt
                           WHERE alt.minecraft_uuid = scores.minecraft_uuid
                       )
-                    ORDER BY scores.award_id, scores.score DESC
+                    ORDER BY scores.award_id, scores.score DESC, scores.minecraft_uuid
                     """)) {
                 stmt.setString(1, season);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -161,6 +161,7 @@ public final class AwardQueryService {
                         ranked.minecraft_uuid,
                         u.minecraft_username,
                         ranked.score,
+                        ranked.rnk,
                         CASE WHEN ranked.rnk <= 3 THEN ranked.rnk::int ELSE 0 END AS medal
                     FROM (
                         SELECT
@@ -175,7 +176,7 @@ public final class AwardQueryService {
                           )
                     ) ranked
                     LEFT JOIN players u ON u.minecraft_uuid = ranked.minecraft_uuid
-                    ORDER BY ranked.score DESC
+                    ORDER BY ranked.score DESC, ranked.minecraft_uuid
                     LIMIT ? OFFSET ?
                     """)) {
                 stmt.setString(1, awardId);
@@ -183,11 +184,9 @@ public final class AwardQueryService {
                 stmt.setInt(3, limit);
                 stmt.setInt(4, offset);
                 try (ResultSet rs = stmt.executeQuery()) {
-                    int rank = offset;
                     while (rs.next()) {
-                        rank++;
                         JsonObject entry = new JsonObject();
-                        entry.addProperty("rank", rank);
+                        entry.addProperty("rank", rs.getInt("rnk"));
                         entry.addProperty("uuid", rs.getString("minecraft_uuid"));
                         entry.addProperty("username", rs.getString("minecraft_username"));
                         entry.addProperty("score", rs.getDouble("score"));

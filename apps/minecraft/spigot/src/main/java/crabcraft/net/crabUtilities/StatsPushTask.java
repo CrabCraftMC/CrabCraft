@@ -2,6 +2,7 @@ package crabcraft.net.crabUtilities;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import crabcraft.net.crabUtilities.awards.XpLevelReader;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
@@ -14,11 +15,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalInt;
 
 /**
- * Periodically scans the Minecraft level's {@code players/stats/} folder and
- * publishes the contents of each changed file to Redis so the Velocity
- * proxy can compute award scores and persist them.
+ * Periodically scans the Minecraft level's saved player data and publishes
+ * changed snapshots to Redis so the Velocity proxy can compute award scores
+ * and persist them.
  *
  * <p>Runs on an async Bukkit task every
  * {@code stats-push.interval-minutes} (config, default 5) plus once
@@ -27,7 +29,15 @@ import java.util.Map;
  * active players, not total player count.
  *
  * <p>Payload on channel {@code crabutilities:stats-push}:
- * <pre>{"season":"6","uuid":"&lt;uuid&gt;","stats":&lt;raw contents&gt;}</pre>
+ * <pre>{
+ *   "season":"6",
+ *   "uuid":"&lt;uuid&gt;",
+ *   "stats":&lt;raw contents&gt;,
+ *   "custom":{"xp_level":42}
+ * }</pre>
+ * The {@code custom} object is optional. XP level is read from the latest
+ * complete player-data save and has the same eventual consistency as the
+ * other periodically pushed statistics.
  */
 public class StatsPushTask {
 
@@ -42,10 +52,12 @@ public class StatsPushTask {
     private final long intervalMinutes;
     private final File statsDir;
     private final File advancementsDir;
+    private final File playerDataDir;
 
     private JedisPool jedisPool;
     private BukkitTask task;
     private final Map<String, Long> lastSeenMtime = new HashMap<>();
+    private final Map<String, Long> lastSeenPlayerDataMtime = new HashMap<>();
     private volatile boolean redisFailureLogged;
 
     public StatsPushTask(CrabUtilities plugin) {
@@ -59,6 +71,7 @@ public class StatsPushTask {
         Path playersDirectory = playerStorageDirectory(plugin.getServer().getLevelDirectory());
         this.statsDir = playersDirectory.resolve("stats").toFile();
         this.advancementsDir = playersDirectory.resolve("advancements").toFile();
+        this.playerDataDir = playersDirectory.resolve("playerdata").toFile();
     }
 
     static Path playerStorageDirectory(Path levelDirectory) {
@@ -105,11 +118,18 @@ public class StatsPushTask {
                 redisFailureLogged = false;
             }
             for (File file : files) {
-                long mtime = file.lastModified();
-                Long prev = lastSeenMtime.get(file.getName());
-                if (prev != null && prev == mtime) continue;
-
                 String uuid = file.getName().substring(0, file.getName().length() - ".json".length());
+                File playerDataFile = new File(playerDataDir, uuid + ".dat");
+                long mtime = file.lastModified();
+                long playerDataMtime = playerDataFile.isFile() ? playerDataFile.lastModified() : 0L;
+                Long prev = lastSeenMtime.get(file.getName());
+                Long previousPlayerDataMtime = lastSeenPlayerDataMtime.get(uuid);
+                if (prev != null && prev == mtime
+                        && previousPlayerDataMtime != null
+                        && previousPlayerDataMtime == playerDataMtime) {
+                    continue;
+                }
+
                 String raw;
                 try {
                     raw = Files.readString(file.toPath());
@@ -131,6 +151,15 @@ public class StatsPushTask {
                 envelope.addProperty("uuid", uuid);
                 envelope.add("stats", JsonParser.parseString(raw));
 
+                OptionalInt xpLevel = XpLevelReader.read(playerDataFile.toPath());
+                if (xpLevel.isPresent()) {
+                    JsonObject custom = new JsonObject();
+                    custom.addProperty("xp_level", xpLevel.getAsInt());
+                    envelope.add("custom", custom);
+                } else if (playerDataFile.isFile()) {
+                    plugin.getLogger().fine("Could not read XP level for " + uuid);
+                }
+
                 // Include advancements if available for this player
                 File advFile = new File(advancementsDir, uuid + ".json");
                 if (advFile.isFile()) {
@@ -149,6 +178,7 @@ public class StatsPushTask {
                 String payload = envelope.toString();
                 jedis.publish(CHANNEL, payload);
                 lastSeenMtime.put(file.getName(), mtime);
+                lastSeenPlayerDataMtime.put(uuid, playerDataMtime);
                 pushed++;
             }
         } catch (Exception e) {

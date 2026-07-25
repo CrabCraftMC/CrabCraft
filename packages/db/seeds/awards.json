@@ -2459,7 +2459,7 @@
   {
     "id": "mine_ground",
     "title": "Excavator",
-    "description": "Dirt, sand and gravel dug",
+    "description": "Dirt, clay, sand and gravel dug",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_ground.png",
@@ -2469,6 +2469,7 @@
         "minecraft:mined"
       ],
       "patterns": [
+        "minecraft:clay",
         "minecraft:coarse_dirt",
         "minecraft:dirt",
         "minecraft:farmland",
@@ -4471,6 +4472,21 @@
       "path": [
         "minecraft:used",
         "minecraft:sweet_berries"
+      ]
+    }
+  },
+  {
+    "id": "xp_level",
+    "title": "Level Headed",
+    "description": "Current experience level",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/xp_level.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "custom-int",
+      "path": [
+        "xp_level"
       ]
     }
   }
