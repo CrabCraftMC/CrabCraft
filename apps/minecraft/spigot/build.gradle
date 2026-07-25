@@ -8,6 +8,8 @@ base {
     archivesName = 'CrabUtilities'
 }
 
+sourceSets.main.java.srcDir("${rootDir}/shared/src/main/java")
+
 repositories {
     maven {
         name = "spigotmc-repo"
@@ -89,6 +91,7 @@ def regressionTests = [
     xpLevelReaderRegressionTest: 'crabcraft.net.crabUtilities.awards.XpLevelReaderRegressionTest',
     globalChatLinkRegressionTest: 'crabcraft.net.crabUtilities.chat.GlobalChatLinkRegressionTest',
     chatMiniMessageRegressionTest: 'crabcraft.net.crabUtilities.chat.ChatMiniMessageRegressionTest',
+    chatBridgeRegressionTest: 'crabcraft.net.crabUtilities.chat.bridge.ChatBridgeRegressionTest',
     reloadCommandRegressionTest: 'crabcraft.net.crabUtilities.ReloadCommandRegressionTest',
     crabMessagesRegressionTest: 'crabcraft.net.crabUtilities.CrabMessagesRegressionTest',
     xaeroLifecycleRegressionTest: 'crabcraft.net.crabUtilities.xaero.XaeroLifecycleRegressionTest',

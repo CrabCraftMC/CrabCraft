@@ -6,6 +6,7 @@ authors: [Max]
 website: https://www.crabcraft.net
 softdepend:
   - Essentials
+  - InteractiveChat
   - voicechat
   - packetevents
   - PlaceholderAPI
@@ -24,6 +25,18 @@ commands:
   slime:
     description: Show nearby slime chunks or check the chunk you are standing in.
     usage: /slime <map|chunk>
+  msg:
+    description: Send a cross-server private message.
+    usage: /msg <player> <message>
+    aliases: [message, tell, whisper, w, dm]
+  r:
+    description: Reply to your most recent private-message partner.
+    usage: /r <message>
+    aliases: [reply]
+  sc:
+    description: Send a cross-server staff-chat message.
+    usage: /sc <message>
+    aliases: [staffchat]
 permissions:
   crabutilities.reload:
     description: Reload CrabUtilities configuration.
