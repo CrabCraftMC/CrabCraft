@@ -1,5 +1,7 @@
 package crabcraft.net.crabUtilities.velocity.awards;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 
@@ -20,9 +22,18 @@ final class AwardAltExclusionRegressionTest {
         AwardQueryService queries = new AwardQueryService(dataSource, logger);
 
         queries.getAllAwards("7");
-        queries.getAwardLeaderboard("test-award", "7", 10, 0);
+        JsonObject awardLeaderboard = queries.getAwardLeaderboard("test-award", "7", 10, 0);
         queries.getCrownLeaderboard("7", 10, 0);
         queries.getPlayerAwards("primary-uuid", "7");
+
+        JsonArray entries = awardLeaderboard.getAsJsonArray("leaderboard");
+        check(entries.size() == 3, "expected the tie-ranking fixture");
+        check(entries.get(0).getAsJsonObject().get("rank").getAsInt() == 1,
+                "first tied player did not receive rank 1");
+        check(entries.get(1).getAsJsonObject().get("rank").getAsInt() == 1,
+                "second tied player did not receive rank 1");
+        check(entries.get(2).getAsJsonObject().get("rank").getAsInt() == 3,
+                "rank after a two-way tie should skip to 3");
 
         List<String> rankingQueries = dataSource.sql.stream()
                 .filter(sql -> sql.contains("player_award_scores"))
@@ -74,6 +85,26 @@ final class AwardAltExclusionRegressionTest {
                         "unit", "int",
                         "bucket", "misc",
                         "icon", "test.png"));
+            } else if (sql.contains("case when ranked.rnk <= 3")) {
+                rows = List.of(
+                        Map.of(
+                                "minecraft_uuid", "primary-uuid",
+                                "minecraft_username", "Primary",
+                                "score", 42d,
+                                "rnk", 1,
+                                "medal", 1),
+                        Map.of(
+                                "minecraft_uuid", "second-uuid",
+                                "minecraft_username", "Second",
+                                "score", 42d,
+                                "rnk", 1,
+                                "medal", 1),
+                        Map.of(
+                                "minecraft_uuid", "third-uuid",
+                                "minecraft_username", "Third",
+                                "score", 41d,
+                                "rnk", 3,
+                                "medal", 3));
             } else if (sql.contains("select award_id, score, rank from")) {
                 rows = List.of(Map.of("award_id", "test-award", "score", 1d, "rank", 1));
             } else {

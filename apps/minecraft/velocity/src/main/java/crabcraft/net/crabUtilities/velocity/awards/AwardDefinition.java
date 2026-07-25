@@ -12,7 +12,10 @@ public class AwardDefinition {
         @SerializedName("$type")
         public String type;
 
-        /** Path inside the stats JSON: e.g. ["minecraft:custom", "minecraft:play_time"]. */
+        /**
+         * Path inside the reader's source object: vanilla stats for standard
+         * readers or plugin-provided metrics for {@code custom-int}.
+         */
         public List<String> path;
 
         /** For match-sum readers: regex patterns whose matching keys are summed. */

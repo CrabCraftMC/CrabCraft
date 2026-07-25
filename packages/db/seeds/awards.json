@@ -4473,5 +4473,20 @@
         "minecraft:sweet_berries"
       ]
     }
+  },
+  {
+    "id": "xp_level",
+    "title": "Level Headed",
+    "description": "Current experience level",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/xp_level.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "custom-int",
+      "path": [
+        "xp_level"
+      ]
+    }
   }
 ]

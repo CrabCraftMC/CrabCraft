@@ -39,7 +39,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@code player_season_stats} row and the award/medal tables.
  *
  * <p>Envelope shape (published by the Spigot {@code StatsPushTask}):
- * <pre>{"season":"6","uuid":"&lt;uuid&gt;","stats":&lt;raw stats object&gt;}</pre>
+ * <pre>{
+ *   "season":"6",
+ *   "uuid":"&lt;uuid&gt;",
+ *   "stats":&lt;raw stats object&gt;,
+ *   "custom":{"xp_level":42}
+ * }</pre>
  *
  * <p>Reconnects on Redis errors with a 3s backoff, same as the other
  * Redis subscribers in this plugin.
@@ -144,6 +149,8 @@ public class StatsPushSubscriber {
                 ? envelope.get("uuid").getAsString() : null;
         JsonObject stats = envelope.has("stats") && envelope.get("stats").isJsonObject()
                 ? envelope.getAsJsonObject("stats") : null;
+        JsonObject customMetrics = envelope.has("custom") && envelope.get("custom").isJsonObject()
+                ? envelope.getAsJsonObject("custom") : null;
 
         if (uuid == null || stats == null) {
             logger.warn("Ignoring stats-push envelope with missing fields");
@@ -179,7 +186,7 @@ public class StatsPushSubscriber {
         AwardDbWriter writer = plugin.getAwardDbWriter();
         if (evaluator != null && writer != null) {
             try {
-                Map<String, Double> scores = evaluator.evaluate(stats);
+                Map<String, Double> scores = evaluator.evaluate(stats, customMetrics);
                 writer.writeScoresForPlayer(uuid, season, scores);
                 queueMedalRecompute(season);
             } catch (Exception e) {
