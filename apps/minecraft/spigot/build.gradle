@@ -56,7 +56,7 @@ dependencies {
     testCompileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
     compileOnly("org.projectlombok:lombok:1.18.46")
     annotationProcessor("org.projectlombok:lombok:1.18.46")
-    implementation("redis.clients:jedis:5.1.0")
+    implementation("redis.clients:jedis:7.5.3")
 }
 
 shadowJar {
