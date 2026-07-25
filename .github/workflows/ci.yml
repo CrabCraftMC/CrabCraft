@@ -58,7 +58,7 @@ jobs:
           cp bun.lock release/bot/bun.lock
           tar -czf crabcraft-bot-${{ github.sha }}.tar.gz -C release/bot .
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: crabcraft-bot
           path: crabcraft-bot-*.tar.gz
@@ -170,19 +170,19 @@ jobs:
           sha256sum CrabUtilities.jar CrabUtilities-Velocity.jar > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: CrabUtilities-Spigot
           path: apps/minecraft/jars/CrabUtilities.jar
           retention-days: 3
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: CrabUtilities-Velocity
           path: apps/minecraft/jars/CrabUtilities-Velocity.jar
           retention-days: 3
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: CrabUtilities-All
           path: |
@@ -191,7 +191,7 @@ jobs:
             apps/minecraft/jars/SHA256SUMS.txt
           retention-days: 3
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: CrabUtilities-Checksums
           path: apps/minecraft/jars/SHA256SUMS.txt
