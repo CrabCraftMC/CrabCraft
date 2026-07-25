@@ -1,0 +1,5 @@
+{
+  "name": "@crabcraft/tsconfig",
+  "private": true,
+  "files": ["base.json", "nextjs.json", "bun.json"]
+}

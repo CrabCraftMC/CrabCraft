@@ -1,0 +1,4477 @@
+[
+  {
+    "id": "aviate",
+    "title": "Glider",
+    "description": "Distance flown with elytra",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/aviate.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:aviate_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "biomes",
+    "title": "Globetrotter",
+    "description": "Unique biomes visited",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/biomes.png",
+    "reader": {
+      "type": "set-count",
+      "path": [
+        "advancements",
+        "minecraft:adventure/adventuring_time",
+        "criteria"
+      ]
+    }
+  },
+  {
+    "id": "break_tools",
+    "title": "Worn Out",
+    "description": "Tools broken from use",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/break_tools.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:broken"
+      ],
+      "patterns": [
+        "minecraft:.+_axe",
+        "minecraft:.+_hoe",
+        "minecraft:.+_pickaxe",
+        "minecraft:.+_shovel",
+        "minecraft:fishing_rod",
+        "minecraft:flint_and_steel",
+        "minecraft:shears"
+      ]
+    }
+  },
+  {
+    "id": "brush_suspicious",
+    "title": "Archaeologist",
+    "description": "Suspicious sand and gravel brushed",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/brush_suspicious.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:suspicious_gravel",
+        "minecraft:suspicious_sand"
+      ]
+    }
+  },
+  {
+    "id": "breed",
+    "title": "Matchmaker",
+    "description": "Animals bred together",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/breed.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:animals_bred"
+      ]
+    }
+  },
+  {
+    "id": "climb",
+    "title": "Ascending",
+    "description": "Distance climbed on ladders and vines",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/climb.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:climb_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "collect_berries",
+    "title": "Berry Picker",
+    "description": "Sweet berries harvested",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/collect_berries.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:picked_up"
+      ],
+      "patterns": [
+        "minecraft:.+_berries"
+      ]
+    }
+  },
+  {
+    "id": "collect_potato",
+    "title": "Absolute Spud",
+    "description": "Potatoes collected",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/collect_potato.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:picked_up",
+        "minecraft:potato"
+      ]
+    }
+  },
+  {
+    "id": "collect_shroom",
+    "title": "Shroom Gatherer",
+    "description": "Mushrooms picked up",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/collect_shroom.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:picked_up"
+      ],
+      "patterns": [
+        "minecraft:.+_fungus",
+        "minecraft:.+_mushroom"
+      ]
+    }
+  },
+  {
+    "id": "craft_armor",
+    "title": "Suited Up",
+    "description": "Armor pieces crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_armor.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_helmet",
+        "minecraft:.+_leggings",
+        "minecraft:.+_boots",
+        "minecraft:.+_chestplate",
+        "minecraft:shield"
+      ]
+    }
+  },
+  {
+    "id": "craft_beacon",
+    "title": "Beacon Builder",
+    "description": "Beacons constructed",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_beacon.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:beacon"
+      ]
+    }
+  },
+  {
+    "id": "craft_bookshelf",
+    "title": "Bookworm",
+    "description": "Bookshelves built",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_bookshelf.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.*bookshelf"
+      ]
+    }
+  },
+  {
+    "id": "craft_buttons",
+    "title": "Pushy",
+    "description": "Buttons crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_buttons.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.*button"
+      ]
+    }
+  },
+  {
+    "id": "craft_bread",
+    "title": "Oven Fresh",
+    "description": "Breads, cakes and cookies baked",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_bread.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:bread",
+        "minecraft:cake",
+        "minecraft:cookie"
+      ]
+    }
+  },
+  {
+    "id": "craft_bundle",
+    "title": "Packed Up",
+    "description": "Bundles crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_bundle.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:bundle"
+      ]
+    }
+  },
+  {
+    "id": "craft_clock",
+    "title": "Clockwork",
+    "description": "Clocks assembled",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_clock.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:clock"
+      ]
+    }
+  },
+  {
+    "id": "craft_compass",
+    "title": "Pathfinder",
+    "description": "Compasses crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_compass.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:compass"
+      ]
+    }
+  },
+  {
+    "id": "craft_dye",
+    "title": "True Colors",
+    "description": "Dyes crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_dye.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_dye"
+      ]
+    }
+  },
+  {
+    "id": "craft_ender_chest",
+    "title": "Secure Storage",
+    "description": "Ender chests crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_ender_chest.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:ender_chest"
+      ]
+    }
+  },
+  {
+    "id": "craft_fireworks",
+    "title": "Pyrotechnician",
+    "description": "Firework rockets and stars crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_fireworks.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:firework_rocket",
+        "minecraft:firework_star"
+      ]
+    }
+  },
+  {
+    "id": "craft_glowstone",
+    "title": "Bright Idea",
+    "description": "Glowstone blocks crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_glowstone.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:glowstone"
+      ]
+    }
+  },
+  {
+    "id": "craft_honey_block",
+    "title": "Honey I'm Home",
+    "description": "Honey blocks crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_honey_block.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:honey_block"
+      ]
+    }
+  },
+  {
+    "id": "craft_lead",
+    "title": "With Strings Attached",
+    "description": "Leads crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_lead.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:lead"
+      ]
+    }
+  },
+  {
+    "id": "craft_mineral_block",
+    "title": "Block Press",
+    "description": "Mineral blocks compressed",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_mineral_block.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:coal_block",
+        "minecraft:copper_block",
+        "minecraft:diamond_block",
+        "minecraft:emerald_block",
+        "minecraft:gold_block",
+        "minecraft:iron_block",
+        "minecraft:lapis_block",
+        "minecraft:netherite_block",
+        "minecraft:quartz_block",
+        "minecraft:raw_copper_block",
+        "minecraft:raw_gold_block",
+        "minecraft:raw_iron_block",
+        "minecraft:redstone_block"
+      ]
+    }
+  },
+  {
+    "id": "craft_paper",
+    "title": "Pulp Mill",
+    "description": "Paper sheets produced",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_paper.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:paper"
+      ]
+    }
+  },
+  {
+    "id": "craft_potent_sulfur",
+    "title": "Cave Chemist",
+    "description": "Potent Sulfur crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_potent_sulfur.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:potent_sulfur"
+      ]
+    }
+  },
+  {
+    "id": "craft_rails",
+    "title": "Rail Works",
+    "description": "Rails and minecarts crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_rails.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:rail",
+        "minecraft:powered_rail",
+        "minecraft:detector_rail",
+        "minecraft:activator_rail",
+        "minecraft:minecart",
+        "minecraft:chest_minecart",
+        "minecraft:furnace_minecart",
+        "minecraft:hopper_minecart",
+        "minecraft:tnt_minecart"
+      ]
+    }
+  },
+  {
+    "id": "craft_recovery_compass",
+    "title": "Lost & Found",
+    "description": "Recovery compasses crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_recovery_compass.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:recovery_compass"
+      ]
+    }
+  },
+  {
+    "id": "craft_redstone_components",
+    "title": "Redstone Crafter",
+    "description": "Redstone components crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_redstone_components.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_pressure_plate",
+        "minecraft:.+button",
+        "minecraft:comparator",
+        "minecraft:daylight_detector.*",
+        "minecraft:detector_rail",
+        "minecraft:lever",
+        "minecraft:observer",
+        "minecraft:redstone",
+        "minecraft:redstone_torch",
+        "minecraft:repeater",
+        "minecraft:sculk_sensor",
+        "minecraft:target"
+      ]
+    }
+  },
+  {
+    "id": "craft_respawn_anchor",
+    "title": "Anchor Point",
+    "description": "Respawn anchors crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_respawn_anchor.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:respawn_anchor"
+      ]
+    }
+  },
+  {
+    "id": "craft_sponge",
+    "title": "Soaked",
+    "description": "Sponges dried in furnace",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_sponge.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:sponge"
+      ]
+    }
+  },
+  {
+    "id": "craft_spyglass",
+    "title": "Lookout",
+    "description": "Spyglasses crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_spyglass.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:spyglass"
+      ]
+    }
+  },
+  {
+    "id": "craft_sword",
+    "title": "Blade Forger",
+    "description": "Swords forged",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_sword.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_sword"
+      ]
+    }
+  },
+  {
+    "id": "craft_tnt",
+    "title": "Demolitions",
+    "description": "TNT blocks crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_tnt.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:tnt"
+      ]
+    }
+  },
+  {
+    "id": "craft_tools",
+    "title": "Tool Bench",
+    "description": "Tools crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_tools.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_axe",
+        "minecraft:.+_hoe",
+        "minecraft:.+_pickaxe",
+        "minecraft:.+_shovel",
+        "minecraft:fishing_rod",
+        "minecraft:flint_and_steel",
+        "minecraft:shears"
+      ]
+    }
+  },
+  {
+    "id": "craft_turtle_helmet",
+    "title": "Shell Helm",
+    "description": "Turtle shell helmets crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_turtle_helmet.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:turtle_helmet"
+      ]
+    }
+  },
+  {
+    "id": "craft_wool",
+    "title": "Textile Worker",
+    "description": "Wool and carpets crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_wool.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_carpet",
+        "minecraft:.+_wool"
+      ]
+    }
+  },
+  {
+    "id": "crouch",
+    "title": "Low Profile",
+    "description": "Distance traveled while sneaking",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/crouch.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:crouch_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "damage_absorbed",
+    "title": "Absorbent",
+    "description": "Damage absorbed by absorption hearts",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_absorbed.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_absorbed"
+      ]
+    }
+  },
+  {
+    "id": "damage_dealt",
+    "title": "Heavy Hitter",
+    "description": "Total damage dealt to mobs",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_dealt.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_dealt"
+      ]
+    }
+  },
+  {
+    "id": "damage_dealt_absorbed",
+    "title": "Bubble Breaker",
+    "description": "Damage dealt into absorption hearts",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_dealt_absorbed.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_dealt_absorbed"
+      ]
+    }
+  },
+  {
+    "id": "damage_shield",
+    "title": "Shielded",
+    "description": "Damage blocked with a shield",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_shield.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_blocked_by_shield"
+      ]
+    }
+  },
+  {
+    "id": "damage_resisted",
+    "title": "Iron Will",
+    "description": "Damage resisted",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_resisted.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_resisted"
+      ]
+    }
+  },
+  {
+    "id": "damage_taken",
+    "title": "Battle Scarred",
+    "description": "Total damage received",
+    "unit": "tenths_of_heart",
+    "bucket": "combat",
+    "icon": "/awards/icons/damage_taken.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:damage_taken"
+      ]
+    }
+  },
+  {
+    "id": "death",
+    "title": "Frequent Flyer",
+    "description": "Total deaths",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/death.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:deaths"
+      ]
+    }
+  },
+  {
+    "id": "dive",
+    "title": "Deep Dive",
+    "description": "Distance traveled underwater",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/dive.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:walk_under_water_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "drink_milk",
+    "title": "Got Milk?",
+    "description": "Milk buckets consumed",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/drink_milk.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:milk_bucket"
+      ]
+    }
+  },
+  {
+    "id": "drop",
+    "title": "Litterbug",
+    "description": "Items tossed on the ground",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/drop.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:drop"
+      ]
+    }
+  },
+  {
+    "id": "eat_bread",
+    "title": "Crushin' a Loaf",
+    "description": "Bread eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_bread.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:bread"
+      ]
+    }
+  },
+  {
+    "id": "eat_cookie",
+    "title": "Cookie Crumbler",
+    "description": "Cookies devoured",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_cookie.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:cookie"
+      ]
+    }
+  },
+  {
+    "id": "eat_fish",
+    "title": "Seafood Lover",
+    "description": "Cooked fish consumed",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_fish.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:clownfish",
+        "minecraft:cod",
+        "minecraft:cooked_cod",
+        "minecraft:cooked_salmon",
+        "minecraft:salmon",
+        "minecraft:tropical_fish"
+      ]
+    }
+  },
+  {
+    "id": "eat_junkfood",
+    "title": "Junk Muncher",
+    "description": "Junk food items eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_junkfood.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:poisonous_potato",
+        "minecraft:rotten_flesh",
+        "minecraft:spider_eye"
+      ]
+    }
+  },
+  {
+    "id": "eat_meat",
+    "title": "Meat Eater",
+    "description": "Cooked meat consumed",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_meat.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:beef",
+        "minecraft:chicken",
+        "minecraft:cooked_beef",
+        "minecraft:cooked_chicken",
+        "minecraft:cooked_mutton",
+        "minecraft:cooked_porkchop",
+        "minecraft:cooked_rabbit",
+        "minecraft:mutton",
+        "minecraft:porkchop",
+        "minecraft:rabbit",
+        "minecraft:rabbit_stew"
+      ]
+    }
+  },
+  {
+    "id": "eat_rawmeat",
+    "title": "Risky Appetite",
+    "description": "Raw meat eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_rawmeat.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:beef",
+        "minecraft:chicken",
+        "minecraft:mutton",
+        "minecraft:porkchop",
+        "minecraft:rabbit"
+      ]
+    }
+  },
+  {
+    "id": "eat_soup",
+    "title": "Soup Slurper",
+    "description": "Soups and stews consumed",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_soup.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:mushroom_stew",
+        "minecraft:beetroot_soup",
+        "minecraft:rabbit_stew",
+        "minecraft:suspicious_stew"
+      ]
+    }
+  },
+  {
+    "id": "eat_veggie",
+    "title": "Green Diet",
+    "description": "Vegetable items eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_veggie.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:apple",
+        "minecraft:baked_potato",
+        "minecraft:beetroot",
+        "minecraft:beetroot_soup",
+        "minecraft:bread",
+        "minecraft:cake",
+        "minecraft:carrot",
+        "minecraft:chorus_fruit",
+        "minecraft:cookie",
+        "minecraft:dried_kelp",
+        "minecraft:glow_berries",
+        "minecraft:golden_apple",
+        "minecraft:golden_carrot",
+        "minecraft:melon_slice",
+        "minecraft:mushroom_stew",
+        "minecraft:potato",
+        "minecraft:pumpkin_pie",
+        "minecraft:sweet_berries"
+      ]
+    }
+  },
+  {
+    "id": "enchant",
+    "title": "Runesmith",
+    "description": "Items enchanted at a table",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/enchant.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:enchant_item"
+      ]
+    }
+  },
+  {
+    "id": "fall",
+    "title": "Free Fall",
+    "description": "Total distance fallen",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/fall.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:fall_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "harvest_bamboo",
+    "title": "Bamboo Farmer",
+    "description": "Bamboo stalks harvested",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/harvest_bamboo.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:picked_up",
+        "minecraft:bamboo"
+      ]
+    }
+  },
+  {
+    "id": "harvest_nether_wart",
+    "title": "Wart Grower",
+    "description": "Nether wart harvested",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/harvest_nether_wart.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:picked_up",
+        "minecraft:nether_wart"
+      ]
+    }
+  },
+  {
+    "id": "harvest_sugar",
+    "title": "Cane Cutter",
+    "description": "Sugar cane harvested",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/harvest_sugar.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:picked_up",
+        "minecraft:sugar_cane"
+      ]
+    }
+  },
+  {
+    "id": "interact_anvil",
+    "title": "Anvil Worker",
+    "description": "Times used an anvil",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_anvil.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_anvil"
+      ]
+    }
+  },
+  {
+    "id": "interact_blast_furnace",
+    "title": "Blast Operator",
+    "description": "Times used a blast furnace",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_blast_furnace.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_blast_furnace"
+      ]
+    }
+  },
+  {
+    "id": "interact_brewing_stand",
+    "title": "Potion Mixer",
+    "description": "Times used a brewing stand",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_brewing_stand.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_brewingstand"
+      ]
+    }
+  },
+  {
+    "id": "interact_campfire",
+    "title": "Camp Cook",
+    "description": "Times used a campfire",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_campfire.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_campfire"
+      ]
+    }
+  },
+  {
+    "id": "interact_cartography",
+    "title": "Map Maker",
+    "description": "Times used a cartography table",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_cartography.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_cartography_table"
+      ]
+    }
+  },
+  {
+    "id": "interact_cauldron",
+    "title": "Cauldron Keeper",
+    "description": "Cauldrons filled or used",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_cauldron.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:custom"
+      ],
+      "patterns": [
+        "minecraft:fill_cauldron",
+        "minecraft:use_cauldron"
+      ]
+    }
+  },
+  {
+    "id": "interact_grindstone",
+    "title": "Grinder",
+    "description": "Times used a grindstone",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_grindstone.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_grindstone"
+      ]
+    }
+  },
+  {
+    "id": "interact_inspectors",
+    "title": "Inspector Gadget",
+    "description": "Dispensers, droppers and hoppers inspected",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_inspectors.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:custom"
+      ],
+      "patterns": [
+        "minecraft:inspect_dispenser",
+        "minecraft:inspect_dropper",
+        "minecraft:inspect_hopper"
+      ]
+    }
+  },
+  {
+    "id": "interact_lectern",
+    "title": "Page Turner",
+    "description": "Times used a lectern",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_lectern.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_lectern"
+      ]
+    }
+  },
+  {
+    "id": "interact_loom",
+    "title": "Pattern Weaver",
+    "description": "Times used a loom",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_loom.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_loom"
+      ]
+    }
+  },
+  {
+    "id": "interact_smoker",
+    "title": "Smoke Master",
+    "description": "Times used a smoker",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_smoker.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_smoker"
+      ]
+    }
+  },
+  {
+    "id": "interact_stonecutter",
+    "title": "Stone Shaper",
+    "description": "Times used a stonecutter",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_stonecutter.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_stonecutter"
+      ]
+    }
+  },
+  {
+    "id": "jump",
+    "title": "Spring Loaded",
+    "description": "Total jumps",
+    "unit": "int",
+    "bucket": "movement",
+    "icon": "/awards/icons/jump.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:jump"
+      ]
+    }
+  },
+  {
+    "id": "kill_allay",
+    "title": "Allay Slayer",
+    "description": "Allays killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_allay.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:allay"
+      ]
+    }
+  },
+  {
+    "id": "kill_any",
+    "title": "Total Eliminations",
+    "description": "Total mobs killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_any.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:mob_kills"
+      ]
+    }
+  },
+  {
+    "id": "kill_axolotl",
+    "title": "Axolotl Hunter",
+    "description": "Axolotls killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_axolotl.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:axolotl"
+      ]
+    }
+  },
+  {
+    "id": "kill_bat",
+    "title": "Bat Swatter",
+    "description": "Bats killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_bat.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:bat"
+      ]
+    }
+  },
+  {
+    "id": "kill_bee",
+    "title": "Bee Bane",
+    "description": "Bees killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_bee.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:bee"
+      ]
+    }
+  },
+  {
+    "id": "kill_blaze",
+    "title": "Blaze Snuffer",
+    "description": "Blazes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_blaze.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:blaze"
+      ]
+    }
+  },
+  {
+    "id": "kill_camel",
+    "title": "Camel Crusher",
+    "description": "Camels killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_camel.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:camel"
+      ]
+    }
+  },
+  {
+    "id": "kill_chicken",
+    "title": "Poultry Puncher",
+    "description": "Chickens killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_chicken.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:chicken"
+      ]
+    }
+  },
+  {
+    "id": "kill_cow",
+    "title": "Beef Bringer",
+    "description": "Cows killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_cow.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:cow"
+      ]
+    }
+  },
+  {
+    "id": "kill_creeper",
+    "title": "Boom Dodger",
+    "description": "Creepers killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_creeper.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:creeper"
+      ]
+    }
+  },
+  {
+    "id": "kill_dolphin",
+    "title": "Flipper Fiend",
+    "description": "Dolphins killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_dolphin.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:dolphin"
+      ]
+    }
+  },
+  {
+    "id": "kill_ender_dragon",
+    "title": "Dragon Slayer",
+    "description": "Ender Dragons killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_ender_dragon.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:ender_dragon"
+      ]
+    }
+  },
+  {
+    "id": "kill_enderman",
+    "title": "Ender Ender",
+    "description": "Endermen killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_enderman.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:enderman"
+      ]
+    }
+  },
+  {
+    "id": "kill_endermite",
+    "title": "Mite Crusher",
+    "description": "Endermites killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_endermite.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:endermite"
+      ]
+    }
+  },
+  {
+    "id": "kill_fish",
+    "title": "Fish Whacker",
+    "description": "Fish killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_fish.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:cod",
+        "minecraft:pufferfish",
+        "minecraft:salmon",
+        "minecraft:tropical_fish"
+      ]
+    }
+  },
+  {
+    "id": "kill_fox",
+    "title": "Fox Chaser",
+    "description": "Foxes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_fox.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:fox"
+      ]
+    }
+  },
+  {
+    "id": "kill_frog",
+    "title": "Frog Squasher",
+    "description": "Frogs killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_frog.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:frog"
+      ]
+    }
+  },
+  {
+    "id": "kill_ghast",
+    "title": "Ghast Buster",
+    "description": "Ghasts killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_ghast.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:ghast"
+      ]
+    }
+  },
+  {
+    "id": "kill_goat",
+    "title": "Goat Getter",
+    "description": "Goats killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_goat.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:goat"
+      ]
+    }
+  },
+  {
+    "id": "kill_guardian",
+    "title": "Temple Raider",
+    "description": "Guardians killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_guardian.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:elder_guardian",
+        "minecraft:guardian"
+      ]
+    }
+  },
+  {
+    "id": "kill_hoglins",
+    "title": "Hoglin Chopper",
+    "description": "Hoglins and zoglins killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_hoglins.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:hoglin",
+        "minecraft:zoglin"
+      ]
+    }
+  },
+  {
+    "id": "kill_horse",
+    "title": "Stallion Stomper",
+    "description": "Horses killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_horse.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:horse"
+      ]
+    }
+  },
+  {
+    "id": "kill_illagers",
+    "title": "Raid Repeller",
+    "description": "Illagers killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_illagers.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:evoker",
+        "minecraft:illusioner",
+        "minecraft:pillager",
+        "minecraft:vindicator"
+      ]
+    }
+  },
+  {
+    "id": "kill_iron_golem",
+    "title": "Golem Breaker",
+    "description": "Iron golems killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_iron_golem.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:iron_golem"
+      ]
+    }
+  },
+  {
+    "id": "kill_llama",
+    "title": "Llama Drama",
+    "description": "Llamas killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_llama.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:llama",
+        "minecraft:trader_llama"
+      ]
+    }
+  },
+  {
+    "id": "kill_magma_cube",
+    "title": "Magma Masher",
+    "description": "Magma cubes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_magma_cube.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:magma_cube"
+      ]
+    }
+  },
+  {
+    "id": "kill_sulfur_cube",
+    "title": "Cube Control",
+    "description": "Sulfur cubes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_sulfur_cube.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:sulfur_cube"
+      ]
+    }
+  },
+  {
+    "id": "kill_mooshroom",
+    "title": "Shroom Cow Slayer",
+    "description": "Mooshrooms killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_mooshroom.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:mooshroom"
+      ]
+    }
+  },
+  {
+    "id": "kill_ocelot",
+    "title": "Cat Catcher",
+    "description": "Ocelots and cats killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_ocelot.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:cat",
+        "minecraft:ocelot"
+      ]
+    }
+  },
+  {
+    "id": "kill_panda",
+    "title": "Panda Pounder",
+    "description": "Pandas killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_panda.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:panda"
+      ]
+    }
+  },
+  {
+    "id": "kill_parrot",
+    "title": "Parrot Pirate",
+    "description": "Parrots killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_parrot.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:parrot"
+      ]
+    }
+  },
+  {
+    "id": "kill_phantom",
+    "title": "Night Swatter",
+    "description": "Phantoms killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_phantom.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:phantom"
+      ]
+    }
+  },
+  {
+    "id": "kill_player",
+    "title": "Player Slayer",
+    "description": "Players killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_player.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:player_kills"
+      ]
+    }
+  },
+  {
+    "id": "kill_pig",
+    "title": "Pork Producer",
+    "description": "Pigs killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_pig.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:pig"
+      ]
+    }
+  },
+  {
+    "id": "kill_piglin",
+    "title": "Piglin Punisher",
+    "description": "Piglins killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_piglin.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:piglin"
+      ]
+    }
+  },
+  {
+    "id": "kill_piglin_brute",
+    "title": "Brute Force",
+    "description": "Piglin brutes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_piglin_brute.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:piglin_brute"
+      ]
+    }
+  },
+  {
+    "id": "kill_polar_bear",
+    "title": "Arctic Antagonist",
+    "description": "Polar bears killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_polar_bear.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:polar_bear"
+      ]
+    }
+  },
+  {
+    "id": "kill_rabbit",
+    "title": "Rabbit Runner",
+    "description": "Rabbits killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_rabbit.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:rabbit"
+      ]
+    }
+  },
+  {
+    "id": "kill_ravager",
+    "title": "Ravager Wrecker",
+    "description": "Ravagers killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_ravager.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:illager_beast",
+        "minecraft:ravager"
+      ]
+    }
+  },
+  {
+    "id": "kill_sheep",
+    "title": "Wool Harvester",
+    "description": "Sheep killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_sheep.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:sheep"
+      ]
+    }
+  },
+  {
+    "id": "kill_shulker",
+    "title": "Shell Popper",
+    "description": "Shulkers killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_shulker.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:shulker"
+      ]
+    }
+  },
+  {
+    "id": "kill_silverfish",
+    "title": "Bug Squasher",
+    "description": "Silverfish killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_silverfish.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:silverfish"
+      ]
+    }
+  },
+  {
+    "id": "kill_skeleton",
+    "title": "Bone Rattler",
+    "description": "Skeletons and strays killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_skeleton.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:skeleton",
+        "minecraft:stray"
+      ]
+    }
+  },
+  {
+    "id": "kill_slime",
+    "title": "Slime Splatter",
+    "description": "Slimes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_slime.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:slime"
+      ]
+    }
+  },
+  {
+    "id": "kill_sniffer",
+    "title": "Sniffer Swiper",
+    "description": "Sniffers killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_sniffer.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:sniffer"
+      ]
+    }
+  },
+  {
+    "id": "kill_snow_golem",
+    "title": "Snowman Melter",
+    "description": "Snow golems killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_snow_golem.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:snow_golem"
+      ]
+    }
+  },
+  {
+    "id": "kill_spider",
+    "title": "Web Clearer",
+    "description": "Spiders killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_spider.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:cave_spider",
+        "minecraft:spider"
+      ]
+    }
+  },
+  {
+    "id": "kill_squid",
+    "title": "Ink Spiller",
+    "description": "Squids killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_squid.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:glow_squid",
+        "minecraft:squid"
+      ]
+    }
+  },
+  {
+    "id": "kill_strider",
+    "title": "Strider Slayer",
+    "description": "Striders killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_strider.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:strider"
+      ]
+    }
+  },
+  {
+    "id": "kill_tadpole",
+    "title": "Tadpole Terminator",
+    "description": "Tadpoles killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_tadpole.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:tadpole"
+      ]
+    }
+  },
+  {
+    "id": "kill_turtle",
+    "title": "Shell Stomper",
+    "description": "Turtles killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_turtle.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:turtle"
+      ]
+    }
+  },
+  {
+    "id": "kill_vex",
+    "title": "Vex Vanquisher",
+    "description": "Vexes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_vex.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:vex"
+      ]
+    }
+  },
+  {
+    "id": "kill_villager",
+    "title": "Village Menace",
+    "description": "Villagers killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_villager.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:villager"
+      ]
+    }
+  },
+  {
+    "id": "kill_wandering_trader",
+    "title": "Trader Trouble",
+    "description": "Wandering traders killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_wandering_trader.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:wandering_trader"
+      ]
+    }
+  },
+  {
+    "id": "kill_warden",
+    "title": "Warden Conqueror",
+    "description": "Wardens killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_warden.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:warden"
+      ]
+    }
+  },
+  {
+    "id": "kill_witch",
+    "title": "Hex Breaker",
+    "description": "Witches killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_witch.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:witch"
+      ]
+    }
+  },
+  {
+    "id": "kill_wither_skeleton",
+    "title": "Skull Collector",
+    "description": "Wither skeletons killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_wither_skeleton.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:wither_skeleton"
+      ]
+    }
+  },
+  {
+    "id": "kill_wither",
+    "title": "Wither Wrecker",
+    "description": "Withers killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_wither.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:wither"
+      ]
+    }
+  },
+  {
+    "id": "kill_wolf",
+    "title": "Wolf Wrangler",
+    "description": "Wolves and dogs killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_wolf.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:wolf"
+      ]
+    }
+  },
+  {
+    "id": "kill_zombie",
+    "title": "Undead Purger",
+    "description": "Zombies, husks and drowned killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_zombie.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:drowned",
+        "minecraft:husk",
+        "minecraft:zombie",
+        "minecraft:zombie_villager"
+      ]
+    }
+  },
+  {
+    "id": "kill_zombified_piglin",
+    "title": "Nether Brawler",
+    "description": "Zombified piglins killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_zombified_piglin.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:killed"
+      ],
+      "patterns": [
+        "minecraft:zombie_pigman",
+        "minecraft:zombified_piglin"
+      ]
+    }
+  },
+  {
+    "id": "killed_by_creeper",
+    "title": "Creeper Victim",
+    "description": "Times killed by a creeper",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/killed_by_creeper.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed_by",
+        "minecraft:creeper"
+      ]
+    }
+  },
+  {
+    "id": "killed_by_warden",
+    "title": "Deep Dark Death",
+    "description": "Times killed by a warden",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/killed_by_warden.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed_by",
+        "minecraft:warden"
+      ]
+    }
+  },
+  {
+    "id": "mine_amethyst",
+    "title": "Gem Cutter",
+    "description": "Amethyst mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_amethyst.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:.+_amethyst_bud",
+        "minecraft:amethyst_cluster"
+      ]
+    }
+  },
+  {
+    "id": "mine_ancient_debris",
+    "title": "Debris Digger",
+    "description": "Ancient debris excavated",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_ancient_debris.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:ancient_debris"
+      ]
+    }
+  },
+  {
+    "id": "mine_coal_ore",
+    "title": "Coal Cracker",
+    "description": "Coal ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_coal_ore.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:coal_ore",
+        "minecraft:deepslate_coal_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_cobweb",
+    "title": "Web Sweeper",
+    "description": "Cobwebs cleared",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_cobweb.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:cobweb"
+      ]
+    }
+  },
+  {
+    "id": "mine_copper_ore",
+    "title": "Copper Vein",
+    "description": "Copper ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_copper_ore.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:copper_ore",
+        "minecraft:deepslate_copper_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_coral",
+    "title": "Reef Raider",
+    "description": "Coral blocks mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_coral.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:.+_coral",
+        "minecraft:.+_coral_block",
+        "minecraft:.+_coral_fan",
+        "minecraft:.+_coral_wall_fan"
+      ]
+    }
+  },
+  {
+    "id": "mine_diamond_ore",
+    "title": "Diamond Strike",
+    "description": "Diamond ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_diamond_ore.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:diamond_ore",
+        "minecraft:deepslate_diamond_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_dimensional",
+    "title": "Dimension Digger",
+    "description": "Netherrack and end stone mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_dimensional.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:end_stone",
+        "minecraft:netherrack"
+      ]
+    }
+  },
+  {
+    "id": "mine_emerald_ore",
+    "title": "Emerald Seeker",
+    "description": "Emerald ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_emerald_ore.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:emerald_ore",
+        "minecraft:deepslate_emerald_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_glass",
+    "title": "Glass Breaker",
+    "description": "Glass blocks broken",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_glass.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:glass",
+        "minecraft:tinted_glass",
+        "minecraft:.*glass_pane",
+        "minecraft:.*stained_glass"
+      ]
+    }
+  },
+  {
+    "id": "mine_gold_ore",
+    "title": "Gold Vein",
+    "description": "Gold ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_gold_ore.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:gold_ore",
+        "minecraft:deepslate_gold_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_grass",
+    "title": "Grass Trimmer",
+    "description": "Grass and ferns cleared",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_grass.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:grass",
+        "minecraft:tall_grass"
+      ]
+    }
+  },
+  {
+    "id": "mine_ground",
+    "title": "Excavator",
+    "description": "Dirt, sand and gravel dug",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_ground.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:coarse_dirt",
+        "minecraft:dirt",
+        "minecraft:farmland",
+        "minecraft:grass",
+        "minecraft:grass_path",
+        "minecraft:gravel",
+        "minecraft:mud",
+        "minecraft:mycelium",
+        "minecraft:podzol",
+        "minecraft:red_sand",
+        "minecraft:rooted_dirt",
+        "minecraft:sand",
+        "minecraft:soul_sand",
+        "minecraft:soul_soil",
+        "minecraft:suspicious_gravel",
+        "minecraft:suspicious_sand"
+      ]
+    }
+  },
+  {
+    "id": "mine_ice",
+    "title": "Ice Breaker",
+    "description": "Ice blocks broken",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_ice.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:ice",
+        "minecraft:.+_ice"
+      ]
+    }
+  },
+  {
+    "id": "mine_iron_ore",
+    "title": "Iron Vein",
+    "description": "Iron ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_iron_ore.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:iron_ore",
+        "minecraft:deepslate_iron_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_kelp",
+    "title": "Kelp Harvester",
+    "description": "Kelp cut",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_kelp.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:kelp",
+        "minecraft:kelp_plant"
+      ]
+    }
+  },
+  {
+    "id": "mine_lapis_ore",
+    "title": "Lapis Finder",
+    "description": "Lapis lazuli ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_lapis_ore.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:lapis_ore",
+        "minecraft:deepslate_lapis_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_lectern",
+    "title": "Librarian Reroller",
+    "description": "Lecterns mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_lectern.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:lectern"
+      ]
+    }
+  },
+  {
+    "id": "mine_nether_foliage",
+    "title": "Nether Trimmer",
+    "description": "Nether roots and sprouts cleared",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_nether_foliage.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:crimson_roots",
+        "minecraft:nether_sprouts",
+        "minecraft:warped_roots"
+      ]
+    }
+  },
+  {
+    "id": "mine_nether_quartz_ore",
+    "title": "Quartz Miner",
+    "description": "Nether quartz ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_nether_quartz_ore.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:nether_quartz_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_obsidian",
+    "title": "Obsidian Breaker",
+    "description": "Obsidian blocks mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_obsidian.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:obsidian"
+      ]
+    }
+  },
+  {
+    "id": "mine_pointed_dripstone",
+    "title": "Cave Chipper",
+    "description": "Pointed dripstone mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_pointed_dripstone.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:pointed_dripstone"
+      ]
+    }
+  },
+  {
+    "id": "mine_redstone_ore",
+    "title": "Redstone Miner",
+    "description": "Redstone ore mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_redstone_ore.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:redstone_ore",
+        "minecraft:deepslate_redstone_ore"
+      ]
+    }
+  },
+  {
+    "id": "mine_resin_clump",
+    "title": "Resin Runner",
+    "description": "Resin clumps mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_resin_clump.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:resin_clump"
+      ]
+    }
+  },
+  {
+    "id": "mine_snow",
+    "title": "Snow Shoveler",
+    "description": "Snow layers cleared",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_snow.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:powder_snow",
+        "minecraft:snow",
+        "minecraft:snow_block"
+      ]
+    }
+  },
+  {
+    "id": "mine_spawner",
+    "title": "Spawner Smasher",
+    "description": "Monster spawners destroyed",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_spawner.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:mined",
+        "minecraft:spawner"
+      ]
+    }
+  },
+  {
+    "id": "mine_stone",
+    "title": "Rock Breaker",
+    "description": "Stone blocks mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_stone.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:andesite",
+        "minecraft:basalt",
+        "minecraft:blackstone",
+        "minecraft:calcite",
+        "minecraft:deepslate",
+        "minecraft:diorite",
+        "minecraft:dripstone",
+        "minecraft:granite",
+        "minecraft:smooth_basalt",
+        "minecraft:stone",
+        "minecraft:tuff"
+      ]
+    }
+  },
+  {
+    "id": "mine_total",
+    "title": "World Eater",
+    "description": "Total blocks mined",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_total.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:.*"
+      ]
+    }
+  },
+  {
+    "id": "mine_wood",
+    "title": "Lumber Jack",
+    "description": "Wood blocks chopped",
+    "unit": "int",
+    "bucket": "mining",
+    "icon": "/awards/icons/mine_wood.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:mined"
+      ],
+      "patterns": [
+        "minecraft:.+_log",
+        "minecraft:.+_stem"
+      ]
+    }
+  },
+  {
+    "id": "noteblock",
+    "title": "Note Player",
+    "description": "Note block interactions",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/noteblock.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:custom"
+      ],
+      "patterns": [
+        "minecraft:play_noteblock",
+        "minecraft:tune_noteblock"
+      ]
+    }
+  },
+  {
+    "id": "open_container",
+    "title": "Container Opener",
+    "description": "Containers opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_container.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:custom"
+      ],
+      "patterns": [
+        "minecraft:open_chest",
+        "minecraft:open_enderchest",
+        "minecraft:open_shulker_box",
+        "minecraft:trigger_trapped_chest"
+      ]
+    }
+  },
+  {
+    "id": "place_banner",
+    "title": "Flag Planter",
+    "description": "Banners placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_banner.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*banner"
+      ]
+    }
+  },
+  {
+    "id": "place_bars",
+    "title": "Cage Builder",
+    "description": "Iron bars and chains placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_bars.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:chain",
+        "minecraft:iron_bars"
+      ]
+    }
+  },
+  {
+    "id": "place_cactus",
+    "title": "Prickly Planter",
+    "description": "Cacti planted",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_cactus.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:cactus"
+      ]
+    }
+  },
+  {
+    "id": "place_candle",
+    "title": "Candle Lighter",
+    "description": "Candles placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_candle.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*candle"
+      ]
+    }
+  },
+  {
+    "id": "place_color_blocks",
+    "title": "Color Blocked",
+    "description": "Concrete, terracotta and glazed terracotta placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_color_blocks.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_concrete",
+        "minecraft:.+_concrete_powder",
+        "minecraft:.+_terracotta",
+        "minecraft:.+_glazed_terracotta",
+        "minecraft:terracotta"
+      ]
+    }
+  },
+  {
+    "id": "place_copper",
+    "title": "Copper Skyline",
+    "description": "Copper-family blocks placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_copper.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*copper.*"
+      ]
+    }
+  },
+  {
+    "id": "place_chorus_flower",
+    "title": "End Gardener",
+    "description": "Chorus flowers planted",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_chorus_flower.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:chorus_flower"
+      ]
+    }
+  },
+  {
+    "id": "place_conveyor",
+    "title": "Item Mover",
+    "description": "Hoppers and droppers placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_conveyor.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:dropper",
+        "minecraft:hopper"
+      ]
+    }
+  },
+  {
+    "id": "place_decor",
+    "title": "Set Dresser",
+    "description": "Paintings, item frames and armor stands placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_decor.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:painting",
+        "minecraft:item_frame",
+        "minecraft:glow_item_frame",
+        "minecraft:armor_stand"
+      ]
+    }
+  },
+  {
+    "id": "place_doors",
+    "title": "Open & Shut",
+    "description": "Doors, trapdoors and fence gates placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_doors.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*_door",
+        "minecraft:.*_trapdoor",
+        "minecraft:.*_fence_gate"
+      ]
+    }
+  },
+  {
+    "id": "place_electrics",
+    "title": "Redstone Placer",
+    "description": "Redstone components placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_electrics.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_pressure_plate",
+        "minecraft:.+button",
+        "minecraft:comparator",
+        "minecraft:daylight_detector.*",
+        "minecraft:detector_rail",
+        "minecraft:lever",
+        "minecraft:observer",
+        "minecraft:redstone",
+        "minecraft:redstone_torch",
+        "minecraft:repeater",
+        "minecraft:sculk_sensor",
+        "minecraft:target"
+      ]
+    }
+  },
+  {
+    "id": "place_glass",
+    "title": "Window Maker",
+    "description": "Glass blocks placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_glass.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*glass",
+        "minecraft:.*glass_pane"
+      ]
+    }
+  },
+  {
+    "id": "place_lantern",
+    "title": "Light Hanger",
+    "description": "Lanterns placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_lantern.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:lantern",
+        "minecraft:soul_lantern"
+      ]
+    }
+  },
+  {
+    "id": "place_lights",
+    "title": "Light Fantastic",
+    "description": "Froglights, sea lanterns, end rods, shroomlights and copper bulbs placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_lights.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*_froglight",
+        "minecraft:sea_lantern",
+        "minecraft:end_rod",
+        "minecraft:shroomlight",
+        "minecraft:.*copper_bulb"
+      ]
+    }
+  },
+  {
+    "id": "place_lightning_rod",
+    "title": "Storm Catcher",
+    "description": "Lightning rods placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_lightning_rod.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:lightning_rod"
+      ]
+    }
+  },
+  {
+    "id": "place_lodestone",
+    "title": "Lodestone Layer",
+    "description": "Lodestones placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_lodestone.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:lodestone"
+      ]
+    }
+  },
+  {
+    "id": "place_masonry",
+    "title": "Master Mason",
+    "description": "Stone, deepslate, tuff and brick blocks placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_masonry.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:stone",
+        "minecraft:smooth_stone",
+        "minecraft:stone_bricks",
+        "minecraft:cracked_stone_bricks",
+        "minecraft:mossy_stone_bricks",
+        "minecraft:chiseled_stone_bricks",
+        "minecraft:deepslate",
+        "minecraft:cobbled_deepslate",
+        "minecraft:polished_deepslate",
+        "minecraft:deepslate_bricks",
+        "minecraft:cracked_deepslate_bricks",
+        "minecraft:deepslate_tiles",
+        "minecraft:cracked_deepslate_tiles",
+        "minecraft:chiseled_deepslate",
+        "minecraft:tuff",
+        "minecraft:polished_tuff",
+        "minecraft:tuff_bricks",
+        "minecraft:chiseled_tuff",
+        "minecraft:bricks",
+        "minecraft:mud_bricks",
+        "minecraft:nether_bricks",
+        "minecraft:red_nether_bricks",
+        "minecraft:end_stone_bricks",
+        "minecraft:prismarine_bricks",
+        "minecraft:quartz_bricks"
+      ]
+    }
+  },
+  {
+    "id": "place_plants",
+    "title": "Living Walls",
+    "description": "Leaves, moss, vines and plant decor placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_plants.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*_leaves",
+        "minecraft:moss_block",
+        "minecraft:moss_carpet",
+        "minecraft:pale_moss_block",
+        "minecraft:pale_moss_carpet",
+        "minecraft:vine",
+        "minecraft:weeping_vines",
+        "minecraft:twisting_vines",
+        "minecraft:glow_lichen",
+        "minecraft:hanging_roots",
+        "minecraft:big_dripleaf",
+        "minecraft:small_dripleaf",
+        "minecraft:spore_blossom",
+        "minecraft:lily_pad"
+      ]
+    }
+  },
+  {
+    "id": "place_piston",
+    "title": "Piston Pusher",
+    "description": "Pistons placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_piston.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*piston"
+      ]
+    }
+  },
+  {
+    "id": "place_rails",
+    "title": "Rail Layer",
+    "description": "Rails placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_rails.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*rail"
+      ]
+    }
+  },
+  {
+    "id": "place_sapling",
+    "title": "Tree Planter",
+    "description": "Saplings planted",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_sapling.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_sapling",
+        "mangrove_propagule"
+      ]
+    }
+  },
+  {
+    "id": "place_scaffolding",
+    "title": "Scaffold Stacker",
+    "description": "Scaffolding placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_scaffolding.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:scaffolding"
+      ]
+    }
+  },
+  {
+    "id": "place_sign",
+    "title": "Sign Poster",
+    "description": "Signs placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_sign.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*sign"
+      ]
+    }
+  },
+  {
+    "id": "place_slabs",
+    "title": "Half Measures",
+    "description": "Slabs placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_slabs.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*_slab"
+      ]
+    }
+  },
+  {
+    "id": "place_stairs",
+    "title": "Step Builder",
+    "description": "Stairs placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_stairs.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_stairs"
+      ]
+    }
+  },
+  {
+    "id": "place_torch",
+    "title": "Torch Bearer",
+    "description": "Torches placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_torch.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:soul_torch",
+        "minecraft:torch"
+      ]
+    }
+  },
+  {
+    "id": "place_wall",
+    "title": "Wall Builder",
+    "description": "Walls placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_wall.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_wall"
+      ]
+    }
+  },
+  {
+    "id": "play",
+    "title": "Time Served",
+    "description": "Total time played",
+    "unit": "ticks",
+    "bucket": "misc",
+    "icon": "/awards/icons/play.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:custom"
+      ],
+      "patterns": [
+        "minecraft:play_one_minute",
+        "minecraft:play_time"
+      ]
+    }
+  },
+  {
+    "id": "play_record",
+    "title": "Jukebox Hero",
+    "description": "Music discs played",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/play_record.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:play_record"
+      ]
+    }
+  },
+  {
+    "id": "pot_flower",
+    "title": "Flower Arranger",
+    "description": "Plants potted in flower pots",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/pot_flower.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:pot_flower"
+      ]
+    }
+  },
+  {
+    "id": "ride_boat",
+    "title": "Boat Captain",
+    "description": "Distance traveled by boat",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_boat.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:boat_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "ride_horse",
+    "title": "Horseback",
+    "description": "Distance traveled on horseback",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_horse.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:horse_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "ride_minecart",
+    "title": "Rail Rider",
+    "description": "Distance traveled by minecart",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_minecart.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:minecart_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "ride_pig",
+    "title": "Pig Jockey",
+    "description": "Distance traveled on a pig",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_pig.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:pig_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "ride_strider",
+    "title": "Lava Surfer",
+    "description": "Distance traveled on a strider",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_strider.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:strider_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "ring_bell",
+    "title": "Bell Ringer",
+    "description": "Bells rung",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/ring_bell.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:bell_ring"
+      ]
+    }
+  },
+  {
+    "id": "sleep",
+    "title": "Well Rested",
+    "description": "Times slept in a bed",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/sleep.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:sleep_in_bed"
+      ]
+    }
+  },
+  {
+    "id": "sprint",
+    "title": "Sprinter",
+    "description": "Distance sprinted",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/sprint.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:sprint_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "swim",
+    "title": "Lap Counter",
+    "description": "Distance swum",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/swim.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:swim_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "time_since_death",
+    "title": "Staying Alive",
+    "description": "Time since last death",
+    "unit": "ticks",
+    "bucket": "misc",
+    "icon": "/awards/icons/time_since_death.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:time_since_death"
+      ]
+    }
+  },
+  {
+    "id": "time_since_sleep",
+    "title": "Night Owl",
+    "description": "Time since last sleep",
+    "unit": "ticks",
+    "bucket": "misc",
+    "icon": "/awards/icons/time_since_sleep.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:time_since_rest"
+      ]
+    }
+  },
+  {
+    "id": "trade",
+    "title": "Deal Maker",
+    "description": "Villager trades completed",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/trade.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:traded_with_villager"
+      ]
+    }
+  },
+  {
+    "id": "trigger_raid",
+    "title": "Raid Starter",
+    "description": "Raids triggered",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/trigger_raid.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:raid_trigger"
+      ]
+    }
+  },
+  {
+    "id": "use_book",
+    "title": "Author",
+    "description": "Books written with quill",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_book.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:writable_book"
+      ]
+    }
+  },
+  {
+    "id": "use_bone_meal",
+    "title": "Green Thumb",
+    "description": "Bone meal used",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_bone_meal.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:bone_meal"
+      ]
+    }
+  },
+  {
+    "id": "use_bow",
+    "title": "Bow Master",
+    "description": "Arrows shot from a bow",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_bow.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:bow"
+      ]
+    }
+  },
+  {
+    "id": "use_crossbow",
+    "title": "Crossbow Expert",
+    "description": "Bolts fired from a crossbow",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_crossbow.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:crossbow"
+      ]
+    }
+  },
+  {
+    "id": "use_dirt",
+    "title": "Dirt Placer",
+    "description": "Dirt blocks placed",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_dirt.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:dirt",
+        "minecraft:mud",
+        "minecraft:rooted_dirt"
+      ]
+    }
+  },
+  {
+    "id": "use_egg",
+    "title": "Egg Tosser",
+    "description": "Eggs thrown",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_egg.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:egg",
+        "minecraft:brown_egg",
+        "minecraft:blue_egg"
+      ]
+    }
+  },
+  {
+    "id": "use_ender_eye",
+    "title": "Eye Launcher",
+    "description": "Eyes of ender thrown",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_ender_eye.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:ender_eye"
+      ]
+    }
+  },
+  {
+    "id": "use_ender_pearl",
+    "title": "Pearl Warper",
+    "description": "Ender pearls thrown",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_ender_pearl.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:ender_pearl"
+      ]
+    }
+  },
+  {
+    "id": "use_fireworks",
+    "title": "Rocket Launcher",
+    "description": "Firework rockets used",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_fireworks.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:firework_rocket"
+      ]
+    }
+  },
+  {
+    "id": "use_flint",
+    "title": "Fire Starter",
+    "description": "Fires ignited with flint and steel",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_flint.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:flint_and_steel"
+      ]
+    }
+  },
+  {
+    "id": "use_goat_horn",
+    "title": "Horn Blower",
+    "description": "Goat horns sounded",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_goat_horn.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:goat_horn"
+      ]
+    }
+  },
+  {
+    "id": "use_golden_dandelion",
+    "title": "Forever Young",
+    "description": "Golden dandelions used",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_golden_dandelion.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:golden_dandelion"
+      ]
+    }
+  },
+  {
+    "id": "use_hoe",
+    "title": "Soil Tiller",
+    "description": "Blocks tilled with a hoe",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_hoe.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_hoe"
+      ]
+    }
+  },
+  {
+    "id": "use_honey_bottle",
+    "title": "Honey Drinker",
+    "description": "Honey bottles consumed",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_honey_bottle.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:honey_bottle"
+      ]
+    }
+  },
+  {
+    "id": "use_lava_bucket",
+    "title": "Lava Dumper",
+    "description": "Lava buckets emptied",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_lava_bucket.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:lava_bucket"
+      ]
+    }
+  },
+  {
+    "id": "use_potion",
+    "title": "Potion Drinker",
+    "description": "Potions consumed",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_potion.png",
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.*potion"
+      ]
+    }
+  },
+  {
+    "id": "use_shears",
+    "title": "Shearer",
+    "description": "Times used shears",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_shears.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:shears"
+      ]
+    }
+  },
+  {
+    "id": "use_snowball",
+    "title": "Snowball Thrower",
+    "description": "Snowballs thrown",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_snowball.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:snowball"
+      ]
+    }
+  },
+  {
+    "id": "use_totem",
+    "title": "Death Cheater",
+    "description": "Totems of undying activated",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_totem.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:totem_of_undying"
+      ]
+    }
+  },
+  {
+    "id": "use_water_bucket",
+    "title": "Water Placer",
+    "description": "Water buckets emptied",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_water_bucket.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:water_bucket"
+      ]
+    }
+  },
+  {
+    "id": "walk",
+    "title": "Wanderer",
+    "description": "Total distance walked",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/walk.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:walk_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "walk_on_water",
+    "title": "Frost Walker",
+    "description": "Distance walked on water",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/walk_on_water.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:walk_on_water_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "win_raid",
+    "title": "Raid Victor",
+    "description": "Raids successfully defended",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/win_raid.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:raid_win"
+      ]
+    }
+  },
+  {
+    "id": "kill_breeze",
+    "title": "Wind Breaker",
+    "description": "Breezes killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_breeze.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:breeze"
+      ]
+    }
+  },
+  {
+    "id": "kill_bogged",
+    "title": "Debogger",
+    "description": "Bogged killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_bogged.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:bogged"
+      ]
+    }
+  },
+  {
+    "id": "kill_armadillo",
+    "title": "Shell Shocked",
+    "description": "Armadillos killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_armadillo.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:armadillo"
+      ]
+    }
+  },
+  {
+    "id": "kill_creaking",
+    "title": "Creak Destroyer",
+    "description": "Creakings killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_creaking.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:creaking"
+      ]
+    }
+  },
+  {
+    "id": "kill_happy_ghast",
+    "title": "Heartbreaker",
+    "description": "Happy ghasts killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_happy_ghast.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:happy_ghast"
+      ]
+    }
+  },
+  {
+    "id": "kill_parched",
+    "title": "Hydration Needed",
+    "description": "Parched killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_parched.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:parched"
+      ]
+    }
+  },
+  {
+    "id": "kill_camel_husk",
+    "title": "Husk Buster",
+    "description": "Camel husks killed",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/kill_camel_husk.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed",
+        "minecraft:camel_husk"
+      ]
+    }
+  },
+  {
+    "id": "killed_by_breeze",
+    "title": "Blown Away",
+    "description": "Times killed by a breeze",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/killed_by_breeze.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed_by",
+        "minecraft:breeze"
+      ]
+    }
+  },
+  {
+    "id": "killed_by_bogged",
+    "title": "Poisoned",
+    "description": "Times killed by a bogged",
+    "unit": "int",
+    "bucket": "combat",
+    "icon": "/awards/icons/killed_by_bogged.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:killed_by",
+        "minecraft:bogged"
+      ]
+    }
+  },
+  {
+    "id": "ride_happy_ghast",
+    "title": "Cloud Rider",
+    "description": "Distance traveled on a happy ghast",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_happy_ghast.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:happy_ghast_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "ride_nautilus",
+    "title": "Submariner",
+    "description": "Distance traveled on a nautilus",
+    "unit": "cm",
+    "bucket": "movement",
+    "icon": "/awards/icons/ride_nautilus.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:nautilus_one_cm"
+      ]
+    }
+  },
+  {
+    "id": "interact_crafting",
+    "title": "Handyman",
+    "description": "Times used a crafting table",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_crafting.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_crafting_table"
+      ]
+    }
+  },
+  {
+    "id": "interact_furnace",
+    "title": "Smelting",
+    "description": "Times used a furnace",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_furnace.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_furnace"
+      ]
+    }
+  },
+  {
+    "id": "interact_smithing",
+    "title": "Netherite Smith",
+    "description": "Times used a smithing table",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_smithing.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_smithing_table"
+      ]
+    }
+  },
+  {
+    "id": "interact_beacon",
+    "title": "Beaconeer",
+    "description": "Times configured a beacon",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/interact_beacon.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:interact_with_beacon"
+      ]
+    }
+  },
+  {
+    "id": "open_chest",
+    "title": "Treasure Hunter",
+    "description": "Chests opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_chest.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:open_chest"
+      ]
+    }
+  },
+  {
+    "id": "open_barrel",
+    "title": "Barrel Roller",
+    "description": "Barrels opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_barrel.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:open_barrel"
+      ]
+    }
+  },
+  {
+    "id": "open_shulker_box",
+    "title": "Unboxer",
+    "description": "Shulker boxes opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_shulker_box.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:open_shulker_box"
+      ]
+    }
+  },
+  {
+    "id": "open_ender_chest",
+    "title": "Ender Hoarder",
+    "description": "Ender chests opened",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/open_ender_chest.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:open_enderchest"
+      ]
+    }
+  },
+  {
+    "id": "target_hit",
+    "title": "Bullseye",
+    "description": "Target blocks shot",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/target_hit.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:target_hit"
+      ]
+    }
+  },
+  {
+    "id": "eat_cake",
+    "title": "Let Them Eat Cake",
+    "description": "Cake slices eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_cake.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:eat_cake_slice"
+      ]
+    }
+  },
+  {
+    "id": "talk_villager",
+    "title": "Chatterbox",
+    "description": "Villager conversations",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/talk_villager.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:talked_to_villager"
+      ]
+    }
+  },
+  {
+    "id": "sneak_time",
+    "title": "Shadow",
+    "description": "Time spent sneaking",
+    "unit": "ticks",
+    "bucket": "misc",
+    "icon": "/awards/icons/sneak_time.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:sneak_time"
+      ]
+    }
+  },
+  {
+    "id": "fish_caught",
+    "title": "Angler",
+    "description": "Fish caught with a rod",
+    "unit": "int",
+    "bucket": "misc",
+    "icon": "/awards/icons/fish_caught.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:custom",
+        "minecraft:fish_caught"
+      ]
+    }
+  },
+  {
+    "id": "craft_mace",
+    "title": "Heavy Hitter",
+    "description": "Maces crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_mace.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:mace"
+      ]
+    }
+  },
+  {
+    "id": "craft_spear",
+    "title": "Javelin",
+    "description": "Spears crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_spear.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_spear"
+      ]
+    }
+  },
+  {
+    "id": "craft_harness",
+    "title": "Sky Saddle",
+    "description": "Harnesses crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_harness.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.+_harness"
+      ]
+    }
+  },
+  {
+    "id": "craft_saddle",
+    "title": "Jockey",
+    "description": "Saddles crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_saddle.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:saddle"
+      ]
+    }
+  },
+  {
+    "id": "craft_copper_bulb",
+    "title": "Copper Glow",
+    "description": "Copper bulbs crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_copper_bulb.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:crafted"
+      ],
+      "patterns": [
+        "minecraft:.*copper_bulb"
+      ]
+    }
+  },
+  {
+    "id": "craft_crafter",
+    "title": "Automation",
+    "description": "Crafters crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_crafter.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:crafter"
+      ]
+    }
+  },
+  {
+    "id": "use_mace",
+    "title": "Smasher",
+    "description": "Mace attacks landed",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_mace.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:mace"
+      ]
+    }
+  },
+  {
+    "id": "use_wind_charge",
+    "title": "Wind Blaster",
+    "description": "Wind charges thrown",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_wind_charge.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:wind_charge"
+      ]
+    }
+  },
+  {
+    "id": "use_spear",
+    "title": "Lancer",
+    "description": "Spear attacks landed",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_spear.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "match-sum",
+      "path": [
+        "minecraft:used"
+      ],
+      "patterns": [
+        "minecraft:.+_spear"
+      ]
+    }
+  },
+  {
+    "id": "eat_sweet_berries",
+    "title": "Jam Buds",
+    "description": "Sweet berries eaten",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/eat_sweet_berries.png",
+    "sort_order": 0,
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:sweet_berries"
+      ]
+    }
+  }
+]

@@ -1,0 +1,42 @@
+# CrabUtilities - Client and Map Integrations
+
+# Server-side companions for client-side mods. Harmless for players without
+# the matching mod installed.
+mod-protocols:
+  # Carpet protocol v2 support for Litematica and Tweakeroo EasyPlace.
+  # Requires PacketEvents.
+  accurate-block-placement:
+    enabled: false
+    # Permit candles to be placed without a supporting block when requested by
+    # an accurate-placement client.
+    air-placement:
+      candles: false
+  jade:
+    enabled: true
+    # Inventory-bearing providers bypass Bukkit protection/ownership hooks when
+    # reading NMS containers, so keep them disabled until that can be authorised.
+    inventory-data-enabled: false
+  appleskin:
+    enabled: true
+  xaero-map:
+    enabled: true
+    # Backend id sent to Xaero clients so each server behind a proxy has separate
+    # saved map data. 0 generates a random id once and writes it back here.
+    server-id: 0
+
+# BlueMap integration. Soft dependency; skipped when BlueMap isn't installed.
+bluemap:
+  # Writing the keyword on a sign's top line adds a POI marker at the sign;
+  # breaking or editing the sign removes it. Markers persist in
+  # bluemap-sign-markers.yml.
+  sign-markers:
+    enabled: false
+    keyword: "[map]"
+    marker-set-label: "Player Markers"
+    toggleable: true
+    default-hidden: false
+    # Optional custom icon path/URL resolved against BlueMap's web root. The
+    # anchor is the icon pixel that sits on the marker position.
+    icon: ""
+    icon-anchor-x: 0
+    icon-anchor-y: 0

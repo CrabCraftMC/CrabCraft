@@ -1,0 +1,26 @@
+# CrabUtilities - Core Plugin Configuration
+#
+# Feature settings live in the modules/ folder. CrabUtilities loads those files
+# together with this one and reloads all of them with /crabutilities reload.
+
+# Season this server writes data to (e.g. "6"). Empty disables stats,
+# awards, and advancement syncing.
+season: ""
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+
+# How often the world's stats/ and advancements/ folders are scanned and
+# published to Redis for the proxy to process.
+stats-push:
+  interval-minutes: 5
+
+auto-update:
+  enabled: true
+  check-interval-hours: 6
+  include-prereleases: false
+  notify-ops: true
+  github-repo: "CrabCraftMC/CrabCraft"
+  github-token: ""

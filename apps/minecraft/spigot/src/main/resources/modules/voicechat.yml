@@ -1,0 +1,21 @@
+# CrabUtilities - Voice Chat
+
+# Simple Voice Chat cross-server bridge. Forwards opus frames between backends
+# over Redis so members of a persistent group hear each other across servers.
+voicechat:
+  # Persistent cross-server group with a continuously playing YouTube Live source.
+  lofi:
+    enabled: true
+    youtube-url: "https://www.youtube.com/watch?v=8TIVlFtcRDU"
+    # Linear volume multipliers: 0.5 = 50%; 0.25 = 75% quieter.
+    music-volume: 0.5
+    player-volume: 0.25
+  cross-server:
+    enabled: true
+    # Velocity server name for THIS backend; must match velocity.toml's
+    # [servers] section.
+    this-backend: ""
+    persistent-groups:
+      - "Global #1"
+      - "Global #2"
+      - "Global #3"

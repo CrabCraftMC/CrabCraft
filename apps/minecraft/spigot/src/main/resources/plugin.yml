@@ -1,0 +1,69 @@
+name: CrabUtilities
+version: '${version}'
+main: crabcraft.net.crabUtilities.CrabUtilities
+api-version: '1.21'
+authors: [Max]
+website: https://www.crabcraft.net
+softdepend:
+  - Essentials
+  - voicechat
+  - packetevents
+  - PlaceholderAPI
+  - BlueMap
+commands:
+  crabutilities:
+    description: CrabUtilities admin commands.
+    usage: /crabutilities <reload|update|viewdistance>
+  jadehandshake:
+    description: Resend the Jade server handshake to your client.
+    permission: crabutilities.jade.handshake
+  settings:
+    description: Open your personal settings menu (phantoms, chat pings, messages, locator bar).
+    usage: /settings [phantoms <on|off|safe>|mentions <on|off>|messages <on|off>|locatorbar <on|off>]
+    permission: crabutilities.settings
+  slime:
+    description: Show nearby slime chunks or check the chunk you are standing in.
+    usage: /slime <map|chunk>
+permissions:
+  crabutilities.reload:
+    description: Reload CrabUtilities configuration.
+    default: op
+  crabutilities.update:
+    description: Run CrabUtilities update commands.
+    default: op
+  crabutilities.viewdistance.admin:
+    description: Inspect and control adaptive simulation and view distances.
+    default: op
+  crabutilities.jade.handshake:
+    description: Resend the Jade server handshake to your client.
+    default: true
+  crabutilities.settings:
+    description: Use the /settings menu to configure personal preferences.
+    default: true
+  crabutilities.slime.map:
+    description: Open the nearby slime-chunk map.
+    default: true
+  crabutilities.slime.chunk:
+    description: Check whether the current chunk is a slime chunk.
+    default: true
+  crabutilities.bluemap.marker:
+    description: Create BlueMap markers by writing the marker keyword on a sign.
+    default: true
+  crabutilities.media.help:
+    description: View Crab Utilities media help.
+    default: true
+  crabutilities.media.create:
+    description: Create and edit playable discs and horns.
+    default: true
+  crabutilities.media.create.remote:
+    description: Use remote URLs for media playback.
+    default: true
+  crabutilities.media.create.remote.youtube:
+    description: Use YouTube URLs for media playback.
+    default: true
+  crabutilities.media.create.remote.soundcloud:
+    description: Use SoundCloud URLs for media playback.
+    default: true
+  crabutilities.media.create.remote.http:
+    description: Use direct HTTP URLs for media playback.
+    default: op

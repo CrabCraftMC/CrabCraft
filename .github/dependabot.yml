@@ -1,0 +1,89 @@
+version: 2
+
+# These schedules apply to version updates. Supported security updates are
+# created when Dependabot alerts are enabled, independently of this cadence.
+updates:
+  # The root bun.lock covers every workspace. Bun's packageManager and
+  # overrides fields are not Dependabot update targets and remain manual.
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Athens"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "gradle"
+    directory: "/apps/minecraft"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "07:00"
+      timezone: "Europe/Athens"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/apps/bot"
+      - "/apps/web"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "07:00"
+      timezone: "Europe/Athens"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch-by-image:
+        group-by: "dependency-name"
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "docker-compose"
+    directories:
+      - "/"
+      - "/docker"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "08:00"
+      timezone: "Europe/Athens"
+    open-pull-requests-limit: 5
+    ignore:
+      # This is CrabCraft's own floating deployment image, not an external
+      # dependency that Dependabot should try to update.
+      - dependency-name: "crabcraftmc/crabcraft/web"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "07:00"
+      timezone: "Europe/Athens"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci(deps)"

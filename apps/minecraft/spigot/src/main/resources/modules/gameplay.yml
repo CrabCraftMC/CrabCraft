@@ -1,0 +1,6 @@
+# CrabUtilities - Gameplay
+
+# Per-player phantom control via /settings (on / off / safe). Set
+# suppress-for-opted-out false to force vanilla phantoms for everyone.
+phantoms:
+  suppress-for-opted-out: true

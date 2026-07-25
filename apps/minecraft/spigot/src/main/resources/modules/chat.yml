@@ -1,0 +1,21 @@
+# CrabUtilities - Chat
+
+# Player chat accepts colours plus bold, italic, underline and strikethrough.
+# Interactive/data MiniMessage tags such as click, hover, insertion and font
+# are rejected. Plain HTTP and HTTPS URLs become clickable links.
+#
+# Sync normal chat across the network via Redis. Servers left off keep their
+# chat local. Staff chat is unaffected.
+global-chat:
+  enabled: false
+  # MiniMessage format. Placeholders: <display_name>, <username>, <message>.
+  format: "<display_name><gray>:</gray> <message>"
+  mentions:
+    enabled: true
+    prefix: "@"
+    highlight: "<yellow><name></yellow>"
+    sound:
+      enabled: true
+      key: "minecraft:block.note_block.pling"
+      volume: 1.0
+      pitch: 1.0

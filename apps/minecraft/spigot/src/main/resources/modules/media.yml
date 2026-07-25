@@ -1,0 +1,49 @@
+# CrabUtilities - Media
+
+# Playable music discs, goat horns, and the shared yt-dlp/FFmpeg pipeline.
+# Existing items retain their stored source, volume, and range metadata.
+media:
+  debug: false
+  creation:
+    remote:
+      suggestions:
+        - "https://www.youtube.com/watch?v="
+        - "https://soundcloud.com/"
+      # Matching a provider controls both its item model and permission node.
+      youtube:
+        custom-model: 0
+        filter: 'https?:\/\/(?:www\.youtube\.com\/watch\?v=|youtu\.be\/).+'
+      soundcloud:
+        custom-model: 0
+        filter: 'https?:\/\/soundcloud\.com\/[^\s]+'
+      http:
+        custom-model: 0
+        filter: 'https?:\/\/.+'
+  discs:
+    # Master playback volume, where 1.0 is 100%.
+    volume: 1.0
+    # Paper requires hopper.disable-move-event=false for hopper insertion.
+    allow-hoppers: true
+    range:
+      min: 4
+      max: 32
+      default: 24
+  horns:
+    volume: 1.0
+    range: 128
+    max-length-seconds: 7
+    cooldown-ticks: 140
+    cache:
+      enabled: true
+      # Maximum decoded horn clips retained on disk using LRU eviction.
+      size: 50
+  providers:
+    # "auto" provisions a pinned, SHA-256-verified build; an explicit path
+    # uses that binary; an empty value uses PATH without downloading.
+    yt-dlp-path: "auto"
+    ffmpeg-path: "auto"
+    # Optional Netscape-format cookies file for restricted media.
+    yt-dlp-cookies: ""
+    # Optional administrator-controlled HTTP proxy used for both resolution and
+    # media fetching. Loopback, private, and Tailscale addresses are supported.
+    yt-dlp-proxy: ""

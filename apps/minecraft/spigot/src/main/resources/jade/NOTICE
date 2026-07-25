@@ -1,0 +1,6 @@
+This server-side Jade implementation is derived from LeavesMC/Leaves and is
+licensed under GNU GPL version 3.
+
+It has been modified by CrabCraft contributors for standalone plug-in
+integration and security hardening, including modifications through 23 July
+2026. The corresponding source and GPLv3 text are distributed with CrabCraft.

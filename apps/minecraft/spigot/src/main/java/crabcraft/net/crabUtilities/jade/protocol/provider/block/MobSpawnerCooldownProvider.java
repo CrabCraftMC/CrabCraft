@@ -1,0 +1,42 @@
+package crabcraft.net.crabUtilities.jade.protocol.provider.block;
+
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.entity.TrialSpawnerBlockEntity;
+import net.minecraft.world.level.block.entity.trialspawner.TrialSpawnerStateData;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import crabcraft.net.crabUtilities.jade.protocol.JadeProtocol;
+import crabcraft.net.crabUtilities.jade.protocol.accessor.BlockAccessor;
+import crabcraft.net.crabUtilities.jade.protocol.provider.StreamServerDataProvider;
+
+public enum MobSpawnerCooldownProvider implements StreamServerDataProvider<BlockAccessor, Integer> {
+    INSTANCE;
+
+    private static final Identifier MC_MOB_SPAWNER_COOLDOWN = JadeProtocol.mc_id("mob_spawner.cooldown");
+
+    @Override
+    public @Nullable Integer streamData(@NotNull BlockAccessor accessor) {
+        TrialSpawnerBlockEntity spawner = (TrialSpawnerBlockEntity) accessor.getBlockEntity();
+        TrialSpawnerStateData spawnerData = spawner.getTrialSpawner().getStateData();
+        ServerLevel level = accessor.getLevel();
+        if (spawner.getTrialSpawner().canSpawnInLevel(level) && level.getGameTime() < spawnerData.cooldownEndsAt) {
+            return (int) (spawnerData.cooldownEndsAt - level.getGameTime());
+        }
+        return null;
+    }
+
+    @Override
+    public @NotNull StreamCodec<RegistryFriendlyByteBuf, Integer> streamCodec() {
+        return ByteBufCodecs.VAR_INT.cast();
+    }
+
+
+    @Override
+    public Identifier getUid() {
+        return MC_MOB_SPAWNER_COOLDOWN;
+    }
+}
