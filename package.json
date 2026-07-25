@@ -13,7 +13,7 @@
     "seed:awards": "bun run --cwd packages/db scripts/seed-awards.ts"
   },
   "devDependencies": {
-    "turbo": "^2.10.5",
+    "turbo": "^2.10.6",
     "typescript": "^5.9.3"
   },
   "overrides": {
