@@ -16,6 +16,7 @@ final class AwardNewDefinitionsRegressionTest {
         checkTitle(rows, "collect_potato", "Absolute Spud");
         checkTitle(rows, "craft_honey_block", "Honey I'm Home");
         checkTitle(rows, "craft_redstone_components", "Redstone Crafter");
+        checkTitle(rows, "mine_ground", "Excavator");
         checkTitle(rows, "mine_lectern", "Librarian Reroller");
         checkTitle(rows, "xp_level", "Level Headed");
         check(rows.get("xp_level").getAsJsonObject("reader").get("type").getAsString()
@@ -38,7 +39,10 @@ final class AwardNewDefinitionsRegressionTest {
                     "minecraft:observer":2,
                     "minecraft:crafting_table":99
                   },
-                  "minecraft:mined":{"minecraft:lectern":11},
+                  "minecraft:mined":{
+                    "minecraft:clay":29,
+                    "minecraft:lectern":11
+                  },
                   "minecraft:used":{
                     "minecraft:egg":13,
                     "minecraft:brown_egg":17,
@@ -57,6 +61,8 @@ final class AwardNewDefinitionsRegressionTest {
         check(scores.get("craft_honey_block") == 7d, "Honey I'm Home read the wrong score");
         check(scores.get("craft_redstone_components") == 10d,
                 "Redstone Crafter did not sum only redstone components");
+        check(scores.get("mine_ground") == 29d,
+                "Excavator did not count mined clay");
         check(scores.get("mine_lectern") == 11d, "Librarian Reroller read the wrong score");
         check(scores.get("use_egg") == 49d,
                 "Egg Tosser did not sum normal, brown, and blue eggs");
@@ -94,6 +100,7 @@ final class AwardNewDefinitionsRegressionTest {
                 if (id.equals("collect_potato")
                         || id.equals("craft_honey_block")
                         || id.equals("craft_redstone_components")
+                        || id.equals("mine_ground")
                         || id.equals("mine_lectern")
                         || id.equals("use_egg")
                         || id.equals("xp_level")) {
@@ -101,7 +108,7 @@ final class AwardNewDefinitionsRegressionTest {
                 }
             }
         }
-        check(rowsById.size() == 6, "one or more new award definitions are missing");
+        check(rowsById.size() == 7, "one or more award definitions are missing");
         return rowsById;
     }
 

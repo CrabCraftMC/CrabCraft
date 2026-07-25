@@ -2459,7 +2459,7 @@
   {
     "id": "mine_ground",
     "title": "Excavator",
-    "description": "Dirt, sand and gravel dug",
+    "description": "Dirt, clay, sand and gravel dug",
     "unit": "int",
     "bucket": "mining",
     "icon": "/awards/icons/mine_ground.png",
@@ -2469,6 +2469,7 @@
         "minecraft:mined"
       ],
       "patterns": [
+        "minecraft:clay",
         "minecraft:coarse_dirt",
         "minecraft:dirt",
         "minecraft:farmland",
