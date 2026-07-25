@@ -25,6 +25,6 @@
   "devDependencies": {
     "@crabcraft/tsconfig": "workspace:*",
     "@types/bun": "^1.3.14",
-    "typescript": "^5.8.0"
+    "typescript": "^7.0.2"
   }
 }
