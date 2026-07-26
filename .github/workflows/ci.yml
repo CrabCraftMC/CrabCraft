@@ -161,6 +161,8 @@ jobs:
           GRADLE_ARGS=""
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             GRADLE_ARGS="-Pversion=${GITHUB_REF_NAME#v}"
+          elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            GRADLE_ARGS="-Pversion=0.0.0-SNAPSHOT.${GITHUB_SHA::7}"
           fi
           ./gradlew build $GRADLE_ARGS
 
@@ -196,6 +198,59 @@ jobs:
           name: CrabUtilities-Checksums
           path: apps/minecraft/jars/SHA256SUMS.txt
           retention-days: 3
+
+  # ── Replace the rolling prerelease after every main commit ───────
+  snapshot-release:
+    name: Publish Rolling Prerelease
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build-bot, build-plugin]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: artifacts
+          pattern: "{crabcraft-bot,CrabUtilities-Spigot,CrabUtilities-Velocity,CrabUtilities-Checksums}"
+
+      - name: Use stable snapshot asset names
+        run: mv artifacts/crabcraft-bot/*.tar.gz artifacts/crabcraft-bot/crabcraft-bot.tar.gz
+
+      - name: Move snapshot tag to this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/snapshot" >/dev/null 2>&1; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/snapshot" \
+              -f sha="${GITHUB_SHA}" -F force=true
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/tags/snapshot" -f sha="${GITHUB_SHA}"
+          fi
+
+      - name: Publish rolling prerelease
+        uses: softprops/action-gh-release@c12583777ecdfd3be55c69cf75464299dc01057e # v3
+        with:
+          tag_name: snapshot
+          name: Development snapshot
+          prerelease: true
+          make_latest: false
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          body: |
+            Latest successful build from `main`.
+
+            Commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+
+            This prerelease is replaced after every commit to `main`. Use a stable
+            `vX.Y.Z` release for production servers.
+          files: |
+            artifacts/crabcraft-bot/crabcraft-bot.tar.gz
+            artifacts/CrabUtilities-Spigot/CrabUtilities.jar
+            artifacts/CrabUtilities-Velocity/CrabUtilities-Velocity.jar
+            artifacts/CrabUtilities-Checksums/SHA256SUMS.txt
 
   # ── Publish a GitHub Release only when a version tag is pushed ───
   release:
