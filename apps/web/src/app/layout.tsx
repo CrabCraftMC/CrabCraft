@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist_Mono, Unbounded } from "next/font/google";
 import { auth, getAvatarUrl } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
@@ -119,6 +120,14 @@ export default async function RootLayout({
         <CommandMenu />
         {/* Only nudge signed-out visitors to join — signed-in users already have. */}
         {!userData && <MascotJoin />}
+        {process.env.NODE_ENV === "production" && (
+          <Script
+            src="https://web.maxmoon.sh/script.js"
+            strategy="lazyOnload"
+            data-website-id="b47dfe1d-3ed3-49d8-948a-96776107f338"
+            data-domains="crabcraft.net,www.crabcraft.net"
+          />
+        )}
       </body>
     </html>
   );
