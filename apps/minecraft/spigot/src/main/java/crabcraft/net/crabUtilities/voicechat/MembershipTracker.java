@@ -1,9 +1,5 @@
 package crabcraft.net.crabUtilities.voicechat;
 
-import de.maxhenkel.voicechat.api.Group;
-import de.maxhenkel.voicechat.api.VoicechatConnection;
-import de.maxhenkel.voicechat.api.events.JoinGroupEvent;
-import de.maxhenkel.voicechat.api.events.LeaveGroupEvent;
 import de.maxhenkel.voicechat.api.events.PlayerDisconnectedEvent;
 
 import java.util.Map;
@@ -25,24 +21,27 @@ class MembershipTracker {
     /** groupId -> local player UUIDs in that group. */
     private final Map<UUID, Set<UUID>> groupMembers = new ConcurrentHashMap<>();
 
-    void onJoinGroupEvent(JoinGroupEvent event) {
-        Group group = event.getGroup();
-        VoicechatConnection conn = event.getConnection();
-        if (group == null || conn == null) return;
-        groupMembers
-                .computeIfAbsent(group.getId(), k -> ConcurrentHashMap.newKeySet())
-                .add(conn.getPlayer().getUuid());
+    /**
+     * Replaces the player's locally committed group and returns the previous
+     * group. SVC can move directly from A to B without a LeaveGroupEvent, so
+     * player membership must be single-valued.
+     */
+    synchronized UUID setLocalGroup(UUID playerId, UUID groupId) {
+        UUID previous = getLocalGroupOf(playerId);
+        for (UUID existingGroupId : Set.copyOf(groupMembers.keySet())) {
+            if (groupId == null || !existingGroupId.equals(groupId)) {
+                removeLocal(existingGroupId, playerId);
+            }
+        }
+        if (groupId != null) {
+            groupMembers
+                    .computeIfAbsent(groupId, ignored -> ConcurrentHashMap.newKeySet())
+                    .add(playerId);
+        }
+        return previous;
     }
 
-    void onLeaveGroupEvent(LeaveGroupEvent event) {
-        VoicechatConnection conn = event.getConnection();
-        if (conn == null) return;
-        Group group = event.getGroup();
-        if (group == null) return;
-        removeLocal(group.getId(), conn.getPlayer().getUuid());
-    }
-
-    void onPlayerDisconnect(PlayerDisconnectedEvent event) {
+    synchronized void onPlayerDisconnect(PlayerDisconnectedEvent event) {
         UUID playerId = event.getPlayerUuid();
         for (UUID groupId : Set.copyOf(groupMembers.keySet())) {
             removeLocal(groupId, playerId);
@@ -61,12 +60,10 @@ class MembershipTracker {
         return members == null ? Set.of() : Set.copyOf(members);
     }
 
-    /** All groups the player is currently in on this backend. */
-    Set<UUID> getLocalGroupsOf(UUID playerId) {
-        Set<UUID> result = new java.util.HashSet<>();
+    synchronized UUID getLocalGroupOf(UUID playerId) {
         for (Map.Entry<UUID, Set<UUID>> entry : groupMembers.entrySet()) {
-            if (entry.getValue().contains(playerId)) result.add(entry.getKey());
+            if (entry.getValue().contains(playerId)) return entry.getKey();
         }
-        return result;
+        return null;
     }
 }

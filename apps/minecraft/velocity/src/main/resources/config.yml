@@ -12,7 +12,7 @@ voicechat:
   cross-server:
     enabled: true
     # TTL for the player-home Redis key; keep longer than the server-switch
-    # window. Refreshed on every switch.
+    # window. Refreshed on every switch and periodically while connected.
     player-home-ttl-seconds: 300
 
 api:

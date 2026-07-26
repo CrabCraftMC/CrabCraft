@@ -1,7 +1,10 @@
 package crabcraft.net.crabUtilities.voicechat;
 
+import de.maxhenkel.voicechat.api.Group;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.UUID;
 
 /**
@@ -21,10 +24,15 @@ final class VoiceMessages {
     static final String AUDIO_CHANNEL_PREFIX = "crabcraft:svc:audio:";
     static final String PLAYER_HOME_KEY_PREFIX = "crabcraft:svc:player-home:";
     static final String PLAYER_GROUP_KEY_PREFIX = "crabcraft:svc:player-group:";
+    static final String GROUP_MEMBERS_KEY_PREFIX = "crabcraft:svc:group-members:";
+    static final String GROUPS_REGISTRY_KEY = "crabcraft:svc:groups";
+    static final String PERMANENT_GROUPS_KEY = "crabcraft:svc:groups:permanent";
     static final String ROSTER_CHANNEL = "crabcraft:svc:roster";
+    static final String LIFECYCLE_CHANNEL = "crabcraft:svc:lifecycle";
 
     static final String SEP = "\0";
 
+    static final String OP_GROUP_CHANGED = "GROUP_CHANGED";
     static final String OP_ROSTER_JOIN = "ROSTER_JOIN";
     static final String OP_ROSTER_LEAVE = "ROSTER_LEAVE";
 
@@ -42,25 +50,31 @@ final class VoiceMessages {
         return PLAYER_GROUP_KEY_PREFIX + playerId;
     }
 
+    static String routeBackend(String route) {
+        if (route == null) return null;
+        int separator = route.indexOf(SEP);
+        return separator < 0 ? route : route.substring(0, separator);
+    }
+
     /* ----------------------- Audio ----------------------- */
 
     /**
      * Audio frame layout (binary):
      * <pre>
-     *   2 bytes: backend name length (uint16)
-     *   N bytes: backend name (UTF-8)
+     *   2 bytes: route length (uint16)
+     *   N bytes: route (backend + hop token, UTF-8)
      *  16 bytes: speaker UUID
      *   1 byte:  whispering flag (0/1)
      *   2 bytes: opus length (uint16)
      *   N bytes: opus data
      * </pre>
      */
-    static byte[] encodeAudioFrame(String backend, UUID speaker,
+    static byte[] encodeAudioFrame(String route, UUID speaker,
                                    boolean whispering, byte[] opus) {
-        byte[] backendBytes = backend.getBytes(StandardCharsets.UTF_8);
-        ByteBuffer buf = ByteBuffer.allocate(2 + backendBytes.length + 16 + 1 + 2 + opus.length);
-        buf.putShort((short) backendBytes.length);
-        buf.put(backendBytes);
+        byte[] routeBytes = route.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer buf = ByteBuffer.allocate(2 + routeBytes.length + 16 + 1 + 2 + opus.length);
+        buf.putShort((short) routeBytes.length);
+        buf.put(routeBytes);
         buf.putLong(speaker.getMostSignificantBits());
         buf.putLong(speaker.getLeastSignificantBits());
         buf.put((byte) (whispering ? 1 : 0));
@@ -71,19 +85,90 @@ final class VoiceMessages {
 
     static AudioFrame decodeAudioFrame(byte[] data) {
         ByteBuffer buf = ByteBuffer.wrap(data);
-        int backendLen = buf.getShort() & 0xFFFF;
-        byte[] backendBytes = new byte[backendLen];
-        buf.get(backendBytes);
-        String backend = new String(backendBytes, StandardCharsets.UTF_8);
+        int routeLength = buf.getShort() & 0xFFFF;
+        byte[] routeBytes = new byte[routeLength];
+        buf.get(routeBytes);
+        String route = new String(routeBytes, StandardCharsets.UTF_8);
         UUID speaker = new UUID(buf.getLong(), buf.getLong());
         boolean whispering = buf.get() != 0;
         int opusLen = buf.getShort() & 0xFFFF;
         byte[] opus = new byte[opusLen];
         buf.get(opus);
-        return new AudioFrame(backend, speaker, whispering, opus);
+        return new AudioFrame(route, speaker, whispering, opus);
     }
 
-    record AudioFrame(String homeBackend, UUID speaker, boolean whispering, byte[] opus) {}
+    record AudioFrame(String route, UUID speaker, boolean whispering, byte[] opus) {}
+
+    /* ----------------------- Group definitions ----------------------- */
+
+    /**
+     * Passwords live only in the authoritative Redis hash. Pub/sub carries
+     * the group ID as an invalidation, so credentials never appear in
+     * lifecycle messages or logs.
+     */
+    static String encodeGroupDefinition(GroupDefinition group) {
+        return String.join(SEP,
+                encodeText(group.name()),
+                group.password() == null ? "0" : "1",
+                group.password() == null ? "" : encodeText(group.password()),
+                typeToString(group.type()),
+                group.hidden() ? "1" : "0",
+                group.permanent() ? "1" : "0");
+    }
+
+    static GroupDefinition decodeGroupDefinition(UUID id, String encoded) {
+        if (encoded == null) return null;
+        String[] parts = encoded.split(SEP, -1);
+        if (parts.length != 6) return null;
+        try {
+            String password = "1".equals(parts[1]) ? decodeText(parts[2]) : null;
+            return new GroupDefinition(id, decodeText(parts[0]), password,
+                    typeFromString(parts[3]), "1".equals(parts[4]), "1".equals(parts[5]));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    static String encodeGroupChanged(UUID groupId) {
+        return String.join(SEP, OP_GROUP_CHANGED, groupId.toString());
+    }
+
+    static UUID decodeGroupChanged(String message) {
+        String[] parts = message.split(SEP, -1);
+        if (parts.length != 2 || !OP_GROUP_CHANGED.equals(parts[0])) return null;
+        try {
+            return UUID.fromString(parts[1]);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    static String typeToString(Group.Type type) {
+        if (type == Group.Type.NORMAL) return "NORMAL";
+        if (type == Group.Type.OPEN) return "OPEN";
+        if (type == Group.Type.ISOLATED) return "ISOLATED";
+        throw new IllegalArgumentException("Unknown group type");
+    }
+
+    static Group.Type typeFromString(String value) {
+        return switch (value) {
+            case "OPEN" -> Group.Type.OPEN;
+            case "ISOLATED" -> Group.Type.ISOLATED;
+            case "NORMAL" -> Group.Type.NORMAL;
+            default -> throw new IllegalArgumentException("Unknown group type");
+        };
+    }
+
+    private static String encodeText(String value) {
+        return Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String decodeText(String value) {
+        return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
+    }
+
+    record GroupDefinition(UUID id, String name, String password, Group.Type type,
+                           boolean hidden, boolean permanent) {}
 
     /* ----------------------- Roster lifecycle ----------------------- */
 

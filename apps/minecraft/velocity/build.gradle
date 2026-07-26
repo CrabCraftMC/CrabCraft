@@ -71,6 +71,8 @@ def regressionTests = [
                 'crabcraft.net.crabUtilities.velocity.JadeClientProtocolPayloadRegressionTest',
         playerLookupRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.messaging.PlayerLookupRegressionTest',
+        playerLocationTrackerRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.voicechat.PlayerLocationTrackerRegressionTest',
         webServerRequestBodyRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.api.WebServerRequestBodyRegressionTest',
         awardAltExclusionRegressionTest:

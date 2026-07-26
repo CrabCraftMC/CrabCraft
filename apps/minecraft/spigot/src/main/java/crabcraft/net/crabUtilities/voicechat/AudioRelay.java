@@ -4,10 +4,10 @@ import crabcraft.net.crabUtilities.CrabUtilities;
 import de.maxhenkel.voicechat.api.VoicechatConnection;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel;
-import de.maxhenkel.voicechat.api.audiosender.AudioSender;
 import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
 import de.maxhenkel.voicechat.api.events.PlayerDisconnectedEvent;
 import de.maxhenkel.voicechat.api.packets.MicrophonePacket;
+import de.maxhenkel.voicechat.api.packets.StaticSoundPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -15,18 +15,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 /**
- * Cross-server audio relay for the fixed set of "global" persistent
- * voice groups. User-created GUI groups stay local on whichever
- * backend they were created on.
+ * Cross-server audio relay for every voice group.
  *
- * <p>Outbound: when a local speaker's group is on the cross-server
- * whitelist, publish the opus frame on Redis under
+ * <p>Outbound: publish grouped opus frames on Redis under
  * {@link VoiceMessages#audioChannel}. SVC's own routing continues to
- * deliver audio to local group members in parallel — we never cancel
- * the event.
+ * deliver normal audio to local group members in parallel. Only packets
+ * racing a quit are cancelled so they cannot reopen an old client
+ * channel after its sequence reset.
  *
  * <p>Inbound: an opus frame received from another backend is pushed
  * into a {@link StaticAudioChannel} keyed by the speaker's UUID, with
@@ -46,9 +45,9 @@ class AudioRelay {
     private final CrabUtilities plugin;
     private final RedisVoiceBus bus;
     private final MembershipTracker membership;
-    private final Set<UUID> crossServerGroupIds;
     private final String thisBackend;
     private final Logger logger;
+    private final Function<UUID, String> localRoute;
     private final UUID attenuatedGroupId;
     private final double attenuatedGroupGain;
 
@@ -56,8 +55,11 @@ class AudioRelay {
     private OpusVolumeScaler remoteVolumeScaler;
 
     private final Map<UUID, ChannelEntry> channels = new ConcurrentHashMap<>();
-    private final Map<UUID, PlayerHomeCache> playerHomeCache = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> nativeSequenceNumbers = new ConcurrentHashMap<>();
+    private final Map<UUID, PlayerRouteCache> playerHomeCache = new ConcurrentHashMap<>();
+    private final Set<UUID> playerHomeRefreshes = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, StaticSoundPacket> lastNativePackets = new ConcurrentHashMap<>();
+    private final Set<UUID> quittingSpeakers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, DisconnectReset> disconnectResets = new ConcurrentHashMap<>();
 
     /** Speakers we've successfully relayed at least one frame for — used
      *  to log a single INFO line on first relay so the operator can see
@@ -68,26 +70,17 @@ class AudioRelay {
      *  don't spam the log on every retry. Cleared on successful create. */
     private final Set<UUID> nullChannelLogged = ConcurrentHashMap.newKeySet();
 
-    /** Speakers we've already logged an origin-mismatch drop for, again
-     *  for log-spam control. Cleared on first matching frame. */
-    private final Set<UUID> originMismatchLogged = ConcurrentHashMap.newKeySet();
-
     private BukkitTask evictionTask;
 
     AudioRelay(CrabUtilities plugin, RedisVoiceBus bus, MembershipTracker membership,
-               Set<UUID> crossServerGroupIds, String thisBackend, Logger logger) {
-        this(plugin, bus, membership, crossServerGroupIds, thisBackend, logger, null, 1D);
-    }
-
-    AudioRelay(CrabUtilities plugin, RedisVoiceBus bus, MembershipTracker membership,
-               Set<UUID> crossServerGroupIds, String thisBackend, Logger logger,
+               String thisBackend, Logger logger, Function<UUID, String> localRoute,
                UUID attenuatedGroupId, double attenuatedGroupGain) {
         this.plugin = plugin;
         this.bus = bus;
         this.membership = membership;
-        this.crossServerGroupIds = crossServerGroupIds;
         this.thisBackend = thisBackend;
         this.logger = logger;
+        this.localRoute = localRoute;
         this.attenuatedGroupId = attenuatedGroupId;
         this.attenuatedGroupGain = attenuatedGroupGain;
     }
@@ -113,15 +106,17 @@ class AudioRelay {
             try { entry.channel.flush(); } catch (Exception ignored) {}
         }
         channels.clear();
-        nativeSequenceNumbers.clear();
+        lastNativePackets.clear();
+        quittingSpeakers.clear();
+        disconnectResets.clear();
+        playerHomeRefreshExecutor.shutdownNow();
         if (remoteVolumeScaler != null) remoteVolumeScaler.close();
     }
 
     /**
      * Outbound: forward a local speaker's opus frame to other backends.
-     * Only the fixed cross-server group whitelist gets bridged — user-
-     * created GUI groups stay local. We never cancel the SVC event so
-     * native local-server group routing keeps working unchanged.
+     * Normal SVC events are not cancelled, so native local-server group
+     * routing keeps working unchanged.
      */
     void onMicrophonePacketEvent(MicrophonePacketEvent event) {
         VoicechatConnection conn = event.getSenderConnection();
@@ -129,26 +124,43 @@ class AudioRelay {
         var group = conn.getGroup();
         if (group == null) return;
         UUID groupId = group.getId();
-        if (!crossServerGroupIds.contains(groupId)) return;
 
         MicrophonePacket packet = event.getPacket();
         if (packet == null) return;
         UUID speakerId = conn.getPlayer().getUuid();
         try {
-            nativeSequenceNumbers.put(speakerId,
-                    packet.staticSoundPacketBuilder().build().getSequenceNumber());
+            lastNativePackets.put(speakerId, packet.staticSoundPacketBuilder()
+                    .channelId(speakerId)
+                    .build());
         } catch (Exception e) {
             logger.fine(() -> "Could not read microphone sequence for " + speakerId
                     + ": " + e.getMessage());
         }
+        if (stopQuittingPacket(event, speakerId)) return;
 
         byte[] opus = packet.getOpusEncodedData();
         // Empty Opus is SVC's stop/reset marker, so it must cross backends too.
         if (!isRelayPayload(opus)) return;
 
-        byte[] frame = VoiceMessages.encodeAudioFrame(thisBackend, speakerId,
+        String route = localRoute.apply(speakerId);
+        if (!thisBackend.equals(VoiceMessages.routeBackend(route))) return;
+        byte[] frame = VoiceMessages.encodeAudioFrame(route, speakerId,
                 packet.isWhispering(), opus);
-        bus.publishAudio(groupId, frame);
+        if (stopQuittingPacket(event, speakerId)) return;
+        bus.publishAudio(groupId, speakerId, frame, opus.length == 0);
+    }
+
+    private boolean stopQuittingPacket(
+            MicrophonePacketEvent event, UUID speakerId) {
+        if (!quittingSpeakers.contains(speakerId)) return false;
+        event.cancel();
+        try {
+            resetSpeaker(speakerId);
+        } catch (Exception e) {
+            logger.warning("Failed to reset late microphone packet for " + speakerId
+                    + ": " + e.getMessage());
+        }
+        return true;
     }
 
     static boolean isRelayPayload(byte[] opus) {
@@ -170,37 +182,22 @@ class AudioRelay {
             return;
         }
         // Don't replay our own frames
-        if (thisBackend.equals(frame.homeBackend())) return;
+        if (thisBackend.equals(VoiceMessages.routeBackend(frame.route()))) return;
         // A locally connected player is routed natively. This also prevents a
         // late frame from their previous backend re-poisoning the sequence.
         if (api.getConnectionOf(frame.speaker()) != null) return;
-        // Single-writer guarantee: only the speaker's actual current
-        // home backend (per Velocity) is allowed to publish for them.
-        if (!isAuthoritativeOrigin(frame.speaker(), frame.homeBackend())) {
-            if (originMismatchLogged.add(frame.speaker())) {
-                PlayerHomeCache cached = playerHomeCache.get(frame.speaker());
-                String actual = cached == null ? "null" : cached.homeBackend();
-                logger.warning("Dropping audio frame: speaker " + frame.speaker()
-                        + " claims home='" + frame.homeBackend()
-                        + "' but Velocity says home='" + actual
-                        + "'. (Likely cause: voicechat.cross-server.this-backend on the "
-                        + "speaker's backend doesn't match its name in velocity.toml. "
-                        + "Names are case-sensitive.)");
-            }
-            return;
-        }
-        // Re-arm the mismatch logger so we'd warn again if it starts flapping.
-        originMismatchLogged.remove(frame.speaker());
-
         Set<UUID> localTargets = membership.getLocalMembers(groupId);
         if (localTargets.isEmpty()) return;
+        // Single-writer guarantee: only the speaker's actual current
+        // home backend (per Velocity) is allowed to publish for them.
+        if (!isAuthoritativeOrigin(frame.speaker(), frame.route())) return;
 
         // Get-or-create channel without caching null. If createChannel
         // fails (e.g. the API rejects the speaker's UUID for some reason),
         // we fall through and try again on the next frame instead of
         // silently dropping audio for 60s.
         ChannelEntry entry = channels.get(frame.speaker());
-        if (entry == null || entry.channel == null) {
+        if (entry == null) {
             StaticAudioChannel ch = createChannel(frame.speaker());
             if (ch == null) {
                 if (nullChannelLogged.add(frame.speaker())) {
@@ -233,7 +230,8 @@ class AudioRelay {
                 entry.channel.send(opus);
                 if (firstRelayLogged.add(frame.speaker())) {
                     logger.info("Now relaying audio from " + frame.speaker()
-                            + " (backend='" + frame.homeBackend() + "') to "
+                            + " (backend='" + VoiceMessages.routeBackend(frame.route())
+                            + "') to "
                             + localTargets.size() + " local listener(s)");
                 }
             } catch (Exception e) {
@@ -248,7 +246,7 @@ class AudioRelay {
      */
     void invalidateSpeaker(UUID speakerId) {
         ChannelEntry entry = channels.remove(speakerId);
-        if (entry != null && entry.channel != null) {
+        if (entry != null) {
             synchronized (entry) {
                 try { entry.channel.flush(); } catch (Exception ignored) {}
                 try { entry.channel.clearTargets(); } catch (Exception ignored) {}
@@ -258,46 +256,136 @@ class AudioRelay {
         playerHomeCache.remove(speakerId);
         firstRelayLogged.remove(speakerId);
         nullChannelLogged.remove(speakerId);
-        originMismatchLogged.remove(speakerId);
         if (remoteVolumeScaler != null) remoteVolumeScaler.remove(speakerId);
+    }
+
+    void beforePlayerQuit(UUID speakerId) {
+        quittingSpeakers.add(speakerId);
+        try {
+            resetSpeaker(speakerId);
+        } catch (Exception e) {
+            logger.warning("Failed to send pre-quit voice stop marker for " + speakerId
+                    + ": " + e.getMessage());
+        }
+    }
+
+    void onPlayerConnect(UUID speakerId) {
+        DisconnectReset pending = disconnectResets.remove(speakerId);
+        if (pending != null) {
+            try {
+                sendLocalReset(speakerId, pending.targets());
+            } catch (Exception e) {
+                logger.warning("Failed to reset voice before reconnect for " + speakerId
+                        + ": " + e.getMessage());
+            }
+        }
+        quittingSpeakers.remove(speakerId);
+        lastNativePackets.remove(speakerId);
+        invalidateSpeaker(speakerId);
     }
 
     void onPlayerDisconnect(PlayerDisconnectedEvent event) {
         UUID speakerId = event.getPlayerUuid();
-        Long lastSequence = nativeSequenceNumbers.remove(speakerId);
+        quittingSpeakers.add(speakerId);
+        UUID groupId = membership.getLocalGroupOf(speakerId);
+        Set<UUID> targets = groupId == null
+                ? Set.of()
+                : membership.getLocalMembers(groupId);
+        DisconnectReset reset = new DisconnectReset(targets);
+        disconnectResets.put(speakerId, reset);
         try {
-            boolean wasInCrossServerGroup = membership.getLocalGroupsOf(speakerId).stream()
-                    .anyMatch(crossServerGroupIds::contains);
-            if (wasInCrossServerGroup && lastSequence != null) {
-                // SVC fires this event after removing voice compatibility but
-                // before removing the player's group state. A temporary sender
-                // can therefore route one final N+1 marker through the native path.
-                VoicechatConnection connection = api.getConnectionOf(speakerId);
-                if (!sendNativeStop(api, connection, lastSequence)) {
-                    logger.fine("Could not register native stop sender for " + speakerId);
-                }
-            }
+            // Repeat the early reset using the latest observed packet. A mic
+            // frame may already have been in SVC's processing thread when the
+            // Bukkit quit event ran.
+            resetSpeaker(speakerId);
         } catch (Exception e) {
             logger.warning("Failed to send native stop marker for " + speakerId
                     + ": " + e.getMessage());
         } finally {
-            // sendNativeStop re-enters the microphone event synchronously.
-            nativeSequenceNumbers.remove(speakerId);
             invalidateSpeaker(speakerId);
+            Bukkit.getScheduler().runTaskLater(plugin,
+                    () -> finishDisconnectReset(speakerId, reset, false), 1L);
+            Bukkit.getScheduler().runTaskLater(plugin,
+                    () -> finishDisconnectReset(speakerId, reset, true), 2L);
         }
     }
 
-    static boolean sendNativeStop(VoicechatServerApi api, VoicechatConnection connection,
-                                  long lastSequence) {
-        if (api == null || connection == null) return false;
-        AudioSender sender = api.createAudioSender(connection);
-        sender.sequenceNumber(lastSequence + 1L);
-        if (!api.registerAudioSender(sender)) return false;
+    private void finishDisconnectReset(
+            UUID speakerId, DisconnectReset reset, boolean finalPass) {
+        if (disconnectResets.get(speakerId) != reset) return;
         try {
-            return sender.reset();
+            // Bounded delayed resets close the small gap for a mic packet
+            // already past SVC's connection lookup when disconnect began.
+            if (api.getConnectionOf(speakerId) == null) {
+                sendLocalReset(speakerId, reset.targets());
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to send final voice stop marker for " + speakerId
+                    + ": " + e.getMessage());
         } finally {
-            api.unregisterAudioSender(sender);
+            if (finalPass && disconnectResets.remove(speakerId, reset)) {
+                lastNativePackets.remove(speakerId);
+                quittingSpeakers.remove(speakerId);
+            }
         }
+    }
+
+    private void resetSpeaker(UUID speakerId) throws ReflectiveOperationException {
+        UUID groupId = membership.getLocalGroupOf(speakerId);
+        if (groupId == null) return;
+
+        sendLocalReset(speakerId, membership.getLocalMembers(groupId));
+
+        String route = localRoute.apply(speakerId);
+        if (thisBackend.equals(VoiceMessages.routeBackend(route))) {
+            bus.publishAudio(groupId, speakerId,
+                    VoiceMessages.encodeAudioFrame(
+                            route, speakerId, false, new byte[0]),
+                    true);
+        }
+    }
+
+    private void sendLocalReset(UUID speakerId, Set<UUID> targets)
+            throws ReflectiveOperationException {
+        StaticSoundPacket lastPacket = lastNativePackets.get(speakerId);
+        if (lastPacket == null) return;
+        StaticSoundPacket reset = nextSequenceStop(lastPacket);
+        for (UUID targetId : targets) {
+            if (speakerId.equals(targetId)) continue;
+            VoicechatConnection target = api.getConnectionOf(targetId);
+            if (target != null) api.sendStaticSoundPacketTo(target, reset);
+        }
+    }
+
+    /**
+     * SVC 2.6.13 exposes packet sequence reads but not writes. Its packet
+     * builder still carries the sequence field, while 2.6.20+ exposes a setter;
+     * support both so listeners receive an accepted N+1 reset.
+     */
+    static StaticSoundPacket nextSequenceStop(StaticSoundPacket lastPacket)
+            throws ReflectiveOperationException {
+        StaticSoundPacket.Builder<?> builder = lastPacket.staticSoundPacketBuilder()
+                .channelId(lastPacket.getChannelId())
+                .opusEncodedData(new byte[0]);
+        long nextSequence = lastPacket.getSequenceNumber() + 1L;
+        try {
+            builder.getClass().getMethod("sequenceNumber", long.class)
+                    .invoke(builder, nextSequence);
+        } catch (NoSuchMethodException e) {
+            Class<?> type = builder.getClass();
+            while (type != null) {
+                try {
+                    java.lang.reflect.Field field = type.getDeclaredField("sequenceNumber");
+                    field.setAccessible(true);
+                    field.setLong(builder, nextSequence);
+                    return builder.build();
+                } catch (NoSuchFieldException ignored) {
+                    type = type.getSuperclass();
+                }
+            }
+            throw e;
+        }
+        return builder.build();
     }
 
     private StaticAudioChannel createChannel(UUID speakerId) {
@@ -314,8 +402,7 @@ class AudioRelay {
     }
 
     private void syncTargets(ChannelEntry entry, Set<UUID> wantedPlayerIds) {
-        Set<UUID> have = entry.currentTargets;
-        if (have.equals(wantedPlayerIds)) return;
+        if (entry.currentTargets.equals(wantedPlayerIds)) return;
         Set<UUID> added = new java.util.HashSet<>();
         try {
             entry.channel.clearTargets();
@@ -328,29 +415,48 @@ class AudioRelay {
         } catch (Exception e) {
             logger.warning("Failed to sync audio targets: " + e.getMessage());
         }
-        // Track only the targets actually added. If api.getConnectionOf
-        // returned null for a wanted listener (transient — happens during
-        // the brief SVC bookkeeping window around a peer's hop), leaving
-        // them out here means have != wantedPlayerIds on the next frame
-        // and we'll retry. Caching wantedPlayerIds verbatim made the
-        // failure permanent: every subsequent frame short-circuited at
-        // the equals() check above and the channel sat with no targets
-        // until the 60s idle-eviction recreated it.
+        // Track only successful additions so a transient null lookup is
+        // retried on the next frame.
         entry.currentTargets = Set.copyOf(added);
     }
 
-    private boolean isAuthoritativeOrigin(UUID speakerId, String claimedBackend) {
+    private boolean isAuthoritativeOrigin(UUID speakerId, String claimedRoute) {
         long now = System.currentTimeMillis();
-        PlayerHomeCache cached = playerHomeCache.get(speakerId);
-        if (cached == null || (now - cached.fetchedAt) > PLAYER_HOME_CACHE_MS) {
-            String home = bus.fetchPlayerHome(speakerId);
-            cached = new PlayerHomeCache(home, now);
-            playerHomeCache.put(speakerId, cached);
+        PlayerRouteCache cached = playerHomeCache.get(speakerId);
+        if (cached == null || cached.route == null) {
+            refreshPlayerHome(speakerId);
+            return false;
         }
-        // If Velocity hasn't recorded a home for this player yet, accept the frame
-        // (cold-start tolerance). The TTL on the Redis key keeps stale data bounded.
-        if (cached.homeBackend == null) return true;
-        return cached.homeBackend.equals(claimedBackend);
+        if (!cached.route.equals(claimedRoute)) {
+            // Once a new hop token appears, fail closed instead of accepting
+            // delayed frames from the cached old hop while Redis catches up.
+            playerHomeCache.remove(speakerId, cached);
+            refreshPlayerHome(speakerId);
+            return false;
+        }
+        if (now - cached.fetchedAt > PLAYER_HOME_CACHE_MS) {
+            // Refresh matching routes in the background without adding a
+            // one-frame gap to every active speaker each second.
+            refreshPlayerHome(speakerId);
+        }
+        return true;
+    }
+
+    private void refreshPlayerHome(UUID speakerId) {
+        if (!playerHomeRefreshes.add(speakerId)) return;
+        try {
+            playerHomeRefreshExecutor.execute(() -> {
+                try {
+                    playerHomeCache.put(speakerId,
+                            new PlayerRouteCache(bus.fetchPlayerHome(speakerId),
+                                    System.currentTimeMillis()));
+                } finally {
+                    playerHomeRefreshes.remove(speakerId);
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            playerHomeRefreshes.remove(speakerId);
+        }
     }
 
     private void evictIdle() {
@@ -375,5 +481,18 @@ class AudioRelay {
         }
     }
 
-    private record PlayerHomeCache(String homeBackend, long fetchedAt) {}
+    private record PlayerRouteCache(String route, long fetchedAt) {}
+
+    private record DisconnectReset(Set<UUID> targets) {}
+
+    private final java.util.concurrent.ThreadPoolExecutor playerHomeRefreshExecutor =
+            new java.util.concurrent.ThreadPoolExecutor(
+                    1, 2, 30L, java.util.concurrent.TimeUnit.SECONDS,
+                    new java.util.concurrent.LinkedBlockingQueue<>(64),
+                    r -> {
+                        Thread thread = new Thread(r, "CrabUtilities-VoiceRoute");
+                        thread.setDaemon(true);
+                        return thread;
+                    },
+                    new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
 }
