@@ -216,8 +216,8 @@ public final class CrabUtilities extends JavaPlugin {
         // default; the manager owns its tick listener and repeating task.
         startViewDistanceManager();
 
-        // Simple Voice Chat integration: creates persistent open groups with
-        // deterministic UUIDs and bridges voice across backends via Redis.
+        // Simple Voice Chat integration: mirrors group definitions and bridges
+        // grouped voice across backends via Redis.
         // Soft dependency — skipped silently if the SVC plugin isn't installed.
         if (Bukkit.getPluginManager().getPlugin("voicechat") != null) {
             try {

@@ -1,8 +1,6 @@
 package crabcraft.net.crabUtilities.voicechat;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
-import org.bukkit.Bukkit;
-import org.bukkit.plugin.IllegalPluginAccessException;
 import redis.clients.jedis.BinaryJedisPubSub;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -10,10 +8,11 @@ import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -22,17 +21,111 @@ import java.util.function.Consumer;
  *
  * <p>Two flavours of channel:
  * <ul>
- *   <li>Per-group binary audio on {@code crabcraft:svc:audio:&lt;uuid&gt;}.</li>
- *   <li>Single text lifecycle channel {@code crabcraft:svc:roster} for
- *       roster join/leave/heartbeat messages.</li>
+ *   <li>One binary pattern subscription for every group audio channel.</li>
+ *   <li>One text subscriber for group invalidations and roster messages.</li>
  * </ul>
  *
  * <p>Subscriber threads reconnect on failure (3s backoff) like
  * {@code RedisStaffChat}; audio publishes use a single-threaded executor
- * with drop-oldest semantics so a slow Redis can't back up the SVC
- * server thread.
+ * with a bounded queue so a slow Redis can't back up the SVC server thread.
  */
 class RedisVoiceBus {
+
+    private static final String UPSERT_GROUP_SCRIPT = """
+            redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+            if ARGV[3] == '1' then
+                redis.call('SADD', KEYS[2], ARGV[1])
+            else
+                redis.call('SREM', KEYS[2], ARGV[1])
+            end
+            redis.call('PUBLISH', KEYS[3], ARGV[4])
+            return 1
+            """;
+
+    private static final String SET_PLAYER_GROUP_SCRIPT = """
+            if redis.call('GET', KEYS[5]) ~= ARGV[6] then
+                return -1
+            end
+            local definition = redis.call('HGET', KEYS[2], ARGV[1])
+            local registryChanged = definition ~= ARGV[7]
+            redis.call('HSET', KEYS[2], ARGV[1], ARGV[7])
+            if ARGV[8] == '1' then
+                redis.call('SADD', KEYS[3], ARGV[1])
+            else
+                redis.call('SREM', KEYS[3], ARGV[1])
+            end
+            if definition ~= ARGV[7] then
+                redis.call('PUBLISH', KEYS[4], ARGV[4] .. ARGV[1])
+            end
+            local old = redis.call('GET', KEYS[1])
+            if old and old ~= ARGV[1] then
+                local oldMembers = ARGV[3] .. old
+                redis.call('SREM', oldMembers, ARGV[2])
+                if redis.call('SCARD', oldMembers) == 0
+                        and redis.call('SISMEMBER', KEYS[3], old) == 0 then
+                    if redis.call('HDEL', KEYS[2], old) > 0 then
+                        registryChanged = true
+                    end
+                    redis.call('PUBLISH', KEYS[4], ARGV[4] .. old)
+                end
+            end
+            redis.call('SETEX', KEYS[1], ARGV[5], ARGV[1])
+            redis.call('SADD', ARGV[3] .. ARGV[1], ARGV[2])
+            if registryChanged then
+                return 1
+            end
+            return 0
+            """;
+
+    private static final String CLEAR_PLAYER_GROUP_SCRIPT = """
+            if redis.call('GET', KEYS[5]) ~= ARGV[4] then
+                return -1
+            end
+            local registryChanged = 0
+            local old = redis.call('GET', KEYS[1])
+            if not old and ARGV[5] ~= '' then
+                old = ARGV[5]
+            end
+            redis.call('DEL', KEYS[1])
+            if old then
+                local oldMembers = ARGV[2] .. old
+                redis.call('SREM', oldMembers, ARGV[1])
+                if redis.call('SCARD', oldMembers) == 0
+                        and redis.call('SISMEMBER', KEYS[3], old) == 0 then
+                    if redis.call('HDEL', KEYS[2], old) > 0 then
+                        registryChanged = 1
+                    end
+                    redis.call('PUBLISH', KEYS[4], ARGV[3] .. old)
+                end
+            end
+            return registryChanged
+            """;
+
+    private static final String PUBLISH_ROSTER_SCRIPT = """
+            if redis.call('GET', KEYS[1]) == ARGV[1] then
+                return redis.call('PUBLISH', KEYS[2], ARGV[2])
+            end
+            return 0
+            """;
+
+    private static final String PRUNE_GROUPS_SCRIPT = """
+            for _, groupId in ipairs(redis.call('HKEYS', KEYS[1])) do
+                local membersKey = ARGV[1] .. groupId
+                local hadMembers = redis.call('SCARD', membersKey) > 0
+                for _, playerId in ipairs(redis.call('SMEMBERS', membersKey)) do
+                    if redis.call('GET', ARGV[2] .. playerId) ~= groupId then
+                        redis.call('SREM', membersKey, playerId)
+                    end
+                end
+                if not hadMembers and redis.call('SCARD', membersKey) == 0
+                        and redis.call('SISMEMBER', KEYS[2], groupId) == 0 then
+                    redis.call('HDEL', KEYS[1], groupId)
+                    redis.call('DEL', membersKey)
+                    redis.call('PUBLISH', KEYS[3], ARGV[3] .. groupId)
+                end
+            end
+            return 1
+            """;
 
     private final CrabUtilities plugin;
     private final String host;
@@ -41,11 +134,11 @@ class RedisVoiceBus {
 
     private JedisPool jedisPool;
     private BiConsumer<UUID, byte[]> audioHandler;
-    private Consumer<String> rosterHandler;
-    private JedisPubSub rosterPubSub;
-    private Thread rosterSubscriberThread;
-
-    private final java.util.Map<UUID, AudioSubscription> audioSubs = new ConcurrentHashMap<>();
+    private Consumer<String> lifecycleHandler;
+    private JedisPubSub lifecyclePubSub;
+    private Thread lifecycleSubscriberThread;
+    private BinaryJedisPubSub audioPubSub;
+    private Thread audioSubscriberThread;
 
     RedisVoiceBus(CrabUtilities plugin) {
         this.plugin = plugin;
@@ -54,15 +147,15 @@ class RedisVoiceBus {
         this.password = plugin.getConfig().getString("redis.password", "");
     }
 
-    void start(BiConsumer<UUID, byte[]> audioHandler, Consumer<String> rosterHandler) {
+    void start(BiConsumer<UUID, byte[]> audioHandler, Consumer<String> lifecycleHandler) {
         this.audioHandler = audioHandler;
-        this.rosterHandler = rosterHandler;
+        this.lifecycleHandler = lifecycleHandler;
 
         JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxTotal(8);
         // Bound resource waits: getResource() otherwise blocks forever when
-        // the pool is exhausted, which would stall the audio subscriber
-        // threads (fetchPlayerHome runs on them) during a Redis hiccup.
+        // the pool is exhausted, which would stall voice worker threads
+        // during a Redis hiccup.
         poolConfig.setMaxWait(java.time.Duration.ofMillis(1500));
         if (password != null && !password.isEmpty()) {
             jedisPool = new JedisPool(poolConfig, host, port, 2000, password);
@@ -70,42 +163,44 @@ class RedisVoiceBus {
             jedisPool = new JedisPool(poolConfig, host, port, 2000);
         }
 
-        startRosterSubscriber();
+        startLifecycleSubscriber();
+        startAudioSubscriber();
         plugin.getLogger().info("Voice bus started; Redis will be retried asynchronously if unavailable.");
     }
 
-    private void startRosterSubscriber() {
-        rosterPubSub = new JedisPubSub() {
+    private void startLifecycleSubscriber() {
+        lifecyclePubSub = new JedisPubSub() {
             @Override
             public void onMessage(String channel, String message) {
                 try {
-                    rosterHandler.accept(message);
+                    lifecycleHandler.accept(message);
                 } catch (Throwable t) {
-                    plugin.getLogger().fine("Voice roster handler threw: " + t.getMessage());
+                    plugin.getLogger().fine("Voice lifecycle handler threw: " + t.getMessage());
                 }
             }
         };
-        rosterSubscriberThread = new Thread(() -> {
+        lifecycleSubscriberThread = new Thread(() -> {
             boolean warned = false;
             while (!Thread.currentThread().isInterrupted()) {
                 JedisPool pool = jedisPool;
                 if (pool == null || pool.isClosed()) break;
                 try (Jedis jedis = pool.getResource()) {
                     if (warned) {
-                        plugin.getLogger().info("Voice roster Redis subscriber reconnected.");
+                        plugin.getLogger().info("Voice lifecycle Redis subscriber reconnected.");
                         warned = false;
                     }
-                    jedis.subscribe(rosterPubSub, VoiceMessages.ROSTER_CHANNEL);
+                    jedis.subscribe(lifecyclePubSub,
+                            VoiceMessages.LIFECYCLE_CHANNEL, VoiceMessages.ROSTER_CHANNEL);
                 } catch (NoClassDefFoundError e) {
                     break;
                 } catch (Exception e) {
                     if (Thread.currentThread().isInterrupted()) break;
                     if (!warned) {
                         plugin.getLogger().warning(
-                                "Voice roster Redis subscriber unavailable; reconnecting in 3s: " + e.getMessage());
+                                "Voice lifecycle Redis subscriber unavailable; reconnecting in 3s: " + e.getMessage());
                         warned = true;
                     } else {
-                        plugin.getLogger().fine("Voice roster subscriber disconnected: " + e.getMessage());
+                        plugin.getLogger().fine("Voice lifecycle subscriber disconnected: " + e.getMessage());
                     }
                     try { Thread.sleep(3000L); } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
@@ -113,64 +208,182 @@ class RedisVoiceBus {
                     }
                 }
             }
-        }, "CrabUtilities-VoiceBus-Roster");
-        rosterSubscriberThread.setDaemon(true);
-        rosterSubscriberThread.start();
+        }, "CrabUtilities-VoiceBus-Lifecycle");
+        lifecycleSubscriberThread.setDaemon(true);
+        lifecycleSubscriberThread.start();
     }
 
-    /** Subscribe to a per-group audio channel. Idempotent. */
-    void subscribeAudio(UUID groupId) {
-        JedisPool pool = jedisPool;
-        if (pool == null || pool.isClosed()) return;
-        audioSubs.computeIfAbsent(groupId, this::createAudioSubscription);
-    }
-
-    private AudioSubscription createAudioSubscription(UUID groupId) {
-        AudioSubscription sub = new AudioSubscription(groupId);
-        sub.start();
-        return sub;
-    }
-
-    void publishAudio(UUID groupId, byte[] frame) {
-        JedisPool pool = jedisPool;
-        if (pool == null || pool.isClosed()) return;
-        audioPublishExecutor.execute(() -> {
-            try (Jedis jedis = pool.getResource()) {
-                jedis.publish(VoiceMessages.audioChannel(groupId).getBytes(StandardCharsets.UTF_8), frame);
-            } catch (Exception e) {
-                plugin.getLogger().fine("Voice audio publish failed: " + e.getMessage());
+    private void startAudioSubscriber() {
+        audioPubSub = new BinaryJedisPubSub() {
+            @Override
+            public void onPMessage(byte[] pattern, byte[] channel, byte[] message) {
+                String channelName = new String(channel, StandardCharsets.UTF_8);
+                if (!channelName.startsWith(VoiceMessages.AUDIO_CHANNEL_PREFIX)) return;
+                try {
+                    UUID groupId = UUID.fromString(
+                            channelName.substring(VoiceMessages.AUDIO_CHANNEL_PREFIX.length()));
+                    audioHandler.accept(groupId, message);
+                } catch (IllegalArgumentException ignored) {
+                    // Ignore malformed or unrelated channels.
+                } catch (Throwable t) {
+                    plugin.getLogger().fine("Voice audio handler threw: " + t.getMessage());
+                }
             }
-        });
+        };
+        audioSubscriberThread = new Thread(() -> {
+            byte[] pattern = (VoiceMessages.AUDIO_CHANNEL_PREFIX + "*")
+                    .getBytes(StandardCharsets.UTF_8);
+            boolean warned = false;
+            while (!Thread.currentThread().isInterrupted()) {
+                JedisPool pool = jedisPool;
+                if (pool == null || pool.isClosed()) break;
+                try (Jedis jedis = pool.getResource()) {
+                    if (warned) {
+                        plugin.getLogger().info("Voice audio Redis subscriber reconnected.");
+                        warned = false;
+                    }
+                    jedis.psubscribe(audioPubSub, pattern);
+                } catch (NoClassDefFoundError e) {
+                    break;
+                } catch (Exception e) {
+                    if (Thread.currentThread().isInterrupted()) break;
+                    if (!warned) {
+                        plugin.getLogger().warning(
+                                "Voice audio Redis subscriber unavailable; reconnecting in 3s: "
+                                        + e.getMessage());
+                        warned = true;
+                    } else {
+                        plugin.getLogger().fine("Voice audio subscriber disconnected: " + e.getMessage());
+                    }
+                    try { Thread.sleep(3000L); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }, "CrabUtilities-VoiceBus-Audio");
+        audioSubscriberThread.setDaemon(true);
+        audioSubscriberThread.start();
     }
 
-    void publishRoster(String message) {
+    void publishAudio(UUID groupId, UUID speakerId, byte[] frame, boolean resetMarker) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
-        runAsync(() -> {
+        if (resetMarker) {
+            // Keep other speakers intact, but ensure this speaker's reset follows
+            // its last in-flight frame and cannot be displaced by stale audio.
+            audioPublishExecutor.getQueue().removeIf(task ->
+                    task instanceof AudioPublish publish
+                            && publish.speakerId.equals(speakerId));
+        } else if (audioPublishExecutor.getQueue().size() >= 64) {
+            return;
+        }
+        try {
+            audioPublishExecutor.execute(
+                    new AudioPublish(groupId, speakerId, frame));
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {
+            // Plugin is stopping.
+        }
+    }
+
+    void publishRoster(String message, UUID playerId, String expectedRoute) {
+        if (expectedRoute == null) return;
+        submitControl("roster:" + playerId, () -> {
+            JedisPool pool = jedisPool;
+            if (pool == null || pool.isClosed()) return;
             try (Jedis jedis = pool.getResource()) {
-                jedis.publish(VoiceMessages.ROSTER_CHANNEL, message);
+                jedis.eval(PUBLISH_ROSTER_SCRIPT,
+                        List.of(VoiceMessages.playerHomeKey(playerId),
+                                VoiceMessages.ROSTER_CHANNEL),
+                        List.of(expectedRoute, message));
             } catch (Exception e) {
                 plugin.getLogger().warning("Voice roster publish failed: " + e.getMessage());
             }
         });
     }
 
-    /**
-     * Bukkit rejects new tasks once the plugin is disabling (the enabled
-     * flag flips before onDisable runs), which made the shutdown
-     * leave-broadcast throw and abort the rest of the cleanup. Fall back
-     * to running inline in that case — the shutdown path is not
-     * latency-sensitive and the publish has a bounded socket timeout.
-     */
-    private void runAsync(Runnable task) {
+    void upsertGroup(VoiceMessages.GroupDefinition group, Consumer<Boolean> completion) {
+        boolean accepted = submitControl("group:" + group.id(), () -> {
+            boolean succeeded = false;
+            JedisPool pool = jedisPool;
+            try {
+                if (pool != null && !pool.isClosed()) {
+                    try (Jedis jedis = pool.getResource()) {
+                        jedis.eval(UPSERT_GROUP_SCRIPT,
+                                List.of(VoiceMessages.GROUPS_REGISTRY_KEY,
+                                        VoiceMessages.PERMANENT_GROUPS_KEY,
+                                        VoiceMessages.LIFECYCLE_CHANNEL),
+                                List.of(group.id().toString(),
+                                        VoiceMessages.encodeGroupDefinition(group),
+                                        group.permanent() ? "1" : "0",
+                                        VoiceMessages.encodeGroupChanged(group.id())));
+                        succeeded = true;
+                    }
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning(
+                        "Voice group registry write failed: " + e.getMessage());
+            } finally {
+                completion.accept(succeeded);
+            }
+        });
+        if (!accepted) completion.accept(false);
+    }
+
+    VoiceMessages.GroupDefinition fetchGroup(UUID groupId) {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return null;
         try {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, task);
-        } catch (IllegalPluginAccessException e) {
-            task.run();
+            try (Jedis jedis = pool.getResource()) {
+                return VoiceMessages.decodeGroupDefinition(groupId,
+                        jedis.hget(VoiceMessages.GROUPS_REGISTRY_KEY, groupId.toString()));
+            }
+        } catch (Exception e) {
+            return null;
         }
     }
 
-    /** Returns the home backend for the speaker, or null if not set. */
+    Map<UUID, VoiceMessages.GroupDefinition> fetchGroups() {
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return null;
+        try (Jedis jedis = pool.getResource()) {
+            Map<UUID, VoiceMessages.GroupDefinition> result = new HashMap<>();
+            for (Map.Entry<String, String> entry
+                    : jedis.hgetAll(VoiceMessages.GROUPS_REGISTRY_KEY).entrySet()) {
+                try {
+                    UUID id = UUID.fromString(entry.getKey());
+                    VoiceMessages.GroupDefinition group =
+                            VoiceMessages.decodeGroupDefinition(id, entry.getValue());
+                    if (group != null) result.put(id, group);
+                } catch (IllegalArgumentException ignored) {
+                    // Skip corrupt registry entries without losing the rest.
+                }
+            }
+            return Map.copyOf(result);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    void pruneGroups() {
+        submitControl("prune", () -> {
+            JedisPool pool = jedisPool;
+            if (pool == null || pool.isClosed()) return;
+            try (Jedis jedis = pool.getResource()) {
+                jedis.eval(PRUNE_GROUPS_SCRIPT,
+                        List.of(VoiceMessages.GROUPS_REGISTRY_KEY,
+                                VoiceMessages.PERMANENT_GROUPS_KEY,
+                                VoiceMessages.LIFECYCLE_CHANNEL),
+                        List.of(VoiceMessages.GROUP_MEMBERS_KEY_PREFIX,
+                                VoiceMessages.PLAYER_GROUP_KEY_PREFIX,
+                                VoiceMessages.OP_GROUP_CHANGED + VoiceMessages.SEP));
+            } catch (Exception e) {
+                plugin.getLogger().fine("Voice group lease pruning failed: " + e.getMessage());
+            }
+        });
+    }
+
+    /** Returns the Velocity backend + hop token, or null if not set. */
     String fetchPlayerHome(UUID playerId) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return null;
@@ -181,135 +394,207 @@ class RedisVoiceBus {
         }
     }
 
-    /**
-     * Returns the group UUID the player was in (across any backend),
-     * or null if no record / expired. Used for auto-rejoin on server hop.
-     */
-    String fetchPlayerGroup(UUID playerId) {
+    Map<UUID, String> fetchPlayerHomes(Set<UUID> playerIds) {
+        if (playerIds.isEmpty()) return Map.of();
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return null;
+        List<UUID> players = List.copyOf(playerIds);
+        String[] keys = new String[players.size()];
+        for (int i = 0; i < players.size(); i++) {
+            keys[i] = VoiceMessages.playerHomeKey(players.get(i));
+        }
         try (Jedis jedis = pool.getResource()) {
-            return jedis.get(VoiceMessages.playerGroupKey(playerId));
+            List<String> routes = jedis.mget(keys);
+            Map<UUID, String> result = new HashMap<>();
+            for (int i = 0; i < players.size(); i++) {
+                if (routes.get(i) != null) result.put(players.get(i), routes.get(i));
+            }
+            return result;
         } catch (Exception e) {
             return null;
         }
     }
 
-    void writePlayerGroup(UUID playerId, UUID groupId, long ttlSeconds) {
+    /**
+     * Returns the group UUID the player was in (across any backend),
+     * or null if no record / expired. Used for auto-rejoin on server hop.
+     */
+    ReadResult<String> fetchPlayerGroup(UUID playerId) {
         JedisPool pool = jedisPool;
-        if (pool == null || pool.isClosed()) return;
-        runAsync(() -> {
-            try (Jedis jedis = pool.getResource()) {
-                jedis.setex(VoiceMessages.playerGroupKey(playerId), ttlSeconds, groupId.toString());
-            } catch (Exception e) {
-                plugin.getLogger().fine("writePlayerGroup failed: " + e.getMessage());
-            }
-        });
+        if (pool == null || pool.isClosed()) return new ReadResult<>(false, null);
+        try (Jedis jedis = pool.getResource()) {
+            return new ReadResult<>(true,
+                    jedis.get(VoiceMessages.playerGroupKey(playerId)));
+        } catch (Exception e) {
+            return new ReadResult<>(false, null);
+        }
     }
 
-    void deletePlayerGroup(UUID playerId) {
-        JedisPool pool = jedisPool;
-        if (pool == null || pool.isClosed()) return;
-        runAsync(() -> {
-            try (Jedis jedis = pool.getResource()) {
-                jedis.del(VoiceMessages.playerGroupKey(playerId));
-            } catch (Exception ignored) {}
+    void writePlayerGroup(UUID playerId, VoiceMessages.GroupDefinition group,
+                          long ttlSeconds, String expectedRoute,
+                          Consumer<Boolean> completion) {
+        if (group == null || expectedRoute == null) return;
+        boolean accepted = submitControl("membership:" + playerId, () -> {
+            boolean definitionChanged = false;
+            JedisPool pool = jedisPool;
+            try {
+                if (pool != null && !pool.isClosed()) {
+                    try (Jedis jedis = pool.getResource()) {
+                        Object result = jedis.eval(SET_PLAYER_GROUP_SCRIPT,
+                                List.of(VoiceMessages.playerGroupKey(playerId),
+                                        VoiceMessages.GROUPS_REGISTRY_KEY,
+                                        VoiceMessages.PERMANENT_GROUPS_KEY,
+                                        VoiceMessages.LIFECYCLE_CHANNEL,
+                                        VoiceMessages.playerHomeKey(playerId)),
+                                List.of(group.id().toString(), playerId.toString(),
+                                        VoiceMessages.GROUP_MEMBERS_KEY_PREFIX,
+                                        VoiceMessages.OP_GROUP_CHANGED + VoiceMessages.SEP,
+                                        Long.toString(ttlSeconds), expectedRoute,
+                                        VoiceMessages.encodeGroupDefinition(group),
+                                        group.permanent() ? "1" : "0"));
+                        definitionChanged = result instanceof Long value && value == 1L;
+                    }
+                }
+            } catch (Exception e) {
+                plugin.getLogger().fine("writePlayerGroup failed: " + e.getMessage());
+            } finally {
+                completion.accept(definitionChanged);
+            }
         });
+        if (!accepted) completion.accept(false);
+    }
+
+    void deletePlayerGroup(UUID playerId, UUID previousGroupId, String expectedRoute,
+                           Consumer<Boolean> completion) {
+        if (expectedRoute == null) return;
+        boolean accepted = submitControl("membership:" + playerId, () -> {
+            boolean registryChanged = false;
+            JedisPool pool = jedisPool;
+            try {
+                if (pool != null && !pool.isClosed()) {
+                    try (Jedis jedis = pool.getResource()) {
+                        Object result = jedis.eval(CLEAR_PLAYER_GROUP_SCRIPT,
+                                List.of(VoiceMessages.playerGroupKey(playerId),
+                                        VoiceMessages.GROUPS_REGISTRY_KEY,
+                                        VoiceMessages.PERMANENT_GROUPS_KEY,
+                                        VoiceMessages.LIFECYCLE_CHANNEL,
+                                        VoiceMessages.playerHomeKey(playerId)),
+                                List.of(playerId.toString(),
+                                        VoiceMessages.GROUP_MEMBERS_KEY_PREFIX,
+                                        VoiceMessages.OP_GROUP_CHANGED + VoiceMessages.SEP,
+                                        expectedRoute,
+                                        previousGroupId == null ? "" : previousGroupId.toString()));
+                        registryChanged = result instanceof Long value && value == 1L;
+                    }
+                }
+            } catch (Exception ignored) {
+                // The next ungrouped heartbeat retries the authoritative clear.
+            } finally {
+                completion.accept(registryChanged);
+            }
+        });
+        if (!accepted) completion.accept(false);
+    }
+
+    private boolean submitControl(String key, Runnable task) {
+        if (controlExecutor.isShutdown()) return false;
+        Runnable previous = pendingControlTasks.put(key, task);
+        if (previous != null) return true;
+        try {
+            controlExecutor.execute(() -> {
+                Runnable latest = pendingControlTasks.remove(key);
+                if (latest != null) latest.run();
+            });
+            return true;
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {
+            pendingControlTasks.remove(key, task);
+            // Plugin is stopping; no new state should be queued.
+            return false;
+        }
     }
 
     void shutdown() {
-        if (rosterPubSub != null) {
-            try { rosterPubSub.unsubscribe(); } catch (Exception ignored) {}
+        controlExecutor.shutdown();
+        try {
+            if (!controlExecutor.awaitTermination(2L, java.util.concurrent.TimeUnit.SECONDS)) {
+                controlExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            controlExecutor.shutdownNow();
         }
-        if (rosterSubscriberThread != null) {
-            rosterSubscriberThread.interrupt();
+        if (lifecyclePubSub != null) {
+            try { lifecyclePubSub.unsubscribe(); } catch (Exception ignored) {}
         }
-        Set<UUID> groupIds = new HashSet<>(audioSubs.keySet());
-        for (UUID id : groupIds) {
-            AudioSubscription sub = audioSubs.remove(id);
-            if (sub != null) sub.shutdown();
+        if (lifecycleSubscriberThread != null) {
+            lifecycleSubscriberThread.interrupt();
+        }
+        if (audioPubSub != null) {
+            try { audioPubSub.punsubscribe(); } catch (Exception ignored) {}
+        }
+        if (audioSubscriberThread != null) {
+            audioSubscriberThread.interrupt();
         }
         audioPublishExecutor.shutdownNow();
+        pendingControlTasks.clear();
         if (jedisPool != null && !jedisPool.isClosed()) {
             try { jedisPool.close(); } catch (NoClassDefFoundError ignored) {}
             jedisPool = null;
         }
     }
 
+    private final class AudioPublish implements Runnable {
+        private final UUID groupId;
+        private final UUID speakerId;
+        private final byte[] frame;
+
+        private AudioPublish(UUID groupId, UUID speakerId, byte[] frame) {
+            this.groupId = groupId;
+            this.speakerId = speakerId;
+            this.frame = frame;
+        }
+
+        @Override
+        public void run() {
+            JedisPool pool = jedisPool;
+            if (pool == null || pool.isClosed()) return;
+            try (Jedis jedis = pool.getResource()) {
+                jedis.publish(VoiceMessages.audioChannel(groupId)
+                        .getBytes(StandardCharsets.UTF_8), frame);
+            } catch (Exception e) {
+                plugin.getLogger().fine("Voice audio publish failed: " + e.getMessage());
+            }
+        }
+    }
+
     /**
-     * Single-threaded executor for audio publishes. Bounded queue with
-     * drop-oldest semantics — voice is real-time, latency &gt; loss.
+     * Normal audio is capped at 64 queued frames. Reset markers may exceed that
+     * cap, but replace queued work for the same speaker and are never discarded.
      */
     private final java.util.concurrent.ThreadPoolExecutor audioPublishExecutor =
             new java.util.concurrent.ThreadPoolExecutor(
                     1, 1, 0L, java.util.concurrent.TimeUnit.MILLISECONDS,
-                    new java.util.concurrent.LinkedBlockingQueue<>(512),
+                    new java.util.concurrent.LinkedBlockingQueue<>(),
                     r -> {
                         Thread t = new Thread(r, "CrabUtilities-VoiceBus-AudioPublish");
                         t.setDaemon(true);
                         return t;
                     },
-                    new java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy());
+                    new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
 
-    private final class AudioSubscription {
-        private final UUID groupId;
-        private final BinaryJedisPubSub pubSub;
-        private Thread thread;
+    /**
+     * Coalesces pending control work by entity while preserving single-threaded
+     * ordering. A Redis outage therefore retains the latest state instead of
+     * either growing without bound or silently dropping an authoritative leave.
+     */
+    private final Map<String, Runnable> pendingControlTasks =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ExecutorService controlExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread thread = new Thread(r, "CrabUtilities-VoiceBus-Control");
+                thread.setDaemon(true);
+                return thread;
+            });
 
-        AudioSubscription(UUID groupId) {
-            this.groupId = groupId;
-            this.pubSub = new BinaryJedisPubSub() {
-                @Override
-                public void onMessage(byte[] channel, byte[] message) {
-                    try {
-                        audioHandler.accept(groupId, message);
-                    } catch (Throwable t) {
-                        plugin.getLogger().fine("Voice audio handler threw: " + t.getMessage());
-                    }
-                }
-            };
-        }
-
-        void start() {
-            byte[] channelBytes = VoiceMessages.audioChannel(groupId)
-                    .getBytes(StandardCharsets.UTF_8);
-            thread = new Thread(() -> {
-                boolean warned = false;
-                while (!Thread.currentThread().isInterrupted()) {
-                    JedisPool pool = jedisPool;
-                    if (pool == null || pool.isClosed()) break;
-                    try (Jedis jedis = pool.getResource()) {
-                        if (warned) {
-                            plugin.getLogger().info("Voice audio Redis subscriber reconnected for " + groupId + ".");
-                            warned = false;
-                        }
-                        jedis.subscribe(pubSub, channelBytes);
-                    } catch (NoClassDefFoundError e) {
-                        break;
-                    } catch (Exception e) {
-                        if (Thread.currentThread().isInterrupted()) break;
-                        if (!warned) {
-                            plugin.getLogger().warning("Voice audio Redis subscriber unavailable for " + groupId
-                                    + "; reconnecting in 3s: " + e.getMessage());
-                            warned = true;
-                        } else {
-                            plugin.getLogger().fine("Voice audio subscriber disconnected for " + groupId + ": "
-                                    + e.getMessage());
-                        }
-                        try { Thread.sleep(3000L); } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
-                }
-            }, "CrabUtilities-VoiceBus-Audio-" + groupId);
-            thread.setDaemon(true);
-            thread.start();
-        }
-
-        void shutdown() {
-            try { pubSub.unsubscribe(); } catch (Exception ignored) {}
-            if (thread != null) thread.interrupt();
-        }
-    }
+    record ReadResult<T>(boolean succeeded, T value) {}
 }

@@ -1,7 +1,7 @@
 # CrabUtilities - Voice Chat
 
-# Simple Voice Chat cross-server bridge. Forwards opus frames between backends
-# over Redis so members of a persistent group hear each other across servers.
+# Simple Voice Chat cross-server bridge. Redis mirrors every group (including
+# its password and mode) and relays grouped audio between backends.
 voicechat:
   # Persistent cross-server group with a continuously playing administrator-configured source.
   lofi:
@@ -16,6 +16,7 @@ voicechat:
     # Velocity server name for THIS backend; must match velocity.toml's
     # [servers] section.
     this-backend: ""
+    # Always-present OPEN groups. Player-created groups are synced automatically.
     persistent-groups:
       - "Global #1"
       - "Global #2"
