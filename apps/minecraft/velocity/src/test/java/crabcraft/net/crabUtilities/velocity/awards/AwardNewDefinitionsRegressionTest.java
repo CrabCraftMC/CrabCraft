@@ -14,6 +14,7 @@ final class AwardNewDefinitionsRegressionTest {
     public static void main(String[] args) throws Exception {
         Map<String, JsonObject> rows = loadSeedRows();
         checkTitle(rows, "collect_potato", "Absolute Spud");
+        checkTitle(rows, "craft_bricks", "Bricklayer");
         checkTitle(rows, "craft_honey_block", "Honey I'm Home");
         checkTitle(rows, "craft_redstone_components", "Redstone Crafter");
         checkTitle(rows, "mine_ground", "Excavator");
@@ -33,6 +34,8 @@ final class AwardNewDefinitionsRegressionTest {
                 {"stats":{
                   "minecraft:picked_up":{"minecraft:potato":23},
                   "minecraft:crafted":{
+                    "minecraft:bricks":37,
+                    "minecraft:brick":41,
                     "minecraft:honey_block":7,
                     "minecraft:comparator":3,
                     "minecraft:repeater":5,
@@ -58,6 +61,8 @@ final class AwardNewDefinitionsRegressionTest {
         Map<String, Double> scores = evaluator.evaluate(stats, customMetrics);
 
         check(scores.get("collect_potato") == 23d, "Absolute Spud read the wrong score");
+        check(scores.get("craft_bricks") == 37d,
+                "Bricklayer did not count only crafted brick blocks");
         check(scores.get("craft_honey_block") == 7d, "Honey I'm Home read the wrong score");
         check(scores.get("craft_redstone_components") == 10d,
                 "Redstone Crafter did not sum only redstone components");
@@ -98,6 +103,7 @@ final class AwardNewDefinitionsRegressionTest {
                 JsonObject row = element.getAsJsonObject();
                 String id = row.get("id").getAsString();
                 if (id.equals("collect_potato")
+                        || id.equals("craft_bricks")
                         || id.equals("craft_honey_block")
                         || id.equals("craft_redstone_components")
                         || id.equals("mine_ground")
@@ -108,7 +114,7 @@ final class AwardNewDefinitionsRegressionTest {
                 }
             }
         }
-        check(rowsById.size() == 7, "one or more award definitions are missing");
+        check(rowsById.size() == 8, "one or more award definitions are missing");
         return rowsById;
     }
 
