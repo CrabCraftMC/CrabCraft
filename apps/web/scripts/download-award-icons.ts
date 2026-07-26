@@ -152,6 +152,7 @@ const ICON_MAP: Record<string, string> = {
   craft_bookshelf: "Bookshelf",
   craft_buttons: "Stone_Button",
   craft_bread: "Bread",
+  craft_bricks: "Bricks",
   craft_bundle: "Bundle",
   craft_clock: "Clock",
   craft_compass: "Compass",

@@ -241,6 +241,21 @@
     }
   },
   {
+    "id": "craft_bricks",
+    "title": "Bricklayer",
+    "description": "Brick blocks crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_bricks.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:bricks"
+      ]
+    }
+  },
+  {
     "id": "craft_bundle",
     "title": "Packed Up",
     "description": "Bundles crafted",
