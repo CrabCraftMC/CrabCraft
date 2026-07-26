@@ -120,6 +120,7 @@ def regressionTests = [
     literalTitleRegressionTest: 'crabcraft.net.crabUtilities.media.language.LiteralTitleRegressionTest',
     hopperSecurityRegressionTest: 'crabcraft.net.crabUtilities.media.event.HopperSecurityRegressionTest',
     binaryProvisionerRegressionTest: 'crabcraft.net.crabUtilities.media.audio.BinaryProvisionerRegressionTest',
+    updateDownloaderRegressionTest: 'crabcraft.net.crabUtilities.update.UpdateDownloaderRegressionTest',
     moduleConfigManagerRegressionTest: 'crabcraft.net.crabUtilities.config.ModuleConfigManagerRegressionTest',
     accurateBlockPlacementRegressionTest: 'crabcraft.net.crabUtilities.accurateplacement.AccurateBlockPlacementRegressionTest',
     appleSkinLifecycleRegressionTest: 'crabcraft.net.crabUtilities.appleskin.AppleSkinLifecycleRegressionTest',

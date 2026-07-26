@@ -125,7 +125,7 @@ public class UpdateDownloader {
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(30))
-                .header("Accept", "text/plain")
+                .header("Accept", "application/octet-stream")
                 .header("User-Agent", userAgent)
                 .GET();
         if (token != null && !token.isEmpty()) {

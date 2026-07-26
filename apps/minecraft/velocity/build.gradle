@@ -83,6 +83,8 @@ def regressionTests = [
                 'crabcraft.net.crabUtilities.velocity.awards.AwardSweetBerriesRegressionTest',
         awardNewDefinitionsRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.awards.AwardNewDefinitionsRegressionTest',
+        updateDownloaderRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.update.UpdateDownloaderRegressionTest',
 ]
 
 regressionTests.each { taskName, testClass ->
