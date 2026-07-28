@@ -34,6 +34,7 @@ import crabcraft.net.crabUtilities.update.UpdateService;
 import crabcraft.net.crabUtilities.viewdistance.ViewDistanceCommand;
 import crabcraft.net.crabUtilities.viewdistance.ViewDistanceManager;
 import crabcraft.net.crabUtilities.villagers.SharedVillagerDiscountListener;
+import crabcraft.net.crabUtilities.voicechat.SimpleVoiceAnimationsIntegration;
 import crabcraft.net.crabUtilities.voicechat.VoicechatIntegration;
 import crabcraft.net.crabUtilities.media.MediaFeature;
 import org.bukkit.Bukkit;
@@ -70,6 +71,7 @@ public final class CrabUtilities extends JavaPlugin {
     private NicknameSync nicknameSync;
     private ViewDistanceManager viewDistanceManager;
     private AccurateBlockPlacementManager accurateBlockPlacementManager;
+    private SimpleVoiceAnimationsIntegration simpleVoiceAnimationsIntegration;
     private ModuleConfigManager moduleConfigManager;
 
     @Override
@@ -97,6 +99,9 @@ public final class CrabUtilities extends JavaPlugin {
 
         // AppleSkin server-side companion (saturation/exhaustion sync).
         AppleSkinIntegration.enable(this);
+
+        // Simple Voice Animations server-side companion (per-player head settings sync).
+        startSimpleVoiceAnimations();
 
         // Xaero map identity (separates backend map storage behind a proxy).
         XaeroBootstrap.enable(this);
@@ -341,14 +346,20 @@ public final class CrabUtilities extends JavaPlugin {
     private void reloadIntegrationsRuntime(List<String> messages) {
         JadeBootstrap.disable(this);
         AppleSkinIntegration.disable(this);
+        stopSimpleVoiceAnimations();
         JadeBootstrap.enable(this);
         AppleSkinIntegration.enable(this);
+        startSimpleVoiceAnimations();
         messages.add(JadeBootstrap.isEnabled()
                 ? "Jade integration active."
                 : "Jade integration inactive (disabled in config).");
         messages.add(AppleSkinIntegration.isEnabled()
                 ? "AppleSkin integration active."
                 : "AppleSkin integration inactive (disabled in config).");
+        messages.add(simpleVoiceAnimationsIntegration != null
+                && simpleVoiceAnimationsIntegration.isActive()
+                ? "Simple Voice Animations integration active."
+                : "Simple Voice Animations integration inactive (disabled in config).");
 
         stopSignMarkers();
         startSignMarkers();
@@ -605,6 +616,27 @@ public final class CrabUtilities extends JavaPlugin {
         }
     }
 
+    private void startSimpleVoiceAnimations() {
+        if (!getConfig().getBoolean(
+                "mod-protocols.simple-voice-animations.enabled",
+                true)) {
+            getLogger().info("Simple Voice Animations integration disabled in config.");
+            return;
+        }
+
+        this.simpleVoiceAnimationsIntegration =
+                new SimpleVoiceAnimationsIntegration(this);
+        simpleVoiceAnimationsIntegration.start();
+        getLogger().info("Simple Voice Animations integration enabled.");
+    }
+
+    private void stopSimpleVoiceAnimations() {
+        if (simpleVoiceAnimationsIntegration != null) {
+            simpleVoiceAnimationsIntegration.shutdown();
+            simpleVoiceAnimationsIntegration = null;
+        }
+    }
+
     private void stopGlobalChatService() {
         if (globalChatListener != null) {
             HandlerList.unregisterAll(globalChatListener);
@@ -618,6 +650,7 @@ public final class CrabUtilities extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        stopSimpleVoiceAnimations();
         stopAccurateBlockPlacement();
         stopStatsPushTask();
         if (updateService != null) {
