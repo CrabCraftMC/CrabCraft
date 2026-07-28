@@ -18,6 +18,10 @@ mod-protocols:
     inventory-data-enabled: false
   appleskin:
     enabled: true
+  # Synchronise each player's Simple Voice Animations head style, split height,
+  # and intensity with other players on the server.
+  simple-voice-animations:
+    enabled: true
   xaero-map:
     enabled: true
     # Backend id sent to Xaero clients so each server behind a proxy has separate
