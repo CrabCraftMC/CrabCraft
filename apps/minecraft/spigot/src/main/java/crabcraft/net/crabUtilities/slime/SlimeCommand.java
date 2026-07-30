@@ -39,7 +39,7 @@ public final class SlimeCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private static void openMap(Player player) {
+    static void openMap(Player player) {
         if (!player.hasPermission(MAP_PERMISSION)) {
             sendNoPermission(player);
             return;
