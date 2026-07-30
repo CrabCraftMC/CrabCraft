@@ -1,5 +1,9 @@
 package crabcraft.net.crabUtilities.slime;
 
+import org.bukkit.Material;
+import org.bukkit.event.block.Action;
+import org.bukkit.inventory.EquipmentSlot;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,6 +18,7 @@ public final class SlimeMapRegressionTest {
         centerSlotAlwaysRepresentsThePlayerChunk();
         mapTopFollowsThePlayersFacingDirection();
         everyCardinalLayoutContains54DistinctChunks();
+        slimeBallsOpenTheMapOnRightClick();
     }
 
     private static void centerSlotAlwaysRepresentsThePlayerChunk() {
@@ -38,6 +43,24 @@ public final class SlimeMapRegressionTest {
             }
             check(offsets.size() == 54, "yaw " + yaw + " produced duplicate chunk positions");
         }
+    }
+
+    private static void slimeBallsOpenTheMapOnRightClick() {
+        check(SlimeMapListener.shouldOpenMap(
+                        Action.RIGHT_CLICK_AIR, EquipmentSlot.HAND, Material.SLIME_BALL, Material.SLIME_BALL),
+                "main-hand slime-ball air clicks should open the map");
+        check(SlimeMapListener.shouldOpenMap(
+                        Action.RIGHT_CLICK_BLOCK, EquipmentSlot.OFF_HAND, Material.SLIME_BALL, Material.STONE),
+                "off-hand slime-ball block clicks should open the map");
+        check(!SlimeMapListener.shouldOpenMap(
+                        Action.LEFT_CLICK_AIR, EquipmentSlot.HAND, Material.SLIME_BALL, Material.SLIME_BALL),
+                "left clicks should not open the map");
+        check(!SlimeMapListener.shouldOpenMap(
+                        Action.RIGHT_CLICK_AIR, EquipmentSlot.HAND, Material.STONE, Material.STONE),
+                "other held items should not open the map");
+        check(!SlimeMapListener.shouldOpenMap(
+                        Action.RIGHT_CLICK_AIR, EquipmentSlot.OFF_HAND, Material.SLIME_BALL, Material.SLIME_BALL),
+                "two held slime balls should not open the map twice");
     }
 
     private static void checkOffset(float yaw, int slot, int expectedX, int expectedZ) {
