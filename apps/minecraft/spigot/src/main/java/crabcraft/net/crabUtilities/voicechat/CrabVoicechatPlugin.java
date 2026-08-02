@@ -21,6 +21,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,7 +75,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private BukkitTask sweepTask;
     private BukkitTask groupReconcileTask;
     private BukkitTask routeRefreshTask;
+    private BukkitTask callTargetReconcileTask;
     private GroupSynchronizer groupSynchronizer;
+    private CallTargetSynchronizer callTargets;
+    private CallRingtonePlayer callRingtones;
     private LofiStreamPlayer lofiStreamPlayer;
     private GroupSpeechAttenuator groupSpeechAttenuator;
     private final AtomicLong sessionSequence = new AtomicLong();
@@ -140,6 +144,11 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private void onServerStarted(VoicechatServerStartedEvent event) {
         this.api = event.getVoicechat();
         VoiceMediaRegistry.getInstance().attach(api, lofiEnabled);
+        try {
+            this.callRingtones = new CallRingtonePlayer(api, logger);
+        } catch (IOException e) {
+            logger.warning("Call ringtones are unavailable: " + e.getMessage());
+        }
 
         List<Group> permanentGroups = new ArrayList<>();
         for (String name : persistentGroupNames) {
@@ -190,6 +199,11 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.roster = new RosterTracker(plugin, svcPackets, thisBackend, logger);
         this.groupSynchronizer = new GroupSynchronizer(
                 plugin, api, bus, logger, this::reconcileMembership);
+        this.callTargets = new CallTargetSynchronizer(
+                plugin, api, bus, groupSynchronizer, thisBackend,
+                voiceSessions::get, voiceRoutes::get,
+                playerId -> restoreSessions.remove(playerId),
+                this::scheduleMembershipReconciliation, logger);
 
         bus.start(audioRelay::onAudioFrame, this::onLifecycleMessage);
         permanentGroups.forEach(groupSynchronizer::seedPermanent);
@@ -219,6 +233,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         routeRefreshTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
                 this::refreshLocalRoutes, 20L * 5L, 20L * 5L);
 
+        callTargetReconcileTask = Bukkit.getScheduler().runTaskTimer(plugin,
+                () -> callTargets.reconcile(Set.copyOf(voiceSessions.keySet())),
+                20L * 2L, 20L * 5L);
+
         logger.info("Cross-server voice bridge started (backend='" + thisBackend + "', "
                 + permanentGroups.size() + " permanent groups plus synced player groups; "
                 + "relying on tab-list sync for skins)");
@@ -244,6 +262,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             // Refresh the auto-rejoin TTL and the network membership lease.
             bus.writePlayerGroup(playerId, group, PLAYER_GROUP_TTL_SECONDS, route,
                     groupSynchronizer::onRegistryWrite);
+            if (callTargets != null) callTargets.onMembershipReconciled(playerId, groupId);
             bus.publishRoster(VoiceMessages.encodeRosterJoin(
                     groupId, playerId, voicechatName(player), thisBackend),
                     playerId, route);
@@ -252,7 +271,34 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     private void onLifecycleMessage(String message) {
         if (groupSynchronizer != null && groupSynchronizer.onLifecycleMessage(message)) return;
+        VoiceMessages.CallRingStart ringStart = VoiceMessages.decodeCallRingStart(message);
+        if (ringStart != null) {
+            runVoiceControl(() -> {
+                if (callRingtones != null) callRingtones.start(ringStart);
+            });
+            return;
+        }
+        VoiceMessages.CallRingStop ringStop = VoiceMessages.decodeCallRingStop(message);
+        if (ringStop != null) {
+            runVoiceControl(() -> {
+                if (callRingtones != null) callRingtones.stop(ringStop);
+            });
+            return;
+        }
+        VoiceMessages.CallJoin callJoin = VoiceMessages.decodeCallJoin(message);
+        if (callJoin != null) {
+            if (callTargets != null) callTargets.onJoinHint(callJoin);
+            return;
+        }
         if (roster != null) roster.onLifecycleMessage(message);
+    }
+
+    private void runVoiceControl(Runnable control) {
+        try {
+            Bukkit.getScheduler().runTask(plugin, control);
+        } catch (Exception ignored) {
+            // Plugin is stopping.
+        }
     }
 
     private void refreshLocalRoutes() {
@@ -273,6 +319,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                     String previous = voiceRoutes.put(playerId, route);
                     if (!Objects.equals(previous, route)) {
                         scheduleMembershipReconciliation(playerId);
+                        if (callTargets != null) callTargets.onRouteReady(playerId);
                     }
                 }
             });
@@ -300,6 +347,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         voiceSessions.put(playerId, session);
         restoreSessions.put(playerId, session);
         voiceRoutes.remove(playerId);
+        if (callRingtones != null) callRingtones.removePlayer(playerId);
+        if (callTargets != null) callTargets.onConnect(playerId);
 
         // If this player was previously heard through a relay on this backend,
         // its next-sequence stop marker resets listeners before native audio starts.
@@ -429,7 +478,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     private void onCreateGroup(CreateGroupEvent event) {
         if (!event.isCancelled() && event.getConnection() != null) {
-            restoreSessions.remove(event.getConnection().getPlayer().getUuid());
+            UUID playerId = event.getConnection().getPlayer().getUuid();
+            restoreSessions.remove(playerId);
         }
         if (groupSynchronizer != null) groupSynchronizer.onCreateGroup(event);
     }
@@ -437,15 +487,20 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private void onJoinGroup(JoinGroupEvent event) {
         if (event.getConnection() == null) return;
         UUID playerId = event.getConnection().getPlayer().getUuid();
-        if (applyingRestore.contains(playerId)) return;
+        if (applyingRestore.contains(playerId)
+                || callTargets != null && callTargets.isApplying(playerId)) return;
         restoreSessions.remove(playerId);
+        if (callTargets != null) callTargets.onManualGroupChange(playerId);
         scheduleMembershipReconciliation(playerId);
     }
 
     private void onLeaveGroup(LeaveGroupEvent event) {
         if (event.getConnection() == null) return;
         UUID playerId = event.getConnection().getPlayer().getUuid();
+        if (applyingRestore.contains(playerId)
+                || callTargets != null && callTargets.isApplying(playerId)) return;
         restoreSessions.remove(playerId);
+        if (callTargets != null) callTargets.onManualGroupChange(playerId);
         scheduleMembershipReconciliation(playerId);
     }
 
@@ -495,6 +550,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         String name = voicechatName(player);
         bus.writePlayerGroup(playerId, definition, PLAYER_GROUP_TTL_SECONDS, route,
                 groupSynchronizer::onRegistryWrite);
+        if (callTargets != null) callTargets.onMembershipReconciled(playerId, groupId);
         bus.publishRoster(VoiceMessages.encodeRosterJoin(
                 groupId, playerId, name, thisBackend), playerId, route);
         if (changed) {
@@ -540,6 +596,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         voiceSessions.remove(playerId);
         restoreSessions.remove(playerId);
         applyingRestore.remove(playerId);
+        if (callRingtones != null) callRingtones.removePlayer(playerId);
+        if (callTargets != null) callTargets.onDisconnect(playerId);
         if (lofiStreamPlayer != null) lofiStreamPlayer.removeTarget(playerId);
         if (groupSpeechAttenuator != null) groupSpeechAttenuator.remove(playerId);
         if (membership != null && bus != null) {
@@ -559,12 +617,15 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     /** Public hook so {@link CrabUtilities#onDisable()} can release resources. */
     public void shutdown() {
+        if (callRingtones != null) callRingtones.close();
+        if (callTargets != null) callTargets.close();
         if (lofiStreamPlayer != null) lofiStreamPlayer.close();
         if (groupSpeechAttenuator != null) groupSpeechAttenuator.close();
         voiceSessions.clear();
         restoreSessions.clear();
         for (BukkitTask task : new BukkitTask[]{
-                rosterRebroadcastTask, sweepTask, groupReconcileTask, routeRefreshTask}) {
+                rosterRebroadcastTask, sweepTask, groupReconcileTask, routeRefreshTask,
+                callTargetReconcileTask}) {
             if (task != null) {
                 try { task.cancel(); } catch (Exception ignored) {}
             }

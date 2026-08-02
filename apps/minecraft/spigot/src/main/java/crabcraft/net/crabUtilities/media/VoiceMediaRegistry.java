@@ -12,6 +12,7 @@ public final class VoiceMediaRegistry {
   public static final String MUSIC_DISC_CATEGORY = "music_discs";
   public static final String GOAT_HORN_CATEGORY = "goat_horns";
   public static final String LOFI_CATEGORY = "crabcraft_lofi";
+  public static final String CALL_CATEGORY = "crabcraft_calls";
 
   private static final VoiceMediaRegistry INSTANCE = new VoiceMediaRegistry();
   private volatile VoicechatServerApi serverApi;
@@ -32,6 +33,7 @@ public final class VoiceMediaRegistry {
     serverApi = api;
     addVolumeControl(api, MUSIC_DISC_CATEGORY, "Music Discs", "media/music_disc_category.png");
     addVolumeControl(api, GOAT_HORN_CATEGORY, "Goat Horns", "media/goat_horn_category.png");
+    addVolumeControl(api, CALL_CATEGORY, "Call Ringtones", "media/music_disc_category.png");
     if (includeLofi) {
       addVolumeControl(api, LOFI_CATEGORY, "Lofi 24/7 CrabFM", "media/music_disc_category.png");
     }

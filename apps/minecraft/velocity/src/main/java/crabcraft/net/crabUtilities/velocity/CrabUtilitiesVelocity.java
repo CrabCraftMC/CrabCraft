@@ -26,6 +26,8 @@ import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.VelocityChatBridge;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
+import crabcraft.net.crabUtilities.velocity.voicechat.CallCommand;
+import crabcraft.net.crabUtilities.velocity.voicechat.CallManager;
 import crabcraft.net.crabUtilities.velocity.voicechat.PlayerLocationTracker;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
@@ -61,6 +63,7 @@ public class CrabUtilitiesVelocity {
     private final Path dataDirectory;
 
     private RedisStaffChat redisStaffChat;
+    private volatile CallManager callManager;
     private PlayerLocationTracker playerLocationTracker;
     private StaffChatManager staffChatManager;
     private MessageManager messageManager;
@@ -126,6 +129,7 @@ public class CrabUtilitiesVelocity {
         StaffChatToggleCommand.register(this);
         SocialSpyCommand.register(this);
         ReloadCommand.register(this);
+        CallCommand.register(this);
 
         this.connectionListener = new ConnectionListener(this);
         server.getEventManager().register(this, connectionListener);
@@ -244,6 +248,10 @@ public class CrabUtilitiesVelocity {
             this.playerLocationTracker = new PlayerLocationTracker(this, config);
             this.playerLocationTracker.start();
             server.getEventManager().register(this, playerLocationTracker);
+
+            this.callManager = new CallManager(this, config, playerLocationTracker);
+            this.callManager.start();
+            server.getEventManager().register(this, callManager);
         }
     }
 
@@ -273,6 +281,7 @@ public class CrabUtilitiesVelocity {
     public PlayerSettingsService getPlayerSettingsService() { return playerSettingsService; }
     public LiteBansInfractionService getLiteBansInfractionService() { return liteBansInfractionService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
+    public CallManager getCallManager() { return callManager; }
 
     public boolean runDatabaseTask(String taskName, Runnable task) {
         ExecutorService executor = databaseExecutor;
@@ -296,6 +305,12 @@ public class CrabUtilitiesVelocity {
     }
 
     private void stopRuntimeConsumers() {
+        CallManager calls = callManager;
+        callManager = null;
+        if (calls != null) {
+            calls.shutdown();
+            server.getEventManager().unregisterListener(this, calls);
+        }
         if (statsPushSubscriber != null) {
             statsPushSubscriber.shutdown();
             statsPushSubscriber = null;

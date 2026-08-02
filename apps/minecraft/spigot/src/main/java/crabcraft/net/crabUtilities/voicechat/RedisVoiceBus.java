@@ -46,6 +46,10 @@ class RedisVoiceBus {
             if redis.call('GET', KEYS[5]) ~= ARGV[6] then
                 return -1
             end
+            local callTarget = redis.call('GET', KEYS[6])
+            if callTarget and string.sub(callTarget, 1, 37) ~= ARGV[1] .. ARGV[9] then
+                return -2
+            end
             local definition = redis.call('HGET', KEYS[2], ARGV[1])
             local registryChanged = definition ~= ARGV[7]
             redis.call('HSET', KEYS[2], ARGV[1], ARGV[7])
@@ -81,6 +85,9 @@ class RedisVoiceBus {
             if redis.call('GET', KEYS[5]) ~= ARGV[4] then
                 return -1
             end
+            if redis.call('GET', KEYS[6]) then
+                return -2
+            end
             local registryChanged = 0
             local old = redis.call('GET', KEYS[1])
             if not old and ARGV[5] ~= '' then
@@ -106,6 +113,17 @@ class RedisVoiceBus {
                 return redis.call('PUBLISH', KEYS[2], ARGV[2])
             end
             return 0
+            """;
+
+    private static final String CLEAR_CALL_TARGET_SCRIPT = """
+            if redis.call('GET', KEYS[1]) ~= ARGV[1] then
+                return -1
+            end
+            if redis.call('GET', KEYS[2]) ~= ARGV[2] then
+                return 0
+            end
+            redis.call('DEL', KEYS[2])
+            return 1
             """;
 
     private static final String PRUNE_GROUPS_SCRIPT = """
@@ -415,6 +433,55 @@ class RedisVoiceBus {
         }
     }
 
+    ReadResult<Map<UUID, VoiceMessages.CallTarget>> fetchCallTargets(Set<UUID> playerIds) {
+        if (playerIds.isEmpty()) return new ReadResult<>(true, Map.of());
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return new ReadResult<>(false, Map.of());
+        List<UUID> players = List.copyOf(playerIds);
+        String[] keys = new String[players.size()];
+        for (int index = 0; index < players.size(); index++) {
+            keys[index] = VoiceMessages.callTargetKey(players.get(index));
+        }
+        try (Jedis jedis = pool.getResource()) {
+            List<String> encodedTargets = jedis.mget(keys);
+            Map<UUID, VoiceMessages.CallTarget> result = new HashMap<>();
+            for (int index = 0; index < players.size(); index++) {
+                VoiceMessages.CallTarget target =
+                        VoiceMessages.decodeCallTarget(encodedTargets.get(index));
+                if (target != null) result.put(players.get(index), target);
+            }
+            return new ReadResult<>(true, Map.copyOf(result));
+        } catch (Exception e) {
+            return new ReadResult<>(false, Map.of());
+        }
+    }
+
+    void clearCallTarget(UUID playerId, VoiceMessages.CallTarget target,
+                         String expectedRoute, Runnable completion) {
+        if (target == null || expectedRoute == null) {
+            completion.run();
+            return;
+        }
+        boolean accepted = submitControl("call-target:" + playerId, () -> {
+            JedisPool pool = jedisPool;
+            try {
+                if (pool != null && !pool.isClosed()) {
+                    try (Jedis jedis = pool.getResource()) {
+                        jedis.eval(CLEAR_CALL_TARGET_SCRIPT,
+                                List.of(VoiceMessages.playerHomeKey(playerId),
+                                        VoiceMessages.callTargetKey(playerId)),
+                                List.of(expectedRoute, VoiceMessages.encodeCallTarget(target)));
+                    }
+                }
+            } catch (Exception e) {
+                plugin.getLogger().fine("Call target clear failed: " + e.getMessage());
+            } finally {
+                completion.run();
+            }
+        });
+        if (!accepted) completion.run();
+    }
+
     /**
      * Returns the group UUID the player was in (across any backend),
      * or null if no record / expired. Used for auto-rejoin on server hop.
@@ -445,13 +512,15 @@ class RedisVoiceBus {
                                         VoiceMessages.GROUPS_REGISTRY_KEY,
                                         VoiceMessages.PERMANENT_GROUPS_KEY,
                                         VoiceMessages.LIFECYCLE_CHANNEL,
-                                        VoiceMessages.playerHomeKey(playerId)),
+                                        VoiceMessages.playerHomeKey(playerId),
+                                        VoiceMessages.callTargetKey(playerId)),
                                 List.of(group.id().toString(), playerId.toString(),
                                         VoiceMessages.GROUP_MEMBERS_KEY_PREFIX,
                                         VoiceMessages.OP_GROUP_CHANGED + VoiceMessages.SEP,
                                         Long.toString(ttlSeconds), expectedRoute,
                                         VoiceMessages.encodeGroupDefinition(group),
-                                        group.permanent() ? "1" : "0"));
+                                        group.permanent() ? "1" : "0",
+                                        VoiceMessages.SEP));
                         definitionChanged = result instanceof Long value && value == 1L;
                     }
                 }
@@ -478,7 +547,8 @@ class RedisVoiceBus {
                                         VoiceMessages.GROUPS_REGISTRY_KEY,
                                         VoiceMessages.PERMANENT_GROUPS_KEY,
                                         VoiceMessages.LIFECYCLE_CHANNEL,
-                                        VoiceMessages.playerHomeKey(playerId)),
+                                        VoiceMessages.playerHomeKey(playerId),
+                                        VoiceMessages.callTargetKey(playerId)),
                                 List.of(playerId.toString(),
                                         VoiceMessages.GROUP_MEMBERS_KEY_PREFIX,
                                         VoiceMessages.OP_GROUP_CHANGED + VoiceMessages.SEP,

@@ -24,6 +24,7 @@ final class VoiceMessages {
     static final String AUDIO_CHANNEL_PREFIX = "crabcraft:svc:audio:";
     static final String PLAYER_HOME_KEY_PREFIX = "crabcraft:svc:player-home:";
     static final String PLAYER_GROUP_KEY_PREFIX = "crabcraft:svc:player-group:";
+    static final String CALL_TARGET_KEY_PREFIX = "crabcraft:svc:call-target:";
     static final String GROUP_MEMBERS_KEY_PREFIX = "crabcraft:svc:group-members:";
     static final String GROUPS_REGISTRY_KEY = "crabcraft:svc:groups";
     static final String PERMANENT_GROUPS_KEY = "crabcraft:svc:groups:permanent";
@@ -35,6 +36,9 @@ final class VoiceMessages {
     static final String OP_GROUP_CHANGED = "GROUP_CHANGED";
     static final String OP_ROSTER_JOIN = "ROSTER_JOIN";
     static final String OP_ROSTER_LEAVE = "ROSTER_LEAVE";
+    static final String OP_CALL_JOIN = "CALL_JOIN";
+    static final String OP_CALL_RING_START = "CALL_RING_START";
+    static final String OP_CALL_RING_STOP = "CALL_RING_STOP";
 
     private VoiceMessages() {}
 
@@ -48,6 +52,10 @@ final class VoiceMessages {
 
     static String playerGroupKey(UUID playerId) {
         return PLAYER_GROUP_KEY_PREFIX + playerId;
+    }
+
+    static String callTargetKey(UUID playerId) {
+        return CALL_TARGET_KEY_PREFIX + playerId;
     }
 
     static String routeBackend(String route) {
@@ -210,4 +218,132 @@ final class VoiceMessages {
     }
 
     record RosterLeave(UUID groupId, UUID playerId, String backend) {}
+
+    /* ----------------------- Private calls ----------------------- */
+
+    /** Password-free wake-up hint; the target and group secret are read from Redis. */
+    static String encodeCallJoin(UUID groupId, UUID playerId, String generation) {
+        requireOpaqueToken(generation);
+        return String.join(SEP, OP_CALL_JOIN, groupId.toString(), playerId.toString(), generation);
+    }
+
+    static CallJoin decodeCallJoin(String message) {
+        String[] parts = message.split(SEP, -1);
+        if (parts.length != 4 || !OP_CALL_JOIN.equals(parts[0])
+                || !isOpaqueToken(parts[3])) return null;
+        try {
+            return new CallJoin(parseCanonicalUuid(parts[1]),
+                    parseCanonicalUuid(parts[2]), parts[3]);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    record CallJoin(UUID groupId, UUID playerId, String generation) {
+        CallTarget target() {
+            return new CallTarget(groupId, generation);
+        }
+    }
+
+    static String encodeCallTarget(CallTarget target) {
+        requireOpaqueToken(target.generation());
+        return String.join(SEP, target.groupId().toString(), target.generation());
+    }
+
+    static CallTarget decodeCallTarget(String encoded) {
+        if (encoded == null) return null;
+        String[] parts = encoded.split(SEP, -1);
+        if (parts.length != 2 || !isOpaqueToken(parts[1])) return null;
+        try {
+            return new CallTarget(parseCanonicalUuid(parts[0]), parts[1]);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    record CallTarget(UUID groupId, String generation) {}
+
+    static String encodeCallRingStart(String token, UUID playerId,
+                                      RingDirection direction, long expiresAtMillis) {
+        requireOpaqueToken(token);
+        if (playerId == null || direction == null || expiresAtMillis <= 0L) {
+            throw new IllegalArgumentException("Invalid call ringtone start");
+        }
+        return String.join(SEP, OP_CALL_RING_START, token, playerId.toString(),
+                direction.name(), Long.toString(expiresAtMillis));
+    }
+
+    static CallRingStart decodeCallRingStart(String message) {
+        String[] parts = message.split(SEP, -1);
+        if (parts.length != 5 || !OP_CALL_RING_START.equals(parts[0])
+                || !isOpaqueToken(parts[1])) return null;
+        try {
+            long expiresAtMillis = parseCanonicalPositiveLong(parts[4]);
+            return new CallRingStart(parts[1], parseCanonicalUuid(parts[2]),
+                    RingDirection.valueOf(parts[3]), expiresAtMillis);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    record CallRingStart(String token, UUID playerId, RingDirection direction,
+                         long expiresAtMillis) {}
+
+    static String encodeCallRingStop(String token, UUID playerId, RingDirection direction) {
+        requireOpaqueToken(token);
+        if (playerId == null || direction == null) {
+            throw new IllegalArgumentException("Invalid call ringtone stop");
+        }
+        return String.join(SEP, OP_CALL_RING_STOP, token, playerId.toString(), direction.name());
+    }
+
+    static CallRingStop decodeCallRingStop(String message) {
+        String[] parts = message.split(SEP, -1);
+        if (parts.length != 4 || !OP_CALL_RING_STOP.equals(parts[0])
+                || !isOpaqueToken(parts[1])) return null;
+        try {
+            return new CallRingStop(parts[1], parseCanonicalUuid(parts[2]),
+                    RingDirection.valueOf(parts[3]));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    record CallRingStop(String token, UUID playerId, RingDirection direction) {}
+
+    enum RingDirection { INCOMING, OUTGOING }
+
+    private static void requireOpaqueToken(String token) {
+        if (!isOpaqueToken(token)) throw new IllegalArgumentException("Invalid call token");
+    }
+
+    private static boolean isOpaqueToken(String token) {
+        if (token == null || token.length() < 22 || token.length() > 64) return false;
+        for (int index = 0; index < token.length(); index++) {
+            char character = token.charAt(index);
+            if (!(character >= 'a' && character <= 'z')
+                    && !(character >= 'A' && character <= 'Z')
+                    && !(character >= '0' && character <= '9')
+                    && character != '-' && character != '_') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static UUID parseCanonicalUuid(String value) {
+        UUID parsed = UUID.fromString(value);
+        if (!parsed.toString().equals(value)) {
+            throw new IllegalArgumentException("Non-canonical UUID");
+        }
+        return parsed;
+    }
+
+    private static long parseCanonicalPositiveLong(String value) {
+        long parsed = Long.parseLong(value);
+        if (parsed <= 0L || !Long.toString(parsed).equals(value)) {
+            throw new IllegalArgumentException("Non-canonical positive long");
+        }
+        return parsed;
+    }
 }
