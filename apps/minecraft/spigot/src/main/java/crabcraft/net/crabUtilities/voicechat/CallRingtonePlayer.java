@@ -27,6 +27,7 @@ import java.util.logging.Logger;
 final class CallRingtonePlayer implements AutoCloseable {
     static final long MAX_RING_DURATION_MILLIS = 30_000L;
     static final int FRAME_SAMPLES = 960;
+    static final double RINGTONE_GAIN = 0.5D;
     private static final int SAMPLES_PER_MILLISECOND = 48;
     private static final String INCOMING_RESOURCE = "crabcraft/call/incoming_ringtone.mp3";
     private static final String OUTGOING_RESOURCE = "crabcraft/call/outgoing_ringtone.mp3";
@@ -125,6 +126,7 @@ final class CallRingtonePlayer implements AutoCloseable {
             if (decoded == null || decoded.length == 0) {
                 throw new IOException("Call ringtone decoded to no audio: " + resource);
             }
+            OpusVolumeScaler.applyGain(decoded, RINGTONE_GAIN);
             return decoded;
         }
     }

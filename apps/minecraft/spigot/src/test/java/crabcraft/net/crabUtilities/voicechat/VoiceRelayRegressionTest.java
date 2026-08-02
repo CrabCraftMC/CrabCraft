@@ -185,6 +185,8 @@ final class VoiceRelayRegressionTest {
     }
 
     private static void verifyRingtoneFrames() {
+        check(CallRingtonePlayer.RINGTONE_GAIN == 0.5D,
+                "ringtone baseline volume is not halved");
         long[] now = {1_000L};
         CallRingtonePlayer.LoopingFrames partial = new CallRingtonePlayer.LoopingFrames(
                 new short[]{1, 2}, () -> now[0]);
