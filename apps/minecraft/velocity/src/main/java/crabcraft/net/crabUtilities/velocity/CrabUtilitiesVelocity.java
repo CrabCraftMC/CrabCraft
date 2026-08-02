@@ -7,6 +7,7 @@ import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Dependency;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import crabcraft.net.crabUtilities.velocity.api.StatsPushSubscriber;
 import crabcraft.net.crabUtilities.velocity.api.WebServer;
@@ -27,6 +28,8 @@ import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.ReplyCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
+import crabcraft.net.crabUtilities.velocity.voicechat.CallCommand;
+import crabcraft.net.crabUtilities.velocity.voicechat.CallManager;
 import crabcraft.net.crabUtilities.velocity.voicechat.PlayerLocationTracker;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatCommand;
 import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatListener;
@@ -43,6 +46,8 @@ import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -65,6 +70,7 @@ public class CrabUtilitiesVelocity {
     private final Path dataDirectory;
 
     private RedisStaffChat redisStaffChat;
+    private CallManager callManager;
     private PlayerLocationTracker playerLocationTracker;
     private StaffChatManager staffChatManager;
     private MessageManager messageManager;
@@ -96,6 +102,9 @@ public class CrabUtilitiesVelocity {
     private LuckPerms luckPerms;
     private volatile ExecutorService databaseExecutor;
     private final Object lifecycleLock = new Object();
+    /** Stable for one proxy session and retained while runtime services reload. */
+    private final Map<UUID, VoiceSession> voiceSessions = new ConcurrentHashMap<>();
+    private final Map<UUID, Object> voiceSessionLocks = new ConcurrentHashMap<>();
 
     @Inject
     public CrabUtilitiesVelocity(ProxyServer server, Logger logger,
@@ -182,6 +191,7 @@ public class CrabUtilitiesVelocity {
         MsgCommand.register(this);
         ReplyCommand.register(this);
         SocialSpyCommand.register(this);
+        CallCommand.register(this);
         ReloadCommand.register(this);
 
         server.getEventManager().register(this, new StaffChatListener(this));
@@ -189,6 +199,10 @@ public class CrabUtilitiesVelocity {
         server.getEventManager().register(this, connectionListener);
 
         if (config.isVoicechatCrossServerEnabled()) {
+            this.callManager = new CallManager(this, config);
+            this.callManager.start();
+            server.getEventManager().register(this, callManager);
+
             this.playerLocationTracker = new PlayerLocationTracker(this, config);
             this.playerLocationTracker.start();
             server.getEventManager().register(this, playerLocationTracker);
@@ -291,6 +305,10 @@ public class CrabUtilitiesVelocity {
                 playerLocationTracker = null;
             }
             if (newConfig.isVoicechatCrossServerEnabled()) {
+                this.callManager = new CallManager(this, newConfig);
+                this.callManager.start();
+                server.getEventManager().register(this, callManager);
+
                 this.playerLocationTracker = new PlayerLocationTracker(this, newConfig);
                 this.playerLocationTracker.start();
                 server.getEventManager().register(this, playerLocationTracker);
@@ -313,6 +331,34 @@ public class CrabUtilitiesVelocity {
     public Path getDataDirectory() { return dataDirectory; }
     public StaffChatManager getStaffChatManager() { return staffChatManager; }
     public MessageManager getMessageManager() { return messageManager; }
+    public CallManager getCallManager() { return callManager; }
+    public String getOrCreateVoiceSessionToken(Player player) {
+        VoiceSession session = voiceSessions.compute(player.getUniqueId(), (ignored, current) ->
+                current != null && current.player() == player
+                        ? current
+                        : new VoiceSession(player, UUID.randomUUID().toString()));
+        return session.token();
+    }
+    public String getVoiceSessionToken(UUID playerId) {
+        VoiceSession session = voiceSessions.get(playerId);
+        return session == null ? null : session.token();
+    }
+    public Object getVoiceSessionLock(UUID playerId) {
+        return voiceSessionLocks.computeIfAbsent(playerId, ignored -> new Object());
+    }
+    public boolean isVoiceSessionCurrent(UUID playerId, String token) {
+        return token != null && token.equals(getVoiceSessionToken(playerId));
+    }
+    public String endVoiceSession(Player player) {
+        java.util.concurrent.atomic.AtomicReference<String> ended =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        voiceSessions.computeIfPresent(player.getUniqueId(), (ignored, current) -> {
+            if (current.player() != player) return current;
+            ended.set(current.token());
+            return null;
+        });
+        return ended.get();
+    }
     public RedisStaffChat getRedisStaffChat() { return redisStaffChat; }
     public NicknameCache getNicknameCache() { return nicknameCache; }
     public NicknameListener getNicknameListener() { return nicknameListener; }
@@ -334,6 +380,8 @@ public class CrabUtilitiesVelocity {
     public PlayerSettingsService getPlayerSettingsService() { return playerSettingsService; }
     public LiteBansInfractionService getLiteBansInfractionService() { return liteBansInfractionService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
+
+    private record VoiceSession(Player player, String token) {}
 
     public boolean runDatabaseTask(String taskName, Runnable task) {
         ExecutorService executor = databaseExecutor;
@@ -378,6 +426,11 @@ public class CrabUtilitiesVelocity {
             playerLocationTracker.shutdown();
             server.getEventManager().unregisterListener(this, playerLocationTracker);
             playerLocationTracker = null;
+        }
+        if (callManager != null) {
+            callManager.shutdown();
+            server.getEventManager().unregisterListener(this, callManager);
+            callManager = null;
         }
         if (punishmentEventPublisher != null) {
             punishmentEventPublisher.shutdown();

@@ -220,6 +220,15 @@ class RosterTracker {
         svcPackets.sendState(recipient, member.uuid(), member.name(), groupId);
     }
 
+    /** Remove all cached remote state for an expired dynamic call. Main thread only. */
+    void clearGroup(UUID groupId) {
+        Map<UUID, RemoteMember> removed = remoteByGroup.remove(groupId);
+        if (removed == null) return;
+        for (RemoteMember member : removed.values()) {
+            removeMemberFromLocalListeners(groupId, member);
+        }
+    }
+
     /** Tear down everything we've sent to local clients (called on plugin shutdown). */
     void shutdown() {
         for (Map.Entry<UUID, Map<UUID, RemoteMember>> entry : remoteByGroup.entrySet()) {

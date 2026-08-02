@@ -16,12 +16,13 @@ import de.maxhenkel.voicechat.api.events.PlayerDisconnectedEvent;
 import de.maxhenkel.voicechat.api.events.StaticSoundPacketEvent;
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
 import net.crabcraft.customdiscs.CDVoiceAddon;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +41,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
      *  longer than 3x the rebroadcast interval so a routine server hop
      *  doesn't expire before the player reconnects. */
     private static final long PLAYER_GROUP_TTL_SECONDS = 90L;
+    private static final long CALL_METADATA_TTL_SECONDS = 180L;
+    static final long DYNAMIC_CALL_IDLE_MS = 120_000L;
     // SVC also uses this label in recording filenames; 48 code points keeps
     // even four-byte UTF-8 names below common per-file limits.
     private static final int MAX_ROSTER_NAME_CODE_POINTS = 48;
@@ -65,9 +68,20 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private SvcPacketSender svcPackets;
     private BukkitTask rosterRebroadcastTask;
     private BukkitTask sweepTask;
-    private Set<UUID> crossServerGroupIds = Set.of();
+    private BukkitTask callReconcileTask;
+    /** Shared live whitelist observed directly by AudioRelay and RosterTracker. */
+    private final Set<UUID> crossServerGroupIds = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> persistentGroupIds = ConcurrentHashMap.newKeySet();
+    private final java.util.Map<UUID, Long> dynamicCallLastHeartbeat = new ConcurrentHashMap<>();
+    private final java.util.Map<UUID, Long> desiredGroupVersions = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicLong desiredGroupSequence =
+            new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicBoolean callReconcileRunning =
+            new java.util.concurrent.atomic.AtomicBoolean();
+    private final Object callGroupCreationLock = new Object();
     private LofiStreamPlayer lofiStreamPlayer;
     private GroupSpeechAttenuator groupSpeechAttenuator;
+    private CallRingtonePlayer callRingtonePlayer;
 
     /** Velocity backend names we've already warned about mismatching this-backend. */
     private final Set<String> homeMismatchWarned = ConcurrentHashMap.newKeySet();
@@ -126,10 +140,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.api = event.getVoicechat();
         CDVoiceAddon.getInstance().register(api, lofiEnabled);
 
-        Set<UUID> ids = new HashSet<>();
         for (String name : persistentGroupNames) {
             UUID id = LOFI_GROUP_NAME.equals(name) ? lofiGroupId : deterministicGroupId(name);
-            ids.add(id);
+            persistentGroupIds.add(id);
+            crossServerGroupIds.add(id);
             Group group = api.groupBuilder()
                     .setId(id)
                     .setName(name)
@@ -138,7 +152,6 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                     .build();
             logger.info("Created persistent voice chat group '" + name + "' (" + group.getId() + ")");
         }
-        this.crossServerGroupIds = Set.copyOf(ids);
 
         if (lofiEnabled) {
             this.groupSpeechAttenuator = new GroupSpeechAttenuator(
@@ -174,8 +187,14 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         this.svcPackets = new SvcPacketSender(plugin);
         this.roster = new RosterTracker(plugin, svcPackets,
                 crossServerGroupIds, thisBackend, logger);
+        try {
+            this.callRingtonePlayer = new CallRingtonePlayer(api, logger);
+        } catch (Exception e) {
+            logger.warning("Could not load the bundled call ringtones; ringtone playback is disabled: "
+                    + e.getMessage());
+        }
 
-        bus.start(audioRelay::onAudioFrame, roster::onLifecycleMessage);
+        bus.start(audioRelay::onAudioFrame, this::onVoiceLifecycleMessage);
 
         for (UUID id : crossServerGroupIds) {
             bus.subscribeAudio(id);
@@ -195,8 +214,15 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                 20L * 30L, 20L * 30L);
 
         sweepTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
-                () -> roster.sweepStaleEntries(),
+                this::sweepVoiceState,
                 20L * 60L, 20L * 30L);
+
+        // Pub/sub is deliberately backed by a short-lived durable target key.
+        // Poll it so an already-connected player still joins if this backend's
+        // roster subscriber was reconnecting when the accept event arrived.
+        callReconcileTask = Bukkit.getScheduler().runTaskTimer(plugin,
+                this::queueAcceptedCallReconciliation,
+                20L * 5L, 20L * 5L);
 
         logger.info("Cross-server voice bridge started (backend='" + thisBackend + "', "
                 + crossServerGroupIds.size() + " groups; relying on tab-list sync for skins)");
@@ -214,7 +240,310 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                 // Refresh the auto-rejoin TTL so a player who stays in
                 // a group keeps their persistence record alive.
                 bus.writePlayerGroup(localId, groupId, PLAYER_GROUP_TTL_SECONDS);
+                if (dynamicCallLastHeartbeat.replace(groupId, System.currentTimeMillis()) != null) {
+                    bus.refreshCallMetadata(groupId, CALL_METADATA_TTL_SECONDS);
+                }
             }
+        }
+    }
+
+    /** Dispatch Redis lifecycle messages, including dynamic call joins. */
+    private void onVoiceLifecycleMessage(String message) {
+        if (message == null || message.isEmpty()) return;
+        int separator = message.indexOf(VoiceMessages.SEP);
+        String operation = separator < 0 ? message : message.substring(0, separator);
+        if (VoiceMessages.OP_CALL_RING_START.equals(operation)) {
+            VoiceMessages.CallRingStart ringStart = VoiceMessages.decodeCallRingStart(message);
+            CallRingtonePlayer ringtonePlayer = callRingtonePlayer;
+            if (ringStart == null || ringtonePlayer == null) return;
+            try {
+                Bukkit.getScheduler().runTask(plugin, () -> ringtonePlayer.start(ringStart));
+            } catch (Exception ignored) {
+                // The plugin is shutting down.
+            }
+            return;
+        }
+        if (VoiceMessages.OP_CALL_RING_STOP.equals(operation)) {
+            VoiceMessages.CallRingStop ringStop = VoiceMessages.decodeCallRingStop(message);
+            CallRingtonePlayer ringtonePlayer = callRingtonePlayer;
+            if (ringStop == null || ringtonePlayer == null) return;
+            try {
+                Bukkit.getScheduler().runTask(plugin, () -> ringtonePlayer.stop(ringStop));
+            } catch (Exception ignored) {
+                // The plugin is shutting down.
+            }
+            return;
+        }
+        if (VoiceMessages.OP_CALL_JOIN.equals(operation)) {
+            VoiceMessages.CallJoin callJoin = VoiceMessages.decodeCallJoin(message);
+            if (callJoin == null) return;
+            if (!activateDynamicCall(callJoin.groupId())) return;
+            bus.writeCallMetadata(callJoin.groupId(), callJoin.password(),
+                    CALL_METADATA_TTL_SECONDS);
+            try {
+                Bukkit.getScheduler().runTask(plugin,
+                        () -> requestAndJoinLocalCall(callJoin, true));
+            } catch (Exception ignored) {
+                // The plugin is shutting down.
+            }
+            return;
+        }
+
+        if (VoiceMessages.OP_ROSTER_JOIN.equals(operation)) {
+            VoiceMessages.RosterJoin join = VoiceMessages.decodeRosterJoin(message);
+            if (join != null) {
+                UUID groupId = join.groupId();
+                if (!persistentGroupIds.contains(groupId)
+                        && (!crossServerGroupIds.contains(groupId)
+                        || !dynamicCallLastHeartbeat.containsKey(groupId))) {
+                    // Recover calls missed while this backend or its roster
+                    // subscriber was offline, as well as a heartbeat racing
+                    // idle cleanup. The heartbeat contains no secret; Redis
+                    // metadata is the authority.
+                    String callPassword = bus.fetchCallMetadata(groupId);
+                    if (VoiceMessages.isValidCallPassword(callPassword)) {
+                        activateDynamicCall(groupId);
+                    }
+                }
+                touchDynamicCall(groupId);
+            }
+        }
+        roster.onLifecycleMessage(message);
+    }
+
+    private boolean activateDynamicCall(UUID groupId) {
+        if (persistentGroupIds.contains(groupId)) return false;
+        dynamicCallLastHeartbeat.put(groupId, System.currentTimeMillis());
+        crossServerGroupIds.add(groupId);
+        bus.subscribeAudio(groupId);
+        return true;
+    }
+
+    private void touchDynamicCall(UUID groupId) {
+        dynamicCallLastHeartbeat.computeIfPresent(groupId,
+                (id, ignored) -> System.currentTimeMillis());
+    }
+
+    private void queueAcceptedCallReconciliation() {
+        if (!callReconcileRunning.compareAndSet(false, true)) return;
+        List<DesiredGroupCheck> checks = new ArrayList<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            UUID playerId = player.getUniqueId();
+            checks.add(new DesiredGroupCheck(playerId, currentDesiredGroup(playerId)));
+        }
+        if (checks.isEmpty()) {
+            callReconcileRunning.set(false);
+            return;
+        }
+
+        try {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                List<RecoveredCall> recovered = new ArrayList<>();
+                try {
+                    java.util.Map<UUID, String> targets = bus.fetchCallTargets(
+                            checks.stream().map(DesiredGroupCheck::playerId).toList());
+                    for (DesiredGroupCheck check : checks) {
+                        if (!isCurrentDesiredGroup(check.playerId(), check.version())) continue;
+                        String groupValue = targets.get(check.playerId());
+                        if (groupValue == null) continue;
+                        UUID groupId;
+                        try {
+                            groupId = UUID.fromString(groupValue);
+                        } catch (IllegalArgumentException e) {
+                            continue;
+                        }
+                        String password = bus.fetchCallMetadata(groupId);
+                        if (!VoiceMessages.isValidCallPassword(password)) continue;
+                        recovered.add(new RecoveredCall(
+                                new VoiceMessages.CallJoin(groupId, check.playerId(), password),
+                                check.version()));
+                    }
+                    if (!recovered.isEmpty()) {
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            for (RecoveredCall call : recovered) {
+                                if (!isCurrentDesiredGroup(
+                                        call.join().playerId(), call.version())) continue;
+                                activateDynamicCall(call.join().groupId());
+                                requestAndJoinLocalCall(call.join(), false);
+                            }
+                        });
+                    }
+                } finally {
+                    callReconcileRunning.set(false);
+                }
+            });
+        } catch (Exception e) {
+            callReconcileRunning.set(false);
+        }
+    }
+
+    private void requestAndJoinLocalCall(VoiceMessages.CallJoin callJoin,
+                                         boolean notifyTransientFailure) {
+        Player player = Bukkit.getPlayer(callJoin.playerId());
+        if (player == null || !player.isOnline()) return;
+        long version = requestDesiredGroup(callJoin.playerId());
+        joinLocalCall(callJoin, notifyTransientFailure, version);
+    }
+
+    private long requestDesiredGroup(UUID playerId) {
+        long version = desiredGroupSequence.incrementAndGet();
+        desiredGroupVersions.put(playerId, version);
+        return version;
+    }
+
+    private long currentDesiredGroup(UUID playerId) {
+        return desiredGroupVersions.computeIfAbsent(playerId,
+                ignored -> desiredGroupSequence.incrementAndGet());
+    }
+
+    private boolean isCurrentDesiredGroup(UUID playerId, long version) {
+        return desiredGroupVersions.getOrDefault(playerId, -1L) == version;
+    }
+
+    /** Only the backend which currently owns the requested player joins them. */
+    private void joinLocalCall(VoiceMessages.CallJoin callJoin,
+                               boolean notifyTransientFailure, long version) {
+        if (!isCurrentDesiredGroup(callJoin.playerId(), version)) return;
+        Player player = Bukkit.getPlayer(callJoin.playerId());
+        if (player == null || !player.isOnline()) return;
+        if (!groupsEnabled()) {
+            sendCallJoinFailure(player, "Voice calls are unavailable because voice-chat groups are disabled.");
+            clearAcceptedCall(callJoin.playerId(), callJoin.groupId());
+            return;
+        }
+
+        VoicechatConnection connection = api.getConnectionOf(callJoin.playerId());
+        if (connection == null) {
+            // Keep the short-lived mapping: a pending PlayerConnectedEvent
+            // can still complete this accepted join.
+            if (notifyTransientFailure) {
+                sendCallJoinFailure(player,
+                        "Could not join the call because Simple Voice Chat is not connected.");
+            }
+            return;
+        }
+        if (!connection.isInstalled()) {
+            sendCallJoinFailure(player, "Could not join the call because Simple Voice Chat is not installed.");
+            clearAcceptedCall(callJoin.playerId(), callJoin.groupId());
+            return;
+        }
+        if (!connection.isConnected()) {
+            if (notifyTransientFailure) {
+                sendCallJoinFailure(player,
+                        "Could not join the call because Simple Voice Chat is not connected.");
+            }
+            return;
+        }
+
+        Group current = connection.getGroup();
+        if (current != null && current.getId().equals(callJoin.groupId())) {
+            bus.deleteCallTarget(callJoin.playerId(), callJoin.groupId());
+            return;
+        }
+
+        Group group = ensureCallGroup(callJoin.groupId(), callJoin.password());
+        if (group == null) {
+            sendCallJoinFailure(player, "Could not create the private voice call.");
+            clearAcceptedCall(callJoin.playerId(), callJoin.groupId());
+            return;
+        }
+        try {
+            connection.setGroup(group);
+            bus.deleteCallTarget(callJoin.playerId(), callJoin.groupId());
+            player.sendMessage(Component.text("Connected to the private voice call.",
+                    NamedTextColor.GREEN));
+        } catch (Exception e) {
+            sendCallJoinFailure(player, "Could not join the private voice call.");
+            clearAcceptedCall(callJoin.playerId(), callJoin.groupId());
+            logger.warning("Dynamic call join failed for player " + callJoin.playerId()
+                    + " in group " + callJoin.groupId());
+        }
+    }
+
+    private void clearAcceptedCall(UUID playerId, UUID groupId) {
+        bus.deletePlayerGroup(playerId, groupId);
+        bus.deleteCallTarget(playerId, groupId);
+    }
+
+    private record DesiredGroupCheck(UUID playerId, long version) {}
+
+    private record RecoveredCall(VoiceMessages.CallJoin join, long version) {}
+
+    private boolean groupsEnabled() {
+        return api != null && api.getServerConfig().getBoolean("enable_groups", true);
+    }
+
+    private void sendCallJoinFailure(Player player, String message) {
+        player.sendMessage(Component.text(message, NamedTextColor.RED));
+    }
+
+    private Group ensureCallGroup(UUID groupId, String callPassword) {
+        synchronized (callGroupCreationLock) {
+            Group existing = api.getGroup(groupId);
+            if (existing != null) {
+                if (existing.hasPassword() && existing.isHidden()
+                        && !existing.isPersistent() && existing.getType() == Group.Type.OPEN) {
+                    return existing;
+                }
+                logger.warning("Refusing incompatible existing voice group for call " + groupId);
+                return null;
+            }
+            try {
+                return buildCallGroup(api, groupId, callPassword);
+            } catch (Exception e) {
+                // Never include the builder exception: implementations may
+                // echo the rejected password in their diagnostic text.
+                logger.warning("Failed to create dynamic call group " + groupId);
+                return null;
+            }
+        }
+    }
+
+    static Group buildCallGroup(VoicechatServerApi api, UUID groupId, String callPassword) {
+        return api.groupBuilder()
+                .setId(groupId)
+                .setName(callGroupName(groupId))
+                .setPassword(callPassword)
+                .setType(Group.Type.OPEN)
+                .setHidden(true)
+                .setPersistent(false)
+                .build();
+    }
+
+    static String callGroupName(UUID groupId) {
+        return "Call " + groupId.toString().substring(0, 8);
+    }
+
+    private void sweepVoiceState() {
+        roster.sweepStaleEntries();
+        long now = System.currentTimeMillis();
+        for (java.util.Map.Entry<UUID, Long> entry : dynamicCallLastHeartbeat.entrySet()) {
+            UUID groupId = entry.getKey();
+            Long lastHeartbeat = entry.getValue();
+            if (now - lastHeartbeat <= DYNAMIC_CALL_IDLE_MS
+                    || !dynamicCallLastHeartbeat.remove(groupId, lastHeartbeat)) continue;
+
+            crossServerGroupIds.remove(groupId);
+            bus.unsubscribeAudio(groupId);
+            // Close the small window where a fresh CALL_JOIN can arrive
+            // between removal from the timestamp map and removal from the
+            // two live whitelists.
+            if (dynamicCallLastHeartbeat.containsKey(groupId)) {
+                crossServerGroupIds.add(groupId);
+                bus.subscribeAudio(groupId);
+                continue;
+            }
+            try {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    // A fresh CALL_JOIN may have reactivated the same ID while
+                    // this main-thread cleanup was queued.
+                    if (dynamicCallLastHeartbeat.containsKey(groupId)) return;
+                    roster.clearGroup(groupId);
+                });
+            } catch (Exception ignored) {
+                // The plugin is shutting down.
+            }
+            logger.info("Released inactive dynamic voice call " + groupId);
         }
     }
 
@@ -233,6 +562,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (lofiStreamPlayer != null) lofiStreamPlayer.reconcileTarget(conn);
         if (api == null || bus == null) return;
         UUID playerId = conn.getPlayer().getUuid();
+        long desiredVersion = requestDesiredGroup(playerId);
 
         // If this player was previously heard through a relay on this backend,
         // its next-sequence stop marker resets listeners before native audio starts.
@@ -249,9 +579,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             }
         });
 
-        // Read Redis on a worker thread; the actual setGroup call must
-        // run on the SVC server thread (the API is thread-safe, but we
-        // route through the connection which expects normal scheduling).
+        // Read Redis on a worker thread, then route the group change back
+        // through the server's main scheduler.
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             // Self-check: Velocity just wrote this player's home key with
             // THIS backend's name from velocity.toml. If it doesn't match
@@ -271,20 +600,72 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             if (groupIdStr == null) return;
             UUID groupId;
             try { groupId = UUID.fromString(groupIdStr); } catch (Exception e) { return; }
-            if (!crossServerGroupIds.contains(groupId)) return;
+            String callPassword = null;
+            if (!crossServerGroupIds.contains(groupId)
+                    || (dynamicCallLastHeartbeat.containsKey(groupId) && api.getGroup(groupId) == null)) {
+                callPassword = bus.fetchCallMetadata(groupId);
+                if (!VoiceMessages.isValidCallPassword(callPassword)) return;
+                if (!activateDynamicCall(groupId)) return;
+            }
 
-            Group group = api.getGroup(groupId);
-            if (group == null) return;
-
-            // setGroup fires JoinGroupEvent which our onJoinGroup
-            // handles (records local membership, publishes ROSTER_JOIN).
+            String recoveredCallPassword = callPassword;
             try {
-                conn.setGroup(group);
-                logger.info("Auto-rejoined " + playerId + " to group '" + group.getName() + "'");
+                Bukkit.getScheduler().runTask(plugin, () -> autoRejoin(
+                        playerId, groupId, recoveredCallPassword, desiredVersion));
             } catch (Exception e) {
-                logger.warning("Auto-rejoin failed for " + playerId + ": " + e.getMessage());
+                // The plugin is shutting down.
             }
         });
+    }
+
+    private void autoRejoin(UUID playerId, UUID groupId, String callPassword,
+                            long desiredVersion) {
+        if (!isCurrentDesiredGroup(playerId, desiredVersion)) return;
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null || !player.isOnline()) return;
+        if (!groupsEnabled()) {
+            sendCallJoinFailure(player, "Could not rejoin the call because voice-chat groups are disabled.");
+            clearAcceptedCall(playerId, groupId);
+            return;
+        }
+        // The event connection is a snapshot and the Redis lookup happened
+        // asynchronously, so always resolve the current connection again.
+        VoicechatConnection connection = api.getConnectionOf(playerId);
+        if (connection == null) {
+            sendCallJoinFailure(player, "Could not rejoin the call because Simple Voice Chat is not connected.");
+            return;
+        }
+        if (!connection.isInstalled()) {
+            sendCallJoinFailure(player, "Could not rejoin the call because Simple Voice Chat is not installed.");
+            clearAcceptedCall(playerId, groupId);
+            return;
+        }
+        if (!connection.isConnected()) {
+            sendCallJoinFailure(player, "Could not rejoin the call because Simple Voice Chat is not connected.");
+            return;
+        }
+
+        Group group = api.getGroup(groupId);
+        if (group == null && callPassword != null) {
+            group = ensureCallGroup(groupId, callPassword);
+        }
+        if (group == null) {
+            sendCallJoinFailure(player, "Could not restore the private voice call.");
+            clearAcceptedCall(playerId, groupId);
+            return;
+        }
+
+        // setGroup fires JoinGroupEvent which records local membership and
+        // publishes the next roster heartbeat.
+        try {
+            if (!isCurrentDesiredGroup(playerId, desiredVersion)) return;
+            connection.setGroup(group);
+            logger.info("Auto-rejoined " + playerId + " to voice group " + groupId);
+        } catch (Exception e) {
+            sendCallJoinFailure(player, "Could not rejoin the private voice call.");
+            clearAcceptedCall(playerId, groupId);
+            logger.warning("Auto-rejoin failed for " + playerId + " in group " + groupId);
+        }
     }
 
     private void onJoinGroup(JoinGroupEvent event) {
@@ -292,6 +673,11 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (lofiStreamPlayer != null && event.getConnection() != null) {
             lofiStreamPlayer.updateTarget(
                     event.getConnection(), group == null ? null : group.getId());
+        }
+        if (bus != null && event.getConnection() != null) {
+            // A real group change wins over any Redis lookup or durable call
+            // reconciliation which was already in flight for this player.
+            requestDesiredGroup(event.getConnection().getPlayer().getUuid());
         }
         if (membership == null) return;
         if (group == null || event.getConnection() == null) return;
@@ -302,6 +688,10 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
         UUID playerId = event.getConnection().getPlayer().getUuid();
         UUID groupId = group.getId();
+        if (dynamicCallLastHeartbeat.replace(groupId, System.currentTimeMillis()) != null) {
+            bus.refreshCallMetadata(groupId, CALL_METADATA_TTL_SECONDS);
+            bus.deleteCallTarget(playerId, groupId);
+        }
 
         // Hop to the main thread: Bukkit player lookup + name access
         // is safer there than on SVC's network thread.
@@ -323,6 +713,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         if (lofiStreamPlayer != null && event.getConnection() != null) {
             lofiStreamPlayer.updateTarget(event.getConnection(), null);
         }
+        if (bus != null && event.getConnection() != null) {
+            requestDesiredGroup(event.getConnection().getPlayer().getUuid());
+        }
         if (membership == null) return;
         Group group = event.getGroup();
         if (group != null && event.getConnection() != null
@@ -343,7 +736,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                             groupId, playerId, thisBackend));
                     // Explicit leave clears the auto-rejoin record so the player
                     // doesn't get put back into the group on their next server hop.
-                    bus.deletePlayerGroup(playerId);
+                    bus.deletePlayerGroup(playerId, groupId);
+                    bus.deleteCallTarget(playerId, groupId);
                 });
             } catch (Exception ignored) {
                 // Plugin is disabling; shutdown() broadcasts leaves for all
@@ -377,6 +771,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     private void onPlayerDisconnect(PlayerDisconnectedEvent event) {
         UUID playerId = event.getPlayerUuid();
+        desiredGroupVersions.remove(playerId);
+        if (callRingtonePlayer != null) callRingtonePlayer.removePlayer(playerId);
         if (lofiStreamPlayer != null) lofiStreamPlayer.removeTarget(playerId);
         if (groupSpeechAttenuator != null) groupSpeechAttenuator.remove(playerId);
         if (membership != null && bus != null) {
@@ -396,9 +792,11 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     /** Public hook so {@link CrabUtilities#onDisable()} can release resources. */
     public void shutdown() {
+        if (callRingtonePlayer != null) callRingtonePlayer.close();
         if (lofiStreamPlayer != null) lofiStreamPlayer.close();
         if (groupSpeechAttenuator != null) groupSpeechAttenuator.close();
-        for (BukkitTask task : new BukkitTask[]{rosterRebroadcastTask, sweepTask}) {
+        for (BukkitTask task : new BukkitTask[]{
+                rosterRebroadcastTask, sweepTask, callReconcileTask}) {
             if (task != null) {
                 try { task.cancel(); } catch (Exception ignored) {}
             }

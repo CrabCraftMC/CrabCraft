@@ -11,9 +11,9 @@ import crabcraft.net.crabUtilities.velocity.VelocityConfig;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
-import redis.clients.jedis.params.SetParams;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -31,6 +31,26 @@ import java.util.UUID;
  * comfortably longer than any real switch window.
  */
 public class PlayerLocationTracker {
+
+    static final String PLAYER_SESSION_KEY_PREFIX = "crabcraft:svc:player-session:";
+    private static final String PLAYER_HOME_KEY_PREFIX = "crabcraft:svc:player-home:";
+    private static final String PLAYER_GROUP_KEY_PREFIX = "crabcraft:svc:player-group:";
+    private static final String CALL_TARGET_KEY_PREFIX = "crabcraft:svc:call-target:";
+
+    private static final String WRITE_HOME_SCRIPT = """
+            local previous = redis.call('get', KEYS[2])
+            if previous and previous ~= ARGV[2] then
+                redis.call('del', KEYS[3], KEYS[4])
+            end
+            redis.call('set', KEYS[1], ARGV[1], 'EX', ARGV[3])
+            redis.call('set', KEYS[2], ARGV[2], 'EX', ARGV[3])
+            return 1
+            """;
+
+    private static final String CLEAN_UP_SESSION_SCRIPT = """
+            if redis.call('get', KEYS[1]) ~= ARGV[1] then return 0 end
+            return redis.call('del', KEYS[1], KEYS[2], KEYS[3], KEYS[4])
+            """;
 
     private final CrabUtilitiesVelocity plugin;
     private final VelocityConfig config;
@@ -68,6 +88,9 @@ public class PlayerLocationTracker {
                 .delay(Duration.ofSeconds(refreshSeconds))
                 .repeat(Duration.ofSeconds(refreshSeconds))
                 .schedule();
+        plugin.getServer().getScheduler()
+                .buildTask(plugin, this::refreshAllHomes)
+                .schedule();
 
         plugin.getLogger().info("Voice location tracker started (TTL {}s, refresh {}s); "
                 + "Redis will be retried on player updates.", ttlSeconds, refreshSeconds);
@@ -86,63 +109,94 @@ public class PlayerLocationTracker {
 
     private void refreshAllHomes() {
         for (Player player : plugin.getServer().getAllPlayers()) {
-            player.getCurrentServer().ifPresent(server ->
-                    writeHome(player.getUniqueId(), server.getServerInfo().getName()));
+            UUID playerId = player.getUniqueId();
+            synchronized (plugin.getVoiceSessionLock(playerId)) {
+                Player current = plugin.getServer().getPlayer(playerId).orElse(null);
+                if (current != player) continue;
+                String sessionToken = plugin.getOrCreateVoiceSessionToken(player);
+                player.getCurrentServer().ifPresent(server -> writeHome(
+                        playerId, server.getServerInfo().getName(), sessionToken));
+            }
         }
     }
 
     @Subscribe(order = PostOrder.LATE)
     public void onServerConnected(ServerConnectedEvent event) {
         if (jedisPool == null) return;
-        UUID playerId = event.getPlayer().getUniqueId();
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
         String backend = event.getServer().getServerInfo().getName();
-        plugin.getServer().getScheduler().buildTask(plugin, () -> writeHome(playerId, backend)).schedule();
+        String sessionToken;
+        synchronized (plugin.getVoiceSessionLock(playerId)) {
+            sessionToken = plugin.getOrCreateVoiceSessionToken(player);
+        }
+        plugin.getServer().getScheduler().buildTask(plugin,
+                () -> writeHome(playerId, backend, sessionToken)).schedule();
     }
 
     @Subscribe(order = PostOrder.LATE)
     public void onDisconnect(DisconnectEvent event) {
         if (jedisPool == null) return;
-        UUID playerId = event.getPlayer().getUniqueId();
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
         // DisconnectEvent only fires when the player leaves the proxy
         // entirely (NOT on backend hop), so this is the right place to
         // clear the auto-rejoin record. Server hops keep the
         // player-group key intact via the 90s TTL.
+        String sessionToken;
+        synchronized (plugin.getVoiceSessionLock(playerId)) {
+            sessionToken = plugin.endVoiceSession(player);
+        }
+        if (sessionToken == null) return;
         plugin.getServer().getScheduler().buildTask(plugin, () -> {
-            // A quick relog can run this delete unordered against the new
-            // session's writeHome. If the player is already back on the
-            // proxy, keep their fresh keys.
-            if (plugin.getServer().getPlayer(playerId).isPresent()) return;
-            deleteHome(playerId);
-            deletePlayerGroup(playerId);
+            // A quick relog gets a different token. The Lua comparison makes
+            // this cleanup harmless whether its atomic write runs first or last.
+            cleanUpSession(playerId, sessionToken);
         }).schedule();
     }
 
-    private void writeHome(UUID playerId, String backend) {
-        JedisPool pool = jedisPool;
-        if (pool == null || pool.isClosed()) return;
-        String key = "crabcraft:svc:player-home:" + playerId;
-        try (Jedis jedis = pool.getResource()) {
-            jedis.set(key, backend, SetParams.setParams().ex(ttlSeconds));
-        } catch (Exception e) {
-            plugin.getLogger().debug("Failed to write player home: " + e.getMessage());
+    private void writeHome(UUID playerId, String backend, String sessionToken) {
+        synchronized (plugin.getVoiceSessionLock(playerId)) {
+            if (!plugin.isVoiceSessionCurrent(playerId, sessionToken)) return;
+            JedisPool pool = jedisPool;
+            if (pool == null || pool.isClosed()) return;
+            try (Jedis jedis = pool.getResource()) {
+                jedis.eval(WRITE_HOME_SCRIPT,
+                        List.of(playerHomeKey(playerId), playerSessionKey(playerId),
+                                playerGroupKey(playerId), callTargetKey(playerId)),
+                        List.of(backend, sessionToken, Long.toString(ttlSeconds)));
+            } catch (Exception e) {
+                plugin.getLogger().debug("Failed to write player home: " + e.getMessage());
+            }
         }
     }
 
-    private void deleteHome(UUID playerId) {
-        JedisPool pool = jedisPool;
-        if (pool == null || pool.isClosed()) return;
-        String key = "crabcraft:svc:player-home:" + playerId;
-        try (Jedis jedis = pool.getResource()) {
-            jedis.del(key);
-        } catch (Exception ignored) {}
+    private void cleanUpSession(UUID playerId, String sessionToken) {
+        synchronized (plugin.getVoiceSessionLock(playerId)) {
+            JedisPool pool = jedisPool;
+            if (pool == null || pool.isClosed()) return;
+            try (Jedis jedis = pool.getResource()) {
+                jedis.eval(CLEAN_UP_SESSION_SCRIPT,
+                        List.of(playerSessionKey(playerId), playerHomeKey(playerId),
+                                playerGroupKey(playerId), callTargetKey(playerId)),
+                        List.of(sessionToken));
+            } catch (Exception ignored) {}
+        }
     }
 
-    private void deletePlayerGroup(UUID playerId) {
-        JedisPool pool = jedisPool;
-        if (pool == null || pool.isClosed()) return;
-        String key = "crabcraft:svc:player-group:" + playerId;
-        try (Jedis jedis = pool.getResource()) {
-            jedis.del(key);
-        } catch (Exception ignored) {}
+    static String playerSessionKey(UUID playerId) {
+        return PLAYER_SESSION_KEY_PREFIX + playerId;
+    }
+
+    private static String playerHomeKey(UUID playerId) {
+        return PLAYER_HOME_KEY_PREFIX + playerId;
+    }
+
+    private static String playerGroupKey(UUID playerId) {
+        return PLAYER_GROUP_KEY_PREFIX + playerId;
+    }
+
+    private static String callTargetKey(UUID playerId) {
+        return CALL_TARGET_KEY_PREFIX + playerId;
     }
 }

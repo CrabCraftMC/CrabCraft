@@ -88,6 +88,13 @@ tasks.register('playerLookupRegressionTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.velocity.messaging.PlayerLookupRegressionTest')
 }
 
+tasks.register('callManagerRegressionTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.voicechat.CallManagerRegressionTest')
+}
+
 tasks.register('awardAltExclusionRegressionTest', JavaExec) {
     group = 'verification'
     dependsOn tasks.named('testClasses')
@@ -132,6 +139,7 @@ tasks.named('check') {
     dependsOn tasks.named('nicknameRegressionTest')
     dependsOn tasks.named('jadeClientProtocolPayloadRegressionTest')
     dependsOn tasks.named('playerLookupRegressionTest')
+    dependsOn tasks.named('callManagerRegressionTest')
     dependsOn tasks.named('awardAltExclusionRegressionTest')
     dependsOn tasks.named('awardDyeCraftingRegressionTest')
     dependsOn tasks.named('awardSuspiciousBrushRegressionTest')

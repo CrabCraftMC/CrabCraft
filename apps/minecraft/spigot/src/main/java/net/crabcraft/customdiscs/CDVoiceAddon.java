@@ -13,6 +13,7 @@ public final class CDVoiceAddon {
   public static final String MUSIC_DISC_CATEGORY = "music_discs";
   public static final String GOAT_HORN_CATEGORY = "goat_horns";
   public static final String LOFI_CATEGORY = "crabcraft_lofi";
+  public static final String CALL_CATEGORY = "crabcraft_calls";
 
   private static final CDVoiceAddon INSTANCE = new CDVoiceAddon();
   private volatile VoicechatServerApi voicechatApi;
@@ -26,6 +27,7 @@ public final class CDVoiceAddon {
     this.voicechatApi = api;
     registerCategory(api, MUSIC_DISC_CATEGORY, "Music Discs", "customdiscs/music_disc_category.png");
     registerCategory(api, GOAT_HORN_CATEGORY, "Goat Horns", "customdiscs/goat_horn_category.png");
+    registerCategory(api, CALL_CATEGORY, "Call Ringtones", "customdiscs/music_disc_category.png");
     if (lofiEnabled) {
       registerCategory(api, LOFI_CATEGORY, "Lofi 24/7 CrabFM", "customdiscs/music_disc_category.png");
     }
