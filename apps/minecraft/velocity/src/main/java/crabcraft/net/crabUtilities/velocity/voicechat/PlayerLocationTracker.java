@@ -38,6 +38,8 @@ import java.util.function.Supplier;
  */
 public class PlayerLocationTracker {
 
+    static final String PLAYER_HOME_KEY_PREFIX = "crabcraft:svc:player-home:";
+
     private final CrabUtilitiesVelocity plugin;
     private final VelocityConfig config;
     private final long ttlSeconds;
@@ -219,5 +221,28 @@ public class PlayerLocationTracker {
         return playerLocks.computeIfAbsent(playerId, ignored -> new Object());
     }
 
+    /**
+     * Returns the exact Redis route owned by this proxy connection. The
+     * identity check prevents a delayed call task from adopting a quick
+     * relog's route merely because it has the same UUID.
+     */
+    RouteSnapshot currentRoute(Player expectedSession) {
+        UUID playerId = expectedSession.getUniqueId();
+        synchronized (lockFor(playerId)) {
+            Player current = plugin.getServer().getPlayer(playerId).orElse(null);
+            RouteState route = routes.get(playerId);
+            if (current != expectedSession || route == null || route.session() != expectedSession) {
+                return null;
+            }
+            return new RouteSnapshot(expectedSession, route.value());
+        }
+    }
+
+    static String playerHomeKey(UUID playerId) {
+        return PLAYER_HOME_KEY_PREFIX + playerId;
+    }
+
     private record RouteState(Player session, String backend, String value) {}
+
+    record RouteSnapshot(Player session, String value) {}
 }

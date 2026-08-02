@@ -2,7 +2,9 @@ package crabcraft.net.crabUtilities.voicechat;
 
 import de.maxhenkel.voicechat.api.Group;
 import de.maxhenkel.voicechat.api.packets.StaticSoundPacket;
+import crabcraft.net.crabUtilities.media.VoiceMediaRegistry;
 
+import java.io.InputStream;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +43,10 @@ final class VoiceRelayRegressionTest {
         verifyPasswordAccess();
         verifyMembershipJoinReplacesPreviousGroup();
         verifySequenceResetUsesNextSequence();
+        verifyPrivateCallProtocol();
+        verifyPrivateCallDefinition();
+        verifyRingtoneFrames();
+        verifyRingtoneResources();
     }
 
     private static void verifyGroupDefinitionRoundTrip() {
@@ -99,6 +105,124 @@ final class VoiceRelayRegressionTest {
                     "native stop changed the speaker channel");
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("native stop packet could not be built", e);
+        }
+    }
+
+    private static void verifyPrivateCallProtocol() {
+        UUID groupId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        UUID playerId = UUID.fromString("33333333-3333-3333-3333-333333333333");
+        String token = "Abcdefghijklmnopqrstuvwx";
+
+        String callJoinWire = VoiceMessages.encodeCallJoin(groupId, playerId, token);
+        VoiceMessages.CallJoin callJoin = VoiceMessages.decodeCallJoin(callJoinWire);
+        check(callJoin != null && groupId.equals(callJoin.groupId())
+                        && playerId.equals(callJoin.playerId())
+                        && token.equals(callJoin.generation()),
+                "password-free call join did not round-trip");
+        check(callJoinWire.split(VoiceMessages.SEP, -1).length == 4,
+                "call join unexpectedly carries another field");
+        check(VoiceMessages.decodeCallJoin(callJoinWire + VoiceMessages.SEP + "secret") == null,
+                "call join accepted a password field");
+        check(!callJoinWire.contains("random-secret"),
+                "call join exposed a group password");
+        check(VoiceMessages.decodeCallJoin(String.join(VoiceMessages.SEP,
+                VoiceMessages.OP_CALL_JOIN, "0-0-0-0-0", playerId.toString(), token)) == null,
+                "call join accepted a non-canonical UUID");
+
+        VoiceMessages.CallTarget target = new VoiceMessages.CallTarget(groupId, token);
+        check(target.equals(VoiceMessages.decodeCallTarget(
+                        VoiceMessages.encodeCallTarget(target))),
+                "durable call target generation did not round-trip");
+        check(VoiceMessages.decodeCallTarget(groupId + "\0short") == null,
+                "call target accepted a weak generation token");
+
+        VoiceMessages.CallTarget oldTarget = new VoiceMessages.CallTarget(
+                groupId, "abcdefghijklmnopqrstuv");
+        VoiceMessages.CallTarget newTarget = new VoiceMessages.CallTarget(
+                groupId, "zyxwvutsrqponmlkjihgfe");
+        check(CallTargetSynchronizer.isNewAcceptedTarget(
+                        newTarget, newTarget, oldTarget),
+                "a newly accepted generation did not supersede an old manual suppression");
+        check(!CallTargetSynchronizer.isNewAcceptedTarget(
+                        oldTarget, oldTarget, oldTarget),
+                "a delayed old hint superseded its manual suppression");
+        check(CallTargetSynchronizer.manualSuppressionTarget(null, oldTarget).equals(oldTarget),
+                "a pending call hint survived a manual group choice");
+        check(CallTargetSynchronizer.manualSuppressionTarget(oldTarget, newTarget).equals(newTarget),
+                "manual suppression did not prefer the latest pending generation");
+
+        VoiceMessages.CallRingStart start = VoiceMessages.decodeCallRingStart(
+                VoiceMessages.encodeCallRingStart(token, playerId,
+                        VoiceMessages.RingDirection.INCOMING, 30_000L));
+        check(start != null && start.expiresAtMillis() == 30_000L,
+                "ring start did not preserve its absolute deadline");
+        check(VoiceMessages.decodeCallRingStart(String.join(VoiceMessages.SEP,
+                VoiceMessages.OP_CALL_RING_START, token, playerId.toString(),
+                "INCOMING", "030000")) == null,
+                "ring start accepted a non-canonical deadline");
+        VoiceMessages.CallRingStop stop = VoiceMessages.decodeCallRingStop(
+                VoiceMessages.encodeCallRingStop(token, playerId,
+                        VoiceMessages.RingDirection.OUTGOING));
+        check(stop != null && stop.direction() == VoiceMessages.RingDirection.OUTGOING,
+                "ring stop did not preserve its direction");
+    }
+
+    private static void verifyPrivateCallDefinition() {
+        VoiceMessages.GroupDefinition call = new VoiceMessages.GroupDefinition(
+                UUID.randomUUID(), CallTargetSynchronizer.CALL_GROUP_NAME, "random-secret",
+                Group.Type.OPEN, true, false);
+        check(CallTargetSynchronizer.isCallGroup(call),
+                "authoritative private call definition was rejected");
+        check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
+                        call.id(), call.name(), call.password(), Group.Type.NORMAL, true, false)),
+                "non-OPEN group was accepted as a private call");
+        check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
+                        call.id(), call.name(), call.password(), Group.Type.OPEN, false, false)),
+                "visible group was accepted as a private call");
+        check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
+                        call.id(), call.name(), null, Group.Type.OPEN, true, false)),
+                "passwordless group was accepted as a private call");
+    }
+
+    private static void verifyRingtoneFrames() {
+        check(CallRingtonePlayer.RINGTONE_GAIN == 0.5D,
+                "ringtone baseline volume is not halved");
+        long[] now = {1_000L};
+        CallRingtonePlayer.LoopingFrames partial = new CallRingtonePlayer.LoopingFrames(
+                new short[]{1, 2}, () -> now[0]);
+        partial.addToken("abcdefghijklmnopqrstuv", 1_010L);
+        short[] finalFrame = partial.get();
+        check(finalFrame != null && finalFrame.length == CallRingtonePlayer.FRAME_SAMPLES,
+                "ringtone final frame had the wrong size");
+        check(finalFrame[479] != 0 && finalFrame[480] == 0,
+                "ringtone did not silence the exact partial frame at its deadline");
+        now[0] = 1_010L;
+        check(partial.get() == null, "ringtone continued at its absolute deadline");
+
+        now[0] = 2_000L;
+        CallRingtonePlayer.LoopingFrames shared = new CallRingtonePlayer.LoopingFrames(
+                new short[]{1}, () -> now[0]);
+        shared.addToken("abcdefghijklmnopqrstuv", 2_100L);
+        shared.addToken("zyxwvutsrqponmlkjihgfe", 2_200L);
+        check(!shared.removeToken("abcdefghijklmnopqrstuv"),
+                "one invitation stopped another invitation's ringtone");
+        check(shared.get() != null, "remaining invitation did not keep ringing");
+        check(shared.removeToken("zyxwvutsrqponmlkjihgfe"),
+                "last invitation did not stop its ringtone");
+    }
+
+    private static void verifyRingtoneResources() {
+        check(VoiceMediaRegistry.CALL_CATEGORY.equals("crabcraft_calls"),
+                "call volume category changed");
+        for (String resource : List.of(
+                "crabcraft/call/incoming_ringtone.mp3",
+                "crabcraft/call/outgoing_ringtone.mp3")) {
+            try (InputStream input = VoiceRelayRegressionTest.class.getClassLoader()
+                    .getResourceAsStream(resource)) {
+                check(input != null, "missing bundled ringtone " + resource);
+            } catch (Exception e) {
+                throw new AssertionError("could not read bundled ringtone " + resource, e);
+            }
         }
     }
 
