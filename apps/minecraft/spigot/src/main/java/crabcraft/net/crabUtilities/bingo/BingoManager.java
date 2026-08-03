@@ -181,9 +181,7 @@ public final class BingoManager {
             if (plugin instanceof crabcraft.net.crabUtilities.CrabUtilities crabUtilities
                     && !crabUtilities.isBingoMessagesEnabled(completion.playerId())) return;
             Component message = miniMessage.deserialize(
-                    "<#FCD05C><bold>BINGO</bold></#FCD05C> "
-                            + "<#77dd77>✓</#77dd77> "
-                            + "<#b0b0b0>Completed</#b0b0b0> "
+                    "<#b0b0b0>Completed</#b0b0b0> "
                             + "<#FCD05C>" + completion.task().description() + "</#FCD05C>")
                     .decoration(TextDecoration.ITALIC, false);
             player.sendMessage(message);
