@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "bun run src/index.ts",
     "dev": "bun --watch src/index.ts",
     "build": "tsc --project tsconfig.json",
     "test": "bun test tests",
