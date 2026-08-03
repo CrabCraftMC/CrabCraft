@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+  Maximize2,
+  X,
+} from "lucide-react";
 
 interface GalleryViewerImage {
   id: string;
@@ -17,33 +23,59 @@ export default function GalleryMediaViewer({
 }: {
   images: GalleryViewerImage[];
 }) {
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselLoading, setCarouselLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [lightboxLoading, setLightboxLoading] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const triggerRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const openerIndexRef = useRef<number | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const isOpen = selectedIndex !== null;
 
   const close = () => {
-    const returnTo = openerIndexRef.current;
     setSelectedIndex(null);
-    openerIndexRef.current = null;
-    if (returnTo !== null) {
-      requestAnimationFrame(() => triggerRefs.current[returnTo]?.focus());
-    }
+    requestAnimationFrame(() => triggerRef.current?.focus());
   };
 
-  const move = (direction: -1 | 1) => {
+  const moveLightbox = (direction: -1 | 1) => {
+    setLightboxLoading(true);
     setSelectedIndex((current) => {
       if (current === null) return null;
       return (current + direction + images.length) % images.length;
     });
   };
 
-  const open = (index: number) => {
-    openerIndexRef.current = index;
-    setSelectedIndex(index);
+  const moveCarousel = (direction: -1 | 1) => {
+    setCarouselLoading(true);
+    setCarouselIndex(
+      (current) => (current + direction + images.length) % images.length,
+    );
   };
+
+  useEffect(() => {
+    if (images.length < 2) return;
+
+    for (const direction of [-1, 1]) {
+      const index =
+        (carouselIndex + direction + images.length) % images.length;
+      const preload = new window.Image();
+      preload.src = images[index].detailUrl;
+    }
+
+    const lightboxPreload = new window.Image();
+    lightboxPreload.src = images[carouselIndex].lightboxUrl;
+  }, [carouselIndex, images]);
+
+  useEffect(() => {
+    if (selectedIndex === null || images.length < 2) return;
+
+    for (const direction of [-1, 1]) {
+      const index =
+        (selectedIndex + direction + images.length) % images.length;
+      const preload = new window.Image();
+      preload.src = images[index].lightboxUrl;
+    }
+  }, [images, selectedIndex]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -54,8 +86,8 @@ export default function GalleryMediaViewer({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();
-      if (event.key === "ArrowLeft" && images.length > 1) move(-1);
-      if (event.key === "ArrowRight" && images.length > 1) move(1);
+      if (event.key === "ArrowLeft" && images.length > 1) moveLightbox(-1);
+      if (event.key === "ArrowRight" && images.length > 1) moveLightbox(1);
       if (event.key === "Tab") {
         const controls = Array.from(
           dialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not([disabled])") ?? [],
@@ -79,36 +111,71 @@ export default function GalleryMediaViewer({
     };
   }, [images.length, isOpen]);
 
+  const carouselImage = images[carouselIndex];
+
   return (
     <>
-      <div className={`grid gap-3 ${images.length > 1 ? "sm:grid-cols-2" : "grid-cols-1"}`}>
-        {images.map((image, index) => (
-          <button
-            key={image.id}
-            ref={(element) => {
-              triggerRefs.current[index] = element;
-            }}
-            type="button"
-            onClick={() => open(index)}
-            aria-label={`Open image ${index + 1} of ${images.length}: ${image.alt}`}
-            className={`group relative overflow-hidden rounded-2xl bg-[#130f0c] cursor-zoom-in focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/60 ${
-              images.length === 1 ? "aspect-[16/9]" : "aspect-[4/3]"
-            }`}
-          >
-            <Image
-              src={image.detailUrl}
-              alt={image.alt}
-              fill
-              sizes={images.length === 1 ? "(max-width: 1024px) 100vw, 70vw" : "(max-width: 640px) 100vw, 35vw"}
-              className="object-contain transition-transform duration-300 group-hover:scale-[1.015] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-              priority={index === 0}
-              unoptimized
-            />
-            <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-              <Maximize2 className="h-4 w-4" />
+      <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-[#130f0c]">
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => {
+            setLightboxLoading(true);
+            setSelectedIndex(carouselIndex);
+          }}
+          aria-label={`Open image ${carouselIndex + 1} of ${images.length}: ${carouselImage.alt}`}
+          aria-busy={carouselLoading}
+          className="group absolute inset-0 cursor-zoom-in focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/60 focus-visible:ring-inset"
+        >
+          <Image
+            key={carouselImage.id}
+            src={carouselImage.detailUrl}
+            alt={carouselImage.alt}
+            fill
+            sizes="(max-width: 1024px) 100vw, 70vw"
+            className="object-contain"
+            priority={carouselIndex === 0}
+            unoptimized
+            onLoad={() => setCarouselLoading(false)}
+            onError={() => setCarouselLoading(false)}
+          />
+          {carouselLoading ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-[#130f0c] text-white/70">
+              <LoaderCircle className="h-6 w-6 animate-spin" />
+              <span className="sr-only">Loading image</span>
             </span>
-          </button>
-        ))}
+          ) : null}
+          <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-md group-hover:opacity-100 group-focus-visible:opacity-100">
+            <Maximize2 className="h-4 w-4" />
+          </span>
+        </button>
+
+        {images.length > 1 ? (
+          <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/65 p-1 text-white backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => moveCarousel(-1)}
+              aria-label="Previous image"
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span
+              className="min-w-12 text-center text-xs font-bold"
+              aria-live="polite"
+            >
+              {carouselIndex + 1} / {images.length}
+            </span>
+            <button
+              type="button"
+              onClick={() => moveCarousel(1)}
+              aria-label="Next image"
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {selectedIndex !== null
@@ -135,6 +202,7 @@ export default function GalleryMediaViewer({
 
               <div className="relative h-[calc(100dvh-8rem)] w-[calc(100vw-2rem)] max-w-7xl">
                 <Image
+                  key={images[selectedIndex].id}
                   src={images[selectedIndex].lightboxUrl}
                   alt={images[selectedIndex].alt}
                   fill
@@ -142,14 +210,22 @@ export default function GalleryMediaViewer({
                   className="object-contain"
                   priority
                   unoptimized
+                  onLoad={() => setLightboxLoading(false)}
+                  onError={() => setLightboxLoading(false)}
                 />
+                {lightboxLoading ? (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black text-white/70">
+                    <LoaderCircle className="h-7 w-7 animate-spin" />
+                    <span className="sr-only">Loading full-size image</span>
+                  </span>
+                ) : null}
               </div>
 
               {images.length > 1 ? (
                 <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/65 p-1.5 text-white backdrop-blur-md sm:bottom-6">
                   <button
                     type="button"
-                    onClick={() => move(-1)}
+                    onClick={() => moveLightbox(-1)}
                     aria-label="Previous image"
                     className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/15 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >
@@ -163,7 +239,7 @@ export default function GalleryMediaViewer({
                   </span>
                   <button
                     type="button"
-                    onClick={() => move(1)}
+                    onClick={() => moveLightbox(1)}
                     aria-label="Next image"
                     className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/15 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >

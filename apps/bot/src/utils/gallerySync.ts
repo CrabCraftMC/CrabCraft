@@ -49,6 +49,7 @@ import type {
   GalleryTagSyncInput,
 } from "./galleryTypes.js";
 import { fetchGalleryStarterMessage } from "./galleryStarter.js";
+import { getGalleryReactionSnapshot } from "./galleryReactions.js";
 
 type GalleryParentChannel = ForumChannel | MediaChannel;
 type GallerySyncResult =
@@ -319,6 +320,7 @@ async function syncGalleryThreadNow(
               availableTags,
             ),
             images,
+            reactions: getGalleryReactionSnapshot(starter),
           };
           const post: GalleryPostSyncInput = {
             ...snapshot,
@@ -393,6 +395,27 @@ export function queueGalleryThreadSync(
   return queueThreadOperation(thread.id, async () =>
     syncGalleryThreadNow(thread, { ...options, revision: await revision }),
   );
+}
+
+export function queueGalleryReactionSync(
+  thread: AnyThreadChannel,
+): Promise<boolean> {
+  const revision = beginSyncRevision();
+  return queueThreadOperation(thread.id, async () => {
+    const fetchedThread = await thread.client.channels.fetch(thread.id, {
+      force: true,
+    });
+    if (!fetchedThread?.isThread() || !isConfiguredGalleryThread(fetchedThread)) {
+      return false;
+    }
+    const starter = await fetchGalleryStarterMessage(fetchedThread, false);
+    if (!starter) return false;
+    return appDb.replaceGalleryPostReactions(
+      fetchedThread.id,
+      getGalleryReactionSnapshot(starter),
+      await revision,
+    );
+  });
 }
 
 export function queueGalleryPostDeletion(

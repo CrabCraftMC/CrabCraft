@@ -26,6 +26,7 @@ import {
   playerLoginStreaks,
   galleryPosts,
   galleryImages,
+  galleryReactions,
   galleryTags,
   galleryPostTags,
 } from "../schema";
@@ -54,12 +55,24 @@ export interface GalleryFilterTag {
   emojiUrl: string | null;
 }
 
+export interface GalleryPlayerFilterOption {
+  username: string;
+  avatarUrl: string;
+}
+
 export interface GalleryImage {
   id: string;
   url: string;
   alt: string | null;
   width: number | null;
   height: number | null;
+}
+
+export interface GalleryReaction {
+  key: string;
+  name: string;
+  emojiUrl: string | null;
+  count: number;
 }
 
 export interface GalleryPostAuthor {
@@ -78,6 +91,7 @@ export interface GalleryPost {
   author: GalleryPostAuthor;
   tags: GalleryTag[];
   images: GalleryImage[];
+  reactions: GalleryReaction[];
 }
 
 export interface GalleryPostLink {
@@ -139,7 +153,7 @@ async function hydrateGalleryPosts(
 ): Promise<GalleryPost[]> {
   if (rows.length === 0) return [];
   const postIds = rows.map((row) => row.id);
-  const [imageRows, tagRows] = await Promise.all([
+  const [imageRows, tagRows, reactionRows] = await Promise.all([
     db
       .select({
         postId: galleryImages.post_id,
@@ -168,6 +182,18 @@ async function hydrateGalleryPosts(
       )
       .where(inArray(galleryPostTags.post_id, postIds))
       .orderBy(asc(galleryTags.position), asc(galleryTags.name)),
+    db
+      .select({
+        postId: galleryReactions.post_id,
+        key: galleryReactions.emoji_key,
+        emojiId: galleryReactions.emoji_id,
+        name: galleryReactions.emoji_name,
+        animated: galleryReactions.animated,
+        count: galleryReactions.count,
+      })
+      .from(galleryReactions)
+      .where(inArray(galleryReactions.post_id, postIds))
+      .orderBy(desc(galleryReactions.count), asc(galleryReactions.emoji_key)),
   ]);
 
   const imagesByPost = new Map<string, GalleryImage[]>();
@@ -190,6 +216,20 @@ async function hydrateGalleryPosts(
     tagsByPost.set(tag.postId, tags);
   }
 
+  const reactionsByPost = new Map<string, GalleryReaction[]>();
+  for (const reaction of reactionRows) {
+    const reactions = reactionsByPost.get(reaction.postId) ?? [];
+    reactions.push({
+      key: reaction.key,
+      name: reaction.name,
+      emojiUrl: reaction.emojiId
+        ? `https://cdn.discordapp.com/emojis/${reaction.emojiId}.${reaction.animated ? "gif" : "webp"}?size=48&quality=lossless`
+        : null,
+      count: reaction.count,
+    });
+    reactionsByPost.set(reaction.postId, reactions);
+  }
+
   return rows.map((row) => ({
     id: row.id,
     title: row.title,
@@ -200,6 +240,7 @@ async function hydrateGalleryPosts(
     author: galleryAuthorFromRow(row),
     tags: tagsByPost.get(row.id) ?? [],
     images: imagesByPost.get(row.id) ?? [],
+    reactions: reactionsByPost.get(row.id) ?? [],
   }));
 }
 
@@ -220,6 +261,7 @@ const galleryPostSelection = {
 export async function getGalleryPosts(options: {
   season?: number;
   tag?: string;
+  player?: string;
   limit: number;
   offset: number;
 }): Promise<{ posts: GalleryPost[]; total: number }> {
@@ -241,6 +283,16 @@ export async function getGalleryPosts(options: {
         AND lower(btrim(selected_tag_definition.name)) = lower(btrim(${options.tag}))
     )`);
   }
+  if (options.player) {
+    const playerPattern = `%${options.player.replace(/[\\%_]/g, "\\$&")}%`;
+    conditions.push(
+      or(
+        ilike(players.minecraft_username, playerPattern),
+        ilike(galleryPosts.author_display_name, playerPattern),
+        ilike(galleryPosts.author_discord_username, playerPattern),
+      )!,
+    );
+  }
   const where = and(...conditions);
 
   const [postRows, totalRows] = await Promise.all([
@@ -252,7 +304,11 @@ export async function getGalleryPosts(options: {
       .orderBy(desc(galleryPosts.posted_at), desc(galleryPosts.thread_id))
       .limit(limit)
       .offset(offset),
-    db.select({ value: count() }).from(galleryPosts).where(where),
+    db
+      .select({ value: count() })
+      .from(galleryPosts)
+      .leftJoin(players, eq(players.discord_id, galleryPosts.author_discord_id))
+      .where(where),
   ]);
 
   return {
@@ -261,48 +317,106 @@ export async function getGalleryPosts(options: {
   };
 }
 
-/** Options come from all published posts/channels, not only the current page. */
+/** One representative image chosen from the visible Gallery posts. */
+export async function getRandomGalleryImage(): Promise<{
+  url: string;
+  alt: string | null;
+} | null> {
+  const [image] = await db
+    .select({
+      url: galleryImages.public_url,
+      alt: galleryImages.alt,
+    })
+    .from(galleryImages)
+    .innerJoin(galleryPosts, eq(galleryPosts.thread_id, galleryImages.post_id))
+    .where(
+      and(
+        eq(galleryImages.position, 0),
+        eq(galleryPosts.published, true),
+        isNull(galleryPosts.deleted_at),
+      ),
+    )
+    .orderBy(sql`random()`)
+    .limit(1);
+  return image ?? null;
+}
+
+/** Seasons come from all published posts; tags come from the latest season. */
 export async function getGalleryFilterOptions(): Promise<{
   seasons: number[];
   tags: GalleryFilterTag[];
+  players: GalleryPlayerFilterOption[];
 }> {
-  const visiblePost = sql`EXISTS (
-    SELECT 1
-    FROM gallery_post_tags AS filter_post_tag
-    JOIN gallery_posts AS filter_post
-      ON filter_post.thread_id = filter_post_tag.post_id
-    WHERE filter_post_tag.tag_id = ${galleryTags.discord_tag_id}
-      AND filter_post.published = TRUE
-      AND filter_post.deleted_at IS NULL
-  )`;
-  const [seasonRows, tagRows] = await Promise.all([
+  const visiblePostConditions = and(
+    eq(galleryPosts.published, true),
+    isNull(galleryPosts.deleted_at),
+  );
+  const [seasonRows, playerRows] = await Promise.all([
     db
       .selectDistinct({ season: galleryPosts.season_number })
       .from(galleryPosts)
-      .where(
-        and(
-          eq(galleryPosts.published, true),
-          isNull(galleryPosts.deleted_at),
-        ),
-      )
+      .where(visiblePostConditions)
       .orderBy(asc(galleryPosts.season_number)),
     db
-      .select({
-        id: galleryTags.discord_tag_id,
-        key: sql<string>`lower(btrim(${galleryTags.name}))`,
-        name: galleryTags.name,
-        emojiId: galleryTags.emoji_id,
-        emojiName: galleryTags.emoji_name,
+      .selectDistinctOn([galleryPosts.author_discord_id], {
+        discordUsername: galleryPosts.author_discord_username,
+        displayName: galleryPosts.author_display_name,
+        minecraftUsername: players.minecraft_username,
+        minecraftUuid: players.minecraft_uuid,
       })
-      .from(galleryTags)
-      .where(or(eq(galleryTags.available, true), visiblePost))
+      .from(galleryPosts)
+      .leftJoin(players, eq(players.discord_id, galleryPosts.author_discord_id))
+      .where(visiblePostConditions)
       .orderBy(
-        desc(galleryTags.last_synced_at),
-        asc(galleryTags.position),
-        asc(galleryTags.name),
-        desc(galleryTags.discord_tag_id),
+        galleryPosts.author_discord_id,
+        desc(galleryPosts.posted_at),
       ),
   ]);
+  const playerOptions = playerRows
+    .map((row) => ({
+      username:
+        row.minecraftUsername ?? row.displayName ?? row.discordUsername,
+      avatarUrl: row.minecraftUuid
+        ? `https://mc-heads.net/avatar/${row.minecraftUuid}/64.png`
+        : "/logo.png",
+    }))
+    .sort((left, right) =>
+      left.username.localeCompare(right.username, "en-GB", {
+        sensitivity: "base",
+      }),
+    );
+  const latestSeason = seasonRows.at(-1)?.season;
+  if (latestSeason === undefined) {
+    return { seasons: [], tags: [], players: [] };
+  }
+
+  const tagRows = await db
+    .select({
+      id: galleryTags.discord_tag_id,
+      key: sql<string>`lower(btrim(${galleryTags.name}))`,
+      name: galleryTags.name,
+      emojiId: galleryTags.emoji_id,
+      emojiName: galleryTags.emoji_name,
+    })
+    .from(galleryTags)
+    .where(
+      and(
+        eq(galleryTags.available, true),
+        sql`EXISTS (
+          SELECT 1
+          FROM gallery_posts AS latest_season_post
+          WHERE latest_season_post.channel_id = ${galleryTags.channel_id}
+            AND latest_season_post.season_number = ${latestSeason}
+            AND latest_season_post.published = TRUE
+            AND latest_season_post.deleted_at IS NULL
+        )`,
+      ),
+    )
+    .orderBy(
+      asc(galleryTags.position),
+      asc(galleryTags.name),
+      desc(galleryTags.discord_tag_id),
+    );
 
   const logicalTags = new Map<string, GalleryFilterTag>();
   for (const row of tagRows) {
@@ -319,6 +433,7 @@ export async function getGalleryFilterOptions(): Promise<{
 
   return {
     seasons: seasonRows.map((row) => row.season),
+    players: playerOptions,
     tags: [...logicalTags.values()].sort((a, b) =>
       a.name.localeCompare(b.name, "en-GB", { sensitivity: "base" }),
     ),

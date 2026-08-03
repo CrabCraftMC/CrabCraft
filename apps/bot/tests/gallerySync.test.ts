@@ -39,6 +39,9 @@ const { parseBackfillArguments } = await import(
 const { fetchGalleryStarterMessage } = await import(
   "../src/utils/galleryStarter.js"
 );
+const { getGalleryReactionSnapshot } = await import(
+  "../src/utils/galleryReactions.js"
+);
 
 const baseAttachment = {
   id: "222222222222222222",
@@ -558,6 +561,55 @@ describe("gallery content hashes", () => {
     expect(buildGalleryTagsHash([tag])).not.toBe(
       buildGalleryTagsHash([{ ...tag, name: "Architecture" }]),
     );
+  });
+});
+
+describe("gallery reaction snapshots", () => {
+  test("preserves Unicode and custom Discord emoji with aggregate counts", () => {
+    const message = {
+      reactions: {
+        cache: new Map([
+          [
+            "unicode",
+            {
+              count: 2,
+              emoji: { id: null, name: "🦀", animated: null },
+            },
+          ],
+          [
+            "custom",
+            {
+              count: 5,
+              emoji: { id: "123456789", name: "crabparty", animated: true },
+            },
+          ],
+          [
+            "empty",
+            {
+              count: 0,
+              emoji: { id: null, name: "👍", animated: null },
+            },
+          ],
+        ]),
+      },
+    };
+
+    expect(getGalleryReactionSnapshot(message as never)).toEqual([
+      {
+        emojiKey: "custom:123456789",
+        emojiId: "123456789",
+        emojiName: "crabparty",
+        animated: true,
+        count: 5,
+      },
+      {
+        emojiKey: "unicode:🦀",
+        emojiId: null,
+        emojiName: "🦀",
+        animated: false,
+        count: 2,
+      },
+    ]);
   });
 });
 

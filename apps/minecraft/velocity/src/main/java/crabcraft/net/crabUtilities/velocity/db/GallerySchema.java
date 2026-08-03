@@ -64,9 +64,16 @@ public final class GallerySchema {
                 published_at INTEGER NOT NULL,
                 deleted_at INTEGER,
                 last_synced_at INTEGER NOT NULL,
+                reactions_revision BIGINT NOT NULL DEFAULT 0,
                 CONSTRAINT gallery_posts_season_number_check
-                    CHECK (season_number > 0)
+                    CHECK (season_number > 0),
+                CONSTRAINT gallery_posts_reactions_revision_check
+                    CHECK (reactions_revision >= 0)
             )
+            """,
+            """
+            ALTER TABLE gallery_posts
+                ADD COLUMN IF NOT EXISTS reactions_revision BIGINT NOT NULL DEFAULT 0
             """,
             """
             ALTER TABLE gallery_posts
@@ -144,6 +151,22 @@ public final class GallerySchema {
                 last_error TEXT,
                 CONSTRAINT gallery_storage_deletions_attempts_check
                     CHECK (attempts >= 0)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS gallery_reactions (
+                post_id TEXT NOT NULL,
+                emoji_key TEXT NOT NULL,
+                emoji_id TEXT,
+                emoji_name TEXT NOT NULL,
+                animated BOOLEAN NOT NULL DEFAULT FALSE,
+                count INTEGER NOT NULL,
+                CONSTRAINT gallery_reactions_post_id_emoji_key_pk
+                    PRIMARY KEY (post_id, emoji_key),
+                CONSTRAINT gallery_reactions_post_id_gallery_posts_thread_id_fk
+                    FOREIGN KEY (post_id) REFERENCES gallery_posts(thread_id)
+                    ON DELETE CASCADE,
+                CONSTRAINT gallery_reactions_count_check CHECK (count > 0)
             )
             """,
             """

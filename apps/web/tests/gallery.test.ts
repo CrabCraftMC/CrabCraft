@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import {
   galleryHref,
   normaliseGalleryTagKey,
+  parseGalleryPlayerParam,
   parseGalleryTagParam,
 } from "../src/data/gallery";
 import { parseGalleryMediaOrigin } from "../gallery-media-origin";
@@ -29,10 +30,24 @@ describe("Gallery tag filters", () => {
   });
 
   test("encodes logical names and preserves pagination filters", () => {
-    expect(galleryHref({ season: 7, tag: "build ideas", page: 2 })).toBe(
-      "/gallery?season=7&tag=build+ideas&page=2",
+    expect(
+      galleryHref({
+        season: 7,
+        tag: "build ideas",
+        player: "Max Moon",
+        page: 2,
+      }),
+    ).toBe(
+      "/gallery?season=7&tag=build+ideas&player=Max+Moon&page=2",
     );
     expect(galleryHref({ season: null, tag: null })).toBe("/gallery");
+  });
+
+  test("accepts player searches and rejects malformed values", () => {
+    expect(parseGalleryPlayerParam("  MaxMoon  ")).toBe("MaxMoon");
+    expect(parseGalleryPlayerParam("   ")).toBeNull();
+    expect(parseGalleryPlayerParam("Max\u0000Moon")).toBeNull();
+    expect(parseGalleryPlayerParam("x".repeat(33))).toBeNull();
   });
 });
 

@@ -8,6 +8,7 @@ import GalleryExplorer from "@/components/gallery/GalleryExplorer";
 import {
   galleryHref,
   normaliseGalleryTagKey,
+  parseGalleryPlayerParam,
   parseGalleryTagParam,
 } from "@/data/gallery";
 
@@ -40,8 +41,9 @@ export async function generateMetadata({
   const params = await searchParams;
   const season = parseSeason(firstValue(params.season));
   const tag = parseGalleryTagParam(firstValue(params.tag));
+  const player = parseGalleryPlayerParam(firstValue(params.player));
   const page = parsePage(firstValue(params.page));
-  const isFiltered = season !== null || tag !== null;
+  const isFiltered = season !== null || tag !== null || player !== null;
   const canonical = isFiltered
     ? "/gallery"
     : galleryHref({ season: null, tag: null, page });
@@ -68,8 +70,10 @@ export async function generateMetadata({
 export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const params = await searchParams;
   const rawTag = firstValue(params.tag);
+  const rawPlayer = firstValue(params.player);
   const requestedSeason = parseSeason(firstValue(params.season));
   const requestedTag = parseGalleryTagParam(rawTag);
+  const requestedPlayer = parseGalleryPlayerParam(rawPlayer);
   const requestedPage = parsePage(firstValue(params.page));
 
   const [filters, result] = await Promise.all([
@@ -77,6 +81,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     getGalleryPosts({
       season: requestedSeason ?? undefined,
       tag: requestedTag ?? undefined,
+      player: requestedPlayer ?? undefined,
       limit: PAGE_SIZE,
       offset: (requestedPage - 1) * PAGE_SIZE,
     }),
@@ -95,15 +100,27 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   if (
     activeSeason !== requestedSeason ||
     activeTag !== requestedTag ||
-    (rawTag !== undefined && rawTag !== activeTag)
+    (rawTag !== undefined && rawTag !== activeTag) ||
+    (rawPlayer !== undefined && rawPlayer !== requestedPlayer)
   ) {
-    redirect(galleryHref({ season: activeSeason, tag: activeTag }));
+    redirect(
+      galleryHref({
+        season: activeSeason,
+        tag: activeTag,
+        player: requestedPlayer,
+      }),
+    );
   }
 
   const pageCount = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
   if (requestedPage > pageCount) {
     redirect(
-      galleryHref({ season: activeSeason, tag: activeTag, page: pageCount }),
+      galleryHref({
+        season: activeSeason,
+        tag: activeTag,
+        player: requestedPlayer,
+        page: pageCount,
+      }),
     );
   }
 
@@ -124,8 +141,10 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
           posts={result.posts}
           seasons={filters.seasons}
           tags={filters.tags}
+          players={filters.players}
           activeSeason={activeSeason}
           activeTag={activeTag}
+          activePlayer={requestedPlayer}
           page={requestedPage}
           pageCount={pageCount}
           total={result.total}

@@ -3,12 +3,15 @@ export type {
   GalleryImage,
   GalleryPost,
   GalleryPostLink,
+  GalleryPlayerFilterOption,
+  GalleryReaction,
   GalleryTag,
 } from "@crabcraft/db/queries/web";
 
 interface GalleryHrefOptions {
   season: number | null;
   tag: string | null;
+  player?: string | null;
   page?: number;
 }
 
@@ -24,10 +27,22 @@ export function parseGalleryTagParam(value: string | undefined) {
   return tag;
 }
 
-export function galleryHref({ season, tag, page = 1 }: GalleryHrefOptions) {
+export function parseGalleryPlayerParam(value: string | undefined) {
+  const player = value?.trim();
+  if (!player || player.length > 32 || CONTROL_CHARACTER.test(player)) return null;
+  return player;
+}
+
+export function galleryHref({
+  season,
+  tag,
+  player,
+  page = 1,
+}: GalleryHrefOptions) {
   const params = new URLSearchParams();
   if (season !== null) params.set("season", String(season));
   if (tag !== null) params.set("tag", tag);
+  if (player) params.set("player", player);
   if (page > 1) params.set("page", String(page));
   const query = params.toString();
   return query ? `/gallery?${query}` : "/gallery";

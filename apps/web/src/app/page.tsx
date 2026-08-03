@@ -8,6 +8,8 @@ import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { getCurrentSeasonWhitelistedPlayerCount } from "@/lib/discord";
 import { getHomepageStats } from "@/lib/queries";
+import { getRandomGalleryImage } from "@crabcraft/db/queries/web";
+import { galleryMediaUrl } from "@/data/gallery-media";
 
 export const metadata: Metadata = {
   description:
@@ -44,14 +46,25 @@ export default async function HomePage() {
     signal: AbortSignal.timeout(5000),
     next: { revalidate: 30 },
   }).catch(() => null);
+  const galleryImagePromise = getRandomGalleryImage().catch(() => null);
 
-  const [homepageStats, currentSeasonPlayerCount, playersRes, crownsRes] =
+  const [
+    homepageStats,
+    currentSeasonPlayerCount,
+    playersRes,
+    crownsRes,
+    galleryImage,
+  ] =
     await Promise.all([
       homepageStatsPromise,
       whitelistedPlayerCountPromise,
       playersPromise,
       crownsPromise,
+      galleryImagePromise,
     ]);
+  const galleryBannerUrl = galleryImage
+    ? galleryMediaUrl(galleryImage.url, "detail")
+    : "/wrapped/1.webp";
 
   seasonCount = homepageStats.seasonCount;
   whitelistedPlayers =
@@ -261,11 +274,12 @@ export default async function HomePage() {
               className="relative min-h-[270px] overflow-hidden bg-[#130f0c] shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/15 motion-reduce:animate-none motion-reduce:opacity-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[290px]"
             >
               <Image
-                src="/wrapped/1.webp"
+                src={galleryBannerUrl}
                 alt=""
                 fill
                 sizes="(max-width: 1280px) 100vw, 1280px"
                 className="object-cover transition-transform duration-700 group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                unoptimized
               />
               <div className="absolute inset-0 bg-black/55 sm:bg-gradient-to-r sm:from-black/90 sm:via-black/65 sm:to-black/15" />
 
