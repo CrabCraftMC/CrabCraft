@@ -68,7 +68,7 @@ function taskCell(label: string, complete: boolean) {
   const fontSize = lines.length <= 3 ? 17 : lines.length === 4 ? 15.5 : 14;
   return container({
     style: {
-      ...squircle(CELL_WIDTH, CELL_HEIGHT, 20),
+      ...squircle(CELL_WIDTH, CELL_HEIGHT, 30),
       width: CELL_WIDTH,
       height: CELL_HEIGHT,
       display: "flex",
@@ -155,10 +155,10 @@ export async function generateBingoCardImage(
           justifyContent: "center", gap: 1,
         } as any,
         children: [
-          text(`${completedCount} / 16`, {
+          text(playerName ? `${completedCount} / 16` : "16", {
             fontFamily: PIXEL, fontSize: 45, color: "#ffffff",
           }),
-          text("COMPLETE", {
+          text(playerName ? "COMPLETE" : "TASKS", {
             fontFamily: SANS, fontSize: 11, fontWeight: 700,
             letterSpacing: 1.6, color: "rgb(255 255 255 / 0.62)",
           }),
