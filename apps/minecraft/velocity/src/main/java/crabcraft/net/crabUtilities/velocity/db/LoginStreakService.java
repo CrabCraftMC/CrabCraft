@@ -65,7 +65,7 @@ public final class LoginStreakService {
                 accumulated_seconds INTEGER NOT NULL DEFAULT 0,
                 qualified_at INTEGER,
                 updated_at INTEGER NOT NULL,
-                PRIMARY KEY (minecraft_uuid, streak_day)
+                CONSTRAINT player_login_streak_progress_pkey PRIMARY KEY (minecraft_uuid, streak_day)
             )
             """;
 

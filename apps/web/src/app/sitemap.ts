@@ -1,15 +1,18 @@
 import type { MetadataRoute } from "next";
+import { getGallerySitemapEntries } from "@crabcraft/db/queries/web";
 import { searchUsers } from "@/lib/queries";
 
 export const revalidate = 3600;
 
 const BASE_URL = "https://crabcraft.net";
+const MAX_GALLERY_SITEMAP_ENTRIES = 39_000;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: BASE_URL, changeFrequency: "daily", priority: 1 },
     { url: `${BASE_URL}/leaderboard`, changeFrequency: "hourly", priority: 0.9 },
     { url: `${BASE_URL}/awards`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${BASE_URL}/gallery`, changeFrequency: "daily", priority: 0.8 },
     { url: `${BASE_URL}/tools/rgb-nickname`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/block-gradient`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/pixel-art-generator`, changeFrequency: "monthly", priority: 0.6 },
@@ -48,5 +51,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {}
 
-  return [...staticRoutes, ...playerRoutes, ...awardRoutes];
+  let galleryRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const rows = await getGallerySitemapEntries();
+    galleryRoutes = rows
+      .slice(0, MAX_GALLERY_SITEMAP_ENTRIES)
+      .map((row) => ({
+        url: `${BASE_URL}/gallery/${row.id}`,
+        lastModified: row.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+      }));
+  } catch {}
+
+  return [...staticRoutes, ...playerRoutes, ...awardRoutes, ...galleryRoutes];
 }

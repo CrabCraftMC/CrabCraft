@@ -36,6 +36,7 @@ import { initStreamMonitor } from "../utils/streamMonitor.js";
 import { startIdentitySync } from "../utils/identitySync.js";
 import { startPunishmentRoleSync } from "../utils/punishmentRoleSync.js";
 import { startBotPlayerStatus } from "../utils/botStatus.js";
+import { startGallerySync } from "../utils/gallerySync.js";
 
 export default class ReadyEvent extends Event {
   constructor() {
@@ -217,6 +218,9 @@ export default class ReadyEvent extends Event {
 
     // Show the current online player count in the bot status.
     startBotPlayerStatus(client, config.CRABCRAFT_API_URL);
+
+    // Mirror configured Discord Media/Forum channels into the website gallery.
+    if (client.isReady()) startGallerySync(client);
 
     // Deploy slash commands on every startup
     if (!client.user) return;

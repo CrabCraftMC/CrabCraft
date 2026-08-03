@@ -1,4 +1,18 @@
-import { eq, and, desc, sql, like, ilike, asc, count } from "drizzle-orm";
+import {
+  eq,
+  and,
+  or,
+  desc,
+  sql,
+  like,
+  ilike,
+  asc,
+  count,
+  inArray,
+  isNull,
+  gt,
+  lt,
+} from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
@@ -10,6 +24,10 @@ import {
   awards,
   streamChannels,
   playerLoginStreaks,
+  galleryPosts,
+  galleryImages,
+  galleryTags,
+  galleryPostTags,
 } from "../schema";
 import type {
   PlayerSeasonStats,
@@ -19,6 +37,401 @@ import type {
   AdminUser,
   Application,
 } from "@crabcraft/shared/types";
+
+export interface GalleryTag {
+  id: string;
+  filterKey: string;
+  name: string;
+  emojiName: string | null;
+  emojiUrl: string | null;
+}
+
+/** One cross-channel filter option, keyed by a normalised Discord tag name. */
+export interface GalleryFilterTag {
+  key: string;
+  name: string;
+  emojiName: string | null;
+  emojiUrl: string | null;
+}
+
+export interface GalleryImage {
+  id: string;
+  url: string;
+  alt: string | null;
+  width: number | null;
+  height: number | null;
+}
+
+export interface GalleryPostAuthor {
+  username: string;
+  profileHref: string | null;
+  avatarUrl: string;
+}
+
+export interface GalleryPost {
+  id: string;
+  title: string;
+  content: string | null;
+  season: number;
+  postedAt: Date;
+  updatedAt: Date;
+  author: GalleryPostAuthor;
+  tags: GalleryTag[];
+  images: GalleryImage[];
+}
+
+export interface GalleryPostLink {
+  id: string;
+  title: string;
+}
+
+interface GalleryPostRow {
+  id: string;
+  title: string;
+  content: string | null;
+  season: number;
+  postedAt: number;
+  contentUpdatedAt: number;
+  authorDiscordUsername: string;
+  authorDisplayName: string;
+  minecraftUsername: string | null;
+  minecraftUuid: string | null;
+}
+
+function galleryTagFromRow(row: {
+  id: string;
+  key: string;
+  name: string;
+  emojiId: string | null;
+  emojiName: string | null;
+}): GalleryTag {
+  return {
+    id: row.id,
+    filterKey: row.key,
+    name: row.name,
+    // Discord supplies a name for custom emoji too, but the website only
+    // renders emojiName as text for native Unicode emoji.
+    emojiName: row.emojiId ? null : row.emojiName,
+    emojiUrl: row.emojiId
+      ? `https://cdn.discordapp.com/emojis/${row.emojiId}.webp?size=32&quality=lossless`
+      : null,
+  };
+}
+
+function galleryAuthorFromRow(row: GalleryPostRow): GalleryPostAuthor {
+  const username =
+    row.minecraftUsername ??
+    row.authorDisplayName ??
+    row.authorDiscordUsername;
+  return {
+    username,
+    profileHref: row.minecraftUsername
+      ? `/stats/${encodeURIComponent(row.minecraftUsername)}`
+      : null,
+    avatarUrl: row.minecraftUuid
+      ? `https://mc-heads.net/avatar/${row.minecraftUuid}/64.png`
+      : "/logo.png",
+  };
+}
+
+async function hydrateGalleryPosts(
+  rows: GalleryPostRow[],
+): Promise<GalleryPost[]> {
+  if (rows.length === 0) return [];
+  const postIds = rows.map((row) => row.id);
+  const [imageRows, tagRows] = await Promise.all([
+    db
+      .select({
+        postId: galleryImages.post_id,
+        id: galleryImages.discord_attachment_id,
+        url: galleryImages.public_url,
+        alt: galleryImages.alt,
+        width: galleryImages.width,
+        height: galleryImages.height,
+      })
+      .from(galleryImages)
+      .where(inArray(galleryImages.post_id, postIds))
+      .orderBy(asc(galleryImages.position)),
+    db
+      .select({
+        postId: galleryPostTags.post_id,
+        id: galleryTags.discord_tag_id,
+        key: sql<string>`lower(btrim(${galleryTags.name}))`,
+        name: galleryTags.name,
+        emojiId: galleryTags.emoji_id,
+        emojiName: galleryTags.emoji_name,
+      })
+      .from(galleryPostTags)
+      .innerJoin(
+        galleryTags,
+        eq(galleryTags.discord_tag_id, galleryPostTags.tag_id),
+      )
+      .where(inArray(galleryPostTags.post_id, postIds))
+      .orderBy(asc(galleryTags.position), asc(galleryTags.name)),
+  ]);
+
+  const imagesByPost = new Map<string, GalleryImage[]>();
+  for (const image of imageRows) {
+    const images = imagesByPost.get(image.postId) ?? [];
+    images.push({
+      id: image.id,
+      url: image.url,
+      alt: image.alt,
+      width: image.width,
+      height: image.height,
+    });
+    imagesByPost.set(image.postId, images);
+  }
+
+  const tagsByPost = new Map<string, GalleryTag[]>();
+  for (const tag of tagRows) {
+    const tags = tagsByPost.get(tag.postId) ?? [];
+    tags.push(galleryTagFromRow(tag));
+    tagsByPost.set(tag.postId, tags);
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    season: row.season,
+    postedAt: new Date(row.postedAt * 1000),
+    updatedAt: new Date(row.contentUpdatedAt * 1000),
+    author: galleryAuthorFromRow(row),
+    tags: tagsByPost.get(row.id) ?? [],
+    images: imagesByPost.get(row.id) ?? [],
+  }));
+}
+
+const galleryPostSelection = {
+  id: galleryPosts.thread_id,
+  title: galleryPosts.title,
+  content: galleryPosts.content,
+  season: galleryPosts.season_number,
+  postedAt: galleryPosts.posted_at,
+  contentUpdatedAt: galleryPosts.content_updated_at,
+  authorDiscordUsername: galleryPosts.author_discord_username,
+  authorDisplayName: galleryPosts.author_display_name,
+  minecraftUsername: players.minecraft_username,
+  minecraftUuid: players.minecraft_uuid,
+};
+
+/** Newest-first, published Gallery posts with optional season/tag filters. */
+export async function getGalleryPosts(options: {
+  season?: number;
+  tag?: string;
+  limit: number;
+  offset: number;
+}): Promise<{ posts: GalleryPost[]; total: number }> {
+  const limit = Math.min(100, Math.max(1, Math.floor(options.limit)));
+  const offset = Math.max(0, Math.floor(options.offset));
+  const conditions = [
+    eq(galleryPosts.published, true),
+    isNull(galleryPosts.deleted_at),
+  ];
+  if (options.season !== undefined) {
+    conditions.push(eq(galleryPosts.season_number, options.season));
+  }
+  if (options.tag) {
+    conditions.push(sql`EXISTS (
+      SELECT 1 FROM gallery_post_tags AS selected_tag
+      JOIN gallery_tags AS selected_tag_definition
+        ON selected_tag_definition.discord_tag_id = selected_tag.tag_id
+      WHERE selected_tag.post_id = ${galleryPosts.thread_id}
+        AND lower(btrim(selected_tag_definition.name)) = lower(btrim(${options.tag}))
+    )`);
+  }
+  const where = and(...conditions);
+
+  const [postRows, totalRows] = await Promise.all([
+    db
+      .select(galleryPostSelection)
+      .from(galleryPosts)
+      .leftJoin(players, eq(players.discord_id, galleryPosts.author_discord_id))
+      .where(where)
+      .orderBy(desc(galleryPosts.posted_at), desc(galleryPosts.thread_id))
+      .limit(limit)
+      .offset(offset),
+    db.select({ value: count() }).from(galleryPosts).where(where),
+  ]);
+
+  return {
+    posts: await hydrateGalleryPosts(postRows),
+    total: Number(totalRows[0]?.value ?? 0),
+  };
+}
+
+/** Options come from all published posts/channels, not only the current page. */
+export async function getGalleryFilterOptions(): Promise<{
+  seasons: number[];
+  tags: GalleryFilterTag[];
+}> {
+  const visiblePost = sql`EXISTS (
+    SELECT 1
+    FROM gallery_post_tags AS filter_post_tag
+    JOIN gallery_posts AS filter_post
+      ON filter_post.thread_id = filter_post_tag.post_id
+    WHERE filter_post_tag.tag_id = ${galleryTags.discord_tag_id}
+      AND filter_post.published = TRUE
+      AND filter_post.deleted_at IS NULL
+  )`;
+  const [seasonRows, tagRows] = await Promise.all([
+    db
+      .selectDistinct({ season: galleryPosts.season_number })
+      .from(galleryPosts)
+      .where(
+        and(
+          eq(galleryPosts.published, true),
+          isNull(galleryPosts.deleted_at),
+        ),
+      )
+      .orderBy(asc(galleryPosts.season_number)),
+    db
+      .select({
+        id: galleryTags.discord_tag_id,
+        key: sql<string>`lower(btrim(${galleryTags.name}))`,
+        name: galleryTags.name,
+        emojiId: galleryTags.emoji_id,
+        emojiName: galleryTags.emoji_name,
+      })
+      .from(galleryTags)
+      .where(or(eq(galleryTags.available, true), visiblePost))
+      .orderBy(
+        desc(galleryTags.last_synced_at),
+        asc(galleryTags.position),
+        asc(galleryTags.name),
+        desc(galleryTags.discord_tag_id),
+      ),
+  ]);
+
+  const logicalTags = new Map<string, GalleryFilterTag>();
+  for (const row of tagRows) {
+    const key = row.key;
+    if (!key || logicalTags.has(key)) continue;
+    const tag = galleryTagFromRow(row);
+    logicalTags.set(key, {
+      key,
+      name: row.name.trim(),
+      emojiName: tag.emojiName,
+      emojiUrl: tag.emojiUrl,
+    });
+  }
+
+  return {
+    seasons: seasonRows.map((row) => row.season),
+    tags: [...logicalTags.values()].sort((a, b) =>
+      a.name.localeCompare(b.name, "en-GB", { sensitivity: "base" }),
+    ),
+  };
+}
+
+export async function getGalleryPost(id: string): Promise<GalleryPost | null> {
+  const rows = await db
+    .select(galleryPostSelection)
+    .from(galleryPosts)
+    .leftJoin(players, eq(players.discord_id, galleryPosts.author_discord_id))
+    .where(
+      and(
+        eq(galleryPosts.thread_id, id),
+        eq(galleryPosts.published, true),
+        isNull(galleryPosts.deleted_at),
+      ),
+    )
+    .limit(1);
+  const posts = await hydrateGalleryPosts(rows);
+  return posts[0] ?? null;
+}
+
+export async function getAdjacentGalleryPosts(id: string): Promise<{
+  newer: GalleryPostLink | null;
+  older: GalleryPostLink | null;
+}> {
+  const [current] = await db
+    .select({ postedAt: galleryPosts.posted_at })
+    .from(galleryPosts)
+    .where(
+      and(
+        eq(galleryPosts.thread_id, id),
+        eq(galleryPosts.published, true),
+        isNull(galleryPosts.deleted_at),
+      ),
+    )
+    .limit(1);
+  if (!current) return { newer: null, older: null };
+
+  const visible = [
+    eq(galleryPosts.published, true),
+    isNull(galleryPosts.deleted_at),
+  ];
+  const [newerRows, olderRows] = await Promise.all([
+    db
+      .select({ id: galleryPosts.thread_id, title: galleryPosts.title })
+      .from(galleryPosts)
+      .where(
+        and(
+          ...visible,
+          or(
+            gt(galleryPosts.posted_at, current.postedAt),
+            and(
+              eq(galleryPosts.posted_at, current.postedAt),
+              gt(galleryPosts.thread_id, id),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(galleryPosts.posted_at), asc(galleryPosts.thread_id))
+      .limit(1),
+    db
+      .select({ id: galleryPosts.thread_id, title: galleryPosts.title })
+      .from(galleryPosts)
+      .where(
+        and(
+          ...visible,
+          or(
+            lt(galleryPosts.posted_at, current.postedAt),
+            and(
+              eq(galleryPosts.posted_at, current.postedAt),
+              lt(galleryPosts.thread_id, id),
+            ),
+          ),
+        ),
+      )
+      .orderBy(desc(galleryPosts.posted_at), desc(galleryPosts.thread_id))
+      .limit(1),
+  ]);
+
+  return {
+    newer: newerRows[0] ?? null,
+    older: olderRows[0] ?? null,
+  };
+}
+
+/** Bounded until Gallery sitemaps are sharded. */
+export async function getGallerySitemapEntries(): Promise<
+  Array<{ id: string; updatedAt: Date }>
+> {
+  const rows = await db
+    .select({
+      id: galleryPosts.thread_id,
+      updatedAt: galleryPosts.content_updated_at,
+    })
+    .from(galleryPosts)
+    .where(
+      and(
+        eq(galleryPosts.published, true),
+        isNull(galleryPosts.deleted_at),
+      ),
+    )
+    .orderBy(
+      desc(galleryPosts.content_updated_at),
+      desc(galleryPosts.thread_id),
+    )
+    .limit(39_000);
+  return rows.map((row) => ({
+    id: row.id,
+    updatedAt: new Date(Number(row.updatedAt) * 1000),
+  }));
+}
 
 const CATEGORY_MAP: Record<string, keyof typeof playerSeasonStats.$inferSelect> = {
   play_time_seconds: "play_time_seconds",

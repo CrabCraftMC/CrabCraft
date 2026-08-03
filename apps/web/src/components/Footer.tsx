@@ -1,4 +1,21 @@
+import Link from "next/link";
 import config from "@/data/site-config.json";
+
+const exploreLinks = [
+  { name: "Home", url: "/" },
+  { name: "Gallery", url: "/gallery" },
+  { name: "Leaderboard", url: "/leaderboard" },
+  { name: "Advancements", url: "/leaderboard/advancements" },
+  { name: "Awards", url: "/awards" },
+  { name: "Wrapped", url: "/wrapped" },
+  { name: "Search players", url: "/search" },
+] as const;
+
+const communityLinks = [
+  { name: "Apply to join", url: "https://discord.crabcraft.net" },
+  { name: "Live map", url: "https://map.crabcraft.net" },
+  { name: "Wiki", url: "https://wiki.crabcraft.net" },
+] as const;
 
 const iconPaths: Record<string, string> = {
   youtube:
@@ -22,44 +39,103 @@ export default function Footer() {
   return (
     <footer className="pt-16 pb-8 text-gray-900 dark:text-gray-100 relative overflow-hidden transition-colors">
       <div className="container mx-auto px-4">
-        <div className="border-t border-gray-300 dark:border-[#3d3028] pt-6">
-          <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-600 dark:text-gray-400 gap-4">
+        <div className="border-t border-gray-300 pt-8 dark:border-[#3d3028]">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[0.9fr_1.6fr_0.8fr] lg:gap-12">
+            <nav aria-label="Explore">
+              <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">
+                Explore
+              </h2>
+              <ul className="mt-4 space-y-2.5">
+                {exploreLinks.map((link) => (
+                  <li key={link.url}>
+                    <Link
+                      href={link.url}
+                      className="text-sm text-gray-600 transition-colors hover:text-orange-500 dark:text-gray-400"
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <nav aria-label="Minecraft tools">
+              <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">
+                Minecraft tools
+              </h2>
+              <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                {config.navbar.tools.map((tool) => (
+                  <li key={tool.url}>
+                    <Link
+                      href={tool.url}
+                      className="text-sm text-gray-600 transition-colors hover:text-orange-500 dark:text-gray-400"
+                    >
+                      {tool.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <nav aria-label="Community">
+              <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">
+                Community
+              </h2>
+              <ul className="mt-4 space-y-2.5">
+                {communityLinks.map((link) => (
+                  <li key={link.url}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-gray-600 transition-colors hover:text-orange-500 dark:text-gray-400"
+                    >
+                      {link.name}
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+
+          <div className="mt-10 flex flex-col items-center justify-between gap-5 text-sm text-gray-600 dark:text-gray-400 md:flex-row">
             <div className="text-center md:text-left">
               <p className="font-semibold">
                 <span className="text-orange-500">{config.site.name}</span>{" "}
                 &copy; {new Date().getFullYear()}.
               </p>
-              <p className="text-xs mt-1">{config.site.disclaimer}</p>
+              <p className="mt-1 max-w-2xl text-xs">{config.site.disclaimer}</p>
             </div>
-            <div className="flex flex-col items-center md:items-end gap-2">
+            <div className="flex flex-col items-center gap-2 md:items-end">
               {process.env.GIT_COMMIT_SHA && (
                 <p className="text-xs text-gray-400 dark:text-gray-600 font-mono">
                   {process.env.GIT_COMMIT_SHA.slice(0, 7)}
                 </p>
               )}
               <div className="flex gap-4">
-              {config.navbar.socials.map(
-                (social: { platform: string; url: string }) => (
-                  <a
-                    key={social.platform}
-                    href={social.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={socialLabels[social.platform] ?? social.platform}
-                    className="text-gray-400 dark:text-gray-500 hover:text-orange-500 transition-colors"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-5 h-5"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      aria-hidden="true"
+                {config.navbar.socials.map(
+                  (social: { platform: string; url: string }) => (
+                    <a
+                      key={social.platform}
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={socialLabels[social.platform] ?? social.platform}
+                      className="text-gray-400 dark:text-gray-500 hover:text-orange-500 transition-colors"
                     >
-                      <path d={iconPaths[social.platform] || ""} />
-                    </svg>
-                  </a>
-                )
-              )}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-5 h-5"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d={iconPaths[social.platform] || ""} />
+                      </svg>
+                    </a>
+                  )
+                )}
               </div>
             </div>
           </div>

@@ -23,5 +23,8 @@
     "starboard": "",
     "counting": "",
     "ticketCategory": ""
+  },
+  "gallery": {
+    "channels": []
   }
 }

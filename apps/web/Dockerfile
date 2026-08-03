@@ -24,6 +24,8 @@ COPY --from=deps /app/packages/shared/node_module[s] ./packages/shared/node_modu
 
 ARG GIT_COMMIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
+ARG GALLERY_MEDIA_BASE_URL
+ENV GALLERY_MEDIA_BASE_URL=${GALLERY_MEDIA_BASE_URL}
 
 WORKDIR /app/apps/web
 RUN bun run build
