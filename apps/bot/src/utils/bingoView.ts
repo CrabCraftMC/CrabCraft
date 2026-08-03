@@ -23,9 +23,11 @@ const ORANGE_FROM = "#F97316";
 const ORANGE_TO = "#FB923C";
 const COMPLETE = "#77dd77";
 const SANS = "Unbounded";
+const PIXEL = "Minecraft";
 const logoUri = `data:image/png;base64,${fs.readFileSync(LOGO).toString("base64")}`;
 
 const fonts: FontLoader[] = [
+  { name: PIXEL, data: fs.readFileSync(path.join(ASSETS, "Minecraft.otf")) },
   { name: SANS, data: fs.readFileSync(path.join(ASSETS, "Unbounded.ttf")) },
 ];
 const CompatibleRenderer = Renderer as unknown as {
@@ -154,7 +156,7 @@ export async function generateBingoCardImage(
         } as any,
         children: [
           text(`${completedCount} / 16`, {
-            fontFamily: SANS, fontSize: 45, color: "#ffffff",
+            fontFamily: PIXEL, fontSize: 45, color: "#ffffff",
           }),
           text("COMPLETE", {
             fontFamily: SANS, fontSize: 11, fontWeight: 700,
@@ -200,7 +202,7 @@ export async function generateBingoCardImage(
       } as any),
       text("/bingo", {
         position: "absolute", right: 18, top: 18,
-        fontFamily: SANS, fontSize: 18, color: ORANGE_TO,
+        fontFamily: PIXEL, fontSize: 18, color: ORANGE_TO,
       } as any),
     ],
   });
