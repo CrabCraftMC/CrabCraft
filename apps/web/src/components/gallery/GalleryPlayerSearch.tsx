@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Search } from "lucide-react";
+import {
+  startTransition,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import PixelIcon from "@/components/PixelIcon";
-import type { GalleryPlayerFilterOption } from "@/data/gallery";
+import {
+  galleryHref,
+  type GalleryPlayerFilterOption,
+} from "@/data/gallery";
 
 export default function GalleryPlayerSearch({
   players,
@@ -16,12 +28,22 @@ export default function GalleryPlayerSearch({
   activeSeason: number | null;
   activeTag: string | null;
 }) {
-  const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+  const listboxRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
   const [value, setValue] = useState(activePlayer ?? "");
+  const [selectedPlayer, setSelectedPlayer] =
+    useState<GalleryPlayerFilterOption | null>(() =>
+      players.find((player) => player.username === activePlayer) ?? null,
+    );
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [listboxPosition, setListboxPosition] = useState<{
+    left: number;
+    top: number;
+    width: number;
+  } | null>(null);
   const matches = useMemo(() => {
     const query = value.trim().toLocaleLowerCase("en-GB");
     return query
@@ -33,24 +55,84 @@ export default function GalleryPlayerSearch({
   const showDropdown = open && matches.length > 0;
 
   useEffect(() => {
+    setValue(activePlayer ?? "");
+    setSelectedPlayer(
+      players.find((player) => player.username === activePlayer) ?? null,
+    );
+  }, [activePlayer, players]);
+
+  useLayoutEffect(() => {
+    if (!showDropdown) {
+      setListboxPosition(null);
+      return;
+    }
+
+    const reposition = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const width = Math.min(rect.width, window.innerWidth - 16);
+      const left = Math.min(
+        Math.max(rect.left, 8),
+        window.innerWidth - width - 8,
+      );
+      setListboxPosition({ left, top: rect.bottom + 8, width });
+    };
+
+    reposition();
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  }, [showDropdown]);
+
+  useEffect(() => {
     if (!showDropdown) return;
     document
       .getElementById(`${listboxId}-${activeIndex}`)
       ?.scrollIntoView({ block: "nearest" });
   }, [activeIndex, listboxId, showDropdown]);
 
+  const navigateToPlayer = (player: string | null) => {
+    setOpen(false);
+    startTransition(() => {
+      router.push(
+        galleryHref({
+          season: activeSeason,
+          tag: activeTag,
+          player,
+        }),
+        { scroll: false },
+      );
+    });
+  };
+
   const choosePlayer = (player: GalleryPlayerFilterOption) => {
     setValue(player.username);
-    setOpen(false);
-    requestAnimationFrame(() => formRef.current?.requestSubmit());
+    setSelectedPlayer(player);
+    navigateToPlayer(player.username);
   };
 
   return (
     <form
-      ref={formRef}
-      action="/gallery"
-      method="get"
       className="flex flex-col gap-2 lg:flex-row lg:items-center"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const player = value.trim();
+        const exactMatch = players.find(
+          (option) =>
+            option.username.toLocaleLowerCase("en-GB") ===
+            player.toLocaleLowerCase("en-GB"),
+        );
+        if (exactMatch) {
+          choosePlayer(exactMatch);
+          return;
+        }
+        setSelectedPlayer(null);
+        navigateToPlayer(player || null);
+      }}
     >
       <label
         htmlFor="gallery-player-search"
@@ -58,27 +140,31 @@ export default function GalleryPlayerSearch({
       >
         Player
       </label>
-      {activeSeason !== null ? (
-        <input type="hidden" name="season" value={activeSeason} />
-      ) : null}
-      {activeTag !== null ? (
-        <input type="hidden" name="tag" value={activeTag} />
-      ) : null}
-      <div className="flex w-full max-w-md gap-2">
+      <div className="w-full max-w-md">
         <div
           ref={containerRef}
-          className="relative min-w-0 flex-1"
+          className="flex h-10 min-w-0 items-center gap-2 rounded-full bg-paper px-3 py-2 focus-within:ring-2 focus-within:ring-orange-500"
           onBlur={(event) => {
             if (
-              !containerRef.current?.contains(event.relatedTarget as Node | null)
+              !containerRef.current?.contains(
+                event.relatedTarget as Node | null,
+              ) &&
+              !listboxRef.current?.contains(event.relatedTarget as Node | null)
             ) {
               setOpen(false);
             }
           }}
         >
+          {selectedPlayer ? (
+            <PixelIcon
+              src={selectedPlayer.avatarUrl}
+              alt=""
+              size={24}
+              imgClassName="rounded-md"
+            />
+          ) : null}
           <input
             id="gallery-player-search"
-            name="player"
             type="search"
             value={value}
             maxLength={32}
@@ -91,15 +177,20 @@ export default function GalleryPlayerSearch({
             aria-activedescendant={
               showDropdown ? `${listboxId}-${activeIndex}` : undefined
             }
-            className="w-full rounded-full bg-paper px-4 py-2 text-sm text-gray-800 outline-none placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-orange-500 dark:text-gray-200"
+            className="min-w-0 flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200"
             onFocus={() => {
               setActiveIndex(0);
               setOpen(true);
             }}
             onChange={(event) => {
-              setValue(event.target.value);
+              const nextValue = event.target.value;
+              setValue(nextValue);
+              setSelectedPlayer(null);
               setActiveIndex(0);
               setOpen(true);
+              if (nextValue === "" && activePlayer !== null) {
+                navigateToPlayer(null);
+              }
             }}
             onKeyDown={(event) => {
               if (event.key === "ArrowDown" && matches.length > 0) {
@@ -121,13 +212,22 @@ export default function GalleryPlayerSearch({
               }
             }}
           />
-
-          {showDropdown ? (
+        </div>
+      </div>
+      {showDropdown && listboxPosition
+        ? createPortal(
             <div
+              ref={listboxRef}
               id={listboxId}
               role="listbox"
               aria-label="Gallery players"
-              className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-line bg-paper-2 p-1.5 shadow-xl"
+              className="fixed max-h-72 overflow-y-auto rounded-2xl border border-line bg-paper-2 p-1.5 shadow-xl"
+              style={{
+                left: listboxPosition.left,
+                top: listboxPosition.top,
+                width: listboxPosition.width,
+                zIndex: 2_147_483_647,
+              }}
             >
               {matches.map((player, index) => (
                 <button
@@ -154,17 +254,10 @@ export default function GalleryPlayerSearch({
                   <span className="min-w-0 truncate">{player.username}</span>
                 </button>
               ))}
-            </div>
-          ) : null}
-        </div>
-        <button
-          type="submit"
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-gray-800 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 dark:bg-white dark:text-gray-950 dark:hover:bg-orange-400"
-        >
-          <Search className="h-3.5 w-3.5" />
-          Search
-        </button>
-      </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </form>
   );
 }
