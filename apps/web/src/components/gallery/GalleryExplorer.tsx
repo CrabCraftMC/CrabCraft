@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Images, RotateCcw } from "lucide-react";
+import GalleryFilterLink from "@/components/gallery/GalleryFilterLink";
 import GalleryTagIcon from "@/components/gallery/GalleryTagIcon";
 import GalleryReactionList from "@/components/gallery/GalleryReactionList";
 import GalleryPlayerSearch from "@/components/gallery/GalleryPlayerSearch";
@@ -90,7 +91,7 @@ export default function GalleryExplorer({
               Season
             </span>
             <div className="flex flex-wrap gap-2">
-              <Link
+              <GalleryFilterLink
                 href={galleryHref({
                   season: null,
                   tag: activeTag,
@@ -104,9 +105,9 @@ export default function GalleryExplorer({
                 }`}
               >
                 All
-              </Link>
+              </GalleryFilterLink>
               {orderedSeasons.map((season) => (
-                <Link
+                <GalleryFilterLink
                   key={season}
                   href={galleryHref({
                     season,
@@ -121,7 +122,7 @@ export default function GalleryExplorer({
                   }`}
                 >
                   Season {season}
-                </Link>
+                </GalleryFilterLink>
               ))}
             </div>
           </div>
@@ -133,7 +134,7 @@ export default function GalleryExplorer({
               Tag
             </span>
             <div className="flex flex-wrap gap-2">
-              <Link
+              <GalleryFilterLink
                 href={galleryHref({
                   season: activeSeason,
                   tag: null,
@@ -147,9 +148,9 @@ export default function GalleryExplorer({
                 }`}
               >
                 All tags
-              </Link>
+              </GalleryFilterLink>
               {tags.map((tag) => (
-                <Link
+                <GalleryFilterLink
                   key={tag.key}
                   href={galleryHref({
                     season: activeSeason,
@@ -168,7 +169,7 @@ export default function GalleryExplorer({
                     emojiUrl={tag.emojiUrl}
                   />
                   {tag.name}
-                </Link>
+                </GalleryFilterLink>
               ))}
             </div>
           </div>
@@ -191,13 +192,13 @@ export default function GalleryExplorer({
         {(activeSeason !== null ||
           activeTagRecord !== null ||
           activePlayer !== null) && (
-          <Link
+          <GalleryFilterLink
             href="/gallery"
             className="flex items-center gap-1.5 text-xs font-bold text-gray-600 transition-colors hover:text-orange-700 dark:text-gray-400 dark:hover:text-orange-400"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Clear filters
-          </Link>
+          </GalleryFilterLink>
         )}
       </div>
 
