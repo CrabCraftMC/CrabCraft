@@ -555,9 +555,16 @@ export const galleryPosts = pgTable(
     published_at: integer("published_at").notNull(),
     deleted_at: integer("deleted_at"),
     last_synced_at: integer("last_synced_at").notNull(),
+    reactions_revision: bigint("reactions_revision", { mode: "number" })
+      .notNull()
+      .default(0),
   },
   (table) => [
     check("gallery_posts_season_number_check", sql`${table.season_number} > 0`),
+    check(
+      "gallery_posts_reactions_revision_check",
+      sql`${table.reactions_revision} >= 0`,
+    ),
     index("gallery_posts_published_date_idx")
       .on(table.posted_at, table.thread_id)
       .where(sql`${table.published} = true AND ${table.deleted_at} IS NULL`),
@@ -599,6 +606,25 @@ export const galleryImages = pgTable(
     check("gallery_images_size_check", sql`${table.size} >= 0`),
     check("gallery_images_width_check", sql`${table.width} IS NULL OR ${table.width} > 0`),
     check("gallery_images_height_check", sql`${table.height} IS NULL OR ${table.height} > 0`),
+  ],
+);
+
+// ── gallery_reactions ──────────────────────────────────────────
+export const galleryReactions = pgTable(
+  "gallery_reactions",
+  {
+    post_id: text("post_id")
+      .notNull()
+      .references(() => galleryPosts.thread_id, { onDelete: "cascade" }),
+    emoji_key: text("emoji_key").notNull(),
+    emoji_id: text("emoji_id"),
+    emoji_name: text("emoji_name").notNull(),
+    animated: boolean("animated").notNull().default(false),
+    count: integer("count").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.post_id, table.emoji_key] }),
+    check("gallery_reactions_count_check", sql`${table.count} > 0`),
   ],
 );
 

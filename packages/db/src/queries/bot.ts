@@ -26,6 +26,7 @@ import {
   applicationChannels,
   galleryPosts,
   galleryImages,
+  galleryReactions,
   galleryTags,
   galleryPostTags,
   galleryPostSyncState,
@@ -77,6 +78,14 @@ export interface GalleryImageSyncInput {
   position: number;
 }
 
+export interface GalleryReactionSyncInput {
+  emojiKey: string;
+  emojiId: string | null;
+  emojiName: string;
+  animated: boolean;
+  count: number;
+}
+
 export interface GalleryPostSyncInput {
   threadId: string;
   channelId: string;
@@ -98,6 +107,7 @@ export interface GalleryPostSyncInput {
   contentHash: string;
   tags: GalleryAppliedTagSyncInput[];
   images: GalleryImageSyncInput[];
+  reactions: GalleryReactionSyncInput[];
 }
 
 export interface GalleryStorageDeletionClaim {
@@ -165,6 +175,60 @@ function assertGalleryPositions(
     }
     positions.add(entry.position);
   }
+}
+
+function assertGalleryReactions(
+  reactions: GalleryReactionSyncInput[],
+): void {
+  const keys = new Set<string>();
+  for (const reaction of reactions) {
+    if (!reaction.emojiKey || keys.has(reaction.emojiKey)) {
+      throw new Error(`Invalid or duplicate Gallery reaction key: ${reaction.emojiKey}`);
+    }
+    if (!reaction.emojiName) {
+      throw new Error("Gallery reactions must include an emoji name");
+    }
+    if (!Number.isSafeInteger(reaction.count) || reaction.count <= 0) {
+      throw new Error(`Invalid Gallery reaction count: ${reaction.count}`);
+    }
+    keys.add(reaction.emojiKey);
+  }
+}
+
+async function replaceGalleryPostReactionsInTransaction(
+  tx: GalleryTransaction,
+  threadId: string,
+  reactions: GalleryReactionSyncInput[],
+  revision: number,
+): Promise<boolean> {
+  const accepted = await tx
+    .update(galleryPosts)
+    .set({ reactions_revision: revision })
+    .where(
+      and(
+        eq(galleryPosts.thread_id, threadId),
+        lt(galleryPosts.reactions_revision, revision),
+      ),
+    )
+    .returning({ threadId: galleryPosts.thread_id });
+  if (accepted.length === 0) return false;
+
+  await tx
+    .delete(galleryReactions)
+    .where(eq(galleryReactions.post_id, threadId));
+  if (reactions.length > 0) {
+    await tx.insert(galleryReactions).values(
+      reactions.map((reaction) => ({
+        post_id: threadId,
+        emoji_key: reaction.emojiKey,
+        emoji_id: reaction.emojiId,
+        emoji_name: reaction.emojiName,
+        animated: reaction.animated,
+        count: reaction.count,
+      })),
+    );
+  }
+  return true;
 }
 
 async function lockGalleryChannelSyncState(
@@ -381,6 +445,7 @@ export async function upsertGalleryPost(
   }
   assertGalleryPositions("image", data.images);
   assertGalleryPositions("tag", data.tags);
+  assertGalleryReactions(data.reactions);
 
   return db.transaction(async (tx) => {
     const channelState = await lockGalleryChannelSyncState(tx, data.channelId);
@@ -554,8 +619,32 @@ export async function upsertGalleryPost(
         })),
       );
     }
+    await replaceGalleryPostReactionsInTransaction(
+      tx,
+      data.threadId,
+      data.reactions,
+      data.revision,
+    );
     return true;
   });
+}
+
+/** Replace reaction counts without making an older content snapshot stale. */
+export async function replaceGalleryPostReactions(
+  threadId: string,
+  reactions: GalleryReactionSyncInput[],
+  revision: number,
+): Promise<boolean> {
+  assertGalleryRevision(revision);
+  assertGalleryReactions(reactions);
+  return db.transaction((tx) =>
+    replaceGalleryPostReactionsInTransaction(
+      tx,
+      threadId,
+      reactions,
+      revision,
+    ),
+  );
 }
 
 /** Replace the available Discord tag catalogue for one media channel. */

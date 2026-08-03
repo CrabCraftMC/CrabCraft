@@ -1,7 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Images, RotateCcw } from "lucide-react";
+import { Images, RotateCcw } from "lucide-react";
 import GalleryTagIcon from "@/components/gallery/GalleryTagIcon";
+import GalleryReactionList from "@/components/gallery/GalleryReactionList";
+import GalleryPlayerSearch from "@/components/gallery/GalleryPlayerSearch";
+import GalleryPagination from "@/components/gallery/GalleryPagination";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { galleryMediaUrl } from "@/data/gallery-media";
@@ -9,6 +12,7 @@ import {
   formatGalleryDate,
   galleryHref,
   type GalleryFilterTag,
+  type GalleryPlayerFilterOption,
   type GalleryPost,
 } from "@/data/gallery";
 
@@ -16,8 +20,10 @@ interface GalleryExplorerProps {
   posts: GalleryPost[];
   seasons: number[];
   tags: GalleryFilterTag[];
+  players: GalleryPlayerFilterOption[];
   activeSeason: number | null;
   activeTag: string | null;
+  activePlayer: string | null;
   page: number;
   pageCount: number;
   total: number;
@@ -61,8 +67,10 @@ export default function GalleryExplorer({
   posts,
   seasons,
   tags,
+  players,
   activeSeason,
   activeTag,
+  activePlayer,
   page,
   pageCount,
   total,
@@ -72,9 +80,8 @@ export default function GalleryExplorer({
 
   return (
     <>
-      <Squircle
-        cornerRadius={28}
-        className="mb-8 bg-paper-2 p-4 sm:p-5 animate-in motion-reduce:animate-none motion-reduce:opacity-100"
+      <div
+        className="mb-8 rounded-[28px] bg-paper-2 p-4 sm:p-5 animate-in motion-reduce:animate-none motion-reduce:opacity-100"
         style={{ animationDelay: "0.08s" }}
       >
         <div className="flex flex-col gap-4">
@@ -84,7 +91,11 @@ export default function GalleryExplorer({
             </span>
             <div className="flex flex-wrap gap-2">
               <Link
-                href={galleryHref({ season: null, tag: activeTag })}
+                href={galleryHref({
+                  season: null,
+                  tag: activeTag,
+                  player: activePlayer,
+                })}
                 aria-current={activeSeason === null ? "page" : undefined}
                 className={`rounded-full px-3.5 py-2 text-xs font-bold transition-colors ${
                   activeSeason === null
@@ -97,7 +108,11 @@ export default function GalleryExplorer({
               {orderedSeasons.map((season) => (
                 <Link
                   key={season}
-                  href={galleryHref({ season, tag: activeTag })}
+                  href={galleryHref({
+                    season,
+                    tag: activeTag,
+                    player: activePlayer,
+                  })}
                   aria-current={activeSeason === season ? "page" : undefined}
                   className={`rounded-full px-3.5 py-2 text-xs font-bold transition-colors ${
                     activeSeason === season
@@ -119,7 +134,11 @@ export default function GalleryExplorer({
             </span>
             <div className="flex flex-wrap gap-2">
               <Link
-                href={galleryHref({ season: activeSeason, tag: null })}
+                href={galleryHref({
+                  season: activeSeason,
+                  tag: null,
+                  player: activePlayer,
+                })}
                 aria-current={activeTagRecord === null ? "page" : undefined}
                 className={`rounded-full px-3.5 py-2 text-xs font-bold transition-colors ${
                   activeTagRecord === null
@@ -132,7 +151,11 @@ export default function GalleryExplorer({
               {tags.map((tag) => (
                 <Link
                   key={tag.key}
-                  href={galleryHref({ season: activeSeason, tag: tag.key })}
+                  href={galleryHref({
+                    season: activeSeason,
+                    tag: tag.key,
+                    player: activePlayer,
+                  })}
                   aria-current={activeTag === tag.key ? "page" : undefined}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold transition-colors ${
                     activeTag === tag.key
@@ -149,14 +172,25 @@ export default function GalleryExplorer({
               ))}
             </div>
           </div>
+
+          <div className="h-px bg-line" />
+
+          <GalleryPlayerSearch
+            players={players}
+            activePlayer={activePlayer}
+            activeSeason={activeSeason}
+            activeTag={activeTag}
+          />
         </div>
-      </Squircle>
+      </div>
 
       <div className="mb-4 flex items-center justify-between gap-4">
         <p className="text-sm text-gray-600 dark:text-gray-400">
           {total} {total === 1 ? "submission" : "submissions"}
         </p>
-        {(activeSeason !== null || activeTagRecord !== null) && (
+        {(activeSeason !== null ||
+          activeTagRecord !== null ||
+          activePlayer !== null) && (
           <Link
             href="/gallery"
             className="flex items-center gap-1.5 text-xs font-bold text-gray-600 transition-colors hover:text-orange-700 dark:text-gray-400 dark:hover:text-orange-400"
@@ -172,7 +206,7 @@ export default function GalleryExplorer({
           {posts.map((post, index) => (
             <article
               key={post.id}
-              className="group animate-in overflow-hidden rounded-[2rem] bg-paper-2 shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 motion-reduce:animate-none motion-reduce:opacity-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              className="group animate-in overflow-hidden rounded-[2rem] bg-paper-2 shadow-sm motion-reduce:animate-none motion-reduce:opacity-100"
               style={{ animationDelay: `${0.12 + index * 0.05}s` }}
             >
               <Link
@@ -190,7 +224,7 @@ export default function GalleryExplorer({
                       alt={image.alt ?? `${post.title} — image ${imageIndex + 1}`}
                       fill
                       sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                      className="object-cover"
                       priority={index < 2 && imageIndex === 0}
                       unoptimized
                     />
@@ -208,28 +242,49 @@ export default function GalleryExplorer({
               <div className="p-5">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Link
-                    href={galleryHref({ season: post.season, tag: activeTag })}
+                    href={galleryHref({
+                      season: post.season,
+                      tag: activeTag,
+                      player: activePlayer,
+                    })}
                     className="rounded-full bg-orange-100 px-3 py-1 text-[11px] font-bold text-orange-900 transition-colors hover:bg-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:hover:bg-orange-500/30"
                   >
                     Season {post.season}
                   </Link>
-                  {post.tags.slice(0, 2).map((tag) => (
-                    <Link
-                      key={tag.id}
-                      href={galleryHref({
-                        season: activeSeason,
-                        tag: tag.filterKey,
-                      })}
-                      className="inline-flex items-center gap-1 rounded-full bg-paper px-2.5 py-1 text-[11px] font-bold text-gray-600 transition-colors hover:text-orange-700 dark:text-gray-400 dark:hover:text-orange-400"
-                    >
-                      <GalleryTagIcon
-                        emojiName={tag.emojiName}
-                        emojiUrl={tag.emojiUrl}
-                        size={12}
-                      />
-                      {tag.name}
-                    </Link>
-                  ))}
+                  {post.tags.slice(0, 2).map((tag) => {
+                    const contents = (
+                      <>
+                        <GalleryTagIcon
+                          emojiName={tag.emojiName}
+                          emojiUrl={tag.emojiUrl}
+                          size={12}
+                        />
+                        {tag.name}
+                      </>
+                    );
+                    const className =
+                      "inline-flex items-center gap-1 rounded-full bg-paper px-2.5 py-1 text-[11px] font-bold text-gray-600 dark:text-gray-400";
+
+                    return tags.some(
+                      (filterTag) => filterTag.key === tag.filterKey,
+                    ) ? (
+                      <Link
+                        key={tag.id}
+                        href={galleryHref({
+                          season: activeSeason,
+                          tag: tag.filterKey,
+                          player: activePlayer,
+                        })}
+                        className={`${className} transition-colors hover:text-orange-700 dark:hover:text-orange-400`}
+                      >
+                        {contents}
+                      </Link>
+                    ) : (
+                      <span key={tag.id} className={className}>
+                        {contents}
+                      </span>
+                    );
+                  })}
                 </div>
 
                 <Link href={`/gallery/${post.id}`} className="block min-w-0">
@@ -242,6 +297,12 @@ export default function GalleryExplorer({
                     </p>
                   ) : null}
                 </Link>
+
+                {post.reactions.length > 0 ? (
+                  <div className="mt-4">
+                    <GalleryReactionList reactions={post.reactions} limit={4} />
+                  </div>
+                ) : null}
 
                 <div className="mt-5 flex items-center justify-between gap-3 border-t border-line pt-4">
                   <GalleryAuthorByline post={post} />
@@ -259,11 +320,13 @@ export default function GalleryExplorer({
       ) : (
         <Squircle cornerRadius={28} className="bg-paper-2 px-6 py-16 text-center">
           <Images className="mx-auto h-8 w-8 text-gray-400 dark:text-gray-600" />
-          {activeSeason !== null || activeTagRecord !== null ? (
+          {activeSeason !== null ||
+          activeTagRecord !== null ||
+          activePlayer !== null ? (
             <>
               <h2 className="mt-4 text-lg font-bold">No screenshots match</h2>
               <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                Try another season or clear the current filters.
+                Try another player or season, or clear the current filters.
               </p>
             </>
           ) : (
@@ -278,42 +341,13 @@ export default function GalleryExplorer({
       )}
 
       {pageCount > 1 ? (
-        <nav
-          aria-label="Gallery pages"
-          className="mt-10 flex flex-wrap items-center justify-center gap-3"
-        >
-          {page > 1 ? (
-            <Link
-              rel="prev"
-              href={galleryHref({
-                season: activeSeason,
-                tag: activeTagRecord?.key ?? null,
-                page: page - 1,
-              })}
-              className="inline-flex items-center gap-1.5 rounded-full bg-paper-2 px-4 py-2.5 text-sm font-bold text-gray-700 transition-colors hover:text-orange-700 dark:text-gray-300 dark:hover:text-orange-400"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Link>
-          ) : null}
-          <span className="px-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-            Page {page} of {pageCount}
-          </span>
-          {page < pageCount ? (
-            <Link
-              rel="next"
-              href={galleryHref({
-                season: activeSeason,
-                tag: activeTagRecord?.key ?? null,
-                page: page + 1,
-              })}
-              className="inline-flex items-center gap-1.5 rounded-full bg-paper-2 px-4 py-2.5 text-sm font-bold text-gray-700 transition-colors hover:text-orange-700 dark:text-gray-300 dark:hover:text-orange-400"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          ) : null}
-        </nav>
+        <GalleryPagination
+          page={page}
+          pageCount={pageCount}
+          season={activeSeason}
+          tag={activeTagRecord?.key ?? null}
+          player={activePlayer}
+        />
       ) : null}
     </>
   );

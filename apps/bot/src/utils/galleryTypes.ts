@@ -20,6 +20,14 @@ export interface GalleryImageSyncInput {
   size: number;
 }
 
+export interface GalleryReactionSyncInput {
+  emojiKey: string;
+  emojiId: string | null;
+  emojiName: string;
+  animated: boolean;
+  count: number;
+}
+
 export interface GalleryPostSyncInput {
   threadId: string;
   channelId: string;
@@ -41,6 +49,7 @@ export interface GalleryPostSyncInput {
   syncedAt: number;
   tags: GalleryTagSyncInput[];
   images: GalleryImageSyncInput[];
+  reactions: GalleryReactionSyncInput[];
 }
 
 export interface GalleryStoredImage {

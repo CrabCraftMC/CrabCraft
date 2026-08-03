@@ -10,6 +10,7 @@ import {
 import { ArrowLeft, CalendarDays, Images, MessageSquareText } from "lucide-react";
 import GalleryMediaViewer from "@/components/gallery/GalleryMediaViewer";
 import GalleryTagIcon from "@/components/gallery/GalleryTagIcon";
+import GalleryReactionList from "@/components/gallery/GalleryReactionList";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import {
@@ -208,6 +209,15 @@ export default async function GalleryPostPage({ params }: GalleryPostPageProps) 
                     {tag.name}
                   </Link>
                 ))}
+              </div>
+            ) : null}
+
+            {post.reactions.length > 0 ? (
+              <div className="mt-6">
+                <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Discord reactions
+                </span>
+                <GalleryReactionList reactions={post.reactions} />
               </div>
             ) : null}
 
