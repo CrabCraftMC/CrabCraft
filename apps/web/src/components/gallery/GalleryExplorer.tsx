@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Images, RotateCcw } from "lucide-react";
+import GalleryFilterLink from "@/components/gallery/GalleryFilterLink";
+import GalleryPostLink from "@/components/gallery/GalleryPostLink";
 import GalleryTagIcon from "@/components/gallery/GalleryTagIcon";
 import GalleryReactionList from "@/components/gallery/GalleryReactionList";
 import GalleryPlayerSearch from "@/components/gallery/GalleryPlayerSearch";
@@ -90,7 +92,7 @@ export default function GalleryExplorer({
               Season
             </span>
             <div className="flex flex-wrap gap-2">
-              <Link
+              <GalleryFilterLink
                 href={galleryHref({
                   season: null,
                   tag: activeTag,
@@ -104,9 +106,9 @@ export default function GalleryExplorer({
                 }`}
               >
                 All
-              </Link>
+              </GalleryFilterLink>
               {orderedSeasons.map((season) => (
-                <Link
+                <GalleryFilterLink
                   key={season}
                   href={galleryHref({
                     season,
@@ -121,7 +123,7 @@ export default function GalleryExplorer({
                   }`}
                 >
                   Season {season}
-                </Link>
+                </GalleryFilterLink>
               ))}
             </div>
           </div>
@@ -133,7 +135,7 @@ export default function GalleryExplorer({
               Tag
             </span>
             <div className="flex flex-wrap gap-2">
-              <Link
+              <GalleryFilterLink
                 href={galleryHref({
                   season: activeSeason,
                   tag: null,
@@ -147,9 +149,9 @@ export default function GalleryExplorer({
                 }`}
               >
                 All tags
-              </Link>
+              </GalleryFilterLink>
               {tags.map((tag) => (
-                <Link
+                <GalleryFilterLink
                   key={tag.key}
                   href={galleryHref({
                     season: activeSeason,
@@ -168,7 +170,7 @@ export default function GalleryExplorer({
                     emojiUrl={tag.emojiUrl}
                   />
                   {tag.name}
-                </Link>
+                </GalleryFilterLink>
               ))}
             </div>
           </div>
@@ -191,13 +193,13 @@ export default function GalleryExplorer({
         {(activeSeason !== null ||
           activeTagRecord !== null ||
           activePlayer !== null) && (
-          <Link
+          <GalleryFilterLink
             href="/gallery"
             className="flex items-center gap-1.5 text-xs font-bold text-gray-600 transition-colors hover:text-orange-700 dark:text-gray-400 dark:hover:text-orange-400"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Clear filters
-          </Link>
+          </GalleryFilterLink>
         )}
       </div>
 
@@ -206,13 +208,14 @@ export default function GalleryExplorer({
           {posts.map((post, index) => (
             <article
               key={post.id}
-              className="group animate-in overflow-hidden rounded-[2rem] bg-paper-2 shadow-sm motion-reduce:animate-none motion-reduce:opacity-100"
+              className="group flex h-full flex-col overflow-hidden rounded-[2rem] bg-paper-2 shadow-sm animate-in motion-reduce:animate-none motion-reduce:opacity-100"
               style={{ animationDelay: `${0.12 + index * 0.05}s` }}
             >
-              <Link
+              <GalleryPostLink
                 href={`/gallery/${post.id}`}
+                imageUrl={galleryMediaUrl(post.images[0].url, "detail")}
                 aria-label={`View ${post.title}`}
-                className="relative grid aspect-[16/10] grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden bg-[#130f0c] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/60 focus-visible:ring-inset"
+                className="relative grid aspect-[16/10] shrink-0 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden bg-[#130f0c] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/60 focus-visible:ring-inset"
               >
                 {post.images.slice(0, 4).map((image, imageIndex) => (
                   <span
@@ -237,9 +240,9 @@ export default function GalleryExplorer({
                     {post.images.length} photos
                   </span>
                 )}
-              </Link>
+              </GalleryPostLink>
 
-              <div className="p-5">
+              <div className="flex flex-1 flex-col p-5">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Link
                     href={galleryHref({
@@ -287,7 +290,11 @@ export default function GalleryExplorer({
                   })}
                 </div>
 
-                <Link href={`/gallery/${post.id}`} className="block min-w-0">
+                <GalleryPostLink
+                  href={`/gallery/${post.id}`}
+                  imageUrl={galleryMediaUrl(post.images[0].url, "detail")}
+                  className="block min-w-0"
+                >
                   <h2 className="break-words text-lg font-bold leading-snug text-gray-900 transition-colors group-hover:text-orange-700 dark:text-gray-100 dark:group-hover:text-orange-400">
                     {post.title}
                   </h2>
@@ -296,7 +303,7 @@ export default function GalleryExplorer({
                       {post.content}
                     </p>
                   ) : null}
-                </Link>
+                </GalleryPostLink>
 
                 {post.reactions.length > 0 ? (
                   <div className="mt-4">
@@ -304,14 +311,16 @@ export default function GalleryExplorer({
                   </div>
                 ) : null}
 
-                <div className="mt-5 flex items-center justify-between gap-3 border-t border-line pt-4">
-                  <GalleryAuthorByline post={post} />
-                  <time
-                    dateTime={post.postedAt.toISOString()}
-                    className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400"
-                  >
-                    {formatGalleryDate(post.postedAt)}
-                  </time>
+                <div className="mt-auto pt-5">
+                  <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
+                    <GalleryAuthorByline post={post} />
+                    <time
+                      dateTime={post.postedAt.toISOString()}
+                      className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400"
+                    >
+                      {formatGalleryDate(post.postedAt)}
+                    </time>
+                  </div>
                 </div>
               </div>
             </article>

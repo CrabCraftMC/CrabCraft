@@ -8,6 +8,7 @@ import {
   getGalleryPost,
 } from "@crabcraft/db/queries/web";
 import { ArrowLeft, CalendarDays, Images, MessageSquareText } from "lucide-react";
+import GalleryFilterLink from "@/components/gallery/GalleryFilterLink";
 import GalleryMediaViewer from "@/components/gallery/GalleryMediaViewer";
 import GalleryTagIcon from "@/components/gallery/GalleryTagIcon";
 import GalleryReactionList from "@/components/gallery/GalleryReactionList";
@@ -22,6 +23,7 @@ import { galleryMediaUrl } from "@/data/gallery-media";
 const SITE_URL = "https://crabcraft.net";
 
 export const dynamic = "force-dynamic";
+export const unstable_dynamicStaleTime = 30;
 
 interface GalleryPostPageProps {
   params: Promise<{ id: string }>;
@@ -145,13 +147,13 @@ export default async function GalleryPostPage({ params }: GalleryPostPageProps) 
         dangerouslySetInnerHTML={{ __html: serialiseJsonLd(jsonLd) }}
       />
       <div className="container mx-auto max-w-7xl px-4">
-        <Link
+        <GalleryFilterLink
           href="/gallery"
           className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-gray-600 transition-colors hover:text-orange-700 dark:text-gray-400 dark:hover:text-orange-400"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Gallery
-        </Link>
+        </GalleryFilterLink>
 
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(19rem,0.8fr)] lg:gap-8">
           <section

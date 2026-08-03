@@ -16,6 +16,7 @@ const PAGE_SIZE = 12;
 const MAX_PAGE = 10_000;
 
 export const dynamic = "force-dynamic";
+export const unstable_dynamicStaleTime = 30;
 
 interface GalleryPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
