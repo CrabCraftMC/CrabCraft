@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities.bingo;
 
 import io.papermc.paper.event.entity.EntityFertilizeEggEvent;
+import io.papermc.paper.event.player.PlayerItemGroupCooldownEvent;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import java.util.ArrayDeque;
@@ -94,6 +95,7 @@ public final class HardBingoListener implements Listener {
     private final BiPredicate<Player, BingoTask> tracking;
     private final BiConsumer<Player, BingoTask> completion;
     private final Map<UUID, Set<String>> hornsByPlayer = new HashMap<>();
+    private final Map<UUID, PendingHorn> pendingHorns = new HashMap<>();
     private final Map<BlockKey, OrePlacement> oreByBlock = new HashMap<>();
     private final Map<UUID, Set<BlockKey>> oresByPlayer = new HashMap<>();
     private final Map<BlockKey, UUID> scaffoldingOwnerByBlock = new HashMap<>();
@@ -150,16 +152,25 @@ public final class HardBingoListener implements Listener {
                 .getRegistry(RegistryKey.INSTRUMENT)
                 .getKey(meta.getInstrument())
                 .asString();
-        ItemStack playedHorn = singleItem(item);
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!player.isOnline() || !player.hasCooldown(playedHorn)) return;
-            Set<String> horns = hornsByPlayer.computeIfAbsent(
-                    player.getUniqueId(), ignored -> new HashSet<>());
-            horns.add(instrument);
-            if (horns.size() >= 5) {
-                completion.accept(player, BingoTask.PLAY_FIVE_GOAT_HORNS);
-            }
-        });
+        pendingHorns.put(player.getUniqueId(), new PendingHorn(instrument, Bukkit.getCurrentTick()));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onItemCooldown(PlayerItemGroupCooldownEvent event) {
+        if (event.getCooldown() <= 0) return;
+        Player player = event.getPlayer();
+        PendingHorn pending = pendingHorns.remove(player.getUniqueId());
+        if (pending == null
+                || !isFresh(pending.tick(), Bukkit.getCurrentTick(), 1)
+                || !tracking.test(player, BingoTask.PLAY_FIVE_GOAT_HORNS)) {
+            return;
+        }
+        Set<String> horns = hornsByPlayer.computeIfAbsent(
+                player.getUniqueId(), ignored -> new HashSet<>());
+        horns.add(pending.instrument());
+        if (horns.size() >= 5) {
+            completion.accept(player, BingoTask.PLAY_FIVE_GOAT_HORNS);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -542,6 +553,7 @@ public final class HardBingoListener implements Listener {
 
     public void resetPlayer(UUID playerId) {
         hornsByPlayer.remove(playerId);
+        pendingHorns.remove(playerId);
         removeOreBlocks(playerId);
         removeOwnedBlocks(playerId, scaffoldingOwnerByBlock, scaffoldingByPlayer);
         removeOwnedBlocks(playerId, anvilOwnerByBlock, anvilsByPlayer);
@@ -556,6 +568,7 @@ public final class HardBingoListener implements Listener {
 
     public void clear() {
         hornsByPlayer.clear();
+        pendingHorns.clear();
         oreByBlock.clear();
         oresByPlayer.clear();
         scaffoldingOwnerByBlock.clear();
@@ -791,6 +804,8 @@ public final class HardBingoListener implements Listener {
     }
 
     private record OrePlacement(UUID playerId, OreFamily family) {}
+
+    private record PendingHorn(String instrument, int tick) {}
 
     private record TimedPlayer(UUID playerId, int tick) {}
 

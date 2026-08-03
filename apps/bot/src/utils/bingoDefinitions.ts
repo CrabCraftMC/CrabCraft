@@ -7,11 +7,11 @@ export const FIRST_BINGO_CARD = {
   tasks: [
     { id: "grow_tree_in_nether", label: "Grow a tree in the Nether" },
     { id: "play_five_goat_horns", label: "Play five different goat horn types" },
-    { id: "connect_all_ore_types", label: "Place all 11 ore types in one connected cluster" },
+    { id: "connect_all_ore_types", label: "Place 10 ore types plus Ancient Debris in one connected cluster" },
     { id: "activate_totem", label: "Activate a Totem of Undying" },
     { id: "breed_mule", label: "Breed a horse and donkey to produce a mule" },
     { id: "kill_hostile_with_anvil", label: "Kill a hostile mob with a falling anvil" },
-    { id: "two_creepers_one_boat", label: "Get two creepers into the same boat" },
+    { id: "two_creepers_one_boat", label: "Place a boat and get two creepers into it" },
     { id: "ignite_campfire_from_distance", label: "Light a campfire with a flaming projectile from 10+ blocks" },
     { id: "breed_sniffers_collect_egg", label: "Breed two Sniffers and collect their Sniffer Egg" },
     { id: "cure_zombie_villager", label: "Cure a zombie villager" },

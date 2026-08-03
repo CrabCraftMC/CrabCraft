@@ -18,8 +18,8 @@ public enum BingoTask {
             "Successfully play five distinct goat horn instruments after this card starts."),
     CONNECT_ALL_ORE_TYPES(
             "connect_all_ore_types",
-            "Place all 11 ore types in one connected cluster.",
-            "Every ore must be placed by you after the card starts and touch the cluster by a face. Stone and deepslate variants count as the same ore."),
+            "Place 10 ore types plus Ancient Debris in one connected cluster.",
+            "Place coal, iron, copper, gold, redstone, lapis, diamond, emerald, Nether quartz, Nether gold and Ancient Debris. Every block must be placed by you after the card starts and touch the cluster by a face; stone and deepslate variants count as the same ore."),
     ACTIVATE_TOTEM(
             "activate_totem",
             "Activate a Totem of Undying.",
@@ -34,8 +34,8 @@ public enum BingoTask {
             "Place the anvil yourself and let its falling-block damage deal the final blow."),
     TWO_CREEPERS_ONE_BOAT(
             "two_creepers_one_boat",
-            "Get two creepers into the same boat.",
-            "Place the boat after the card starts, then get two creepers into it at the same time."),
+            "Place a boat and get two creepers into it.",
+            "You receive credit as the player who placed the boat after the card starts; it must then carry two creepers at the same time."),
     IGNITE_CAMPFIRE_FROM_DISTANCE(
             "ignite_campfire_from_distance",
             "Light a campfire with a flaming projectile from at least 10 blocks away.",
