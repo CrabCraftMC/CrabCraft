@@ -125,6 +125,7 @@ def regressionTests = [
     moduleConfigManagerRegressionTest: 'crabcraft.net.crabUtilities.config.ModuleConfigManagerRegressionTest',
     accurateBlockPlacementRegressionTest: 'crabcraft.net.crabUtilities.accurateplacement.AccurateBlockPlacementRegressionTest',
     appleSkinLifecycleRegressionTest: 'crabcraft.net.crabUtilities.appleskin.AppleSkinLifecycleRegressionTest',
+    bingoTaskRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoTaskRegressionTest',
 ]
 def runtimeOnlyRegressionTests = [
     'voiceRelayRegressionTest',

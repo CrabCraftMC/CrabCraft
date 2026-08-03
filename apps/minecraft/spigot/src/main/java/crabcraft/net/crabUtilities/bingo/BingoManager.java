@@ -44,7 +44,7 @@ public final class BingoManager {
     private final String sourceBackend;
     private final boolean enabled;
     private JedisPool jedisPool;
-    private BingoListener listener;
+    private HardBingoListener listener;
     private volatile BingoActiveCard activeCard;
     private volatile boolean redisFailureLogged;
 
@@ -68,7 +68,7 @@ public final class BingoManager {
         jedisPool = password == null || password.isEmpty()
                 ? new JedisPool(poolConfig, host, port, 2_000)
                 : new JedisPool(poolConfig, host, port, 2_000, password);
-        listener = new BingoListener(plugin, this);
+        listener = new HardBingoListener(plugin, this::isTracking, this::complete);
         plugin.getServer().getPluginManager().registerEvents(listener, plugin);
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::refreshActiveCard, 0L, 20L * 30L);
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::flushPending, 20L, 20L);

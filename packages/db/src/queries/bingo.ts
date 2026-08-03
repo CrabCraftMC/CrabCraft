@@ -32,15 +32,24 @@ export async function seedBingoCard(card: {
   endsAt: number;
   tasks: BingoTaskDefinition[];
 }): Promise<void> {
+  const values = {
+    starts_at: card.startsAt,
+    ends_at: card.endsAt,
+    tasks: card.tasks,
+  };
   await db
     .insert(bingoCards)
     .values({
       number: card.number,
-      starts_at: card.startsAt,
-      ends_at: card.endsAt,
-      tasks: card.tasks,
+      ...values,
     })
     .onConflictDoNothing({ target: bingoCards.number });
+
+  // Prepared cards remain editable until their Discord announcement is sent.
+  await db
+    .update(bingoCards)
+    .set(values)
+    .where(and(eq(bingoCards.number, card.number), isNull(bingoCards.posted_at)));
 }
 
 export async function getActiveBingoCard(now: number): Promise<BingoCardRecord | null> {
