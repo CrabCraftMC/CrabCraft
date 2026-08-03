@@ -37,6 +37,7 @@ import { startIdentitySync } from "../utils/identitySync.js";
 import { startPunishmentRoleSync } from "../utils/punishmentRoleSync.js";
 import { startBotPlayerStatus } from "../utils/botStatus.js";
 import { startGallerySync } from "../utils/gallerySync.js";
+import { startBingoService } from "../utils/bingoService.js";
 
 export default class ReadyEvent extends Event {
   constructor() {
@@ -221,6 +222,9 @@ export default class ReadyEvent extends Event {
 
     // Mirror configured Discord Media/Forum channels into the website gallery.
     if (client.isReady()) startGallerySync(client);
+
+    // Weekly card publication, durable Paper completion intake and milestone delivery.
+    startBingoService(client);
 
     // Deploy slash commands on every startup
     if (!client.user) return;

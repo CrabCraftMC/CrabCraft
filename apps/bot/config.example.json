@@ -4,6 +4,9 @@
     "mod": "",
     "council": "",
     "punished": "",
+    "bingoLine": "",
+    "bingoBlackout": "",
+    "bingoPing": "",
     "live": "",
     "currentSeason": ""
   },
@@ -12,7 +15,10 @@
     "port": 6379,
     "password": "",
     "punishmentStream": "crabcraft:punishments",
-    "punishmentGroup": "crabcraft-bot"
+    "punishmentGroup": "crabcraft-bot",
+    "bingoStream": "crabcraft:bingo:completions",
+    "bingoGroup": "crabcraft-bot-bingo",
+    "bingoActiveCardKey": "crabcraft:bingo:active-card"
   },
   "channels": {
     "applicationCategory": "",
@@ -22,9 +28,14 @@
     "wiki": "",
     "starboard": "",
     "counting": "",
+    "bingo": "",
     "ticketCategory": ""
   },
   "gallery": {
     "channels": []
+  },
+  "bingo": {
+    "ownerUserId": "866686984587313173",
+    "missingCardWarningHours": 48
   }
 }

@@ -275,6 +275,72 @@ export const playerSettings = pgTable("player_settings", {
   updated_at: integer("updated_at").notNull(),
 });
 
+// ── weekly bingo ───────────────────────────────────────────────
+// Cards are prepared in advance. Paper receives the currently active card via
+// Redis while the Discord bot owns scheduling, rendering and durable progress.
+export const bingoCards = pgTable(
+  "bingo_cards",
+  {
+    id: serial("id").primaryKey(),
+    number: integer("number").notNull(),
+    starts_at: integer("starts_at").notNull(),
+    ends_at: integer("ends_at").notNull(),
+    tasks: jsonb("tasks").$type<Array<{ id: string; label: string }>>().notNull(),
+    announcement_guild_id: text("announcement_guild_id"),
+    announcement_channel_id: text("announcement_channel_id"),
+    announcement_message_id: text("announcement_message_id"),
+    posted_at: integer("posted_at"),
+    created_at: integer("created_at")
+      .notNull()
+      .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  },
+  (table) => [
+    uniqueIndex("bingo_cards_number_unique").on(table.number),
+    index("bingo_cards_active_idx").on(table.starts_at, table.ends_at),
+  ],
+);
+
+export const bingoPlayerProgress = pgTable(
+  "bingo_player_progress",
+  {
+    card_id: integer("card_id")
+      .notNull()
+      .references(() => bingoCards.id, { onDelete: "cascade" }),
+    minecraft_uuid: text("minecraft_uuid").notNull(),
+    source_minecraft_uuid: text("source_minecraft_uuid").notNull(),
+    task_id: text("task_id").notNull(),
+    completed_at: integer("completed_at").notNull(),
+    source_backend: text("source_backend"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.card_id, table.minecraft_uuid, table.task_id] }),
+    index("bingo_progress_player_idx").on(table.minecraft_uuid, table.card_id),
+  ],
+);
+
+export const bingoPlayerMilestones = pgTable(
+  "bingo_player_milestones",
+  {
+    card_id: integer("card_id")
+      .notNull()
+      .references(() => bingoCards.id, { onDelete: "cascade" }),
+    minecraft_uuid: text("minecraft_uuid").notNull(),
+    first_line_completed_at: integer("first_line_completed_at"),
+    first_line_announced_at: integer("first_line_announced_at"),
+    first_line_role_awarded_at: integer("first_line_role_awarded_at"),
+    blackout_completed_at: integer("blackout_completed_at"),
+    blackout_announced_at: integer("blackout_announced_at"),
+    blackout_role_awarded_at: integer("blackout_role_awarded_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.card_id, table.minecraft_uuid] }),
+    index("bingo_milestones_pending_idx").on(
+      table.first_line_announced_at,
+      table.blackout_announced_at,
+    ),
+  ],
+);
+
 // ── player_login_streaks ───────────────────────────────────────
 // All-time login streaks per Minecraft account. Updated by the
 // Velocity proxy after a player has been online long enough to qualify

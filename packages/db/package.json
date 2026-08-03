@@ -6,6 +6,7 @@
     "./schema": "./src/schema.ts",
     "./client": "./src/client.ts",
     "./queries/bot": "./src/queries/bot.ts",
+    "./queries/bingo": "./src/queries/bingo.ts",
     "./queries/web": "./src/queries/web.ts",
     "./queries/auth": "./src/queries/auth.ts"
   },

@@ -11,6 +11,9 @@ interface IdConfig {
     mod: string;
     council: string;
     punished: string;
+    bingoLine?: string;
+    bingoBlackout?: string;
+    bingoPing?: string;
     live?: string;
     currentSeason?: string;
   };
@@ -20,6 +23,9 @@ interface IdConfig {
     password?: string;
     punishmentStream?: string;
     punishmentGroup?: string;
+    bingoStream?: string;
+    bingoGroup?: string;
+    bingoActiveCardKey?: string;
   };
   channels: {
     applicationCategory: string;
@@ -29,6 +35,7 @@ interface IdConfig {
     wiki?: string;
     starboard?: string;
     counting?: string;
+    bingo?: string;
     ticketCategory: string;
   };
   gallery?: {
@@ -36,6 +43,10 @@ interface IdConfig {
       channelId: string;
       seasonId: string;
     }>;
+  };
+  bingo?: {
+    ownerUserId?: string;
+    missingCardWarningHours?: number;
   };
 }
 
@@ -171,6 +182,9 @@ interface IConfig {
   REDIS_PASSWORD: string;
   PUNISHMENT_REDIS_STREAM: string;
   PUNISHMENT_REDIS_GROUP: string;
+  BINGO_REDIS_STREAM: string;
+  BINGO_REDIS_GROUP: string;
+  BINGO_ACTIVE_CARD_KEY: string;
   APPLICATION_CATEGORY_ID: string;
   LOG_CHANNEL_ID: string;
   TICKET_LOG_CHANNEL_ID: string;
@@ -178,6 +192,12 @@ interface IConfig {
   WIKI_CHANNEL_ID: string;
   STARBOARD_CHANNEL_ID: string;
   COUNTING_CHANNEL_ID: string;
+  BINGO_CHANNEL_ID: string;
+  BINGO_LINE_ROLE_ID: string;
+  BINGO_BLACKOUT_ROLE_ID: string;
+  BINGO_PING_ROLE_ID: string;
+  BINGO_OWNER_USER_ID: string;
+  BINGO_MISSING_CARD_WARNING_HOURS: number;
   TICKET_CATEGORY_ID: string;
   GALLERY_CHANNELS: readonly GalleryChannelConfig[];
   GALLERY_CONFIGURATION_ERRORS: readonly string[];
@@ -217,6 +237,9 @@ const config: IConfig = {
   REDIS_PASSWORD: ids.redis?.password ?? "",
   PUNISHMENT_REDIS_STREAM: ids.redis?.punishmentStream ?? "crabcraft:punishments",
   PUNISHMENT_REDIS_GROUP: ids.redis?.punishmentGroup ?? "crabcraft-bot",
+  BINGO_REDIS_STREAM: ids.redis?.bingoStream ?? "crabcraft:bingo:completions",
+  BINGO_REDIS_GROUP: ids.redis?.bingoGroup ?? "crabcraft-bot-bingo",
+  BINGO_ACTIVE_CARD_KEY: ids.redis?.bingoActiveCardKey ?? "crabcraft:bingo:active-card",
   APPLICATION_CATEGORY_ID: ids.channels.applicationCategory,
   LOG_CHANNEL_ID: ids.channels.log,
   // Ticket transcripts go here; falls back to the general log channel if unset.
@@ -225,6 +248,15 @@ const config: IConfig = {
   WIKI_CHANNEL_ID: ids.channels.wiki ?? "",
   STARBOARD_CHANNEL_ID: ids.channels.starboard ?? "",
   COUNTING_CHANNEL_ID: ids.channels.counting ?? "",
+  BINGO_CHANNEL_ID: ids.channels.bingo ?? "",
+  BINGO_LINE_ROLE_ID: ids.roles.bingoLine ?? "",
+  BINGO_BLACKOUT_ROLE_ID: ids.roles.bingoBlackout ?? "",
+  BINGO_PING_ROLE_ID: ids.roles.bingoPing ?? "",
+  BINGO_OWNER_USER_ID: ids.bingo?.ownerUserId ?? "",
+  BINGO_MISSING_CARD_WARNING_HOURS: Math.min(
+    168,
+    Math.max(1, ids.bingo?.missingCardWarningHours ?? 48),
+  ),
   TICKET_CATEGORY_ID: ids.channels.ticketCategory,
   GALLERY_CHANNELS: galleryChannels.channels,
   GALLERY_CONFIGURATION_ERRORS: galleryChannels.errors,

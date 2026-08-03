@@ -40,6 +40,7 @@ public class SettingsDialog {
     private static final String MENTION_PINGS_KEY = "mentionPings";
     private static final String ACCEPT_MESSAGES_KEY = "acceptMessages";
     private static final String LOCATOR_BAR_KEY = "locatorBar";
+    private static final String BINGO_MESSAGES_KEY = "bingoMessages";
     private static final String TOGGLE_ON = "on";
     private static final String TOGGLE_OFF = "off";
 
@@ -76,7 +77,10 @@ public class SettingsDialog {
                                 toggleOptions(current.isAcceptMessages())).build(),
                         DialogInput.singleOption(LOCATOR_BAR_KEY,
                                 mini(CrabMessages.HIGHLIGHT_TAG + "Locator bar"),
-                                toggleOptions(current.isLocatorBar())).build()))
+                                toggleOptions(current.isLocatorBar())).build(),
+                        DialogInput.singleOption(BINGO_MESSAGES_KEY,
+                                mini(CrabMessages.HIGHLIGHT_TAG + "Bingo messages"),
+                                toggleOptions(current.isBingoMessages())).build()))
                 .canCloseWithEscape(true)
                 .build();
 
@@ -110,8 +114,10 @@ public class SettingsDialog {
         boolean mentionPings = selectedToggle(view.getText(MENTION_PINGS_KEY), current.isMentionPings());
         boolean acceptMessages = selectedToggle(view.getText(ACCEPT_MESSAGES_KEY), current.isAcceptMessages());
         boolean locatorBar = selectedToggle(view.getText(LOCATOR_BAR_KEY), current.isLocatorBar());
+        boolean bingoMessages = selectedToggle(
+                view.getText(BINGO_MESSAGES_KEY), current.isBingoMessages());
 
-        settingsService.setAll(uuid, mode, mentionPings, acceptMessages, locatorBar);
+        settingsService.setAll(uuid, mode, mentionPings, acceptMessages, locatorBar, bingoMessages);
         audience.sendMessage(CrabMessages.success("Settings saved."));
     }
 

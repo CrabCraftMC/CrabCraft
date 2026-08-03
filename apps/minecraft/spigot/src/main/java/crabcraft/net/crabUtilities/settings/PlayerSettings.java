@@ -12,7 +12,7 @@ import com.google.gson.JsonPrimitive;
  * shared with the Velocity proxy, which owns the canonical copy in Postgres.
  *
  * <p>Defaults: phantoms {@link PhantomMode#OFF} (no spawn, no attack), mention
- * pings ON, private messages accepted, and locator bar OFF.
+ * pings ON, private messages accepted, locator bar OFF, and bingo messages ON.
  */
 public final class PlayerSettings {
 
@@ -20,22 +20,25 @@ public final class PlayerSettings {
     public static final boolean DEFAULT_MENTION_PINGS = true;
     public static final boolean DEFAULT_ACCEPT_MESSAGES = true;
     public static final boolean DEFAULT_LOCATOR_BAR = false;
+    public static final boolean DEFAULT_BINGO_MESSAGES = true;
 
     public static final PlayerSettings DEFAULTS =
             new PlayerSettings(DEFAULT_PHANTOM_MODE, DEFAULT_MENTION_PINGS,
-                    DEFAULT_ACCEPT_MESSAGES, DEFAULT_LOCATOR_BAR);
+                    DEFAULT_ACCEPT_MESSAGES, DEFAULT_LOCATOR_BAR, DEFAULT_BINGO_MESSAGES);
 
     private final PhantomMode phantomMode;
     private final boolean mentionPings;
     private final boolean acceptMessages;
     private final boolean locatorBar;
+    private final boolean bingoMessages;
 
     public PlayerSettings(PhantomMode phantomMode, boolean mentionPings,
-                          boolean acceptMessages, boolean locatorBar) {
+                          boolean acceptMessages, boolean locatorBar, boolean bingoMessages) {
         this.phantomMode = phantomMode == null ? DEFAULT_PHANTOM_MODE : phantomMode;
         this.mentionPings = mentionPings;
         this.acceptMessages = acceptMessages;
         this.locatorBar = locatorBar;
+        this.bingoMessages = bingoMessages;
     }
 
     public PhantomMode getPhantomMode() {
@@ -54,20 +57,28 @@ public final class PlayerSettings {
         return locatorBar;
     }
 
+    public boolean isBingoMessages() {
+        return bingoMessages;
+    }
+
     public PlayerSettings withPhantomMode(PhantomMode mode) {
-        return new PlayerSettings(mode, mentionPings, acceptMessages, locatorBar);
+        return new PlayerSettings(mode, mentionPings, acceptMessages, locatorBar, bingoMessages);
     }
 
     public PlayerSettings withMentionPings(boolean value) {
-        return new PlayerSettings(phantomMode, value, acceptMessages, locatorBar);
+        return new PlayerSettings(phantomMode, value, acceptMessages, locatorBar, bingoMessages);
     }
 
     public PlayerSettings withAcceptMessages(boolean value) {
-        return new PlayerSettings(phantomMode, mentionPings, value, locatorBar);
+        return new PlayerSettings(phantomMode, mentionPings, value, locatorBar, bingoMessages);
     }
 
     public PlayerSettings withLocatorBar(boolean value) {
-        return new PlayerSettings(phantomMode, mentionPings, acceptMessages, value);
+        return new PlayerSettings(phantomMode, mentionPings, acceptMessages, value, bingoMessages);
+    }
+
+    public PlayerSettings withBingoMessages(boolean value) {
+        return new PlayerSettings(phantomMode, mentionPings, acceptMessages, locatorBar, value);
     }
 
     public JsonObject toJson() {
@@ -76,6 +87,7 @@ public final class PlayerSettings {
         obj.addProperty("mentionPings", mentionPings);
         obj.addProperty("acceptMessages", acceptMessages);
         obj.addProperty("locatorBar", locatorBar);
+        obj.addProperty("bingoMessages", bingoMessages);
         return obj;
     }
 
@@ -92,7 +104,8 @@ public final class PlayerSettings {
                 parsePhantomMode(obj.get("phantoms")),
                 parseBool(obj.get("mentionPings"), DEFAULT_MENTION_PINGS),
                 parseBool(obj.get("acceptMessages"), DEFAULT_ACCEPT_MESSAGES),
-                parseBool(obj.get("locatorBar"), DEFAULT_LOCATOR_BAR));
+                parseBool(obj.get("locatorBar"), DEFAULT_LOCATOR_BAR),
+                parseBool(obj.get("bingoMessages"), DEFAULT_BINGO_MESSAGES));
     }
 
     private static PhantomMode parsePhantomMode(JsonElement element) {

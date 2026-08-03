@@ -12,6 +12,15 @@ redis:
   port: 6379
   password: ""
 
+# Weekly bingo. The Discord bot publishes the active card through Redis; this
+# backend only listens for eligible Survival actions and streams completions.
+bingo:
+  enabled: false
+  source-backend: ""
+  redis-stream: "crabcraft:bingo:completions"
+  active-card-key: "crabcraft:bingo:active-card"
+  excluded-worlds: []
+
 # How often the world's stats/ and advancements/ folders are scanned and
 # published to Redis for the proxy to process.
 stats-push:

@@ -148,6 +148,10 @@ public class PlayerSettingsService implements Listener {
         return get(uuid).isLocatorBar();
     }
 
+    public boolean isBingoMessagesEnabled(UUID uuid) {
+        return get(uuid).isBingoMessages();
+    }
+
     /**
      * Whether this player's record has been resolved yet (loaded from Redis,
      * or seeded with defaults when Redis is unavailable). Callers that would
@@ -180,10 +184,15 @@ public class PlayerSettingsService implements Listener {
         update(uuid, current -> current.withLocatorBar(value));
     }
 
+    public void setBingoMessages(UUID uuid, boolean value) {
+        update(uuid, current -> current.withBingoMessages(value));
+    }
+
     /** Replaces every setting at once (used by the dialog, which submits them together). */
     public void setAll(UUID uuid, PhantomMode mode, boolean mentionPings,
-                       boolean acceptMessages, boolean locatorBar) {
-        update(uuid, current -> new PlayerSettings(mode, mentionPings, acceptMessages, locatorBar));
+                       boolean acceptMessages, boolean locatorBar, boolean bingoMessages) {
+        update(uuid, current -> new PlayerSettings(
+                mode, mentionPings, acceptMessages, locatorBar, bingoMessages));
     }
 
     /**

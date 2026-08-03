@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { Renderer, type FontLoader } from "@takumi-rs/core";
+import { Renderer } from "@takumi-rs/core";
 import { container, text, image, percentage } from "@takumi-rs/helpers";
 import { getSvgPath } from "figma-squircle";
 import logger from "./logger.js";
@@ -153,17 +153,15 @@ async function fetchSkin(uuid: string): Promise<Img | null> {
 
 type CardRenderContext = {
   renderer: Renderer;
-  fonts: FontLoader[];
 };
 
 let renderContext: CardRenderContext | null = null;
 function getRenderContext(): CardRenderContext {
   if (!renderContext) {
     renderContext = {
-      renderer: new Renderer(),
-      fonts: [
-        { name: SANS, data: fs.readFileSync(SANS_FONT_PATH) },
-      ],
+      renderer: new Renderer({
+        fonts: [{ name: SANS, data: fs.readFileSync(SANS_FONT_PATH) }],
+      }),
     };
   }
   return renderContext;
@@ -297,6 +295,6 @@ export async function generatePlayerCard(data: PlayerCardData): Promise<Buffer> 
     children: [header, medals, statGrid],
   });
 
-  const { renderer, fonts } = getRenderContext();
-  return renderer.render(root, { format: "png", devicePixelRatio: 2, fonts });
+  const { renderer } = getRenderContext();
+  return renderer.render(root, { format: "png", devicePixelRatio: 2 });
 }
