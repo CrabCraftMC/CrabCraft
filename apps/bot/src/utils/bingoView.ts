@@ -177,7 +177,7 @@ export async function generateBingoCardImage(
 
   const footer = container({
     style: {
-      ...squircle(GRID_WIDTH, 56, 18),
+      ...squircle(GRID_WIDTH, 56, 26),
       position: "relative", width: GRID_WIDTH, height: 56,
       marginTop: 14, backgroundColor: PAPER_2,
     } as any,
