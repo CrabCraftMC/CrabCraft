@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Images, RotateCcw } from "lucide-react";
 import GalleryFilterLink from "@/components/gallery/GalleryFilterLink";
+import GalleryPostLink from "@/components/gallery/GalleryPostLink";
 import GalleryTagIcon from "@/components/gallery/GalleryTagIcon";
 import GalleryReactionList from "@/components/gallery/GalleryReactionList";
 import GalleryPlayerSearch from "@/components/gallery/GalleryPlayerSearch";
@@ -210,8 +211,9 @@ export default function GalleryExplorer({
               className="group flex h-full flex-col overflow-hidden rounded-[2rem] bg-paper-2 shadow-sm animate-in motion-reduce:animate-none motion-reduce:opacity-100"
               style={{ animationDelay: `${0.12 + index * 0.05}s` }}
             >
-              <Link
+              <GalleryPostLink
                 href={`/gallery/${post.id}`}
+                imageUrl={galleryMediaUrl(post.images[0].url, "detail")}
                 aria-label={`View ${post.title}`}
                 className="relative grid aspect-[16/10] shrink-0 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden bg-[#130f0c] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/60 focus-visible:ring-inset"
               >
@@ -238,7 +240,7 @@ export default function GalleryExplorer({
                     {post.images.length} photos
                   </span>
                 )}
-              </Link>
+              </GalleryPostLink>
 
               <div className="flex flex-1 flex-col p-5">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -288,7 +290,11 @@ export default function GalleryExplorer({
                   })}
                 </div>
 
-                <Link href={`/gallery/${post.id}`} className="block min-w-0">
+                <GalleryPostLink
+                  href={`/gallery/${post.id}`}
+                  imageUrl={galleryMediaUrl(post.images[0].url, "detail")}
+                  className="block min-w-0"
+                >
                   <h2 className="break-words text-lg font-bold leading-snug text-gray-900 transition-colors group-hover:text-orange-700 dark:text-gray-100 dark:group-hover:text-orange-400">
                     {post.title}
                   </h2>
@@ -297,7 +303,7 @@ export default function GalleryExplorer({
                       {post.content}
                     </p>
                   ) : null}
-                </Link>
+                </GalleryPostLink>
 
                 {post.reactions.length > 0 ? (
                   <div className="mt-4">
