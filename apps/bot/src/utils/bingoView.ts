@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { Renderer } from "@takumi-rs/core";
+import { Renderer, type FontLoader } from "@takumi-rs/core";
 import { container, image, text } from "@takumi-rs/helpers";
 import { getSvgPath } from "figma-squircle";
 import type { BingoCardRecord } from "@crabcraft/db/queries/bingo";
@@ -25,12 +25,15 @@ const COMPLETE = "#77dd77";
 const SANS = "Unbounded";
 const logoUri = `data:image/png;base64,${fs.readFileSync(LOGO).toString("base64")}`;
 
-const renderer = new Renderer({
+const fonts: FontLoader[] = [
+  { name: SANS, data: fs.readFileSync(path.join(ASSETS, "Unbounded.ttf")) },
+];
+const CompatibleRenderer = Renderer as unknown as {
+  new(options?: { loadDefaultFonts?: boolean; fonts?: FontLoader[] }): Renderer;
+};
+const renderer = new CompatibleRenderer({
   loadDefaultFonts: true,
-  fonts: [
-    { name: "Minecraft", data: fs.readFileSync(path.join(ASSETS, "Minecraft.otf")) },
-    { name: SANS, data: fs.readFileSync(path.join(ASSETS, "Unbounded.ttf")) },
-  ],
+  fonts,
 });
 
 function squircle(width: number, height: number, radius: number) {
@@ -151,7 +154,7 @@ export async function generateBingoCardImage(
         } as any,
         children: [
           text(`${completedCount} / 16`, {
-            fontFamily: "Minecraft", fontSize: 45, color: "#ffffff",
+            fontFamily: SANS, fontSize: 45, color: "#ffffff",
           }),
           text("COMPLETE", {
             fontFamily: SANS, fontSize: 11, fontWeight: 700,
@@ -197,7 +200,7 @@ export async function generateBingoCardImage(
       } as any),
       text("/bingo", {
         position: "absolute", right: 18, top: 18,
-        fontFamily: "Minecraft", fontSize: 18, color: ORANGE_TO,
+        fontFamily: SANS, fontSize: 18, color: ORANGE_TO,
       } as any),
     ],
   });
@@ -210,5 +213,11 @@ export async function generateBingoCardImage(
     },
     children: [header, grid, footer],
   });
-  return Buffer.from(await renderer.render(root, { format: "png", devicePixelRatio: 2 }));
+  const options: NonNullable<Parameters<Renderer["render"]>[1]>
+    & { fonts: FontLoader[] } = {
+      format: "png",
+      devicePixelRatio: 2,
+      fonts,
+    };
+  return Buffer.from(await renderer.render(root, options));
 }

@@ -298,5 +298,11 @@ export async function generatePlayerCard(data: PlayerCardData): Promise<Buffer> 
   });
 
   const { renderer, fonts } = getRenderContext();
-  return renderer.render(root, { format: "png", devicePixelRatio: 2, fonts });
+  const options: NonNullable<Parameters<Renderer["render"]>[1]>
+    & { fonts: FontLoader[] } = {
+      format: "png",
+      devicePixelRatio: 2,
+      fonts,
+    };
+  return renderer.render(root, options);
 }
