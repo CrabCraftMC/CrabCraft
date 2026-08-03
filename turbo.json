@@ -11,7 +11,12 @@
         "spigot/build/libs/**",
         "velocity/build/libs/**"
       ],
-      "env": ["DATABASE_URL", "NODE_ENV", "NEXT_PUBLIC_*"]
+      "env": [
+        "DATABASE_URL",
+        "GALLERY_MEDIA_BASE_URL",
+        "NODE_ENV",
+        "NEXT_PUBLIC_*"
+      ]
     },
     "dev": {
       "dependsOn": ["^build"],

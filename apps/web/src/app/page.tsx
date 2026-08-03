@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import config from "@/data/site-config.json";
 import CopyIPCard from "@/components/CopyIPCard";
-import CountdownBanner from "@/components/CountdownBanner";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { getCurrentSeasonWhitelistedPlayerCount } from "@/lib/discord";
@@ -83,8 +84,6 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen relative">
-      <CountdownBanner />
-
       <section className="relative gap-8 mt-16">
         <div className="container mx-auto px-4 relative grid grid-cols-1 lg:grid-cols-8 gap-6 lg:gap-8 h-auto lg:h-[570px]">
           {(config.home.hero as any[]).map((item: any, index: number) => (
@@ -248,6 +247,46 @@ export default async function HomePage() {
               onlinePlayerList={onlinePlayerList}
             />
           </div>
+        </div>
+      </section>
+
+      <section className="relative mt-8">
+        <div className="container mx-auto px-4">
+          <Link
+            href="/gallery"
+            className="group block rounded-[2rem] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/50 focus-visible:ring-offset-4 focus-visible:ring-offset-paper"
+          >
+            <Squircle
+              cornerRadius={32}
+              className="relative min-h-[270px] overflow-hidden bg-[#130f0c] shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/15 motion-reduce:animate-none motion-reduce:opacity-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[290px]"
+            >
+              <Image
+                src="/wrapped/1.webp"
+                alt=""
+                fill
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="object-cover transition-transform duration-700 group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+              />
+              <div className="absolute inset-0 bg-black/55 sm:bg-gradient-to-r sm:from-black/90 sm:via-black/65 sm:to-black/15" />
+
+              <div className="relative z-10 flex min-h-[270px] max-w-2xl flex-col items-start justify-center p-6 text-white sm:min-h-[290px] sm:p-10 lg:p-12">
+                <h2 className="font-mc text-3xl font-bold sm:text-4xl">
+                  Explore the Gallery
+                </h2>
+                <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/85 sm:text-base">
+                  Seven seasons of builds, adventures and favourite moments,
+                  shared by the players who made them.
+                </p>
+                <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-white transition-colors group-hover:text-orange-400">
+                  View gallery
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                    aria-hidden="true"
+                  />
+                </span>
+              </div>
+            </Squircle>
+          </Link>
         </div>
       </section>
 

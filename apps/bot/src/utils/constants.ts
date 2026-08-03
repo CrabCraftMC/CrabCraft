@@ -10,6 +10,32 @@ export const LEADERBOARD_REFRESH_MS = 5 * 60 * 1000;
 /** Interval between Discord/Minecraft username syncs (24 hours). */
 export const IDENTITY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/** Interval between complete Discord gallery reconciliations (6 hours). */
+export const GALLERY_RECONCILE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/** Short delays used while Discord finishes creating a thread starter message. */
+export const GALLERY_STARTER_RETRY_DELAYS_MS = [0, 250, 1_000, 3_000] as const;
+
+/** Bounded waits while cleanup finishes deleting a deterministic media key. */
+export const GALLERY_STORAGE_WRITE_RETRY_DELAYS_MS = [
+  250,
+  1_000,
+  3_000,
+  6_000,
+] as const;
+
+/** Maximum number of gallery posts processed concurrently during a full scan. */
+export const GALLERY_SYNC_CONCURRENCY = 3;
+
+/** Interval between durable Gallery media-deletion queue polls (1 minute). */
+export const GALLERY_STORAGE_DELETE_INTERVAL_MS = 60 * 1_000;
+
+/** Maximum Gallery media deletions claimed in one queue poll. */
+export const GALLERY_STORAGE_DELETE_BATCH_SIZE = 25;
+
+/** Lease used to keep Gallery media deletion work exclusive (5 minutes). */
+export const GALLERY_STORAGE_DELETE_LEASE_SECONDS = 5 * 60;
+
 /** Fallback interval between full Minecraft ban/mute role reconciliations (5 minutes). */
 export const PUNISHMENT_ROLE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 

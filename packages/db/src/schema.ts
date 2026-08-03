@@ -11,7 +11,10 @@ import {
   uniqueIndex,
   index,
   primaryKey,
+  check,
+  pgSequence,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const playerRoleEnum = pgEnum("player_role", [
   "unverified",
@@ -320,6 +323,7 @@ export const playerLoginStreakProgress = pgTable(
   },
   (table) => [
     primaryKey({
+      name: "player_login_streak_progress_pkey",
       columns: [table.minecraft_uuid, table.streak_day],
     }),
   ],
@@ -476,5 +480,193 @@ export const applicationChannels = pgTable(
   (table) => [
     index("appchannels_applicant_idx").on(table.applicant_id),
     index("appchannels_delete_after_idx").on(table.delete_after),
+  ],
+);
+
+// ── gallery_posts ─────────────────────────────────────────────
+export const gallerySyncRevisionSeq = pgSequence("gallery_sync_revision_seq");
+
+// Per-post revisions remain after a post disappears, preventing an older
+// Gateway event or reconciliation snapshot from resurrecting it.
+export const galleryPostSyncState = pgTable(
+  "gallery_post_sync_state",
+  {
+    thread_id: text("thread_id").primaryKey(),
+    last_revision: bigint("last_revision", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    check(
+      "gallery_post_sync_state_revision_check",
+      sql`${table.last_revision} > 0`,
+    ),
+  ],
+);
+
+// Tag and post revisions are independent: a newer catalogue rename does not
+// make a force-fetched message edit stale. Post paths lock this row only to
+// observe deleted_revision; tags_revision exclusively CASes tag catalogues.
+export const galleryChannelSyncState = pgTable(
+  "gallery_channel_sync_state",
+  {
+    channel_id: text("channel_id").primaryKey(),
+    tags_revision: bigint("tags_revision", { mode: "number" })
+      .notNull()
+      .default(0),
+    tags_hash: text("tags_hash").notNull().default(""),
+    deleted_revision: bigint("deleted_revision", { mode: "number" }),
+  },
+  (table) => [
+    check(
+      "gallery_channel_sync_state_tags_revision_check",
+      sql`${table.tags_revision} >= 0`,
+    ),
+    check(
+      "gallery_channel_sync_state_deleted_revision_check",
+      sql`${table.deleted_revision} IS NULL OR ${table.deleted_revision} > 0`,
+    ),
+  ],
+);
+
+// Durable copy of Discord media-channel posts. Discord attachment URLs are
+// deliberately not stored: the bot first copies each image to gallery media
+// storage, then persists its stable storage key and public URL below.
+export const galleryPosts = pgTable(
+  "gallery_posts",
+  {
+    thread_id: text("thread_id").primaryKey(),
+    channel_id: text("channel_id").notNull(),
+    season_id: text("season_id").notNull(),
+    season_number: integer("season_number").notNull(),
+    title: text("title").notNull(),
+    content: text("content"),
+    author_discord_id: text("author_discord_id").notNull(),
+    author_discord_username: text("author_discord_username").notNull(),
+    author_display_name: text("author_display_name").notNull(),
+    author_webhook_id: text("author_webhook_id"),
+    source_url: text("source_url").notNull(),
+    posted_at: integer("posted_at").notNull(),
+    edited_at: integer("edited_at"),
+    content_hash: text("content_hash").notNull(),
+    content_updated_at: integer("content_updated_at").notNull(),
+    archived: boolean("archived").notNull().default(false),
+    locked: boolean("locked").notNull().default(false),
+    pinned: boolean("pinned").notNull().default(false),
+    published: boolean("published").notNull().default(true),
+    published_at: integer("published_at").notNull(),
+    deleted_at: integer("deleted_at"),
+    last_synced_at: integer("last_synced_at").notNull(),
+  },
+  (table) => [
+    check("gallery_posts_season_number_check", sql`${table.season_number} > 0`),
+    index("gallery_posts_published_date_idx")
+      .on(table.posted_at, table.thread_id)
+      .where(sql`${table.published} = true AND ${table.deleted_at} IS NULL`),
+    index("gallery_posts_season_date_idx")
+      .on(table.season_number, table.posted_at, table.thread_id)
+      .where(sql`${table.published} = true AND ${table.deleted_at} IS NULL`),
+    index("gallery_posts_content_updated_idx")
+      .on(table.content_updated_at, table.thread_id)
+      .where(sql`${table.published} = true AND ${table.deleted_at} IS NULL`),
+    index("gallery_posts_channel_idx").on(table.channel_id, table.thread_id),
+    index("gallery_posts_author_idx").on(table.author_discord_id),
+  ],
+);
+
+// ── gallery_images ─────────────────────────────────────────────
+export const galleryImages = pgTable(
+  "gallery_images",
+  {
+    discord_attachment_id: text("discord_attachment_id").primaryKey(),
+    post_id: text("post_id")
+      .notNull()
+      .references(() => galleryPosts.thread_id, { onDelete: "cascade" }),
+    storage_key: text("storage_key").notNull().unique(),
+    public_url: text("public_url").notNull(),
+    filename: text("filename").notNull(),
+    alt: text("alt"),
+    content_type: text("content_type"),
+    size: integer("size").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    position: integer("position").notNull(),
+  },
+  (table) => [
+    uniqueIndex("gallery_images_post_position_unique").on(
+      table.post_id,
+      table.position,
+    ),
+    check("gallery_images_position_check", sql`${table.position} >= 0`),
+    check("gallery_images_size_check", sql`${table.size} >= 0`),
+    check("gallery_images_width_check", sql`${table.width} IS NULL OR ${table.width} > 0`),
+    check("gallery_images_height_check", sql`${table.height} IS NULL OR ${table.height} > 0`),
+  ],
+);
+
+// Durable, retryable work queue for media no longer referenced by a post.
+// Upserts cancel rows when the same immutable storage key becomes current
+// again before its grace period or an active deletion lease expires.
+export const galleryStorageDeletions = pgTable(
+  "gallery_storage_deletions",
+  {
+    storage_key: text("storage_key").primaryKey(),
+    public_url: text("public_url").notNull(),
+    queued_at: integer("queued_at").notNull(),
+    delete_after: integer("delete_after").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    last_attempt_at: integer("last_attempt_at"),
+    last_error: text("last_error"),
+  },
+  (table) => [
+    index("gallery_storage_deletions_due_idx").on(
+      table.delete_after,
+      table.storage_key,
+    ),
+    check(
+      "gallery_storage_deletions_attempts_check",
+      sql`${table.attempts} >= 0`,
+    ),
+  ],
+);
+
+// ── gallery_tags ───────────────────────────────────────────────
+// Discord forum/media tags are retained after removal from a channel so old
+// gallery posts keep their labels and emoji. `available` controls filter UI.
+export const galleryTags = pgTable(
+  "gallery_tags",
+  {
+    discord_tag_id: text("discord_tag_id").primaryKey(),
+    channel_id: text("channel_id").notNull(),
+    name: text("name").notNull(),
+    emoji_id: text("emoji_id"),
+    emoji_name: text("emoji_name"),
+    moderated: boolean("moderated").notNull().default(false),
+    available: boolean("available").notNull().default(true),
+    position: integer("position").notNull(),
+    last_synced_at: integer("last_synced_at").notNull(),
+  },
+  (table) => [
+    index("gallery_tags_channel_available_idx").on(
+      table.channel_id,
+      table.available,
+      table.position,
+    ),
+    check("gallery_tags_position_check", sql`${table.position} >= 0`),
+  ],
+);
+
+// ── gallery_post_tags ─────────────────────────────────────────────
+export const galleryPostTags = pgTable(
+  "gallery_post_tags",
+  {
+    post_id: text("post_id")
+      .notNull()
+      .references(() => galleryPosts.thread_id, { onDelete: "cascade" }),
+    tag_id: text("tag_id")
+      .notNull()
+      .references(() => galleryTags.discord_tag_id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.post_id, table.tag_id] }),
+    index("gallery_post_tags_tag_idx").on(table.tag_id, table.post_id),
   ],
 );

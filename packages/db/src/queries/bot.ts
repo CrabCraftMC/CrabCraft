@@ -1,4 +1,18 @@
-import { eq, and, asc, desc, sql, lte, ne, ilike, isNull, isNotNull } from "drizzle-orm";
+import {
+  eq,
+  and,
+  asc,
+  desc,
+  sql,
+  lte,
+  lt,
+  ne,
+  ilike,
+  isNull,
+  isNotNull,
+  inArray,
+  notInArray,
+} from "drizzle-orm";
 import { db } from "../client";
 import {
   players,
@@ -10,6 +24,13 @@ import {
   countingState,
   tickets,
   applicationChannels,
+  galleryPosts,
+  galleryImages,
+  galleryTags,
+  galleryPostTags,
+  galleryPostSyncState,
+  galleryChannelSyncState,
+  galleryStorageDeletions,
   type TicketCategory,
 } from "../schema";
 
@@ -32,6 +53,921 @@ export interface CreateApplicationData {
   joinReason?: string;
   favouriteWood?: string;
   season?: string | null;
+}
+
+export interface GalleryAppliedTagSyncInput {
+  discordTagId: string;
+  name: string;
+  emojiId: string | null;
+  emojiName: string | null;
+  position: number;
+  moderated: boolean;
+}
+
+export interface GalleryImageSyncInput {
+  discordAttachmentId: string;
+  storageKey: string;
+  publicUrl: string;
+  filename: string;
+  alt: string | null;
+  contentType: string | null;
+  size: number;
+  width: number | null;
+  height: number | null;
+  position: number;
+}
+
+export interface GalleryPostSyncInput {
+  threadId: string;
+  channelId: string;
+  seasonId: string;
+  title: string;
+  content: string | null;
+  authorDiscordId: string;
+  authorDiscordUsername: string;
+  authorDisplayName: string | null;
+  authorWebhookId: string | null;
+  sourceUrl: string;
+  postedAt: number;
+  editedAt: number | null;
+  archived: boolean;
+  locked: boolean;
+  pinned: boolean;
+  syncedAt: number;
+  revision: number;
+  contentHash: string;
+  tags: GalleryAppliedTagSyncInput[];
+  images: GalleryImageSyncInput[];
+}
+
+export interface GalleryStorageDeletionClaim {
+  storageKey: string;
+  publicUrl: string;
+  attempts: number;
+  claimedAt: number;
+  leaseUntil: number;
+}
+
+export interface GalleryStoredMediaInput {
+  storageKey: string;
+  publicUrl: string;
+}
+
+export type GalleryStorageWritePreparationResult =
+  | { status: "ready" }
+  | { status: "storage-claimed"; retryAfter: number };
+
+export type GalleryStorageDeletionExecutionResult =
+  | "deleted"
+  | "stale-claim"
+  | "referenced";
+
+const GALLERY_STORAGE_DELETE_GRACE_SECONDS = 5 * 60;
+const GALLERY_STORAGE_WRITE_RESERVATION_SECONDS = 30 * 60;
+const GALLERY_STORAGE_RETRY_MAX_SECONDS = 60 * 60;
+
+type GalleryTransaction = Parameters<
+  Parameters<typeof db.transaction>[0]
+>[0];
+
+function assertGalleryRevision(revision: number): void {
+  if (!Number.isSafeInteger(revision) || revision <= 0) {
+    throw new Error(`Invalid gallery sync revision: ${revision}`);
+  }
+}
+
+function assertGalleryTimestamp(label: string, value: number): void {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`Invalid Gallery ${label} timestamp: ${value}`);
+  }
+}
+
+function gallerySeasonNumber(seasonId: string): number {
+  const matches = seasonId.match(/\d+/g);
+  const value = matches ? Number(matches[matches.length - 1]) : Number.NaN;
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`Invalid gallery season id: ${seasonId}`);
+  }
+  return value;
+}
+
+function assertGalleryPositions(
+  kind: "image" | "tag",
+  entries: Array<{ position: number }>,
+): void {
+  const positions = new Set<number>();
+  for (const entry of entries) {
+    if (!Number.isSafeInteger(entry.position) || entry.position < 0) {
+      throw new Error(`Invalid gallery ${kind} position: ${entry.position}`);
+    }
+    if (positions.has(entry.position)) {
+      throw new Error(`Duplicate gallery ${kind} position: ${entry.position}`);
+    }
+    positions.add(entry.position);
+  }
+}
+
+async function lockGalleryChannelSyncState(
+  tx: GalleryTransaction,
+  channelId: string,
+) {
+  await tx
+    .insert(galleryChannelSyncState)
+    .values({ channel_id: channelId })
+    .onConflictDoNothing();
+  const [state] = await tx
+    .select()
+    .from(galleryChannelSyncState)
+    .where(eq(galleryChannelSyncState.channel_id, channelId))
+    .for("update");
+  if (!state) {
+    throw new Error(`Gallery channel sync state missing for ${channelId}`);
+  }
+  return state;
+}
+
+async function acceptGalleryPostRevisions(
+  tx: GalleryTransaction,
+  threadIds: string[],
+  revision: number,
+): Promise<string[]> {
+  if (threadIds.length === 0) return [];
+  const rows = await tx
+    .insert(galleryPostSyncState)
+    .values(
+      threadIds.map((threadId) => ({
+        thread_id: threadId,
+        last_revision: revision,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: galleryPostSyncState.thread_id,
+      set: { last_revision: revision },
+      setWhere: lt(galleryPostSyncState.last_revision, revision),
+    })
+    .returning({ threadId: galleryPostSyncState.thread_id });
+  return rows.map((row) => row.threadId);
+}
+
+async function lockGalleryStorageKeys(
+  tx: GalleryTransaction,
+  storageKeys: string[],
+): Promise<void> {
+  const keys = [...new Set(storageKeys)].sort();
+  for (const storageKey of keys) {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtextextended(${storageKey}, 0))`,
+    );
+  }
+}
+
+async function lockActiveGalleryStorageClaims(
+  tx: GalleryTransaction,
+  storageKeys: string[],
+): Promise<Array<{ storageKey: string; retryAfter: number }>> {
+  if (storageKeys.length === 0) return [];
+  return tx
+    .select({
+      storageKey: galleryStorageDeletions.storage_key,
+      retryAfter: galleryStorageDeletions.delete_after,
+    })
+    .from(galleryStorageDeletions)
+    .where(
+      and(
+        inArray(galleryStorageDeletions.storage_key, storageKeys),
+        isNotNull(galleryStorageDeletions.last_attempt_at),
+        sql`${galleryStorageDeletions.delete_after} > FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::integer`,
+      ),
+    )
+    .for("update");
+}
+
+/**
+ * Reserve deterministic Gallery object keys before consulting or writing S3.
+ * Unreferenced keys receive a durable cleanup row, so a process crash after an
+ * upload cannot leak the object. A successful post upsert cancels those rows.
+ * Once this function owns the key lock, an expired claim is safe to replace:
+ * any external delete still in progress would be holding that same lock.
+ */
+export async function prepareGalleryStorageWrites(
+  images: GalleryStoredMediaInput[],
+  preparedAt: number,
+): Promise<GalleryStorageWritePreparationResult> {
+  assertGalleryTimestamp("storage write preparation", preparedAt);
+  const uniqueImages = Array.from(
+    new Map(images.map((image) => [image.storageKey, image])).values(),
+  ).sort((left, right) => left.storageKey.localeCompare(right.storageKey));
+  if (uniqueImages.length === 0) return { status: "ready" };
+  const storageKeys = uniqueImages.map((image) => image.storageKey);
+
+  return db.transaction(async (tx) => {
+    await lockGalleryStorageKeys(tx, storageKeys);
+    const claims = await lockActiveGalleryStorageClaims(tx, storageKeys);
+    if (claims.length > 0) {
+      return {
+        status: "storage-claimed" as const,
+        retryAfter: Math.max(...claims.map((claim) => claim.retryAfter)),
+      };
+    }
+    await tx
+      .delete(galleryStorageDeletions)
+      .where(inArray(galleryStorageDeletions.storage_key, storageKeys));
+
+    const referenced = await tx
+      .select({ storageKey: galleryImages.storage_key })
+      .from(galleryImages)
+      .where(inArray(galleryImages.storage_key, storageKeys));
+    const referencedKeys = new Set(referenced.map((row) => row.storageKey));
+    const reservations = uniqueImages.filter(
+      (image) => !referencedKeys.has(image.storageKey),
+    );
+    if (reservations.length > 0) {
+      await tx.insert(galleryStorageDeletions).values(
+        reservations.map((image) => ({
+          storage_key: image.storageKey,
+          public_url: image.publicUrl,
+          queued_at: preparedAt,
+          delete_after:
+            preparedAt + GALLERY_STORAGE_WRITE_RESERVATION_SECONDS,
+        })),
+      );
+    }
+    return { status: "ready" as const };
+  });
+}
+
+async function queueGalleryStorageDeletions(
+  tx: GalleryTransaction,
+  images: Array<{ storageKey: string; publicUrl: string }>,
+  queuedAt: number,
+): Promise<void> {
+  if (images.length === 0) return;
+  await lockGalleryStorageKeys(
+    tx,
+    images.map((image) => image.storageKey),
+  );
+  const deleteAfter = queuedAt + GALLERY_STORAGE_DELETE_GRACE_SECONDS;
+  await tx
+    .insert(galleryStorageDeletions)
+    .values(
+      images.map((image) => ({
+        storage_key: image.storageKey,
+        public_url: image.publicUrl,
+        queued_at: queuedAt,
+        delete_after: deleteAfter,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: galleryStorageDeletions.storage_key,
+      set: {
+        public_url: sql`excluded.public_url`,
+        queued_at: sql`LEAST(${galleryStorageDeletions.queued_at}, excluded.queued_at)`,
+        delete_after: sql`LEAST(${galleryStorageDeletions.delete_after}, excluded.delete_after)`,
+      },
+      // An external delete may already be in flight for a claimed row. Leave
+      // its fencing values untouched so writers continue to observe it busy.
+      setWhere: isNull(galleryStorageDeletions.last_attempt_at),
+    });
+}
+
+async function queueAndRemoveGalleryImages(
+  tx: GalleryTransaction,
+  threadIds: string[],
+  queuedAt: number,
+): Promise<void> {
+  if (threadIds.length === 0) return;
+  const images = await tx
+    .select({
+      storageKey: galleryImages.storage_key,
+      publicUrl: galleryImages.public_url,
+    })
+    .from(galleryImages)
+    .where(inArray(galleryImages.post_id, threadIds));
+  await queueGalleryStorageDeletions(tx, images, queuedAt);
+  await tx
+    .delete(galleryImages)
+    .where(inArray(galleryImages.post_id, threadIds));
+}
+
+/** Allocate one total-order revision before fetching any Discord state. */
+export async function allocateGallerySyncRevision(): Promise<number> {
+  const rows = await db.execute(
+    sql`SELECT nextval('gallery_sync_revision_seq') AS revision`,
+  );
+  const revision = Number(
+    (rows as unknown as Array<{ revision: number | string }>)[0]?.revision,
+  );
+  assertGalleryRevision(revision);
+  return revision;
+}
+
+/**
+ * Persist one complete Discord media post snapshot. Images and applied tags
+ * are replaced in the same transaction, so the website never observes a
+ * mixture of the old and new Discord state.
+ */
+export async function upsertGalleryPost(
+  data: GalleryPostSyncInput,
+): Promise<boolean> {
+  const seasonNumber = gallerySeasonNumber(data.seasonId);
+  assertGalleryRevision(data.revision);
+  assertGalleryTimestamp("posted", data.postedAt);
+  assertGalleryTimestamp("sync", data.syncedAt);
+  if (data.editedAt !== null) {
+    assertGalleryTimestamp("edited", data.editedAt);
+  }
+  if (data.images.length === 0) {
+    throw new Error("Gallery posts must contain at least one image");
+  }
+  assertGalleryPositions("image", data.images);
+  assertGalleryPositions("tag", data.tags);
+
+  return db.transaction(async (tx) => {
+    const channelState = await lockGalleryChannelSyncState(tx, data.channelId);
+    // Do not compare tags_revision here. Revisions order operations, not the
+    // freshness of independent resources: this post was force-fetched and a
+    // newer tag rename must not suppress its message edit.
+    if (
+      channelState.deleted_revision !== null &&
+      channelState.deleted_revision >= data.revision
+    ) {
+      return false;
+    }
+
+    const accepted = await acceptGalleryPostRevisions(
+      tx,
+      [data.threadId],
+      data.revision,
+    );
+    if (accepted.length === 0) return false;
+
+    const previousImages = await tx
+      .select({
+        storageKey: galleryImages.storage_key,
+        publicUrl: galleryImages.public_url,
+      })
+      .from(galleryImages)
+      .where(eq(galleryImages.post_id, data.threadId));
+    await lockGalleryStorageKeys(
+      tx,
+      [
+        ...previousImages.map((image) => image.storageKey),
+        ...data.images.map((image) => image.storageKey),
+      ],
+    );
+    const currentStorageKeys = new Set(
+      data.images.map((image) => image.storageKey),
+    );
+    await queueGalleryStorageDeletions(
+      tx,
+      previousImages.filter(
+        (image) => !currentStorageKeys.has(image.storageKey),
+      ),
+      data.syncedAt,
+    );
+    await tx
+      .delete(galleryStorageDeletions)
+      .where(
+        inArray(
+          galleryStorageDeletions.storage_key,
+          data.images.map((image) => image.storageKey),
+        ),
+      );
+
+    const initialContentUpdatedAt = Math.max(
+      data.postedAt,
+      data.editedAt ?? data.postedAt,
+    );
+    await tx
+      .insert(galleryPosts)
+      .values({
+        thread_id: data.threadId,
+        channel_id: data.channelId,
+        season_id: data.seasonId,
+        season_number: seasonNumber,
+        title: data.title,
+        content: data.content,
+        author_discord_id: data.authorDiscordId,
+        author_discord_username: data.authorDiscordUsername,
+        author_display_name:
+          data.authorDisplayName ?? data.authorDiscordUsername,
+        author_webhook_id: data.authorWebhookId,
+        source_url: data.sourceUrl,
+        posted_at: data.postedAt,
+        edited_at: data.editedAt,
+        content_hash: data.contentHash,
+        content_updated_at: initialContentUpdatedAt,
+        archived: data.archived,
+        locked: data.locked,
+        pinned: data.pinned,
+        published: true,
+        published_at: data.postedAt,
+        deleted_at: null,
+        last_synced_at: data.syncedAt,
+      })
+      .onConflictDoUpdate({
+        target: galleryPosts.thread_id,
+        set: {
+          channel_id: sql`excluded.channel_id`,
+          season_id: sql`excluded.season_id`,
+          season_number: sql`excluded.season_number`,
+          title: sql`excluded.title`,
+          content: sql`excluded.content`,
+          author_discord_id: sql`excluded.author_discord_id`,
+          author_discord_username: sql`excluded.author_discord_username`,
+          author_display_name: sql`excluded.author_display_name`,
+          author_webhook_id: sql`excluded.author_webhook_id`,
+          source_url: sql`excluded.source_url`,
+          posted_at: sql`excluded.posted_at`,
+          edited_at: sql`excluded.edited_at`,
+          content_hash: sql`excluded.content_hash`,
+          content_updated_at: sql`CASE
+            WHEN ${galleryPosts.content_hash} IS DISTINCT FROM excluded.content_hash
+              OR ${galleryPosts.published} = false
+              OR ${galleryPosts.deleted_at} IS NOT NULL
+              THEN GREATEST(
+                ${galleryPosts.content_updated_at},
+                excluded.last_synced_at
+              )
+            ELSE ${galleryPosts.content_updated_at}
+          END`,
+          archived: sql`excluded.archived`,
+          locked: sql`excluded.locked`,
+          pinned: sql`excluded.pinned`,
+          published: true,
+          deleted_at: null,
+          last_synced_at: sql`excluded.last_synced_at`,
+        },
+      });
+
+    if (data.tags.length > 0) {
+      await tx
+        .insert(galleryTags)
+        .values(
+          data.tags.map((tag) => ({
+            discord_tag_id: tag.discordTagId,
+            channel_id: data.channelId,
+            name: tag.name,
+            emoji_id: tag.emojiId,
+            emoji_name: tag.emojiName,
+            moderated: tag.moderated,
+            available: true,
+            position: tag.position,
+            last_synced_at: data.syncedAt,
+          })),
+        )
+        // Applied tags from archived threads can be absent from Discord's
+        // current catalogue. Preserve any known snapshot; the complete
+        // channel refresh below is authoritative for names and emoji.
+        .onConflictDoNothing();
+    }
+
+    await tx
+      .delete(galleryImages)
+      .where(eq(galleryImages.post_id, data.threadId));
+    if (data.images.length > 0) {
+      await tx.insert(galleryImages).values(
+        data.images.map((image) => ({
+          discord_attachment_id: image.discordAttachmentId,
+          post_id: data.threadId,
+          storage_key: image.storageKey,
+          public_url: image.publicUrl,
+          filename: image.filename,
+          alt: image.alt,
+          content_type: image.contentType,
+          size: image.size,
+          width: image.width,
+          height: image.height,
+          position: image.position,
+        })),
+      );
+    }
+
+    await tx
+      .delete(galleryPostTags)
+      .where(eq(galleryPostTags.post_id, data.threadId));
+    if (data.tags.length > 0) {
+      await tx.insert(galleryPostTags).values(
+        data.tags.map((tag) => ({
+          post_id: data.threadId,
+          tag_id: tag.discordTagId,
+        })),
+      );
+    }
+    return true;
+  });
+}
+
+/** Replace the available Discord tag catalogue for one media channel. */
+export async function replaceGalleryChannelTags(
+  channelId: string,
+  tags: GalleryAppliedTagSyncInput[],
+  tagsHash: string,
+  syncedAt: number,
+  revision: number,
+): Promise<boolean> {
+  assertGalleryRevision(revision);
+  assertGalleryTimestamp("tag sync", syncedAt);
+  assertGalleryPositions("tag", tags);
+  return db.transaction(async (tx) => {
+    const channelState = await lockGalleryChannelSyncState(tx, channelId);
+    if (
+      channelState.tags_revision >= revision ||
+      (channelState.deleted_revision !== null &&
+        channelState.deleted_revision >= revision)
+    ) {
+      return false;
+    }
+    const tagsChanged = channelState.tags_hash !== tagsHash;
+    await tx
+      .update(galleryChannelSyncState)
+      .set({ tags_revision: revision, tags_hash: tagsHash })
+      .where(eq(galleryChannelSyncState.channel_id, channelId));
+
+    await tx
+      .update(galleryTags)
+      .set({ available: false, last_synced_at: syncedAt })
+      .where(eq(galleryTags.channel_id, channelId));
+
+    if (tags.length > 0) {
+      await tx
+        .insert(galleryTags)
+        .values(
+          tags.map((tag) => ({
+            discord_tag_id: tag.discordTagId,
+            channel_id: channelId,
+            name: tag.name,
+            emoji_id: tag.emojiId,
+            emoji_name: tag.emojiName,
+            moderated: tag.moderated,
+            available: true,
+            position: tag.position,
+            last_synced_at: syncedAt,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: galleryTags.discord_tag_id,
+          set: {
+            channel_id: sql`excluded.channel_id`,
+            name: sql`excluded.name`,
+            emoji_id: sql`excluded.emoji_id`,
+            emoji_name: sql`excluded.emoji_name`,
+            moderated: sql`excluded.moderated`,
+            available: true,
+            position: sql`excluded.position`,
+            last_synced_at: sql`excluded.last_synced_at`,
+          },
+        });
+    }
+    if (tagsChanged) {
+      await tx
+        .update(galleryPosts)
+        .set({
+          content_updated_at: sql`GREATEST(${galleryPosts.content_updated_at}, ${syncedAt})`,
+        })
+        .where(
+          and(
+            eq(galleryPosts.channel_id, channelId),
+            eq(galleryPosts.published, true),
+            isNull(galleryPosts.deleted_at),
+          ),
+        );
+    }
+    return true;
+  });
+}
+
+export async function markGalleryPostDeleted(
+  threadId: string,
+  deletedAt: number,
+  revision: number,
+): Promise<boolean> {
+  assertGalleryRevision(revision);
+  assertGalleryTimestamp("post deletion", deletedAt);
+  return db.transaction(async (tx) => {
+    const accepted = await acceptGalleryPostRevisions(
+      tx,
+      [threadId],
+      revision,
+    );
+    if (accepted.length === 0) return false;
+    await queueAndRemoveGalleryImages(tx, accepted, deletedAt);
+    await tx
+      .update(galleryPosts)
+      .set({
+        published: false,
+        deleted_at: deletedAt,
+        last_synced_at: deletedAt,
+      })
+      .where(eq(galleryPosts.thread_id, threadId));
+    return true;
+  });
+}
+
+export async function markGalleryChannelDeleted(
+  channelId: string,
+  deletedAt: number,
+  revision: number,
+): Promise<boolean> {
+  assertGalleryRevision(revision);
+  assertGalleryTimestamp("channel deletion", deletedAt);
+  return db.transaction(async (tx) => {
+    const channelState = await lockGalleryChannelSyncState(tx, channelId);
+    if (
+      channelState.deleted_revision !== null &&
+      channelState.deleted_revision >= revision
+    ) {
+      return false;
+    }
+    await tx
+      .update(galleryChannelSyncState)
+      .set({ deleted_revision: revision })
+      .where(eq(galleryChannelSyncState.channel_id, channelId));
+    await tx
+      .update(galleryTags)
+      .set({ available: false, last_synced_at: deletedAt })
+      .where(eq(galleryTags.channel_id, channelId));
+
+    const posts = await tx
+      .select({ threadId: galleryPosts.thread_id })
+      .from(galleryPosts)
+      .where(eq(galleryPosts.channel_id, channelId));
+    const accepted = await acceptGalleryPostRevisions(
+      tx,
+      posts.map((post) => post.threadId),
+      revision,
+    );
+    await queueAndRemoveGalleryImages(tx, accepted, deletedAt);
+    if (accepted.length > 0) {
+      await tx
+        .update(galleryPosts)
+        .set({
+          published: false,
+          deleted_at: deletedAt,
+          last_synced_at: deletedAt,
+        })
+        .where(inArray(galleryPosts.thread_id, accepted));
+    }
+    return true;
+  });
+}
+
+/**
+ * Reconcile a complete channel backfill, retaining rows for audit while
+ * removing posts no longer present in Discord from the public website.
+ */
+export async function markGalleryPostsDeletedExcept(
+  channelId: string,
+  liveThreadIds: string[],
+  deletedAt: number,
+  revision: number,
+): Promise<number> {
+  assertGalleryRevision(revision);
+  assertGalleryTimestamp("reconciliation", deletedAt);
+  return db.transaction(async (tx) => {
+    const channelState = await lockGalleryChannelSyncState(tx, channelId);
+    if (
+      channelState.deleted_revision !== null &&
+      channelState.deleted_revision >= revision
+    ) {
+      return 0;
+    }
+    const conditions = [eq(galleryPosts.channel_id, channelId)];
+    if (liveThreadIds.length > 0) {
+      conditions.push(
+        notInArray(galleryPosts.thread_id, [...new Set(liveThreadIds)]),
+      );
+    }
+    const posts = await tx
+      .select({ threadId: galleryPosts.thread_id })
+      .from(galleryPosts)
+      .where(and(...conditions));
+    const accepted = await acceptGalleryPostRevisions(
+      tx,
+      posts.map((post) => post.threadId),
+      revision,
+    );
+    await queueAndRemoveGalleryImages(tx, accepted, deletedAt);
+    if (accepted.length > 0) {
+      await tx
+        .update(galleryPosts)
+        .set({
+          published: false,
+          deleted_at: deletedAt,
+          last_synced_at: deletedAt,
+        })
+        .where(inArray(galleryPosts.thread_id, accepted));
+    }
+    return accepted.length;
+  });
+}
+
+/**
+ * Queue uploads produced by a stale sync only when no accepted Gallery image
+ * currently references their deterministic key. A later accepted upsert
+ * cancels the queue row if that key becomes current during the grace period.
+ */
+export async function enqueueUnreferencedGalleryStorageDeletions(
+  images: GalleryStoredMediaInput[],
+  queuedAt: number,
+): Promise<number> {
+  assertGalleryTimestamp("storage queue", queuedAt);
+  const uniqueImages = Array.from(
+    new Map(images.map((image) => [image.storageKey, image])).values(),
+  );
+  if (uniqueImages.length === 0) return 0;
+  return db.transaction(async (tx) => {
+    await lockGalleryStorageKeys(
+      tx,
+      uniqueImages.map((image) => image.storageKey),
+    );
+    const referenced = await tx
+      .select({ storageKey: galleryImages.storage_key })
+      .from(galleryImages)
+      .where(
+        inArray(
+          galleryImages.storage_key,
+          uniqueImages.map((image) => image.storageKey),
+        ),
+      );
+    const referencedKeys = new Set(referenced.map((row) => row.storageKey));
+    const unreferenced = uniqueImages.filter(
+      (image) => !referencedKeys.has(image.storageKey),
+    );
+    if (unreferenced.length > 0) {
+      await tx
+        .insert(galleryStorageDeletions)
+        .values(
+          unreferenced.map((image) => ({
+            storage_key: image.storageKey,
+            public_url: image.publicUrl,
+            queued_at: queuedAt,
+            delete_after:
+              queuedAt + GALLERY_STORAGE_DELETE_GRACE_SECONDS,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: galleryStorageDeletions.storage_key,
+          // The stale sync has just uploaded this deterministic key again.
+          // Reset older unclaimed retry state so it receives a full grace.
+          set: {
+            public_url: sql`excluded.public_url`,
+            queued_at: sql`excluded.queued_at`,
+            delete_after: sql`excluded.delete_after`,
+            attempts: 0,
+            last_attempt_at: null,
+            last_error: null,
+          },
+          // Never cancel a delete that has crossed the database/storage
+          // boundary. The owning sync will retry its upload after that claim.
+          setWhere: isNull(galleryStorageDeletions.last_attempt_at),
+        });
+    }
+    return unreferenced.length;
+  });
+}
+
+/** Atomically lease due media deletions; expired leases become retryable. */
+export async function claimDueGalleryStorageDeletions(
+  now: number,
+  limit: number,
+  leaseUntil: number,
+): Promise<GalleryStorageDeletionClaim[]> {
+  assertGalleryTimestamp("storage claim", now);
+  assertGalleryTimestamp("storage lease", leaseUntil);
+  if (!Number.isSafeInteger(limit) || limit <= 0) {
+    throw new Error("Gallery storage deletion claim limit must be positive");
+  }
+  const safeLimit = Math.min(1_000, limit);
+  if (leaseUntil <= now) {
+    throw new Error("Gallery storage deletion lease must end after it starts");
+  }
+  const rows = await db.execute(sql`
+    WITH due AS (
+      SELECT storage_key
+      FROM gallery_storage_deletions
+      WHERE delete_after <= ${now}
+      ORDER BY delete_after ASC, storage_key ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT ${safeLimit}
+    )
+    UPDATE gallery_storage_deletions AS deletion
+    SET attempts = deletion.attempts + 1,
+        last_attempt_at = ${now},
+        delete_after = ${leaseUntil},
+        last_error = NULL
+    FROM due
+    WHERE deletion.storage_key = due.storage_key
+    RETURNING deletion.storage_key,
+              deletion.public_url,
+              deletion.attempts,
+              deletion.last_attempt_at,
+              deletion.delete_after
+  `);
+  return (
+    rows as unknown as Array<{
+      storage_key: string;
+      public_url: string;
+      attempts: number;
+      last_attempt_at: number;
+      delete_after: number;
+    }>
+  ).map((row) => ({
+    storageKey: row.storage_key,
+    publicUrl: row.public_url,
+    attempts: Number(row.attempts),
+    claimedAt: Number(row.last_attempt_at),
+    leaseUntil: Number(row.delete_after),
+  }));
+}
+
+/**
+ * Execute one leased deletion while fencing every database path that can
+ * reserve or reference its deterministic object key. Keeping the advisory
+ * lock through the external callback is deliberate: a writer either cancels
+ * the queue before checking storage, or waits until this deletion has finished
+ * and then checks/uploads the object afterwards.
+ */
+export async function executeGalleryStorageDeletionClaim(
+  claim: GalleryStorageDeletionClaim,
+  deleteObject: () => Promise<void>,
+): Promise<GalleryStorageDeletionExecutionResult> {
+  return db.transaction(async (tx) => {
+    await lockGalleryStorageKeys(tx, [claim.storageKey]);
+
+    const claimIdentity = and(
+      eq(galleryStorageDeletions.storage_key, claim.storageKey),
+      eq(galleryStorageDeletions.attempts, claim.attempts),
+      eq(galleryStorageDeletions.last_attempt_at, claim.claimedAt),
+      eq(galleryStorageDeletions.delete_after, claim.leaseUntil),
+    );
+    const [currentClaim] = await tx
+      .select({ storageKey: galleryStorageDeletions.storage_key })
+      .from(galleryStorageDeletions)
+      .where(
+        and(
+          claimIdentity,
+          sql`${galleryStorageDeletions.delete_after} > FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::integer`,
+        ),
+      )
+      .for("update");
+    if (!currentClaim) return "stale-claim";
+
+    const [reference] = await tx
+      .select({ storageKey: galleryImages.storage_key })
+      .from(galleryImages)
+      .where(eq(galleryImages.storage_key, claim.storageKey))
+      .limit(1);
+    if (reference) {
+      await tx.delete(galleryStorageDeletions).where(claimIdentity);
+      return "referenced";
+    }
+
+    // This callback must only perform the storage/cache deletion. It must not
+    // call back into a Gallery database query while the per-key lock is held.
+    await deleteObject();
+    const completed = await tx
+      .delete(galleryStorageDeletions)
+      .where(claimIdentity)
+      .returning({ storageKey: galleryStorageDeletions.storage_key });
+    if (completed.length !== 1) {
+      throw new Error(
+        `Gallery storage claim changed during deletion: ${claim.storageKey}`,
+      );
+    }
+    return "deleted";
+  });
+}
+
+export async function recordGalleryStorageDeletionFailure(
+  claim: GalleryStorageDeletionClaim,
+  failedAt: number,
+  error: string,
+): Promise<boolean> {
+  assertGalleryTimestamp("storage failure", failedAt);
+  const retrySeconds = Math.min(
+    GALLERY_STORAGE_RETRY_MAX_SECONDS,
+    30 * 2 ** Math.min(10, Math.max(0, claim.attempts - 1)),
+  );
+  const rows = await db
+    .update(galleryStorageDeletions)
+    .set({
+      delete_after: failedAt + retrySeconds,
+      // The external attempt has returned, so a writer may now cancel this
+      // retry and re-upload the deterministic key without racing a delete.
+      last_attempt_at: null,
+      last_error: error.slice(0, 4_000),
+    })
+    .where(
+      and(
+        eq(galleryStorageDeletions.storage_key, claim.storageKey),
+        eq(galleryStorageDeletions.attempts, claim.attempts),
+        eq(galleryStorageDeletions.last_attempt_at, claim.claimedAt),
+        eq(galleryStorageDeletions.delete_after, claim.leaseUntil),
+      ),
+    )
+    .returning({ storageKey: galleryStorageDeletions.storage_key });
+  return rows.length > 0;
 }
 
 export async function upsertUser(data: UpsertUserData): Promise<void> {
