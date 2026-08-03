@@ -323,7 +323,7 @@ export const playerLoginStreakProgress = pgTable(
   },
   (table) => [
     primaryKey({
-      name: "player_login_streak_progress_pkey",
+      name: "player_login_streak_progress_minecraft_uuid_streak_day_pk",
       columns: [table.minecraft_uuid, table.streak_day],
     }),
   ],
