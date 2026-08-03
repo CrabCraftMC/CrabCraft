@@ -4,6 +4,7 @@ import crabcraft.net.crabUtilities.accurateplacement.AccurateBlockPlacementManag
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
 import crabcraft.net.crabUtilities.awards.SuspiciousBrushTracker;
 import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
+import crabcraft.net.crabUtilities.bingo.BingoManager;
 import crabcraft.net.crabUtilities.cauldron.CauldronRecipeListener;
 import crabcraft.net.crabUtilities.chat.EssentialsMentionAutocompleteListener;
 import crabcraft.net.crabUtilities.chat.GlobalChatListener;
@@ -73,6 +74,7 @@ public final class CrabUtilities extends JavaPlugin {
     private AccurateBlockPlacementManager accurateBlockPlacementManager;
     private SimpleVoiceAnimationsIntegration simpleVoiceAnimationsIntegration;
     private ModuleConfigManager moduleConfigManager;
+    private BingoManager bingoManager;
 
     @Override
     public void onEnable() {
@@ -208,6 +210,9 @@ public final class CrabUtilities extends JavaPlugin {
         // Settings are stored network-wide in Redis; phantoms and locator bar default OFF.
         startPlayerSettings();
 
+        // Weekly bingo is opt-out for players but feature-gated for deployment.
+        startBingo();
+
         // BlueMap sign markers: signs with [map] on the top line become POI
         // markers on the BlueMap web map. Soft dependency — skipped when the
         // BlueMap plugin isn't installed or the feature is off in config.
@@ -248,6 +253,10 @@ public final class CrabUtilities extends JavaPlugin {
     /** The per-player settings mirror, or {@code null} before it has started. */
     public PlayerSettingsService getPlayerSettingsService() {
         return playerSettingsService;
+    }
+
+    public boolean isBingoMessagesEnabled(java.util.UUID playerId) {
+        return playerSettingsService == null || playerSettingsService.isBingoMessagesEnabled(playerId);
     }
 
     /**
@@ -360,6 +369,12 @@ public final class CrabUtilities extends JavaPlugin {
                 && simpleVoiceAnimationsIntegration.isActive()
                 ? "Simple Voice Animations integration active."
                 : "Simple Voice Animations integration inactive (disabled in config).");
+
+        stopBingo();
+        startBingo();
+        messages.add(bingoManager != null
+                ? "Weekly bingo tracking restarted."
+                : "Weekly bingo tracking inactive (disabled in config).");
 
         stopSignMarkers();
         startSignMarkers();
@@ -509,6 +524,21 @@ public final class CrabUtilities extends JavaPlugin {
             HandlerList.unregisterAll(playerSettingsService);
             playerSettingsService.shutdown();
             playerSettingsService = null;
+        }
+    }
+
+    private void startBingo() {
+        BingoManager manager = new BingoManager(this);
+        manager.start();
+        if (getConfig().getBoolean("bingo.enabled", false)) {
+            this.bingoManager = manager;
+        }
+    }
+
+    private void stopBingo() {
+        if (bingoManager != null) {
+            bingoManager.shutdown();
+            bingoManager = null;
         }
     }
 
@@ -677,6 +707,7 @@ public final class CrabUtilities extends JavaPlugin {
             chatBridge = null;
         }
         stopGlobalChatService();
+        stopBingo();
         stopPlayerSettings();
         stopSignMarkers();
         stopHappyGhastSpeed();
