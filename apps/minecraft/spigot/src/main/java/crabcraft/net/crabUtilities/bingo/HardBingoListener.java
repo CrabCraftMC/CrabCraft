@@ -1,7 +1,7 @@
 package crabcraft.net.crabUtilities.bingo;
 
 import io.papermc.paper.event.entity.EntityFertilizeEggEvent;
-import io.papermc.paper.event.player.PlayerItemGroupCooldownEvent;
+import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import java.util.ArrayDeque;
@@ -80,6 +80,7 @@ public final class HardBingoListener implements Listener {
     private static final int MAX_ORE_BLOCKS_PER_PLAYER = 512;
     private static final int SHORT_CORRELATION_TICKS = 3;
     private static final int ITEM_RETENTION_TICKS = 20 * 60 * 10;
+    private static final int HORN_COMPLETION_TICKS = 20 * 10;
     private static final int SCAFFOLDING_HEIGHT = 64;
     private static final double CAMPFIRE_DISTANCE_SQUARED = 100.0;
     private static final BlockFace[] FACES = {
@@ -94,6 +95,7 @@ public final class HardBingoListener implements Listener {
     private final JavaPlugin plugin;
     private final BiPredicate<Player, BingoTask> tracking;
     private final BiConsumer<Player, BingoTask> completion;
+    private final BiConsumer<Player, HornProgress> hornProgress;
     private final Map<UUID, Set<String>> hornsByPlayer = new HashMap<>();
     private final Map<UUID, PendingHorn> pendingHorns = new HashMap<>();
     private final Map<BlockKey, OrePlacement> oreByBlock = new HashMap<>();
@@ -114,9 +116,18 @@ public final class HardBingoListener implements Listener {
             JavaPlugin plugin,
             BiPredicate<Player, BingoTask> tracking,
             BiConsumer<Player, BingoTask> completion) {
+        this(plugin, tracking, completion, (player, progress) -> {});
+    }
+
+    public HardBingoListener(
+            JavaPlugin plugin,
+            BiPredicate<Player, BingoTask> tracking,
+            BiConsumer<Player, BingoTask> completion,
+            BiConsumer<Player, HornProgress> hornProgress) {
         this.plugin = plugin;
         this.tracking = tracking;
         this.completion = completion;
+        this.hornProgress = hornProgress;
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -156,18 +167,19 @@ public final class HardBingoListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onItemCooldown(PlayerItemGroupCooldownEvent event) {
-        if (event.getCooldown() <= 0) return;
+    public void onItemCooldown(PlayerItemCooldownEvent event) {
+        if (event.getType() != Material.GOAT_HORN || event.getCooldown() <= 0) return;
         Player player = event.getPlayer();
         PendingHorn pending = pendingHorns.remove(player.getUniqueId());
         if (pending == null
-                || !isFresh(pending.tick(), Bukkit.getCurrentTick(), 1)
+                || !isFresh(pending.tick(), Bukkit.getCurrentTick(), HORN_COMPLETION_TICKS)
                 || !tracking.test(player, BingoTask.PLAY_FIVE_GOAT_HORNS)) {
             return;
         }
         Set<String> horns = hornsByPlayer.computeIfAbsent(
                 player.getUniqueId(), ignored -> new HashSet<>());
-        horns.add(pending.instrument());
+        if (!horns.add(pending.instrument())) return;
+        hornProgress.accept(player, new HornProgress(pending.instrument(), horns.size()));
         if (horns.size() >= 5) {
             completion.accept(player, BingoTask.PLAY_FIVE_GOAT_HORNS);
         }
@@ -806,6 +818,8 @@ public final class HardBingoListener implements Listener {
     private record OrePlacement(UUID playerId, OreFamily family) {}
 
     private record PendingHorn(String instrument, int tick) {}
+
+    public record HornProgress(String instrument, int uniqueCount) {}
 
     private record TimedPlayer(UUID playerId, int tick) {}
 
