@@ -207,13 +207,13 @@ export default function GalleryExplorer({
           {posts.map((post, index) => (
             <article
               key={post.id}
-              className="group animate-in overflow-hidden rounded-[2rem] bg-paper-2 shadow-sm motion-reduce:animate-none motion-reduce:opacity-100"
+              className="group flex h-full flex-col overflow-hidden rounded-[2rem] bg-paper-2 shadow-sm animate-in motion-reduce:animate-none motion-reduce:opacity-100"
               style={{ animationDelay: `${0.12 + index * 0.05}s` }}
             >
               <Link
                 href={`/gallery/${post.id}`}
                 aria-label={`View ${post.title}`}
-                className="relative grid aspect-[16/10] grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden bg-[#130f0c] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/60 focus-visible:ring-inset"
+                className="relative grid aspect-[16/10] shrink-0 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden bg-[#130f0c] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/60 focus-visible:ring-inset"
               >
                 {post.images.slice(0, 4).map((image, imageIndex) => (
                   <span
@@ -240,7 +240,7 @@ export default function GalleryExplorer({
                 )}
               </Link>
 
-              <div className="p-5">
+              <div className="flex flex-1 flex-col p-5">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Link
                     href={galleryHref({
@@ -305,14 +305,16 @@ export default function GalleryExplorer({
                   </div>
                 ) : null}
 
-                <div className="mt-5 flex items-center justify-between gap-3 border-t border-line pt-4">
-                  <GalleryAuthorByline post={post} />
-                  <time
-                    dateTime={post.postedAt.toISOString()}
-                    className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400"
-                  >
-                    {formatGalleryDate(post.postedAt)}
-                  </time>
+                <div className="mt-auto pt-5">
+                  <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
+                    <GalleryAuthorByline post={post} />
+                    <time
+                      dateTime={post.postedAt.toISOString()}
+                      className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400"
+                    >
+                      {formatGalleryDate(post.postedAt)}
+                    </time>
+                  </div>
                 </div>
               </div>
             </article>
