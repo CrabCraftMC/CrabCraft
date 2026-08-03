@@ -160,6 +160,7 @@ function getRenderContext(): CardRenderContext {
   if (!renderContext) {
     renderContext = {
       renderer: new Renderer({
+        loadDefaultFonts: true,
         fonts: [{ name: SANS, data: fs.readFileSync(SANS_FONT_PATH) }],
       }),
     };
