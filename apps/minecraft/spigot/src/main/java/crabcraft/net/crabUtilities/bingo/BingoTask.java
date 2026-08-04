@@ -18,8 +18,8 @@ public enum BingoTask {
             "Successfully play five distinct goat horn instruments after this card starts."),
     CONNECT_ALL_ORE_TYPES(
             "connect_all_ore_types",
-            "Place 10 ore types plus Ancient Debris in one connected cluster.",
-            "Place coal, iron, copper, gold, redstone, lapis, diamond, emerald, Nether quartz, Nether gold and Ancient Debris. Every block must be placed by you after the card starts and touch the cluster by a face; stone and deepslate variants count as the same ore."),
+            "Place all 10 ore families plus Ancient Debris together (normal/deepslate count as one).",
+            "Place coal, copper, iron, gold, redstone, lapis, diamond, emerald, Nether gold, Nether quartz and Ancient Debris. Every block must be placed by you after the card starts and touch the cluster by a face. Stone and deepslate variants count as the same ore family and do not count twice."),
     ACTIVATE_TOTEM(
             "activate_totem",
             "Activate a Totem of Undying.",
