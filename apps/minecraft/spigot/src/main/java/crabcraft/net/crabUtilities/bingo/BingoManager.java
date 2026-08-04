@@ -68,7 +68,8 @@ public final class BingoManager {
         jedisPool = password == null || password.isEmpty()
                 ? new JedisPool(poolConfig, host, port, 2_000)
                 : new JedisPool(poolConfig, host, port, 2_000, password);
-        listener = new HardBingoListener(plugin, this::isTracking, this::complete);
+        listener = new HardBingoListener(
+                plugin, this::isTracking, this::complete, this::logHornProgress);
         plugin.getServer().getPluginManager().registerEvents(listener, plugin);
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::refreshActiveCard, 0L, 20L * 30L);
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::flushPending, 20L, 20L);
@@ -115,6 +116,11 @@ public final class BingoManager {
     boolean isTracking(Player player, BingoTask task) {
         BingoActiveCard card = activeCard;
         return isEligible(player) && card != null && card.contains(task);
+    }
+
+    private void logHornProgress(Player player, HardBingoListener.HornProgress progress) {
+        plugin.getLogger().info("Bingo goat horn progress for " + player.getName()
+                + ": " + progress.uniqueCount() + "/5 (" + progress.instrument() + ")");
     }
 
     private void refreshActiveCard() {

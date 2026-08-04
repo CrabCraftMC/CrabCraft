@@ -1,7 +1,7 @@
 package crabcraft.net.crabUtilities.bingo;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.event.entity.EntityFertilizeEggEvent;
-import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import java.util.ArrayDeque;
@@ -18,6 +18,7 @@ import java.util.function.BiPredicate;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.MusicInstrument;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -64,11 +65,11 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.MusicInstrumentMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffectType;
 
@@ -137,22 +138,37 @@ public final class HardBingoListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onItemCooldown(PlayerItemCooldownEvent event) {
-        if (event.getType() != Material.GOAT_HORN || event.getCooldown() <= 0) return;
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onHornInteract(PlayerInteractEvent event) {
+        if (!event.getAction().isRightClick()
+                || event.useItemInHand() == org.bukkit.event.Event.Result.DENY) {
+            return;
+        }
         Player player = event.getPlayer();
-        ItemStack item = player.getActiveItem();
-        if (item.getType() != Material.GOAT_HORN
-                || !tracking.test(player, BingoTask.PLAY_FIVE_GOAT_HORNS)
-                || !(item.getItemMeta() instanceof MusicInstrumentMeta meta)
-                || meta.getInstrument() == null) {
+        ItemStack item = event.getItem();
+        String instrument = instrumentKey(item);
+        if (instrument == null
+                || player.getCooldown(item) > 0
+                || !tracking.test(player, BingoTask.PLAY_FIVE_GOAT_HORNS)) {
             return;
         }
 
-        String instrument = RegistryAccess.registryAccess()
-                .getRegistry(RegistryKey.INSTRUMENT)
-                .getKey(meta.getInstrument())
-                .asString();
+        ItemStack usedHorn = item.clone();
+        Bukkit.getScheduler().runTask(plugin, () ->
+                confirmHornPlayed(player.getUniqueId(), instrument, usedHorn));
+    }
+
+    private void confirmHornPlayed(UUID playerId, String instrument, ItemStack usedHorn) {
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null
+                || !tracking.test(player, BingoTask.PLAY_FIVE_GOAT_HORNS)
+                || player.getCooldown(usedHorn) <= 0) {
+            return;
+        }
+        recordHorn(player, instrument);
+    }
+
+    private void recordHorn(Player player, String instrument) {
         Set<String> horns = hornsByPlayer.computeIfAbsent(
                 player.getUniqueId(), ignored -> new HashSet<>());
         if (!horns.add(instrument)) return;
@@ -160,6 +176,16 @@ public final class HardBingoListener implements Listener {
         if (horns.size() >= 5) {
             completion.accept(player, BingoTask.PLAY_FIVE_GOAT_HORNS);
         }
+    }
+
+    private static String instrumentKey(ItemStack item) {
+        if (item == null || item.getType() != Material.GOAT_HORN) return null;
+        MusicInstrument instrument = item.getData(DataComponentTypes.INSTRUMENT);
+        if (instrument == null) return null;
+        return RegistryAccess.registryAccess()
+                .getRegistry(RegistryKey.INSTRUMENT)
+                .getKey(instrument)
+                .asString();
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
