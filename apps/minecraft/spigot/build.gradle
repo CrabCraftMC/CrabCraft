@@ -42,10 +42,10 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("26.1.2.build.72-stable")
+    paperweight.paperDevBundle("26.2.build.87-stable")
     compileOnly("net.essentialsx:EssentialsX:2.20.1") {
         // EssentialsX 2.20.1 transitively pulls spigot-api:1.20.1 which conflicts
-        // with paper-api:26.1.2 on the org.spigotmc:spigot-api capability.
+        // with paper-api:26.2 on the org.spigotmc:spigot-api capability.
         exclude group: "org.spigotmc", module: "spigot-api"
     }
     compileOnly("net.kyori:adventure-text-serializer-legacy:4.17.0")
@@ -80,7 +80,7 @@ tasks.build.dependsOn(tasks.shadowJar)
 
 tasks {
     runServer {
-        minecraftVersion("26.1.2")
+        minecraftVersion("26.2")
     }
 }
 
@@ -127,6 +127,7 @@ def regressionTests = [
     appleSkinLifecycleRegressionTest: 'crabcraft.net.crabUtilities.appleskin.AppleSkinLifecycleRegressionTest',
     bingoTaskRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoTaskRegressionTest',
     spectatorBackRegressionTest: 'crabcraft.net.crabUtilities.spectator.SpectatorBackRegressionTest',
+    endPortalBlockingRegressionTest: 'crabcraft.net.crabUtilities.endportals.EndPortalBlockerListenerRegressionTest',
 ]
 def runtimeOnlyRegressionTests = [
     'voiceRelayRegressionTest',
