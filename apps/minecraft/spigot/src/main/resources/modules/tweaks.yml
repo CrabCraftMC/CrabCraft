@@ -22,6 +22,11 @@ tweaks:
       max-portal-width: 23
       max-portal-height: 23
 
+  # Stop all entities using End portals in either direction. Nether portals
+  # and End gateways are unaffected.
+  end-portals:
+    prevent-entry: false
+
   # Reactively lower simulation/view distances when tick time is high and
   # cautiously raise them again after performance has remained healthy.
   # Uses ViewDistanceTweaks' reactive defaults: check every 30 seconds,

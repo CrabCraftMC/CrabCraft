@@ -13,6 +13,7 @@ import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
 import crabcraft.net.crabUtilities.chat.bridge.PaperChatBridge;
 import crabcraft.net.crabUtilities.config.ModuleConfigManager;
 import crabcraft.net.crabUtilities.enderman.EndermanGriefListener;
+import crabcraft.net.crabUtilities.endportals.EndPortalBlockerListener;
 import crabcraft.net.crabUtilities.happyghast.HappyGhastSpeedManager;
 import crabcraft.net.crabUtilities.heads.PersistentHeadsListener;
 import crabcraft.net.crabUtilities.heads.PlayerHeadDropsListener;
@@ -141,6 +142,11 @@ public final class CrabUtilities extends JavaPlugin {
         // frame-materials/size settings are cached and invalidated on reload.
         this.customNetherPortalListener = new CustomNetherPortalListener(this);
         Bukkit.getPluginManager().registerEvents(customNetherPortalListener, this);
+
+        // End portal blocker: prevent every entity from entering an End portal.
+        // Opt-in and disabled by default; the listener reads config live so
+        // /crabutilities reload tweaks toggles it without re-registration.
+        Bukkit.getPluginManager().registerEvents(new EndPortalBlockerListener(this), this);
 
         // Small opt-in survival tweaks (ported from VanillaTweaks/PaperTweaks).
         // Each reads config live and is disabled by default, so /crabutilities
