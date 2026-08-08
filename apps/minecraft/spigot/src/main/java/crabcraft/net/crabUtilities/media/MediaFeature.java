@@ -118,8 +118,8 @@ public final class MediaFeature {
   private void registerCommands() {
     javaPlugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
       var commands = event.registrar();
-      commands.register("disc", "Create and edit playable music discs.", java.util.List.of(), new DiscCommand());
-      commands.register("horn", "Create and edit playable goat horns.", java.util.List.of(), new HornCommand());
+      commands.register("disc", "Create, edit, and clear playable music discs.", java.util.List.of(), new DiscCommand());
+      commands.register("horn", "Create, edit, and clear playable goat horns.", java.util.List.of(), new HornCommand());
       commands.register("cd", "Crab Utilities media commands.", java.util.List.of(), new MediaCommand());
     });
   }

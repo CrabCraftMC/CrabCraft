@@ -6,11 +6,15 @@ import crabcraft.net.crabUtilities.media.source.MediaSourceKind;
 import crabcraft.net.crabUtilities.media.util.RemoteMediaSecurity;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.CustomModelData;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.keys.InstrumentKeys;
 import io.papermc.paper.registry.keys.SoundEventKeys;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.MusicInstrument;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -75,9 +79,10 @@ public final class PlayableItemWriter {
     if (!hasName(player, name, "error.command.horn-name-empty")) return;
 
     ItemStack held = player.getInventory().getItemInMainHand();
+    String originalInstrument = originalInstrument(held);
     ItemMeta meta = MediaItemCodec.requireMeta(held);
     decorate(meta, name);
-    MediaItemCodec.writeHorn(meta, source, name, volume);
+    MediaItemCodec.writeHorn(meta, source, name, volume, originalInstrument);
     held.setItemMeta(meta);
 
     String title = shortened(name);
@@ -90,6 +95,41 @@ public final class PlayableItemWriter {
 
     describeHorn(player, name, source, volume);
     prewarmHorn(player, source, volume);
+  }
+
+  @SuppressWarnings("UnstableApiUsage")
+  public static void clearDisc(Player player) {
+    if (!canClear(player)) return;
+    ItemStack held = player.getInventory().getItemInMainHand();
+    if (!MediaItemCodec.isMusicDiscHeld(player) || !MediaItemCodec.isDisc(held)) {
+      reject(player, "command.clear.messages.error.not-media-disc");
+      return;
+    }
+
+    ItemMeta meta = MediaItemCodec.requireMeta(held);
+    MediaItemCodec.clearDisc(meta);
+    restoreAppearance(meta);
+    held.setItemMeta(meta);
+    held.resetData(DataComponentTypes.CUSTOM_MODEL_DATA);
+    player.sendMessage(MediaFeature.get().getMessages().component("command.clear.messages.cleared"));
+  }
+
+  @SuppressWarnings("UnstableApiUsage")
+  public static void clearHorn(Player player) {
+    if (!canClear(player)) return;
+    ItemStack held = player.getInventory().getItemInMainHand();
+    if (!MediaItemCodec.isHorn(held)) {
+      reject(player, "command.horn.clear.messages.error.not-media-horn");
+      return;
+    }
+
+    String originalInstrument = MediaItemCodec.readOriginalHornInstrument(held);
+    ItemMeta meta = MediaItemCodec.requireMeta(held);
+    MediaItemCodec.clearHorn(meta);
+    restoreAppearance(meta);
+    held.setItemMeta(meta);
+    held.setData(DataComponentTypes.INSTRUMENT, resolveInstrument(originalInstrument));
+    player.sendMessage(MediaFeature.get().getMessages().component("command.horn.clear.messages.cleared"));
   }
 
   private static MediaSourceKind authorisedSource(Player player, String source) {
@@ -116,6 +156,33 @@ public final class PlayableItemWriter {
     meta.displayName(Component.text(shortened(name), NamedTextColor.WHITE)
       .decoration(TextDecoration.ITALIC, false));
     meta.addItemFlags(ItemFlag.values());
+  }
+
+  private static void restoreAppearance(ItemMeta meta) {
+    meta.displayName(null);
+    meta.removeItemFlags(ItemFlag.values());
+  }
+
+  @SuppressWarnings("UnstableApiUsage")
+  private static String originalInstrument(ItemStack horn) {
+    if (MediaItemCodec.isHorn(horn)) return null;
+    MusicInstrument instrument = horn.getData(DataComponentTypes.INSTRUMENT);
+    if (instrument == null) return null;
+    return RegistryAccess.registryAccess().getRegistry(RegistryKey.INSTRUMENT)
+      .getKeyOrThrow(instrument).toString();
+  }
+
+  private static MusicInstrument resolveInstrument(String key) {
+    var instruments = RegistryAccess.registryAccess().getRegistry(RegistryKey.INSTRUMENT);
+    NamespacedKey namespacedKey = key != null ? NamespacedKey.fromString(key) : null;
+    MusicInstrument instrument = namespacedKey != null ? instruments.get(namespacedKey) : null;
+    return instrument != null ? instrument : instruments.getOrThrow(InstrumentKeys.PONDER_GOAT_HORN);
+  }
+
+  private static boolean canClear(Player player) {
+    if (player.hasPermission("crabutilities.media.create")) return true;
+    reject(player, "error.command.no-permission");
+    return false;
   }
 
   private static String shortened(String name) {
