@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, lte, gt, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNotNull, isNull, lte, gt, or, sql } from "drizzle-orm";
 import { db } from "../client";
 import {
   bingoCards,
@@ -62,11 +62,15 @@ export async function getActiveBingoCard(now: number): Promise<BingoCardRecord |
   return (card as BingoCardRecord | undefined) ?? null;
 }
 
-export async function getBingoCardStartingAt(startsAt: number): Promise<BingoCardRecord | null> {
+export async function getBingoCardStartingBetween(
+  startsAt: number,
+  endsAt: number,
+): Promise<BingoCardRecord | null> {
   const [card] = await db
     .select()
     .from(bingoCards)
-    .where(eq(bingoCards.starts_at, startsAt))
+    .where(and(gte(bingoCards.starts_at, startsAt), lte(bingoCards.starts_at, endsAt)))
+    .orderBy(asc(bingoCards.starts_at))
     .limit(1);
   return (card as BingoCardRecord | undefined) ?? null;
 }

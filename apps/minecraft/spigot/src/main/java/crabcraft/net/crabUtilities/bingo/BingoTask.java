@@ -71,9 +71,73 @@ public enum BingoTask {
     BREED_TRUSTING_FOX(
             "breed_trusting_fox",
             "Breed foxes to gain a cub's trust.",
-            "You must breed the two foxes and be recorded as a trusted player on their cub.");
+            "You must breed the two foxes and be recorded as a trusted player on their cub."),
+    SHEAR_BOGGED(
+            "shear_bogged",
+            "Shear a Bogged.",
+            "Use shears yourself on a Bogged that has not already been sheared."),
+    RING_BELL_PROJECTILE(
+            "ring_bell_projectile",
+            "Ring a bell with a projectile fired from at least 10 blocks away.",
+            "Launch the projectile yourself and make it actually ring the bell after travelling at least ten blocks."),
+    BERRY_BUSH_KILL(
+            "berry_bush_kill",
+            "Plant a sweet berry bush that kills a hostile mob.",
+            "Plant the bush after the card starts; the hostile mob must die from damage dealt by that exact bush."),
+    DRY_SPONGE_NETHER(
+            "dry_sponge_nether",
+            "Dry a wet sponge by placing it in the Nether.",
+            "Place the wet sponge yourself in the Nether and let it convert into a dry sponge."),
+    FIVE_PARROTS_DANCE(
+            "five_parrots_dance",
+            "Play a jukebox to make all five parrot colours dance together.",
+            "Start the jukebox yourself while one dancing parrot of every colour is beside it."),
+    DETONATE_TNT_MINECART(
+            "detonate_tnt_minecart",
+            "Detonate a TNT minecart by lighting fire beneath it with flint and steel or a fire charge.",
+            "Create the fire yourself, let the TNT minecart enter that exact fire, and wait for the minecart to explode."),
+    TARGET_OPENS_DOOR(
+            "target_opens_door",
+            "Shoot a target block from at least 10 blocks away to open an adjacent door.",
+            "Fire the arrow yourself; it must travel at least ten blocks, hit the target, and power a directly adjacent door open."),
+    COLLECT_TURTLE_SCUTE(
+            "collect_turtle_scute",
+            "Pick up a scute shed by a maturing turtle.",
+            "Pick up the Turtle Scute item produced when a baby turtle grows into an adult."),
+    SHELF_HOTBAR_SWAP(
+            "shelf_hotbar_swap",
+            "Use three connected powered shelves to swap your entire hotbar.",
+            "Use a chain of three powered, same-facing shelves to exchange all nine shelf slots with all nine hotbar slots at once."),
+    REMOVE_PIG_SADDLE(
+            "remove_pig_saddle",
+            "Remove a pig's saddle with shears without killing it.",
+            "Use shears on a living saddled pig and make the saddle drop without the pig dying."),
+    EXPLORER_MAP_TRADE(
+            "explorer_map_trade",
+            "Buy an explorer map from a cartographer villager.",
+            "Complete a cartographer trade whose result is a filled explorer map and whose cost includes a compass."),
+    SELF_ARROW_TOTEM(
+            "self_arrow_totem",
+            "Fire an arrow, then survive that same arrow using a Totem of Undying.",
+            "Your own arrow must deal the lethal hit that activates a Totem you are holding. This requires Survival and server PvP enabled."),
+    EQUIP_PIGLIN_GOLD_ARMOUR(
+            "equip_piglin_gold_armour",
+            "Give one Piglin a full set of golden armour to equip.",
+            "Drop the golden helmet, chestplate, leggings and boots yourself; the same Piglin must pick up and equip all four pieces."),
+    LEASHED_BEE_STING(
+            "leashed_bee_sting",
+            "Leash a bee and have it sting another mob.",
+            "Leash the bee yourself, keep it leashed, and make it successfully sting a non-player mob."),
+    CREEPER_RINGS_BELL(
+            "creeper_rings_bell",
+            "Place a pressure plate beside a bell and let a creeper ring it.",
+            "Place the pressure plate yourself; a Creeper must step on it and directly power the adjacent bell."),
+    MINE_COPPER_GOLEM_STATUE(
+            "mine_copper_golem_statue",
+            "Mine a copper golem statue so it drops.",
+            "Break any copper golem statue variant yourself and make it produce a statue item drop. This normally requires Survival.");
 
-    private static final List<BingoTask> ORDERED = List.of(
+    private static final List<BingoTask> CARD_ONE = List.of(
             GROW_TREE_IN_NETHER,
             PLAY_FIVE_GOAT_HORNS,
             CONNECT_ALL_ORE_TYPES,
@@ -90,11 +154,29 @@ public enum BingoTask {
             DUPLICATE_ALLAY,
             COLLAPSE_SCAFFOLDING_TOWER,
             BREED_TRUSTING_FOX);
+    private static final List<BingoTask> CARD_TWO = List.of(
+            SHEAR_BOGGED,
+            RING_BELL_PROJECTILE,
+            BERRY_BUSH_KILL,
+            DRY_SPONGE_NETHER,
+            FIVE_PARROTS_DANCE,
+            DETONATE_TNT_MINECART,
+            TARGET_OPENS_DOOR,
+            COLLECT_TURTLE_SCUTE,
+            SHELF_HOTBAR_SWAP,
+            REMOVE_PIG_SADDLE,
+            EXPLORER_MAP_TRADE,
+            SELF_ARROW_TOTEM,
+            EQUIP_PIGLIN_GOLD_ARMOUR,
+            LEASHED_BEE_STING,
+            CREEPER_RINGS_BELL,
+            MINE_COPPER_GOLEM_STATUE);
+    private static final List<BingoTask> ALL_DEPLOYED = List.of(values());
     private static final Map<String, BingoTask> BY_ID;
 
     static {
         Map<String, BingoTask> tasksById = new LinkedHashMap<>();
-        for (BingoTask task : ORDERED) {
+        for (BingoTask task : values()) {
             BingoTask previous = tasksById.put(task.id, task);
             if (previous != null) {
                 throw new IllegalStateException("Duplicate bingo task ID: " + task.id);
@@ -125,8 +207,16 @@ public enum BingoTask {
         return detail;
     }
 
-    public static List<BingoTask> ordered() {
-        return ORDERED;
+    public static List<BingoTask> cardOne() {
+        return CARD_ONE;
+    }
+
+    public static List<BingoTask> cardTwo() {
+        return CARD_TWO;
+    }
+
+    public static List<BingoTask> allDeployed() {
+        return ALL_DEPLOYED;
     }
 
     public static Optional<BingoTask> fromId(String id) {

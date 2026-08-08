@@ -74,7 +74,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffectType;
 
 /** Event-driven detectors for the harder Bingo #1 card. */
-public final class HardBingoListener implements Listener {
+public final class HardBingoListener implements BingoDetector {
     private static final int MAX_OWNED_BLOCKS_PER_PLAYER = 2_048;
     private static final int MAX_ORE_BLOCKS_PER_PLAYER = 512;
     private static final int SHORT_CORRELATION_TICKS = 3;
@@ -566,6 +566,7 @@ public final class HardBingoListener implements Listener {
         droppedAxes.remove(id);
     }
 
+    @Override
     public void resetPlayer(UUID playerId) {
         hornsByPlayer.remove(playerId);
         removeOreBlocks(playerId);
@@ -580,6 +581,7 @@ public final class HardBingoListener implements Listener {
         droppedAxes.values().removeIf(value -> value.playerId().equals(playerId));
     }
 
+    @Override
     public void clear() {
         hornsByPlayer.clear();
         oreByBlock.clear();

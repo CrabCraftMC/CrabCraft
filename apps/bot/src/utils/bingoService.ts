@@ -10,7 +10,7 @@ import Redis from "ioredis";
 import { createHash } from "node:crypto";
 import {
   getActiveBingoCard,
-  getBingoCardStartingAt,
+  getBingoCardStartingBetween,
   getPendingBingoMilestones,
   markBingoCardPosted,
   markBingoMilestoneDelivered,
@@ -25,6 +25,7 @@ import { generateBingoCardImage } from "./bingoView.js";
 const RECONCILE_INTERVAL_MS = 30_000;
 const REDIS_BLOCK_MS = 10_000;
 const REDIS_RECONNECT_MS = 3_000;
+const NEXT_CARD_START_WINDOW_SECONDS = 86_400;
 
 interface CompletionEvent {
   cardId: number;
@@ -75,7 +76,10 @@ async function warnIfNextCardMissing(
   const warningWindowSeconds = config.BINGO_MISSING_CARD_WARNING_HOURS * 3_600;
   const secondsRemaining = card.ends_at - now;
   if (secondsRemaining <= 0 || secondsRemaining > warningWindowSeconds) return;
-  if (await getBingoCardStartingAt(card.ends_at)) return;
+  if (await getBingoCardStartingBetween(
+    card.ends_at,
+    card.ends_at + NEXT_CARD_START_WINDOW_SECONDS,
+  )) return;
 
   const warningKey = `crabcraft:bingo:missing-card-warning:${card.id}`;
   if (await redis.exists(warningKey)) return;
