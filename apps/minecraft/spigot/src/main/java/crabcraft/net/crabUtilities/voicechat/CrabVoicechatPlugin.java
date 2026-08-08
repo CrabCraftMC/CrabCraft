@@ -87,7 +87,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private final Map<UUID, String> voiceRoutes = new ConcurrentHashMap<>();
     private final Set<UUID> applyingRestore = ConcurrentHashMap.newKeySet();
 
-    /** Velocity backend names we've already warned about mismatching this-backend. */
+    /** Player-route backend names we've already warned about mismatching this-backend. */
     private final Set<String> homeMismatchWarned = ConcurrentHashMap.newKeySet();
 
     public CrabVoicechatPlugin(CrabUtilities plugin) {
@@ -383,12 +383,13 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             if (!Objects.equals(voiceSessions.get(playerId), session)) return;
             String velocityRoute = bus.fetchPlayerHome(playerId);
             String velocityName = VoiceMessages.routeBackend(velocityRoute);
-            if (velocityName != null && !velocityName.equals(thisBackend)
+            if (shouldWarnRouteMismatch(thisBackend, velocityName, attempt)
                     && homeMismatchWarned.add(velocityName)) {
-                logger.severe("voicechat.cross-server.this-backend is '" + thisBackend
-                        + "' but Velocity calls this backend '" + velocityName
-                        + "'. Other backends will DROP all voice frames published by "
-                        + "this server — fix modules/voicechat.yml (names are case-sensitive).");
+                logger.severe("Cross-server voice route mismatch: this backend is configured as '"
+                        + thisBackend + "', but Velocity currently routes player " + playerId
+                        + " to '" + velocityName + "'. This player's voice will not be relayed "
+                        + "across servers until the route is corrected. If this persists, "
+                        + "verify modules/voicechat.yml (names are case-sensitive).");
             }
 
             boolean restoring = Objects.equals(restoreSessions.get(playerId), session);
@@ -466,6 +467,11 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         } catch (Exception ignored) {
             // Plugin is stopping.
         }
+    }
+
+    static boolean shouldWarnRouteMismatch(String thisBackend, String velocityName, int attempt) {
+        // The first read can briefly observe the previous backend during a hop.
+        return attempt > 0 && velocityName != null && !velocityName.equals(thisBackend);
     }
 
     private void confirmRestore(UUID playerId, long session, UUID groupId, int attempt) {

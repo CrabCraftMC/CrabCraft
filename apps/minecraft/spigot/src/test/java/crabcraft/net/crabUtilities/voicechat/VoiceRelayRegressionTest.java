@@ -25,6 +25,12 @@ final class VoiceRelayRegressionTest {
         check(route.equals(stop.route()), "audio frame lost its hop token");
         check("backend-b".equals(VoiceMessages.routeBackend(stop.route())),
                 "route backend decoding changed");
+        check(!CrabVoicechatPlugin.shouldWarnRouteMismatch("creative", "limbo", 0),
+                "a transient first route read triggered a mismatch warning");
+        check(CrabVoicechatPlugin.shouldWarnRouteMismatch("creative", "limbo", 1),
+                "a persistent route mismatch did not trigger a warning");
+        check(!CrabVoicechatPlugin.shouldWarnRouteMismatch("creative", "creative", 1),
+                "a matching player route triggered a mismatch warning");
 
         VoiceMessages.RosterJoin roster = VoiceMessages.decodeRosterJoin(
                 VoiceMessages.encodeRosterJoin(UUID.randomUUID(), speaker, "Crabby", "survival"));
