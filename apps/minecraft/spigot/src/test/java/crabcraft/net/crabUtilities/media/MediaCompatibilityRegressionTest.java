@@ -18,7 +18,7 @@ public final class MediaCompatibilityRegressionTest {
       check(key.getKey().equals(entry.getKey()),
         "item key changed for " + entry.getKey());
     }
-    check(MediaItemCodec.compatibilityKeys().size() == 7,
+    check(MediaItemCodec.compatibilityKeys().size() == 8,
       "a persisted media key was removed from the compatibility contract");
   }
 

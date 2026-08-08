@@ -117,6 +117,7 @@ def regressionTests = [
     customPortalDestinationRegressionTest: 'crabcraft.net.crabUtilities.netherportals.CustomPortalDestinationRegressionTest',
     mediaFeatureSecurityRegressionTest: 'crabcraft.net.crabUtilities.media.util.MediaFeatureSecurityRegressionTest',
     mediaCompatibilityRegressionTest: 'crabcraft.net.crabUtilities.media.MediaCompatibilityRegressionTest',
+    mediaClearRegressionTest: 'crabcraft.net.crabUtilities.media.item.MediaClearRegressionTest',
     mediaSecurityRegressionTest: 'crabcraft.net.crabUtilities.media.audio.MediaSecurityRegressionTest',
     literalTitleRegressionTest: 'crabcraft.net.crabUtilities.media.language.LiteralTitleRegressionTest',
     hopperSecurityRegressionTest: 'crabcraft.net.crabUtilities.media.event.HopperSecurityRegressionTest',

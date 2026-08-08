@@ -34,6 +34,7 @@ public final class MediaItemCodec {
   private static final NamespacedKey HORN_SOURCE = key("horn_remote");
   private static final NamespacedKey HORN_VOLUME = key("horn_volume");
   private static final NamespacedKey HORN_NAME = key("horn_name");
+  private static final NamespacedKey HORN_ORIGINAL_INSTRUMENT = key("horn_original_instrument");
 
   private MediaItemCodec() {}
 
@@ -103,14 +104,35 @@ public final class MediaItemCodec {
     return new HornData(source, volume == null ? 1f : volume, storedName == null ? "" : storedName);
   }
 
-  public static void writeHorn(ItemMeta meta, String source, String name, float volume) {
+  public static void writeHorn(
+    ItemMeta meta,
+    String source,
+    String name,
+    float volume,
+    String originalInstrument
+  ) {
     PersistentDataContainer data = meta.getPersistentDataContainer();
-    data.remove(HORN_SOURCE);
-    data.remove(HORN_VOLUME);
-    data.remove(HORN_NAME);
+    clearHornMediaData(data);
+    if (originalInstrument != null) {
+      data.set(HORN_ORIGINAL_INSTRUMENT, PersistentDataType.STRING, originalInstrument);
+    }
     data.set(HORN_SOURCE, PersistentDataType.STRING, source);
     data.set(HORN_VOLUME, PersistentDataType.FLOAT, volume);
     data.set(HORN_NAME, PersistentDataType.STRING, name);
+  }
+
+  public static String readOriginalHornInstrument(ItemStack item) {
+    if (!isHorn(item)) throw new IllegalArgumentException("Item has no media-horn source");
+    return requireMeta(item).getPersistentDataContainer()
+      .get(HORN_ORIGINAL_INSTRUMENT, PersistentDataType.STRING);
+  }
+
+  public static void clearDisc(ItemMeta meta) {
+    clearDiscData(meta.getPersistentDataContainer());
+  }
+
+  public static void clearHorn(ItemMeta meta) {
+    clearHornData(meta.getPersistentDataContainer());
   }
 
   public static ItemMeta requireMeta(ItemStack item) {
@@ -134,14 +156,26 @@ public final class MediaItemCodec {
     keys.put("horn_remote", HORN_SOURCE);
     keys.put("horn_volume", HORN_VOLUME);
     keys.put("horn_name", HORN_NAME);
+    keys.put("horn_original_instrument", HORN_ORIGINAL_INSTRUMENT);
     return Map.copyOf(keys);
   }
 
-  private static void clearDiscData(PersistentDataContainer data) {
+  static void clearDiscData(PersistentDataContainer data) {
     data.remove(DISC_SOURCE);
     data.remove(DISC_VOLUME);
     data.remove(DISC_RANGE);
     data.remove(DISC_NAME);
+  }
+
+  static void clearHornData(PersistentDataContainer data) {
+    clearHornMediaData(data);
+    data.remove(HORN_ORIGINAL_INSTRUMENT);
+  }
+
+  private static void clearHornMediaData(PersistentDataContainer data) {
+    data.remove(HORN_SOURCE);
+    data.remove(HORN_VOLUME);
+    data.remove(HORN_NAME);
   }
 
   private static Component displayTitle(ItemMeta meta) {

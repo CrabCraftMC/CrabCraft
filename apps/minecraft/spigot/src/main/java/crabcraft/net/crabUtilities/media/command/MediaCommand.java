@@ -9,13 +9,14 @@ import crabcraft.net.crabUtilities.CrabMessages;
 import crabcraft.net.crabUtilities.media.MediaFeature;
 import crabcraft.net.crabUtilities.media.dialog.CreateDiscDialog;
 import crabcraft.net.crabUtilities.media.dialog.CreateHornDialog;
+import crabcraft.net.crabUtilities.media.item.PlayableItemWriter;
 import crabcraft.net.crabUtilities.media.language.MediaMessages;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/** {@code /cd}: help and disc/horn creation shortcuts. */
+/** {@code /cd}: help and disc/horn management shortcuts. */
 @SuppressWarnings("UnstableApiUsage")
 public final class MediaCommand implements BasicCommand {
   @Override
@@ -44,13 +45,20 @@ public final class MediaCommand implements BasicCommand {
           MediaFeature.sendMessage(sender, plugin.getMessages().prefixedComponent("error.command.cant-perform"));
         }
       }
+      case "clear" -> {
+        if (sender instanceof Player player) {
+          PlayableItemWriter.clearDisc(player);
+        } else {
+          MediaFeature.sendMessage(sender, plugin.getMessages().prefixedComponent("error.command.cant-perform"));
+        }
+      }
       case "horn" -> {
         if (sender instanceof Player player) {
           String hornSub = args.length > 1 ? args[1].toLowerCase() : "create";
-          if (hornSub.equals("edit")) {
-            CreateHornDialog.openForEdit(player);
-          } else {
-            CreateHornDialog.open(player);
+          switch (hornSub) {
+            case "edit" -> CreateHornDialog.openForEdit(player);
+            case "clear" -> PlayableItemWriter.clearHorn(player);
+            default -> CreateHornDialog.open(player);
           }
         } else {
           MediaFeature.sendMessage(sender, plugin.getMessages().prefixedComponent("error.command.cant-perform"));
@@ -62,7 +70,7 @@ public final class MediaCommand implements BasicCommand {
   }
 
   private static void sendUsage(CommandSender sender) {
-    MediaFeature.sendMessage(sender, CrabMessages.error("Usage: /cd <create|edit|horn>"));
+    MediaFeature.sendMessage(sender, CrabMessages.error("Usage: /cd <create|edit|clear|horn>"));
   }
 
   private void sendHelp(CommandSender sender) {
@@ -75,24 +83,30 @@ public final class MediaCommand implements BasicCommand {
     MediaFeature.sendMessage(sender, lang.component("command.help.messages.format",
       lang.string("command.edit.syntax"), lang.string("command.edit.description")));
     MediaFeature.sendMessage(sender, lang.component("command.help.messages.format",
+      lang.string("command.clear.syntax"), lang.string("command.clear.description")));
+    MediaFeature.sendMessage(sender, lang.component("command.help.messages.format",
       lang.string("command.horn.create.syntax"), lang.string("command.horn.create.description")));
     MediaFeature.sendMessage(sender, lang.component("command.help.messages.format",
       lang.string("command.horn.edit.syntax"), lang.string("command.horn.edit.description")));
+    MediaFeature.sendMessage(sender, lang.component("command.help.messages.format",
+      lang.string("command.horn.clear.syntax"), lang.string("command.horn.clear.description")));
   }
 
   @Override
   public @NotNull Collection<String> suggest(@NotNull CommandSourceStack source, @NotNull String[] args) {
     CommandSender sender = source.getSender();
-    // Second argument of "/cd horn <create|edit>".
+    // Second argument of "/cd horn <create|edit|clear>".
     if (args.length == 2 && args[0].equalsIgnoreCase("horn")) {
       if (!sender.hasPermission("crabutilities.media.create")) return List.of();
-      return List.of("create", "edit").stream().filter(s -> s.startsWith(args[1].toLowerCase())).toList();
+      return List.of("create", "edit", "clear").stream()
+        .filter(s -> s.startsWith(args[1].toLowerCase())).toList();
     }
     if (args.length > 1) return List.of();
     List<String> out = new ArrayList<>();
     out.add("help");
     if (sender.hasPermission("crabutilities.media.create")) out.add("create");
     if (sender.hasPermission("crabutilities.media.create")) out.add("edit");
+    if (sender.hasPermission("crabutilities.media.create")) out.add("clear");
     if (sender.hasPermission("crabutilities.media.create")) out.add("horn");
     String prefix = args.length == 1 ? args[0].toLowerCase() : "";
     return out.stream().filter(s -> s.startsWith(prefix)).toList();

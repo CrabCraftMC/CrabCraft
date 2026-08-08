@@ -7,11 +7,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import crabcraft.net.crabUtilities.media.MediaFeature;
 import crabcraft.net.crabUtilities.media.dialog.CreateHornDialog;
+import crabcraft.net.crabUtilities.media.item.PlayableItemWriter;
 
 import java.util.Collection;
 import java.util.List;
 
-/** {@code /horn} opens the custom goat horn creation dialog. */
+/** {@code /horn} creates, edits, or clears playable goat horns. */
 @SuppressWarnings("UnstableApiUsage")
 public final class HornCommand implements BasicCommand {
   @Override
@@ -21,16 +22,17 @@ public final class HornCommand implements BasicCommand {
         MediaFeature.get().getMessages().prefixedComponent("error.command.cant-perform"));
       return;
     }
-    if (args.length > 0 && args[0].equalsIgnoreCase("edit")) {
-      CreateHornDialog.openForEdit(player);
-    } else {
-      CreateHornDialog.open(player);
+    String subcommand = args.length > 0 ? args[0].toLowerCase() : "create";
+    switch (subcommand) {
+      case "edit" -> CreateHornDialog.openForEdit(player);
+      case "clear" -> PlayableItemWriter.clearHorn(player);
+      default -> CreateHornDialog.open(player);
     }
   }
 
   @Override
   public @NotNull Collection<String> suggest(@NotNull CommandSourceStack source, @NotNull String[] args) {
-    return args.length <= 1 ? List.of("create", "edit") : List.of();
+    return args.length <= 1 ? List.of("create", "edit", "clear") : List.of();
   }
 
   @Override

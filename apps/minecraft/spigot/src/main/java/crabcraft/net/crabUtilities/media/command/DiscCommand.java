@@ -7,11 +7,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import crabcraft.net.crabUtilities.media.MediaFeature;
 import crabcraft.net.crabUtilities.media.dialog.CreateDiscDialog;
+import crabcraft.net.crabUtilities.media.item.PlayableItemWriter;
 
 import java.util.Collection;
 import java.util.List;
 
-/** {@code /disc} opens the custom music disc creation dialog. */
+/** {@code /disc} creates, edits, or clears playable music discs. */
 @SuppressWarnings("UnstableApiUsage")
 public final class DiscCommand implements BasicCommand {
   @Override
@@ -21,16 +22,17 @@ public final class DiscCommand implements BasicCommand {
         MediaFeature.get().getMessages().prefixedComponent("error.command.cant-perform"));
       return;
     }
-    if (args.length > 0 && args[0].equalsIgnoreCase("edit")) {
-      CreateDiscDialog.openForEdit(player);
-    } else {
-      CreateDiscDialog.open(player);
+    String subcommand = args.length > 0 ? args[0].toLowerCase() : "create";
+    switch (subcommand) {
+      case "edit" -> CreateDiscDialog.openForEdit(player);
+      case "clear" -> PlayableItemWriter.clearDisc(player);
+      default -> CreateDiscDialog.open(player);
     }
   }
 
   @Override
   public @NotNull Collection<String> suggest(@NotNull CommandSourceStack source, @NotNull String[] args) {
-    return args.length <= 1 ? List.of("create", "edit") : List.of();
+    return args.length <= 1 ? List.of("create", "edit", "clear") : List.of();
   }
 
   @Override
