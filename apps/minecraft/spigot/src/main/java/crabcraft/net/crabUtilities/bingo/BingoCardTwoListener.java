@@ -285,8 +285,18 @@ public final class BingoCardTwoListener implements BingoDetector {
         if (!event.canBuild()) return;
         Block block = event.getBlockPlaced();
         BlockKey key = BlockKey.from(block);
-        removeTrackedBlock(key);
         Player player = event.getPlayer();
+        removeOwnedBlock(key, berryBushOwners, berryBushesByPlayer);
+        // Paper follows a successful flint/fire-charge BlockIgniteEvent with a captured
+        // BlockPlaceEvent. Keep only the same player's newly recorded fire attribution.
+        if (!shouldRetainFireOwnerAfterPlaceEvent(
+                Tag.FIRE.isTagged(block.getType()),
+                player.getUniqueId(),
+                fireOwners.get(key))) {
+            removeOwnedBlock(key, fireOwners, firesByPlayer);
+        }
+        removeOwnedBlock(key, pressurePlateOwners, pressurePlatesByPlayer);
+        pressurePlateTriggers.remove(key);
         if (block.getType() == Material.SWEET_BERRY_BUSH
                 && tracking.test(player, BingoTask.BERRY_BUSH_KILL)) {
             setOwnedBlock(
@@ -775,8 +785,11 @@ public final class BingoCardTwoListener implements BingoDetector {
                         || offhand.newItem().isSimilar(pickup.item());
                 int releasedTick = pickup.releasedTick();
                 if (observed
-                        && offhand.oldItem().isSimilar(pickup.item())
-                        && isEmpty(offhand.newItem())) {
+                        && transitionedAwayFromTrackedItem(
+                                pickup.item(),
+                                offhand.oldItem(),
+                                offhand.newItem(),
+                                ItemStack::isSimilar)) {
                     releasedTick = tick;
                 }
                 if (observed != pickup.observedInOffhand() || releasedTick != pickup.releasedTick()) {
@@ -797,13 +810,15 @@ public final class BingoCardTwoListener implements BingoDetector {
         EnumMap<EquipmentSlot, PiglinPickup> pickups = piglinPickups.get(piglin.getUniqueId());
         PiglinPickup pickup = pickups == null ? null : pickups.get(slot);
         EnumMap<EquipmentSlot, UUID> owners = piglinArmourOwnersFor(piglin.getUniqueId());
+        int tick = Bukkit.getCurrentTick();
         if (pickup != null
-                && isFresh(pickup.tick(), Bukkit.getCurrentTick(), PIGLIN_RETENTION_TICKS)
-                && pickup.observedInOffhand()
-                && pickup.releasedTick() >= 0
-                && pickup.releasedTick() == Bukkit.getCurrentTick()
-                && goldenArmourSlot(equipped.getType()) == slot
-                && equipped.isSimilar(pickup.item())) {
+                && canAttributePiglinArmour(
+                        isFresh(pickup.tick(), tick, PIGLIN_RETENTION_TICKS),
+                        pickup.observedInOffhand(),
+                        pickup.releasedTick(),
+                        tick,
+                        goldenArmourSlot(equipped.getType()) == slot,
+                        equipped.isSimilar(pickup.item()))) {
             owners.put(slot, pickup.playerId());
             pickups.remove(slot);
             if (pickups.isEmpty()) piglinPickups.remove(piglin.getUniqueId());
@@ -818,7 +833,7 @@ public final class BingoCardTwoListener implements BingoDetector {
             return;
         }
         if (pickup != null
-                && !isFresh(pickup.tick(), Bukkit.getCurrentTick(), PIGLIN_RETENTION_TICKS)) {
+                && !isFresh(pickup.tick(), tick, PIGLIN_RETENTION_TICKS)) {
             pickups.remove(slot);
             if (pickups.isEmpty()) piglinPickups.remove(piglin.getUniqueId());
         }
@@ -1031,6 +1046,31 @@ public final class BingoCardTwoListener implements BingoDetector {
         return item == null || item.getType().isAir() || item.getAmount() <= 0;
     }
 
+    static <T> boolean transitionedAwayFromTrackedItem(
+            T tracked, T previous, T current, BiPredicate<T, T> similarity) {
+        return similarity.test(previous, tracked) && !similarity.test(current, tracked);
+    }
+
+    static boolean canAttributePiglinArmour(
+            boolean fresh,
+            boolean observedInOffhand,
+            int releasedTick,
+            int currentTick,
+            boolean equippedSlotMatches,
+            boolean equippedItemMatches) {
+        return fresh
+                && observedInOffhand
+                && releasedTick >= 0
+                && releasedTick == currentTick
+                && equippedSlotMatches
+                && equippedItemMatches;
+    }
+
+    static boolean shouldRetainFireOwnerAfterPlaceEvent(
+            boolean placedBlockIsFire, UUID placingPlayerId, UUID recordedFireOwner) {
+        return placedBlockIsFire && placingPlayerId.equals(recordedFireOwner);
+    }
+
     private static ItemStack copyOrNull(ItemStack item) {
         return isEmpty(item) ? null : item.clone();
     }
@@ -1059,11 +1099,18 @@ public final class BingoCardTwoListener implements BingoDetector {
 
     private static boolean hasFullGoldenArmourFrom(
             Piglin piglin, Map<EquipmentSlot, UUID> owners, UUID playerId) {
+        if (!allArmourSlotsOwnedBy(owners, playerId)) return false;
         for (EquipmentSlot slot : GOLD_ARMOUR_SLOTS) {
-            if (!playerId.equals(owners.get(slot))
-                    || goldenArmourSlot(piglin.getEquipment().getItem(slot).getType()) != slot) {
+            if (goldenArmourSlot(piglin.getEquipment().getItem(slot).getType()) != slot) {
                 return false;
             }
+        }
+        return true;
+    }
+
+    static boolean allArmourSlotsOwnedBy(Map<EquipmentSlot, UUID> owners, UUID playerId) {
+        for (EquipmentSlot slot : GOLD_ARMOUR_SLOTS) {
+            if (!playerId.equals(owners.get(slot))) return false;
         }
         return true;
     }

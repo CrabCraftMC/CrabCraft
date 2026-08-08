@@ -126,6 +126,7 @@ def regressionTests = [
     accurateBlockPlacementRegressionTest: 'crabcraft.net.crabUtilities.accurateplacement.AccurateBlockPlacementRegressionTest',
     appleSkinLifecycleRegressionTest: 'crabcraft.net.crabUtilities.appleskin.AppleSkinLifecycleRegressionTest',
     bingoTaskRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoTaskRegressionTest',
+    bingoCardTwoListenerRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoCardTwoListenerRegressionTest',
     spectatorBackRegressionTest: 'crabcraft.net.crabUtilities.spectator.SpectatorBackRegressionTest',
     endPortalBlockingRegressionTest: 'crabcraft.net.crabUtilities.endportals.EndPortalBlockerListenerRegressionTest',
 ]
