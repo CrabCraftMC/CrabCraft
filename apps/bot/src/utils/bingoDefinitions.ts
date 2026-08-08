@@ -7,7 +7,10 @@ export const FIRST_BINGO_CARD = {
   tasks: [
     { id: "grow_tree_in_nether", label: "Grow a tree in the Nether" },
     { id: "play_five_goat_horns", label: "Play five different goat horn types" },
-    { id: "connect_all_ore_types", label: "Place 10 ore types plus Ancient Debris in one connected cluster" },
+    {
+      id: "connect_all_ore_types",
+      label: "Place all 10 ore families + Ancient Debris together (normal/deepslate count as one)",
+    },
     { id: "activate_totem", label: "Activate a Totem of Undying" },
     { id: "breed_mule", label: "Breed a horse and donkey to produce a mule" },
     { id: "kill_hostile_with_anvil", label: "Kill a hostile mob with a falling anvil" },
@@ -24,9 +27,36 @@ export const FIRST_BINGO_CARD = {
   ] satisfies BingoTaskDefinition[],
 } as const;
 
-export const PREPARED_BINGO_CARDS = [FIRST_BINGO_CARD];
+export const SECOND_BINGO_CARD = {
+  number: 2,
+  startsAt: 1_786_348_800,
+  endsAt: 1_786_921_200,
+  tasks: [
+    { id: "shear_bogged", label: "Shear a Bogged" },
+    { id: "ring_bell_projectile", label: "Ring a bell with a projectile fired from 10+ blocks away" },
+    { id: "berry_bush_kill", label: "Plant a sweet berry bush that kills a hostile mob" },
+    { id: "dry_sponge_nether", label: "Dry a wet sponge by placing it in the Nether" },
+    { id: "five_parrots_dance", label: "Play a jukebox to make all five parrot colours dance together" },
+    {
+      id: "detonate_tnt_minecart",
+      label: "Detonate a TNT minecart by lighting fire beneath it with flint and steel or a fire charge",
+    },
+    { id: "target_opens_door", label: "Shoot a target block from 10+ blocks away to open an adjacent door" },
+    { id: "collect_turtle_scute", label: "Pick up a scute shed by a maturing turtle" },
+    { id: "shelf_hotbar_swap", label: "Use three connected powered shelves to swap your entire hotbar" },
+    { id: "remove_pig_saddle", label: "Remove a pig’s saddle with shears without killing it" },
+    { id: "explorer_map_trade", label: "Buy an explorer map from a cartographer villager" },
+    { id: "self_arrow_totem", label: "Fire an arrow, then survive that same arrow using a Totem of Undying" },
+    { id: "equip_piglin_gold_armour", label: "Give one Piglin a full set of golden armour to equip" },
+    { id: "leashed_bee_sting", label: "Leash a bee and have it sting another mob" },
+    { id: "creeper_rings_bell", label: "Place a pressure plate beside a bell and let a creeper ring it" },
+    { id: "mine_copper_golem_statue", label: "Mine a copper golem statue so it drops" },
+  ] satisfies BingoTaskDefinition[],
+} as const;
+
+export const PREPARED_BINGO_CARDS = [FIRST_BINGO_CARD, SECOND_BINGO_CARD];
 
 /** Task IDs that have a deployed Paper detector, not merely a planned card entry. */
 export const SUPPORTED_BINGO_TASK_IDS = new Set(
-  FIRST_BINGO_CARD.tasks.map((task) => task.id),
+  PREPARED_BINGO_CARDS.flatMap((card) => card.tasks.map((task) => task.id)),
 );

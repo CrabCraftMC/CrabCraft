@@ -6,13 +6,16 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -44,9 +47,12 @@ public final class BingoManager {
     private final String sourceBackend;
     private final boolean enabled;
     private JedisPool jedisPool;
-    private HardBingoListener listener;
+    private List<BingoDetector> detectors = List.of();
+    private BukkitTask activeCardRefreshTask;
+    private BukkitTask completionFlushTask;
     private volatile BingoActiveCard activeCard;
     private volatile boolean redisFailureLogged;
+    private volatile boolean running;
 
     public BingoManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -68,26 +74,42 @@ public final class BingoManager {
         jedisPool = password == null || password.isEmpty()
                 ? new JedisPool(poolConfig, host, port, 2_000)
                 : new JedisPool(poolConfig, host, port, 2_000, password);
-        listener = new HardBingoListener(
+        HardBingoListener cardOneDetector = new HardBingoListener(
                 plugin, this::isTracking, this::complete, this::logHornProgress);
-        plugin.getServer().getPluginManager().registerEvents(listener, plugin);
-        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::refreshActiveCard, 0L, 20L * 30L);
-        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::flushPending, 20L, 20L);
+        BingoCardTwoListener cardTwoDetector = new BingoCardTwoListener(
+                plugin, this::isTracking, this::complete);
+        detectors = List.of(cardOneDetector, cardTwoDetector);
+        detectors.forEach(detector ->
+                plugin.getServer().getPluginManager().registerEvents(detector, plugin));
+        running = true;
+        activeCardRefreshTask = Bukkit.getScheduler().runTaskTimerAsynchronously(
+                plugin, this::refreshActiveCard, 0L, 20L * 30L);
+        completionFlushTask = Bukkit.getScheduler().runTaskTimerAsynchronously(
+                plugin, this::flushPending, 20L, 20L);
         plugin.getLogger().info("Bingo tracking enabled; waiting for the active card from Redis.");
     }
 
-    public void shutdown() {
-        flushPending();
-        if (listener != null) {
-            listener.clear();
-            org.bukkit.event.HandlerList.unregisterAll(listener);
-            listener = null;
+    public synchronized void shutdown() {
+        running = false;
+        if (activeCardRefreshTask != null) {
+            activeCardRefreshTask.cancel();
+            activeCardRefreshTask = null;
         }
+        if (completionFlushTask != null) {
+            completionFlushTask.cancel();
+            completionFlushTask = null;
+        }
+        activeCard = null;
+        flushPending();
+        for (BingoDetector detector : detectors) {
+            detector.clear();
+            HandlerList.unregisterAll(detector);
+        }
+        detectors = List.of();
         if (jedisPool != null) {
             jedisPool.close();
             jedisPool = null;
         }
-        activeCard = null;
     }
 
     void complete(Player player, BingoTask task) {
@@ -107,6 +129,7 @@ public final class BingoManager {
     boolean isEligible(Player player) {
         BingoActiveCard card = activeCard;
         return enabled
+                && running
                 && player.getGameMode() == GameMode.SURVIVAL
                 && !excludedWorlds.contains(player.getWorld().getName())
                 && card != null
@@ -123,9 +146,9 @@ public final class BingoManager {
                 + ": " + progress.uniqueCount() + "/5 (" + progress.instrument() + ")");
     }
 
-    private void refreshActiveCard() {
+    private synchronized void refreshActiveCard() {
         JedisPool pool = jedisPool;
-        if (pool == null) return;
+        if (!running || pool == null) return;
         try (Jedis jedis = pool.getResource()) {
             String json = jedis.get(activeCardKey);
             BingoActiveCard next = json == null ? null : BingoActiveCard.fromJson(json);
@@ -139,12 +162,9 @@ public final class BingoManager {
                     next = null;
                 }
             }
-            BingoActiveCard previous = activeCard;
-            activeCard = next;
-            if (next != null && (previous == null || previous.id() != next.id())) {
-                plugin.getLogger().info("Tracking Bingo #" + next.number() + " with "
-                        + next.taskIds().size() + " tasks.");
-                if (listener != null) Bukkit.getScheduler().runTask(plugin, listener::clear);
+            if (running) {
+                BingoActiveCard fetched = next;
+                Bukkit.getScheduler().runTask(plugin, () -> applyActiveCard(fetched));
             }
             redisRecovered();
         } catch (Exception e) {
@@ -152,7 +172,19 @@ public final class BingoManager {
         }
     }
 
-    private void flushPending() {
+    private void applyActiveCard(BingoActiveCard next) {
+        if (!running || Objects.equals(activeCard, next)) return;
+        detectors.forEach(BingoDetector::clear);
+        activeCard = next;
+        if (next != null) {
+            plugin.getLogger().info("Tracking Bingo #" + next.number() + " with "
+                    + next.taskIds().size() + " tasks.");
+        } else {
+            plugin.getLogger().info("No supported active bingo card; tracking paused.");
+        }
+    }
+
+    private synchronized void flushPending() {
         JedisPool pool = jedisPool;
         if (pool == null) return;
         PendingCompletion completion;

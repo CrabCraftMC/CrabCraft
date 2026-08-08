@@ -16,3 +16,4 @@ rootProject.name = 'CrabUtilities'
 
 include 'spigot'
 include 'velocity'
+include 'bingo-test'
