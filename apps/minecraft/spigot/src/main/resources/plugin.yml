@@ -25,6 +25,10 @@ commands:
   slime:
     description: Show nearby slime chunks or check the chunk you are standing in.
     usage: /slime <map|chunk>
+  specback:
+    description: Return to where you entered spectator mode.
+    usage: /specback
+    permission: crabutilities.specback
   msg:
     description: Send a cross-server private message.
     usage: /msg <player> <message>
@@ -59,6 +63,9 @@ permissions:
   crabutilities.slime.chunk:
     description: Check whether the current chunk is a slime chunk.
     default: true
+  crabutilities.specback:
+    description: Return to where you entered spectator mode.
+    default: op
   crabutilities.bluemap.marker:
     description: Create BlueMap markers by writing the marker keyword on a sign.
     default: true

@@ -28,6 +28,7 @@ import crabcraft.net.crabUtilities.settings.SettingsDialog;
 import crabcraft.net.crabUtilities.slime.SlimeCommand;
 import crabcraft.net.crabUtilities.slime.SlimeMapListener;
 import crabcraft.net.crabUtilities.sleep.SleepBroadcastListener;
+import crabcraft.net.crabUtilities.spectator.SpectatorBackCommand;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListener;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
@@ -186,6 +187,10 @@ public final class CrabUtilities extends JavaPlugin {
         SlimeCommand slimeCommand = new SlimeCommand();
         getCommand("slime").setExecutor(slimeCommand);
         getCommand("slime").setTabCompleter(slimeCommand);
+
+        SpectatorBackCommand spectatorBackCommand = new SpectatorBackCommand();
+        Bukkit.getPluginManager().registerEvents(spectatorBackCommand, this);
+        getCommand("specback").setExecutor(spectatorBackCommand);
 
         // Private and staff chat enter through Paper so InteractiveChat, emoji
         // plugins and other local processors see them before Velocity routes
