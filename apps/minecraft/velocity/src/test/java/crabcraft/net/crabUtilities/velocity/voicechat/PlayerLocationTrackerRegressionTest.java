@@ -23,7 +23,7 @@ final class PlayerLocationTrackerRegressionTest {
 
     private static void delayedHopUsesCurrentBackend() {
         Object lock = new Object();
-        Session session = new Session("smp");
+        Session session = new Session("limbo");
         AtomicReference<Session> current = new AtomicReference<>(session);
         AtomicReference<String> written = new AtomicReference<>();
 
@@ -37,13 +37,13 @@ final class PlayerLocationTrackerRegressionTest {
 
     private static void refreshCannotRegressNewRoute() {
         Object lock = new Object();
-        Session session = new Session("smp");
+        Session session = new Session("limbo");
         AtomicReference<Session> current = new AtomicReference<>(session);
         AtomicReference<String> written = new AtomicReference<>();
         CountDownLatch refreshRead = new CountDownLatch(1);
         CountDownLatch finishRefresh = new CountDownLatch(1);
 
-        Thread refresh = start(() -> PlayerLocationTracker.updateCurrentSession(
+        Worker refresh = start(() -> PlayerLocationTracker.updateCurrentSession(
                 lock, session, current::get, live -> {
                     String backend = live.backend.get();
                     refreshRead.countDown();
@@ -53,7 +53,7 @@ final class PlayerLocationTrackerRegressionTest {
         await(refreshRead);
 
         session.backend.set("creative");
-        Thread serverConnected = start(() -> PlayerLocationTracker.updateCurrentSession(
+        Worker serverConnected = start(() -> PlayerLocationTracker.updateCurrentSession(
                 lock, session, current::get,
                 live -> written.set(live.backend.get())));
         awaitBlocked(serverConnected);
@@ -78,11 +78,18 @@ final class PlayerLocationTrackerRegressionTest {
         check(!deleted.get(), "an old disconnect deleted a newer session");
     }
 
-    private static Thread start(Runnable action) {
-        Thread thread = new Thread(action);
+    private static Worker start(Runnable action) {
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Thread thread = new Thread(() -> {
+            try {
+                action.run();
+            } catch (Throwable throwable) {
+                failure.set(throwable);
+            }
+        });
         thread.setDaemon(true);
         thread.start();
-        return thread;
+        return new Worker(thread, failure);
     }
 
     private static void await(CountDownLatch latch) {
@@ -94,7 +101,8 @@ final class PlayerLocationTrackerRegressionTest {
         }
     }
 
-    private static void awaitBlocked(Thread thread) {
+    private static void awaitBlocked(Worker worker) {
+        Thread thread = worker.thread();
         for (int attempts = 0; attempts < 200 && thread.getState() != Thread.State.BLOCKED;
              attempts++) {
             try {
@@ -108,7 +116,8 @@ final class PlayerLocationTrackerRegressionTest {
                 "same-player Redis operations were not serialised");
     }
 
-    private static void join(Thread thread) {
+    private static void join(Worker worker) {
+        Thread thread = worker.thread();
         try {
             thread.join(2_000L);
         } catch (InterruptedException e) {
@@ -116,11 +125,15 @@ final class PlayerLocationTrackerRegressionTest {
             throw new AssertionError("interrupted while joining test thread", e);
         }
         check(!thread.isAlive(), "test thread did not finish");
+        Throwable failure = worker.failure().get();
+        if (failure != null) throw new AssertionError("test worker failed", failure);
     }
 
     private static void check(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
     }
+
+    private record Worker(Thread thread, AtomicReference<Throwable> failure) {}
 
     private static final class Session {
         private final AtomicReference<String> backend;
