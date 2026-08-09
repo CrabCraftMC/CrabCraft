@@ -12,14 +12,18 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
+import redis.clients.jedis.params.XAddParams;
 
 import java.net.URI;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -50,6 +54,9 @@ public class GlobalChatService {
     private final String password;
 
     private final boolean enabled;
+    private final boolean publicChatEnabled;
+    private final String publicChatStream;
+    private final long publicChatMaxMessages;
     private final String format;
     private final MentionProcessor mentionProcessor;
     private final boolean soundEnabled;
@@ -71,6 +78,14 @@ public class GlobalChatService {
         this.password = plugin.getConfig().getString("redis.password", "");
 
         this.enabled = plugin.getConfig().getBoolean("global-chat.enabled", false);
+        this.publicChatEnabled = plugin.getConfig().getBoolean("public-chat.enabled", false);
+        String configuredPublicChatStream = plugin.getConfig()
+                .getString("public-chat.stream", "crabcraft:public-chat");
+        this.publicChatStream = configuredPublicChatStream == null || configuredPublicChatStream.isBlank()
+                ? "crabcraft:public-chat"
+                : configuredPublicChatStream;
+        this.publicChatMaxMessages = Math.max(1L,
+                plugin.getConfig().getLong("public-chat.max-messages", 500L));
         this.format = plugin.getConfig().getString("global-chat.format",
                 "<display_name><gray>:</gray> <message>");
 
@@ -90,10 +105,8 @@ public class GlobalChatService {
     }
 
     public void start() {
-        // Disabled servers stay fully local: no publish, and no subscribe (so
-        // they don't display the network's chat either).
-        if (!enabled) {
-            plugin.getLogger().info("Global chat disabled for this server; chat stays local.");
+        if (!enabled && !publicChatEnabled) {
+            plugin.getLogger().info("Global and public chat are disabled for this server; chat stays local.");
             return;
         }
 
@@ -105,9 +118,13 @@ public class GlobalChatService {
             jedisPool = new JedisPool(poolConfig, host, port, 2000);
         }
 
-        startSubscriber();
-        plugin.getLogger().info("Global chat started (enabled=" + enabled + ", serverId=" + serverId
-                + "); Redis will be retried asynchronously if unavailable.");
+        // Servers outside global chat still need the pool when their public
+        // feed is enabled, but must not display the network's global chat.
+        if (enabled) {
+            startSubscriber();
+        }
+        plugin.getLogger().info("Chat Redis started (global=" + enabled + ", public=" + publicChatEnabled
+                + ", serverId=" + serverId + "); Redis will be retried asynchronously if unavailable.");
     }
 
     public boolean isEnabled() {
@@ -219,6 +236,7 @@ public class GlobalChatService {
             RenderedLine rendered = renderLine(displayName, username, rawMessage, senderUuid);
 
             deliverLocally(rendered.line(), rendered.mentioned());
+            publishPublicChat(senderUuid, username, rawMessage);
             publish(senderUuid, username, displayName, rawMessage);
         });
     }
@@ -266,6 +284,39 @@ public class GlobalChatService {
                 plugin.getLogger().warning("Global chat publish failed: " + e.getMessage());
             }
         });
+    }
+
+    /** Publishes the accepted message as plain visible text for public consumers. */
+    public void publishPublicChat(UUID senderUuid, String username, String rawMessage) {
+        if (!publicChatEnabled || stopped) return;
+        JedisPool pool = jedisPool;
+        if (pool == null || pool.isClosed()) return;
+        Map<String, String> fields = publicChatFields(senderUuid, username, rawMessage);
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try (Jedis jedis = pool.getResource()) {
+                jedis.xadd(publicChatStream,
+                        XAddParams.xAddParams()
+                                .maxLen(publicChatMaxMessages)
+                                .approximateTrimming(),
+                        fields);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Public chat publish failed: " + e.getMessage());
+            }
+        });
+    }
+
+    static Map<String, String> publicChatFields(UUID senderUuid, String username, String rawMessage) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("uuid", senderUuid.toString());
+        fields.put("username", username);
+        fields.put("message", visiblePlainText(rawMessage));
+        return fields;
+    }
+
+    static String visiblePlainText(String rawMessage) {
+        return PlainTextComponentSerializer.plainText().serialize(
+                SafeChatMiniMessage.deserialize(rawMessage));
     }
 
     /** Parses an inbound envelope, drops our own echoes, then renders + delivers it. */

@@ -91,6 +91,7 @@ def regressionTests = [
     xpLevelReaderRegressionTest: 'crabcraft.net.crabUtilities.awards.XpLevelReaderRegressionTest',
     globalChatLinkRegressionTest: 'crabcraft.net.crabUtilities.chat.GlobalChatLinkRegressionTest',
     chatMiniMessageRegressionTest: 'crabcraft.net.crabUtilities.chat.ChatMiniMessageRegressionTest',
+    publicChatPublisherRegressionTest: 'crabcraft.net.crabUtilities.chat.PublicChatPublisherRegressionTest',
     chatBridgeRegressionTest: 'crabcraft.net.crabUtilities.chat.bridge.ChatBridgeRegressionTest',
     reloadCommandRegressionTest: 'crabcraft.net.crabUtilities.ReloadCommandRegressionTest',
     crabMessagesRegressionTest: 'crabcraft.net.crabUtilities.CrabMessagesRegressionTest',

@@ -79,6 +79,12 @@ def regressionTests = [
                 'crabcraft.net.crabUtilities.velocity.voicechat.CallManagerRegressionTest',
         webServerRequestBodyRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.api.WebServerRequestBodyRegressionTest',
+        publicChatBrokerRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.api.PublicChatBrokerRegressionTest',
+        chatConnectionLimiterRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.api.ChatConnectionLimiterRegressionTest',
+        webServerExecutorRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.api.WebServerExecutorRegressionTest',
         awardAltExclusionRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.awards.AwardAltExclusionRegressionTest',
         awardDyeCraftingRegressionTest:

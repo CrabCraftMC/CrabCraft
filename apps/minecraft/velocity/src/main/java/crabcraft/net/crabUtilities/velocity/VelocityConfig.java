@@ -50,6 +50,12 @@ public class VelocityConfig {
     private final float msgIncomingSoundVolume;
     private final float msgIncomingSoundPitch;
     private final int apiPort;
+    private final boolean publicChatEnabled;
+    private final String publicChatStream;
+    private final int publicChatReplayMessages;
+    private final int publicChatMaxConnections;
+    private final int publicChatMaxConnectionsPerIp;
+    private final List<String> publicChatAllowedOrigins;
     private final List<String> ignoredServers;
     private final String firstJoinFormat;
     private final String discordWebhookUrl;
@@ -82,6 +88,10 @@ public class VelocityConfig {
                            boolean msgIncomingSoundEnabled, String msgIncomingSoundKey,
                            float msgIncomingSoundVolume, float msgIncomingSoundPitch,
                            int apiPort,
+                           boolean publicChatEnabled, String publicChatStream,
+                           int publicChatReplayMessages, int publicChatMaxConnections,
+                           int publicChatMaxConnectionsPerIp,
+                           List<String> publicChatAllowedOrigins,
                            List<String> ignoredServers, String firstJoinFormat,
                            String discordWebhookUrl, String discordJoinFormat,
                            String discordLeaveFormat, String discordSwapFormat,
@@ -114,6 +124,12 @@ public class VelocityConfig {
         this.msgIncomingSoundVolume = msgIncomingSoundVolume;
         this.msgIncomingSoundPitch = msgIncomingSoundPitch;
         this.apiPort = apiPort;
+        this.publicChatEnabled = publicChatEnabled;
+        this.publicChatStream = publicChatStream;
+        this.publicChatReplayMessages = publicChatReplayMessages;
+        this.publicChatMaxConnections = publicChatMaxConnections;
+        this.publicChatMaxConnectionsPerIp = publicChatMaxConnectionsPerIp;
+        this.publicChatAllowedOrigins = publicChatAllowedOrigins;
         this.ignoredServers = ignoredServers;
         this.firstJoinFormat = firstJoinFormat;
         this.discordWebhookUrl = discordWebhookUrl;
@@ -201,6 +217,30 @@ public class VelocityConfig {
 
             int apiPort = root.node("api", "port").getInt(8080);
 
+            ConfigurationNode publicChat = root.node("public-chat");
+            boolean publicChatEnabled = publicChat.node("enabled").getBoolean(false);
+            String publicChatStream = publicChat.node("stream")
+                    .getString("crabcraft:public-chat");
+            if (publicChatStream == null || publicChatStream.isBlank()) {
+                publicChatStream = "crabcraft:public-chat";
+            }
+            int publicChatReplayMessages = Math.max(1,
+                    Math.min(20, publicChat.node("replay-messages").getInt(6)));
+            int publicChatMaxConnections = Math.max(1,
+                    publicChat.node("max-connections").getInt(64));
+            int publicChatMaxConnectionsPerIp = Math.max(1,
+                    publicChat.node("max-connections-per-ip").getInt(2));
+            List<String> publicChatAllowedOrigins = new ArrayList<>();
+            ConfigurationNode originsNode = publicChat.node("allowed-origins");
+            if (!originsNode.virtual()) {
+                for (ConfigurationNode child : originsNode.childrenList()) {
+                    String value = child.getString();
+                    if (value != null && !value.isBlank()) {
+                        publicChatAllowedOrigins.add(value);
+                    }
+                }
+            }
+
             List<String> ignoredServers = new ArrayList<>();
             ConfigurationNode ignoredNode = root.node("join-leave-messages", "ignored-servers");
             if (!ignoredNode.virtual()) {
@@ -245,6 +285,9 @@ public class VelocityConfig {
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
                     msgOutgoing, msgIncoming, msgSpy, msgNotFound, msgNoReply, msgSelf,
                     soundEnabled, soundKey, soundVolume, soundPitch, apiPort,
+                    publicChatEnabled, publicChatStream, publicChatReplayMessages,
+                    publicChatMaxConnections, publicChatMaxConnectionsPerIp,
+                    List.copyOf(publicChatAllowedOrigins),
                     ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
@@ -259,6 +302,8 @@ public class VelocityConfig {
                     DEFAULT_MSG_OUTGOING, DEFAULT_MSG_INCOMING, DEFAULT_MSG_SPY,
                     DEFAULT_MSG_PLAYER_NOT_FOUND, DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF,
                     true, "minecraft:entity.experience_orb.pickup", 1.0f, 1.0f, 8080,
+                    false, "crabcraft:public-chat", 6, 64, 2,
+                    List.of("https://crabcraft.net", "https://www.crabcraft.net"),
                     List.of(), "<yellow><name> joined the game for the first time</yellow>",
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
@@ -289,6 +334,12 @@ public class VelocityConfig {
     public float getMsgIncomingSoundVolume() { return msgIncomingSoundVolume; }
     public float getMsgIncomingSoundPitch() { return msgIncomingSoundPitch; }
     public int getApiPort() { return apiPort; }
+    public boolean isPublicChatEnabled() { return publicChatEnabled; }
+    public String getPublicChatStream() { return publicChatStream; }
+    public int getPublicChatReplayMessages() { return publicChatReplayMessages; }
+    public int getPublicChatMaxConnections() { return publicChatMaxConnections; }
+    public int getPublicChatMaxConnectionsPerIp() { return publicChatMaxConnectionsPerIp; }
+    public List<String> getPublicChatAllowedOrigins() { return publicChatAllowedOrigins; }
     public List<String> getIgnoredServers() { return ignoredServers; }
     public String getFirstJoinFormat() { return firstJoinFormat; }
     public String getDiscordWebhookUrl() { return discordWebhookUrl; }

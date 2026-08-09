@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import config from "@/data/site-config.json";
 import CopyIPCard from "@/components/CopyIPCard";
+import LiveChatSnippet from "@/components/LiveChatSnippet";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { getCurrentSeasonWhitelistedPlayerCount } from "@/lib/discord";
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
+  const chatStreamUrl = process.env.CHAT_STREAM_URL?.trim();
   let topPlayers: { uuid: string; name: string; points: number }[] = [];
   let seasonCount = 0;
   let whitelistedPlayers = 0;
@@ -303,6 +305,8 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      {chatStreamUrl ? <LiveChatSnippet streamUrl={chatStreamUrl} /> : null}
 
       <section className="mt-16 pb-8 relative">
         <div className="container mx-auto px-4">

@@ -19,3 +19,10 @@ global-chat:
       key: "minecraft:block.note_block.pling"
       volume: 1.0
       pitch: 1.0
+
+# Publish accepted normal chat as plain text for the public website feed.
+# The Redis Stream ID supplies each message's timestamp.
+public-chat:
+  enabled: false
+  stream: "crabcraft:public-chat"
+  max-messages: 500

@@ -82,6 +82,8 @@ public final class ModuleConfigManagerRegressionTest {
                 "Jade path was routed to the wrong module");
         check(moduleName("bluemap.sign-markers.enabled").equals("integrations"),
                 "BlueMap path was routed to the wrong module");
+        check(moduleName("public-chat.enabled").equals("chat"),
+                "public chat path was routed to the wrong module");
         check(moduleName("tweaks.view-distance.enabled").equals("tweaks"),
                 "tweak path was routed to the wrong module");
         check(ModuleConfigManager.moduleForPathStatic("redis.host") == null,
