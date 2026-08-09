@@ -87,6 +87,8 @@ def regressionTests = [
                 'crabcraft.net.crabUtilities.velocity.api.WebServerExecutorRegressionTest',
         awardAltExclusionRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.awards.AwardAltExclusionRegressionTest',
+        awardBiomesRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.awards.AwardBiomesRegressionTest',
         awardDyeCraftingRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.awards.AwardDyeCraftingRegressionTest',
         awardSuspiciousBrushRegressionTest:

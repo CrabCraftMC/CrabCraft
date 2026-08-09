@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import crabcraft.net.crabUtilities.awards.XpLevelReader;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -16,17 +17,17 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Periodically scans the Minecraft level's saved player data and publishes
  * changed snapshots to Redis so the Velocity proxy can compute award scores
  * and persist them.
  *
- * <p>Runs on an async Bukkit task every
- * {@code stats-push.interval-minutes} (config, default 5) plus once
- * on plugin enable. Skips files whose {@code mtime} hasn't moved
- * since the previous run, so steady-state traffic is proportional to
- * active players, not total player count.
+ * <p>Snapshots online XP levels on the server thread, then scans saved data
+ * asynchronously every {@code stats-push.interval-minutes} (config, default 5)
+ * plus once on plugin enable. Skips unchanged players, so steady-state traffic
+ * is proportional to active players, not total player count.
  *
  * <p>Payload on channel {@code crabutilities:stats-push}:
  * <pre>{
@@ -35,9 +36,9 @@ import java.util.OptionalInt;
  *   "stats":&lt;raw contents&gt;,
  *   "custom":{"xp_level":42}
  * }</pre>
- * The {@code custom} object is optional. XP level is read from the latest
- * complete player-data save and has the same eventual consistency as the
- * other periodically pushed statistics.
+ * The {@code custom} object is optional. XP level comes from Paper for online
+ * players and falls back to the latest complete player-data save for offline
+ * players.
  */
 public class StatsPushTask {
 
@@ -58,6 +59,8 @@ public class StatsPushTask {
     private BukkitTask task;
     private final Map<String, Long> lastSeenMtime = new HashMap<>();
     private final Map<String, Long> lastSeenPlayerDataMtime = new HashMap<>();
+    private final Map<String, Integer> lastSeenXpLevel = new HashMap<>();
+    private final AtomicBoolean scanRunning = new AtomicBoolean();
     private volatile boolean redisFailureLogged;
 
     public StatsPushTask(CrabUtilities plugin) {
@@ -92,18 +95,35 @@ public class StatsPushTask {
         }
 
         long intervalTicks = TICKS_PER_MINUTE * intervalMinutes;
-        this.task = Bukkit.getScheduler().runTaskTimerAsynchronously(
-                plugin, this::scan, 0L, intervalTicks);
+        this.task = Bukkit.getScheduler().runTaskTimer(
+                plugin, this::startScan, 0L, intervalTicks);
         plugin.getLogger().info(
                 "Stats push scheduled every " + intervalMinutes + " minute(s) on channel " + CHANNEL
                         + "; Redis will be retried asynchronously if unavailable.");
+    }
+
+    private void startScan() {
+        if (!scanRunning.compareAndSet(false, true)) return;
+
+        Map<String, Integer> onlineXpLevels = new HashMap<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            onlineXpLevels.put(player.getUniqueId().toString(), player.getLevel());
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                scan(Map.copyOf(onlineXpLevels));
+            } finally {
+                scanRunning.set(false);
+            }
+        });
     }
 
     /**
      * Iterates the level's {@code players/stats/<uuid>.json} files and pushes
      * anything whose mtime has moved since the previous scan.
      */
-    private void scan() {
+    private void scan(Map<String, Integer> onlineXpLevels) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
         if (!statsDir.isDirectory()) return;
@@ -124,9 +144,11 @@ public class StatsPushTask {
                 long playerDataMtime = playerDataFile.isFile() ? playerDataFile.lastModified() : 0L;
                 Long prev = lastSeenMtime.get(file.getName());
                 Long previousPlayerDataMtime = lastSeenPlayerDataMtime.get(uuid);
+                Integer liveXpLevel = onlineXpLevels.get(uuid);
                 if (prev != null && prev == mtime
                         && previousPlayerDataMtime != null
-                        && previousPlayerDataMtime == playerDataMtime) {
+                        && previousPlayerDataMtime == playerDataMtime
+                        && !hasLiveXpLevelChanged(liveXpLevel, lastSeenXpLevel.get(uuid))) {
                     continue;
                 }
 
@@ -151,7 +173,7 @@ public class StatsPushTask {
                 envelope.addProperty("uuid", uuid);
                 envelope.add("stats", JsonParser.parseString(raw));
 
-                OptionalInt xpLevel = XpLevelReader.read(playerDataFile.toPath());
+                OptionalInt xpLevel = resolveXpLevel(liveXpLevel, playerDataFile.toPath());
                 if (xpLevel.isPresent()) {
                     JsonObject custom = new JsonObject();
                     custom.addProperty("xp_level", xpLevel.getAsInt());
@@ -179,6 +201,7 @@ public class StatsPushTask {
                 jedis.publish(CHANNEL, payload);
                 lastSeenMtime.put(file.getName(), mtime);
                 lastSeenPlayerDataMtime.put(uuid, playerDataMtime);
+                xpLevel.ifPresent(level -> lastSeenXpLevel.put(uuid, level));
                 pushed++;
             }
         } catch (Exception e) {
@@ -193,6 +216,16 @@ public class StatsPushTask {
         if (pushed > 0) {
             plugin.getLogger().info("Pushed " + pushed + " stats update(s).");
         }
+    }
+
+    static OptionalInt resolveXpLevel(Integer liveXpLevel, Path playerDataFile) {
+        return liveXpLevel == null
+                ? XpLevelReader.read(playerDataFile)
+                : OptionalInt.of(liveXpLevel);
+    }
+
+    static boolean hasLiveXpLevelChanged(Integer liveXpLevel, Integer previousXpLevel) {
+        return liveXpLevel != null && !liveXpLevel.equals(previousXpLevel);
     }
 
     public void shutdown() {
