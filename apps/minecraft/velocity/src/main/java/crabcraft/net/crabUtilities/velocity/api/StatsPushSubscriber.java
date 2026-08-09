@@ -151,6 +151,8 @@ public class StatsPushSubscriber {
                 ? envelope.getAsJsonObject("stats") : null;
         JsonObject customMetrics = envelope.has("custom") && envelope.get("custom").isJsonObject()
                 ? envelope.getAsJsonObject("custom") : null;
+        JsonObject advancements = envelope.has("advancements") && envelope.get("advancements").isJsonObject()
+                ? envelope.getAsJsonObject("advancements") : null;
 
         if (uuid == null || stats == null) {
             logger.warn("Ignoring stats-push envelope with missing fields");
@@ -186,7 +188,7 @@ public class StatsPushSubscriber {
         AwardDbWriter writer = plugin.getAwardDbWriter();
         if (evaluator != null && writer != null) {
             try {
-                Map<String, Double> scores = evaluator.evaluate(stats, customMetrics);
+                Map<String, Double> scores = evaluator.evaluate(stats, customMetrics, advancements);
                 writer.writeScoresForPlayer(uuid, season, scores);
                 queueMedalRecompute(season);
             } catch (Exception e) {
@@ -195,8 +197,6 @@ public class StatsPushSubscriber {
         }
 
         // Advancements.
-        JsonObject advancements = envelope.has("advancements") && envelope.get("advancements").isJsonObject()
-                ? envelope.getAsJsonObject("advancements") : null;
         if (advancements != null) {
             AdvancementDbWriter advWriter = plugin.getAdvancementDbWriter();
             if (advWriter != null) {

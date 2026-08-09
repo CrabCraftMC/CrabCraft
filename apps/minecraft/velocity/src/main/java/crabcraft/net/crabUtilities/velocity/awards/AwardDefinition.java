@@ -14,7 +14,8 @@ public class AwardDefinition {
 
         /**
          * Path inside the reader's source object: vanilla stats for standard
-         * readers or plugin-provided metrics for {@code custom-int}.
+         * readers, plugin-provided metrics for {@code custom-int}, or the full
+         * stats payload for {@code set-count}.
          */
         public List<String> path;
 

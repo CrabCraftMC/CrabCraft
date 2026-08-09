@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
  *     <li>{@code custom-int} — read an optional numeric value from the
  *         plugin-provided custom metrics object. Missing values are omitted
  *         from the result so they do not overwrite the last valid score.</li>
+ *     <li>{@code set-count} — count keys in an object from the full stats
+ *         payload, including advancement criteria. Missing values are omitted.</li>
  * </ul>
  * Unknown reader types are treated as zero and skipped with a silent miss,
  * to keep evaluation total across all configured awards even if upstream adds new
@@ -47,7 +49,7 @@ public final class AwardEvaluator {
      * @return awardId &rarr; numeric score (0 for missing / unmatched).
      */
     public Map<String, Double> evaluate(JsonObject rawStats) {
-        return evaluate(rawStats, null);
+        return evaluate(rawStats, null, null);
     }
 
     /**
@@ -58,15 +60,35 @@ public final class AwardEvaluator {
      * @return awardId &rarr; numeric score; missing custom values are omitted
      */
     public Map<String, Double> evaluate(JsonObject rawStats, JsonObject customMetrics) {
+        return evaluate(rawStats, customMetrics, null);
+    }
+
+    /**
+     * Evaluate every award against vanilla stats, custom metrics, and advancements.
+     *
+     * @param rawStats the root object of a Minecraft stats file
+     * @param customMetrics optional plugin-provided metrics
+     * @param advancements optional root object of a Minecraft advancements file
+     * @return awardId &rarr; numeric score; missing optional values are omitted
+     */
+    public Map<String, Double> evaluate(
+            JsonObject rawStats, JsonObject customMetrics, JsonObject advancements) {
         JsonObject stats = rawStats == null ? new JsonObject()
                 : (rawStats.has("stats") && rawStats.get("stats").isJsonObject()
                         ? rawStats.getAsJsonObject("stats")
                         : rawStats);
+        JsonObject fullPayload = new JsonObject();
+        if (advancements != null) fullPayload.add("advancements", advancements);
 
         Map<String, Double> out = new HashMap<>(definitions.size());
         for (AwardDefinition def : definitions.values()) {
             if (def.reader != null && "custom-int".equals(def.reader.type)) {
                 readOptionalNumber(customMetrics, def.reader.path)
+                        .ifPresent(value -> out.put(def.id, value));
+                continue;
+            }
+            if (def.reader != null && "set-count".equals(def.reader.type)) {
+                readOptionalObjectSize(fullPayload, def.reader.path)
                         .ifPresent(value -> out.put(def.id, value));
                 continue;
             }
@@ -116,6 +138,19 @@ public final class AwardEvaluator {
             return OptionalDouble.of(cursor.getAsDouble());
         }
         return OptionalDouble.empty();
+    }
+
+    private static OptionalDouble readOptionalObjectSize(JsonObject source, List<String> path) {
+        if (source == null || path == null) return OptionalDouble.empty();
+
+        JsonElement cursor = source;
+        for (String segment : path) {
+            if (cursor == null || !cursor.isJsonObject()) return OptionalDouble.empty();
+            cursor = cursor.getAsJsonObject().get(segment);
+        }
+        return cursor != null && cursor.isJsonObject()
+                ? OptionalDouble.of(cursor.getAsJsonObject().size())
+                : OptionalDouble.empty();
     }
 
     private static double readMatchSum(JsonObject stats, List<String> path, List<Pattern> patterns) {
