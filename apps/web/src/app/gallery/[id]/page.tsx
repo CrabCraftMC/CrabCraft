@@ -19,6 +19,7 @@ import {
   galleryHref,
 } from "@/data/gallery";
 import { galleryMediaUrl } from "@/data/gallery-media";
+import { playerDisplayName } from "@/lib/playerName";
 
 const SITE_URL = "https://crabcraft.net";
 
@@ -55,10 +56,14 @@ export async function generateMetadata({
   const { id } = await params;
   const post = await getCachedGalleryPost(id);
   if (!post) return { title: "Gallery post not found" };
+  const authorName = playerDisplayName(
+    post.author.nickname,
+    post.author.username,
+  );
 
   const description = metadataDescription(
     post.content,
-    `Minecraft screenshots shared by ${post.author.username} during CrabCraft Season ${post.season}.`,
+    `Minecraft screenshots shared by ${authorName} during CrabCraft Season ${post.season}.`,
   );
   const canonical = `/gallery/${post.id}`;
   const images = post.images.map((image, index) => ({
@@ -79,7 +84,7 @@ export async function generateMetadata({
       type: "article",
       publishedTime: post.postedAt.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
-      authors: [post.author.username],
+      authors: [authorName],
       tags: post.tags.map((tag) => tag.name),
       images,
     },
@@ -97,6 +102,10 @@ export default async function GalleryPostPage({ params }: GalleryPostPageProps) 
     getAdjacentGalleryPosts(id),
   ]);
   if (!post) notFound();
+  const authorName = playerDisplayName(
+    post.author.nickname,
+    post.author.username,
+  );
 
   const pageUrl = `${SITE_URL}/gallery/${post.id}`;
   const authorUrl = post.author.profileHref
@@ -115,13 +124,13 @@ export default async function GalleryPostPage({ params }: GalleryPostPageProps) 
     url: pageUrl,
     description: metadataDescription(
       post.content,
-      `CrabCraft Season ${post.season} screenshots by ${post.author.username}.`,
+      `CrabCraft Season ${post.season} screenshots by ${authorName}.`,
     ),
     datePublished: post.postedAt.toISOString(),
     dateModified: post.updatedAt.toISOString(),
     author: {
       "@type": "Person",
-      name: post.author.username,
+      name: authorName,
       ...(authorUrl ? { url: authorUrl } : {}),
     },
     keywords: post.tags.map((tag) => tag.name),
@@ -231,7 +240,7 @@ export default async function GalleryPostPage({ params }: GalleryPostPageProps) 
                 >
                   <PixelIcon
                     src={post.author.avatarUrl}
-                    alt={`${post.author.username}'s avatar`}
+                    alt={`${authorName}'s avatar`}
                     size={44}
                     imgClassName="rounded-lg"
                   />
@@ -240,7 +249,7 @@ export default async function GalleryPostPage({ params }: GalleryPostPageProps) 
                       Submitted by
                     </span>
                     <span className="block truncate text-sm font-bold text-gray-800 transition-colors group-hover:text-orange-700 dark:text-gray-200 dark:group-hover:text-orange-400">
-                      {post.author.username}
+                      {authorName}
                     </span>
                   </span>
                 </Link>
@@ -248,7 +257,7 @@ export default async function GalleryPostPage({ params }: GalleryPostPageProps) 
                 <div className="flex items-center gap-3 rounded-2xl bg-paper p-3">
                   <PixelIcon
                     src={post.author.avatarUrl}
-                    alt={`${post.author.username}'s avatar`}
+                    alt={`${authorName}'s avatar`}
                     size={44}
                     imgClassName="rounded-lg"
                   />
@@ -257,7 +266,7 @@ export default async function GalleryPostPage({ params }: GalleryPostPageProps) 
                       Submitted by
                     </span>
                     <span className="block truncate text-sm font-bold text-gray-800 dark:text-gray-200">
-                      {post.author.username}
+                      {authorName}
                     </span>
                   </span>
                 </div>

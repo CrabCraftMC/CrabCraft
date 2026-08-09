@@ -7,10 +7,12 @@ import Link from "next/link";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { ColoredNickname } from "@/lib/parseMinecraftColors";
+import { playerDisplayName } from "@/lib/playerName";
 
 interface OnlinePlayer {
   name: string;
   uuid: string;
+  nickname?: string;
   nickname_raw?: string;
 }
 
@@ -49,6 +51,7 @@ export default function CopyIPCard({
   const playerListRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{
     name: string;
+    nickname?: string;
     nickname_raw?: string;
     x: number;
     y: number;
@@ -65,6 +68,7 @@ export default function CopyIPCard({
           (data.players || []).map((p: any) => ({
             name: p.username,
             uuid: p.uuid,
+            nickname: p.nickname,
             nickname_raw: p.nickname_raw,
           }))
         );
@@ -147,6 +151,7 @@ export default function CopyIPCard({
                     const rect = e.currentTarget.getBoundingClientRect();
                     setTooltip({
                       name: p.name,
+                      nickname: p.nickname,
                       nickname_raw: p.nickname_raw,
                       x: rect.left + rect.width / 2,
                       y: rect.top - 4,
@@ -157,7 +162,7 @@ export default function CopyIPCard({
                 >
                   <PixelIcon
                     src={`https://mc-heads.net/avatar/${p.uuid}/16.png`}
-                    alt={p.name}
+                    alt={playerDisplayName(p.nickname, p.name)}
                     size={HEAD_SIZE}
                     imgClassName="rounded"
                   />
@@ -195,7 +200,7 @@ export default function CopyIPCard({
           {tooltip.nickname_raw ? (
             <ColoredNickname raw={tooltip.nickname_raw} exact />
           ) : (
-            tooltip.name
+            playerDisplayName(tooltip.nickname, tooltip.name)
           )}
         </div>
         <div className="flex justify-center">

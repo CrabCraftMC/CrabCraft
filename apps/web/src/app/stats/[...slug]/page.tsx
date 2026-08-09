@@ -120,6 +120,7 @@ export default async function StatsPage({ params }: Props) {
 
   const playerData = {
     nickname: dbUser?.minecraft_username ?? identifier,
+    nicknamePlain: dbUser?.nickname ?? null,
     nicknameRaw: dbUser?.nickname_raw ?? null,
     uuid: dbUser?.minecraft_uuid ?? "",
     rank: 0,

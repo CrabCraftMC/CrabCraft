@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  type ClipboardEvent,
+} from "react";
 import Squircle from "@/components/Squircle";
+import { parsePortalCoordinates } from "@/data/portal-coordinates";
 import { RotateCcw, ArrowLeftRight, Info, AlertTriangle, Link2 } from "lucide-react";
 
 const STORAGE_KEY = "crabcraft-nether-portal";
@@ -105,6 +111,23 @@ export default function NetherPortalCalculator() {
     setEditingField(null);
   };
 
+  const handleCoordinatePaste = (
+    event: ClipboardEvent<HTMLInputElement>,
+    dimension: "overworld" | "nether",
+  ) => {
+    const coordinates = parsePortalCoordinates(
+      event.clipboardData.getData("text"),
+    );
+    if (!coordinates) return;
+
+    event.preventDefault();
+    setEditingField(null);
+
+    const scale = dimension === "nether" ? 8 : 1;
+    setOverworldX(coordinates.x * scale);
+    setOverworldZ(coordinates.z * scale);
+  };
+
   const inputValue = (field: string, numericValue: number) =>
     editingField === field ? editingValue : String(numericValue);
 
@@ -159,6 +182,7 @@ export default function NetherPortalCalculator() {
                     onChange={(e) =>
                       handleChange("ow-x", e.target.value, setOverworldX)
                     }
+                    onPaste={(e) => handleCoordinatePaste(e, "overworld")}
                     onBlur={handleBlur}
                     className={INPUT_CLS}
                   />
@@ -172,6 +196,7 @@ export default function NetherPortalCalculator() {
                     onChange={(e) =>
                       handleChange("ow-z", e.target.value, setOverworldZ)
                     }
+                    onPaste={(e) => handleCoordinatePaste(e, "overworld")}
                     onBlur={handleBlur}
                     className={INPUT_CLS}
                   />
@@ -210,6 +235,7 @@ export default function NetherPortalCalculator() {
                         setOverworldX(n * 8)
                       )
                     }
+                    onPaste={(e) => handleCoordinatePaste(e, "nether")}
                     onBlur={handleBlur}
                     className={INPUT_CLS}
                   />
@@ -225,6 +251,7 @@ export default function NetherPortalCalculator() {
                         setOverworldZ(n * 8)
                       )
                     }
+                    onPaste={(e) => handleCoordinatePaste(e, "nether")}
                     onBlur={handleBlur}
                     className={INPUT_CLS}
                   />

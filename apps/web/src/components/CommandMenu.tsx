@@ -11,6 +11,7 @@ import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import { Instagram } from "lucide-react";
 import PixelIcon from "@/components/PixelIcon";
 import config from "@/data/site-config.json";
+import { playerDisplayName } from "@/lib/playerName";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight, BookOpen,
@@ -24,8 +25,9 @@ type Result = {
   icon?: string;
   url: string;
   external?: boolean;
-  category: "Pages" | "Tools" | "Players" | "Socials";
+  category: "Pages" | "Tools" | "Awards" | "Players" | "Socials";
   avatar?: string;
+  searchText?: string;
 };
 
 const PAGES: Result[] = config.navbar.links.map((l) => ({
@@ -67,6 +69,7 @@ export default function CommandMenu() {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [players, setPlayers] = useState<Result[]>([]);
+  const [awards, setAwards] = useState<Result[] | null>(null);
   const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -76,19 +79,60 @@ export default function CommandMenu() {
 
   // Filter static items
   const q = query.toLowerCase().trim();
-  const filtered = q
+  const filteredStatic = q
     ? STATIC_ITEMS.filter((item) => item.label.toLowerCase().includes(q))
     : STATIC_ITEMS;
+  const filteredAwards = q
+    ? (awards ?? []).filter((award) => award.searchText?.includes(q))
+    : [];
 
-  const results = [...filtered, ...players];
+  const results = [...filteredStatic, ...filteredAwards, ...players];
 
   // Group results by category
   const grouped = results.reduce<Record<string, Result[]>>((acc, r) => {
     (acc[r.category] ??= []).push(r);
     return acc;
   }, {});
-  const categoryOrder = ["Pages", "Tools", "Players", "Socials"] as const;
+  const categoryOrder = ["Pages", "Tools", "Awards", "Players", "Socials"] as const;
   const flatResults = categoryOrder.flatMap((cat) => grouped[cat] || []);
+
+  // Load the small award catalogue once, when search is first opened.
+  useEffect(() => {
+    if (!open || awards !== null) return;
+
+    let cancelled = false;
+    fetch("/api/awards")
+      .then((response) => (response.ok ? response.json() : []))
+      .then(
+        (
+          data: Array<{
+            id: string;
+            title: string;
+            description: string;
+            icon: string;
+          }>,
+        ) => {
+          if (cancelled) return;
+          setAwards(
+            data.map((award) => ({
+              id: `award-${award.id}`,
+              label: award.title,
+              url: `/awards/${award.id}`,
+              category: "Awards" as const,
+              avatar: award.icon,
+              searchText: `${award.title} ${award.description} ${award.id}`.toLocaleLowerCase("en-GB"),
+            })),
+          );
+        },
+      )
+      .catch(() => {
+        if (!cancelled) setAwards([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [awards, open]);
 
   // Debounced player search
   useEffect(() => {
@@ -104,9 +148,9 @@ export default function CommandMenu() {
         const res = await fetch(`/api/players/search?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         setPlayers(
-          data.map((p: { minecraft_uuid: string; minecraft_username: string }) => ({
+          data.map((p: { minecraft_uuid: string; minecraft_username: string; nickname: string | null }) => ({
             id: `player-${p.minecraft_uuid}`,
-            label: p.minecraft_username,
+            label: playerDisplayName(p.nickname, p.minecraft_username),
             url: `/stats/${p.minecraft_uuid}`,
             category: "Players" as const,
             avatar: `https://mc-heads.net/avatar/${p.minecraft_uuid}/24.png`,
@@ -213,7 +257,7 @@ export default function CommandMenu() {
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Search pages, players, tools..."
+            placeholder="Search pages, players, awards, tools..."
             className="flex-1 text-sm bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none"
           />
           <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold text-gray-400 bg-paper border border-line/60">

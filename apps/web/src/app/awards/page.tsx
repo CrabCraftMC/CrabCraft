@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import AwardsTabs from "@/components/AwardsTabs";
 import { categorise } from "@/lib/categories";
+import { playerDisplayName } from "@/lib/playerName";
 
 export const metadata: Metadata = {
   title: "Awards",
@@ -15,7 +16,12 @@ interface ProxyAward {
   unit: string;
   bucket: string;
   icon: string;
-  leader: { uuid: string; username: string; score: number } | null;
+  leader: {
+    uuid: string;
+    username: string;
+    nickname: string | null;
+    score: number;
+  } | null;
 }
 
 interface ProxyAwardsResponse {
@@ -46,7 +52,9 @@ export default async function AwardsPage() {
     key: d.id,
     title: d.title,
     desc: d.description || null,
-    bestName: d.leader?.username ?? null,
+    bestName: d.leader
+      ? playerDisplayName(d.leader.nickname, d.leader.username)
+      : null,
     bestUuid: d.leader?.uuid ?? null,
     bestValue: d.leader?.score ?? 0,
   }));

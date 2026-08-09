@@ -10,6 +10,7 @@ import GalleryPagination from "@/components/gallery/GalleryPagination";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { galleryMediaUrl } from "@/data/gallery-media";
+import { playerDisplayName } from "@/lib/playerName";
 import {
   formatGalleryDate,
   galleryHref,
@@ -39,15 +40,19 @@ function cardImageClass(imageCount: number, index: number) {
 }
 
 function GalleryAuthorByline({ post }: { post: GalleryPost }) {
+  const displayName = playerDisplayName(
+    post.author.nickname,
+    post.author.username,
+  );
   const contents = (
     <>
       <PixelIcon
         src={post.author.avatarUrl}
-        alt={`${post.author.username}'s avatar`}
+        alt={`${displayName}'s avatar`}
         size={28}
         imgClassName="rounded-md"
       />
-      <span className="truncate text-xs">{post.author.username}</span>
+      <span className="truncate text-xs">{displayName}</span>
     </>
   );
 
@@ -186,7 +191,10 @@ export default function GalleryExplorer({
         </div>
       </div>
 
-      <div className="mb-4 flex items-center justify-between gap-4">
+      <div
+        className="mb-4 flex items-center justify-between gap-4 animate-in motion-reduce:animate-none motion-reduce:opacity-100"
+        style={{ animationDelay: "0.12s" }}
+      >
         <p className="text-sm text-gray-600 dark:text-gray-400">
           {total} {total === 1 ? "submission" : "submissions"}
         </p>
@@ -209,7 +217,7 @@ export default function GalleryExplorer({
             <article
               key={post.id}
               className="group flex h-full flex-col overflow-hidden rounded-[2rem] bg-paper-2 shadow-sm animate-in motion-reduce:animate-none motion-reduce:opacity-100"
-              style={{ animationDelay: `${0.12 + index * 0.05}s` }}
+              style={{ animationDelay: `${0.16 + index * 0.05}s` }}
             >
               <GalleryPostLink
                 href={`/gallery/${post.id}`}

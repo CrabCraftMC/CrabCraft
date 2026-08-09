@@ -142,13 +142,14 @@ public final class AdvancementQueryService {
                     "SELECT"
                     + " p.minecraft_uuid,"
                     + " u.minecraft_username,"
+                    + " u.nickname,"
                     + " COUNT(*) FILTER (WHERE p.completed = true)::int AS completed"
                     + " FROM player_advancements p"
                     + " LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid"
                     + " WHERE p.season = ?"
                     + " AND p.advancement_id NOT LIKE 'minecraft:recipes/%'"
                     + categoryFilter
-                    + " GROUP BY p.minecraft_uuid, u.minecraft_username"
+                    + " GROUP BY p.minecraft_uuid, u.minecraft_username, u.nickname"
                     + " HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0"
                     + " ORDER BY completed DESC, p.minecraft_uuid"
                     + " LIMIT ? OFFSET ?")) {
@@ -163,6 +164,7 @@ public final class AdvancementQueryService {
                         entry.addProperty("rank", rank);
                         entry.addProperty("uuid", rs.getString("minecraft_uuid"));
                         entry.addProperty("username", rs.getString("minecraft_username"));
+                        entry.addProperty("nickname", rs.getString("nickname"));
                         entry.addProperty("completed", rs.getInt("completed"));
                         leaderboard.add(entry);
                     }

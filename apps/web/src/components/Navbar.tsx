@@ -46,10 +46,12 @@ interface UserData {
     avatarUrl: string;
     minecraftUuid: string | null;
     minecraftUsername: string | null;
+    minecraftNickname: string | null;
     role: string;
 }
 
 export default function Navbar({ user }: { user?: UserData | null }) {
+    const playerName = user?.minecraftNickname || user?.minecraftUsername || user?.name || "User";
     const { trigger } = useWebHaptics();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -105,7 +107,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
     };
 
     return (
-        <div className="sticky top-4 z-50 px-4 lg:px-8 relative">
+        <div data-site-navbar className="sticky top-4 z-50 px-4 lg:px-8 relative">
         <nav className="container mx-auto relative">
             <Squircle
                 cornerRadius={20}
@@ -256,7 +258,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                     {user.minecraftUuid ? (
                                         <PixelIcon
                                             src={`https://mc-heads.net/avatar/${user.minecraftUuid}/56.png`}
-                                            alt={user.minecraftUsername || user.name}
+                                            alt={playerName}
                                             size={28}
                                             imgClassName="rounded"
                                         />
@@ -269,7 +271,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                             className="rounded-full"
                                         />
                                     )}
-                                    <span className="text-xs font-bold">{user.minecraftUsername || user.name}</span>
+                                    <span className="text-xs font-bold">{playerName}</span>
                                     {isUserMenuOpen ? <ChevronUp className="w-3 h-3 text-gray-400" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
                                 </button>
                             </div>
@@ -406,7 +408,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                     {user.minecraftUuid ? (
                                         <PixelIcon
                                             src={`https://mc-heads.net/avatar/${user.minecraftUuid}/64.png`}
-                                            alt={user.minecraftUsername || user.name}
+                                            alt={playerName}
                                             size={28}
                                             imgClassName="rounded"
                                         />
@@ -419,7 +421,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                             className="rounded-full"
                                         />
                                     )}
-                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex-1">{user.minecraftUsername || user.name}</span>
+                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex-1">{playerName}</span>
                                 </div>
                                 {user.minecraftUuid && (
                                     <Link href={`/stats/${user.minecraftUuid}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-paper/60 dark:hover:bg-white/5 transition-colors" onClick={() => setIsMenuOpen(false)}>

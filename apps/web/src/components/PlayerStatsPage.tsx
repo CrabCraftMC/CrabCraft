@@ -4,9 +4,11 @@ import PlayerDetailedStats from "@/components/PlayerDetailedStats";
 import PlayerAdvancements from "@/components/PlayerAdvancements";
 import { SiTwitch, SiYoutube, SiTiktok } from "react-icons/si";
 import { ColoredNickname, parseMinecraftColors } from "@/lib/parseMinecraftColors";
+import { playerDisplayName } from "@/lib/playerName";
 
 interface PlayerProps {
     nickname: string;
+    nicknamePlain?: string | null;
     nicknameRaw?: string | null;
     uuid: string;
     rank: number;
@@ -46,14 +48,14 @@ export default function PlayerStatsPage(props: PlayerProps) {
         );
     }
 
-    const { nickname, nicknameRaw, uuid, rank, points, gold, silver, bronze, currentStreak, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile, advancements: advancementsData } = props;
+    const { nickname, nicknamePlain, nicknameRaw, uuid, rank, points, gold, silver, bronze, currentStreak, role, joinedSeason, detailedStats, awardsById, localization, awardUnits, profile, advancements: advancementsData } = props;
     const showStreak = currentStreak >= 3;
     const hasMeta = showStreak || rank > 0 || joinedSeason;
     // Show the real username under a nickname that spells something else
     // (a recolored username needs no repeat).
     const plainNick = nicknameRaw
         ? parseMinecraftColors(nicknameRaw).map((s) => s.text).join("")
-        : null;
+        : playerDisplayName(nicknamePlain, nickname);
     const showUsername = Boolean(
         plainNick && plainNick.toLowerCase() !== nickname.toLowerCase(),
     );
@@ -92,7 +94,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                         <div className="relative z-10 pl-24 lg:pl-32 flex items-center justify-between">
                             <div>
                                 <h1 className="text-3xl lg:text-4xl font-bold text-white flex items-center flex-wrap">
-                                    {nicknameRaw ? <ColoredNickname raw={nicknameRaw} contrastBg="#F97316" shadow /> : nickname}
+                                    {nicknameRaw ? <ColoredNickname raw={nicknameRaw} contrastBg="#F97316" shadow /> : plainNick}
                                     {(role === "moderator" || role === "admin") && (
                                         <span className="ml-3 inline-flex items-center group relative cursor-pointer" tabIndex={0} title="Moderator">
                                             <img
@@ -156,7 +158,7 @@ export default function PlayerStatsPage(props: PlayerProps) {
                     </Squircle>
                     <img
                         src={`https://mc-api.io/render/full/${encodeURIComponent(nickname)}/java?size=256`}
-                        alt={nickname}
+                        alt={plainNick}
                         width={140}
                         height={280}
                         className="absolute bottom-0 left-3 lg:left-6 h-[147px] lg:h-[187px] w-auto z-20"

@@ -4,6 +4,7 @@ import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { formatValue } from "@/lib/formatValue";
 import { notFound } from "next/navigation";
+import { playerDisplayName } from "@/lib/playerName";
 
 interface Props {
   params: Promise<{ key: string }>;
@@ -22,6 +23,7 @@ interface ProxyLeaderboardEntry {
   rank: number;
   uuid: string;
   username: string | null;
+  nickname: string | null;
   score: number;
   medal: number;
 }
@@ -57,7 +59,10 @@ export default async function AwardLeaderboardPage({ params }: Props) {
   if (!data) notFound();
 
   const meta = data.award;
-  const entries = data.leaderboard;
+  const entries = data.leaderboard.map((entry) => ({
+    ...entry,
+    displayName: playerDisplayName(entry.nickname, entry.username),
+  }));
   const awardUnits: Record<string, string> = { [meta.id]: meta.unit };
 
   return (
@@ -127,12 +132,12 @@ export default async function AwardLeaderboardPage({ params }: Props) {
                   </span>
                   <PixelIcon
                     src={`https://mc-heads.net/avatar/${entry.uuid}/64.png`}
-                    alt={entry.username ?? ""}
+                    alt={entry.displayName}
                     size={32}
                     imgClassName="rounded"
                   />
                   <span className="flex-1 font-bold text-sm text-gray-800 dark:text-gray-200 truncate">
-                    {entry.username ?? "Unknown"}
+                    {entry.displayName}
                   </span>
                   <span className="text-sm font-bold text-gray-600 dark:text-gray-400 shrink-0">
                     {formatValue(entry.score, key, awardUnits)}

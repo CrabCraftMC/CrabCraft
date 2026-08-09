@@ -23,6 +23,7 @@ import {
   playerAwardScores,
   awards,
   streamChannels,
+  blockGradientShares,
   playerLoginStreaks,
   galleryPosts,
   galleryImages,
@@ -57,7 +58,35 @@ export interface GalleryFilterTag {
 
 export interface GalleryPlayerFilterOption {
   username: string;
+  nickname: string | null;
   avatarUrl: string;
+}
+
+// ── Block Gradient shares ─────────────────────────────────────
+
+export async function createBlockGradientShare(
+  id: string,
+  version: number,
+  state: Record<string, unknown>,
+): Promise<void> {
+  await db
+    .insert(blockGradientShares)
+    .values({ id, version, state })
+    .onConflictDoNothing();
+}
+
+export async function getBlockGradientShare(
+  id: string,
+): Promise<{ version: number; state: Record<string, unknown> } | null> {
+  const [share] = await db
+    .select({
+      version: blockGradientShares.version,
+      state: blockGradientShares.state,
+    })
+    .from(blockGradientShares)
+    .where(eq(blockGradientShares.id, id))
+    .limit(1);
+  return share ?? null;
 }
 
 export interface GalleryImage {
@@ -77,6 +106,7 @@ export interface GalleryReaction {
 
 export interface GalleryPostAuthor {
   username: string;
+  nickname: string | null;
   profileHref: string | null;
   avatarUrl: string;
 }
@@ -109,6 +139,7 @@ interface GalleryPostRow {
   authorDiscordUsername: string;
   authorDisplayName: string;
   minecraftUsername: string | null;
+  minecraftNickname: string | null;
   minecraftUuid: string | null;
 }
 
@@ -139,6 +170,7 @@ function galleryAuthorFromRow(row: GalleryPostRow): GalleryPostAuthor {
     row.authorDiscordUsername;
   return {
     username,
+    nickname: row.minecraftNickname,
     profileHref: row.minecraftUsername
       ? `/stats/${encodeURIComponent(row.minecraftUsername)}`
       : null,
@@ -254,6 +286,7 @@ const galleryPostSelection = {
   authorDiscordUsername: galleryPosts.author_discord_username,
   authorDisplayName: galleryPosts.author_display_name,
   minecraftUsername: players.minecraft_username,
+  minecraftNickname: players.nickname,
   minecraftUuid: players.minecraft_uuid,
 };
 
@@ -288,6 +321,7 @@ export async function getGalleryPosts(options: {
     conditions.push(
       or(
         ilike(players.minecraft_username, playerPattern),
+        ilike(players.nickname, playerPattern),
         ilike(galleryPosts.author_display_name, playerPattern),
         ilike(galleryPosts.author_discord_username, playerPattern),
       )!,
@@ -362,6 +396,7 @@ export async function getGalleryFilterOptions(): Promise<{
         discordUsername: galleryPosts.author_discord_username,
         displayName: galleryPosts.author_display_name,
         minecraftUsername: players.minecraft_username,
+        minecraftNickname: players.nickname,
         minecraftUuid: players.minecraft_uuid,
       })
       .from(galleryPosts)
@@ -376,14 +411,19 @@ export async function getGalleryFilterOptions(): Promise<{
     .map((row) => ({
       username:
         row.minecraftUsername ?? row.displayName ?? row.discordUsername,
+      nickname: row.minecraftNickname,
       avatarUrl: row.minecraftUuid
         ? `https://mc-heads.net/avatar/${row.minecraftUuid}/64.png`
         : "/logo.png",
     }))
     .sort((left, right) =>
-      left.username.localeCompare(right.username, "en-GB", {
+      (left.nickname?.trim() || left.username).localeCompare(
+        right.nickname?.trim() || right.username,
+        "en-GB",
+        {
         sensitivity: "base",
-      }),
+        },
+      ),
     );
   const latestSeason = seasonRows.at(-1)?.season;
   if (latestSeason === undefined) {
@@ -757,18 +797,37 @@ export async function getPlayerCurrentStreak(
 export async function searchUsers(
   query: string,
   limit = 10,
-): Promise<{ minecraft_uuid: string; minecraft_username: string }[]> {
+): Promise<
+  {
+    minecraft_uuid: string;
+    minecraft_username: string;
+    nickname: string | null;
+  }[]
+> {
+  const pattern = `%${query.replace(/[%_\\]/g, (c) => '\\' + c)}%`;
   const rows = await db
     .select({
       minecraft_uuid: players.minecraft_uuid,
       minecraft_username: players.minecraft_username,
+      nickname: players.nickname,
     })
     .from(players)
-    .where(ilike(players.minecraft_username, `%${query.replace(/[%_\\]/g, (c) => '\\' + c)}%`))
+    .where(
+      or(
+        ilike(players.minecraft_username, pattern),
+        ilike(players.nickname, pattern),
+      ),
+    )
     .orderBy(asc(players.minecraft_username))
     .limit(limit);
   return rows.filter(
-    (r): r is { minecraft_uuid: string; minecraft_username: string } =>
+    (
+      r,
+    ): r is {
+      minecraft_uuid: string;
+      minecraft_username: string;
+      nickname: string | null;
+    } =>
       r.minecraft_uuid !== null && r.minecraft_username !== null,
   );
 }

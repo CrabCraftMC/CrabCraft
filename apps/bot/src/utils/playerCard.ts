@@ -141,13 +141,12 @@ async function fetchImg(url: string): Promise<Img | null> {
   }
 }
 
-// Preferred skin render is starlightskins (what the website uses); fall back to
-// mc-heads.net body if it's unreachable. Natural dimensions come back so the box
-// can preserve the render's aspect ratio.
+// Prefer the same full-body render used by the website; fall back to mc-heads.net
+// if it is unreachable. Natural dimensions preserve the render's aspect ratio.
 async function fetchSkin(uuid: string): Promise<Img | null> {
-  const starlight = await fetchImg(`https://starlightskins.lunareclipse.studio/render/default/${uuid}/full`);
-  if (starlight) return starlight;
-  logger.warn("playerCard: starlightskins unavailable, falling back to mc-heads");
+  const fullRender = await fetchImg(`https://mc-api.io/render/full/${uuid}`);
+  if (fullRender) return fullRender;
+  logger.warn("playerCard: mc-api full render unavailable, falling back to mc-heads");
   return fetchImg(`https://mc-heads.net/body/${uuid}/300`);
 }
 

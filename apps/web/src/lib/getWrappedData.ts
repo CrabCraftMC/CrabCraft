@@ -6,6 +6,7 @@ import {
   getPlayerRank,
 } from "@/lib/queries";
 import type { WrappedData, WrappedDataResult } from "./wrappedTypes";
+import { playerDisplayName } from "./playerName";
 
 const RANK_CATEGORIES = [
   "play_time_seconds",
@@ -52,7 +53,11 @@ export async function getWrappedData(season: string): Promise<WrappedDataResult>
           stats,
           averages,
           ranks,
-          playerName: user.minecraftUsername || user.name,
+          playerName: playerDisplayName(
+            user.minecraftNickname,
+            user.minecraftUsername,
+            user.name ?? "Player",
+          ),
           playerUuid: mcUuid,
           season,
           totalPlayers:

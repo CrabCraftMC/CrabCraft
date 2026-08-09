@@ -12,10 +12,15 @@ import {
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import PixelIcon from "@/components/PixelIcon";
+import { playerDisplayName } from "@/lib/playerName";
 import {
   galleryHref,
   type GalleryPlayerFilterOption,
 } from "@/data/gallery";
+
+function galleryPlayerName(player: GalleryPlayerFilterOption) {
+  return playerDisplayName(player.nickname, player.username);
+}
 
 export default function GalleryPlayerSearch({
   players,
@@ -32,11 +37,13 @@ export default function GalleryPlayerSearch({
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
-  const [value, setValue] = useState(activePlayer ?? "");
+  const initialPlayer =
+    players.find((player) => player.username === activePlayer) ?? null;
+  const [value, setValue] = useState(
+    initialPlayer ? galleryPlayerName(initialPlayer) : activePlayer ?? "",
+  );
   const [selectedPlayer, setSelectedPlayer] =
-    useState<GalleryPlayerFilterOption | null>(() =>
-      players.find((player) => player.username === activePlayer) ?? null,
-    );
+    useState<GalleryPlayerFilterOption | null>(initialPlayer);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [listboxPosition, setListboxPosition] = useState<{
@@ -47,18 +54,22 @@ export default function GalleryPlayerSearch({
   const matches = useMemo(() => {
     const query = value.trim().toLocaleLowerCase("en-GB");
     return query
-      ? players.filter((player) =>
-          player.username.toLocaleLowerCase("en-GB").includes(query),
-        )
+      ? players.filter((player) => {
+          const displayName = galleryPlayerName(player).toLocaleLowerCase("en-GB");
+          return (
+            displayName.includes(query) ||
+            player.username.toLocaleLowerCase("en-GB").includes(query)
+          );
+        })
       : players;
   }, [players, value]);
   const showDropdown = open && matches.length > 0;
 
   useEffect(() => {
-    setValue(activePlayer ?? "");
-    setSelectedPlayer(
-      players.find((player) => player.username === activePlayer) ?? null,
-    );
+    const player =
+      players.find((option) => option.username === activePlayer) ?? null;
+    setValue(player ? galleryPlayerName(player) : activePlayer ?? "");
+    setSelectedPlayer(player);
   }, [activePlayer, players]);
 
   useLayoutEffect(() => {
@@ -110,7 +121,7 @@ export default function GalleryPlayerSearch({
   };
 
   const choosePlayer = (player: GalleryPlayerFilterOption) => {
-    setValue(player.username);
+    setValue(galleryPlayerName(player));
     setSelectedPlayer(player);
     navigateToPlayer(player.username);
   };
@@ -121,11 +132,13 @@ export default function GalleryPlayerSearch({
       onSubmit={(event) => {
         event.preventDefault();
         const player = value.trim();
-        const exactMatch = players.find(
-          (option) =>
-            option.username.toLocaleLowerCase("en-GB") ===
-            player.toLocaleLowerCase("en-GB"),
-        );
+        const playerKey = player.toLocaleLowerCase("en-GB");
+        const exactMatch = players.find((option) => {
+          return (
+            option.username.toLocaleLowerCase("en-GB") === playerKey ||
+            galleryPlayerName(option).toLocaleLowerCase("en-GB") === playerKey
+          );
+        });
         if (exactMatch) {
           choosePlayer(exactMatch);
           return;
@@ -221,7 +234,7 @@ export default function GalleryPlayerSearch({
               id={listboxId}
               role="listbox"
               aria-label="Gallery players"
-              className="fixed max-h-72 overflow-y-auto rounded-2xl border border-line bg-paper-2 p-1.5 shadow-xl"
+              className="themed-scrollbar fixed max-h-72 overflow-y-auto rounded-2xl border border-line bg-paper-2 p-1.5 shadow-xl"
               style={{
                 left: listboxPosition.left,
                 top: listboxPosition.top,
@@ -251,7 +264,9 @@ export default function GalleryPlayerSearch({
                     size={30}
                     imgClassName="rounded-md"
                   />
-                  <span className="min-w-0 truncate">{player.username}</span>
+                  <span className="min-w-0 truncate">
+                    {galleryPlayerName(player)}
+                  </span>
                 </button>
               ))}
             </div>,

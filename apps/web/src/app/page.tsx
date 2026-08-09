@@ -10,6 +10,7 @@ import { getCurrentSeasonWhitelistedPlayerCount } from "@/lib/discord";
 import { getHomepageStats } from "@/lib/queries";
 import { getRandomGalleryImage } from "@crabcraft/db/queries/web";
 import { galleryMediaUrl } from "@/data/gallery-media";
+import { playerDisplayName } from "@/lib/playerName";
 
 export const metadata: Metadata = {
   description:
@@ -26,7 +27,12 @@ export default async function HomePage() {
   let seasonCount = 0;
   let whitelistedPlayers = 0;
   let onlinePlayers = 0;
-  let onlinePlayerList: { name: string; uuid: string; nickname_raw?: string }[] = [];
+  let onlinePlayerList: {
+    name: string;
+    uuid: string;
+    nickname?: string;
+    nickname_raw?: string;
+  }[] = [];
 
   const homepageStatsPromise = getHomepageStats().catch(() => ({
     seasonCount: 0,
@@ -75,7 +81,7 @@ export default async function HomePage() {
       const data = await crownsRes.json();
       topPlayers = (data.leaderboard ?? []).map((p: any) => ({
         uuid: p.uuid,
-        name: p.username ?? "Unknown",
+        name: playerDisplayName(p.nickname, p.username),
         points: p.crown_score,
       }));
     } catch {}
@@ -88,6 +94,7 @@ export default async function HomePage() {
       onlinePlayerList = (data.players || []).map((p: any) => ({
         name: p.username,
         uuid: p.uuid,
+        nickname: p.nickname,
         nickname_raw: p.nickname_raw,
       }));
     } catch (e) {
@@ -267,11 +274,12 @@ export default async function HomePage() {
         <div className="container mx-auto px-4">
           <Link
             href="/gallery"
-            className="group block rounded-[2rem] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/50 focus-visible:ring-offset-4 focus-visible:ring-offset-paper"
+            className="group block cursor-pointer rounded-[2rem] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/50 focus-visible:ring-offset-4 focus-visible:ring-offset-paper"
           >
             <Squircle
               cornerRadius={32}
-              className="relative min-h-[270px] overflow-hidden bg-[#130f0c] shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/15 motion-reduce:animate-none motion-reduce:opacity-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-[290px]"
+              className="card-hover animate-in relative min-h-[270px] overflow-hidden bg-[#130f0c] shadow-sm motion-reduce:animate-none motion-reduce:opacity-100 motion-reduce:transition-none motion-reduce:hover:scale-100 sm:min-h-[290px]"
+              style={{ animationDelay: "0.55s" }}
             >
               <Image
                 src={galleryBannerUrl}

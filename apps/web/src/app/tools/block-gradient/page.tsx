@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { notFound } from "next/navigation";
+import { getBlockGradientShare } from "@crabcraft/db/queries/web";
+import {
+  BLOCK_GRADIENT_SHARE_ID_PATTERN,
+  BLOCK_GRADIENT_SHARE_VERSION,
+  normaliseBlockGradientShareState,
+} from "@/lib/blockGradientShare";
 
 const BlockGradient = dynamic(() => import("@/components/BlockGradient"));
 
@@ -46,14 +53,40 @@ const jsonLd = {
   },
 };
 
-export default function BlockGradientPage() {
+export default async function BlockGradientPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ share?: string | string[] }>;
+}) {
+  const { share: shareId } = await searchParams;
+  let initialState = null;
+
+  if (shareId !== undefined) {
+    if (
+      typeof shareId !== "string" ||
+      !BLOCK_GRADIENT_SHARE_ID_PATTERN.test(shareId)
+    ) {
+      notFound();
+    }
+
+    const share = await getBlockGradientShare(shareId);
+    if (!share || share.version !== BLOCK_GRADIENT_SHARE_VERSION) {
+      notFound();
+    }
+    initialState = normaliseBlockGradientShareState(share.state);
+    if (!initialState) notFound();
+  }
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <BlockGradient />
+      <BlockGradient
+        initialState={initialState}
+        initialShareId={typeof shareId === "string" ? shareId : null}
+      />
     </>
   );
 }
