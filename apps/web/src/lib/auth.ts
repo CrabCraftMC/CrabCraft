@@ -13,6 +13,7 @@ declare module "next-auth" {
       discordId: string;
       minecraftUuid: string | null;
       minecraftUsername: string | null;
+      minecraftNickname: string | null;
       role: string;
     };
   }
@@ -23,6 +24,7 @@ declare module "@auth/core/jwt" {
     discordId?: string;
     minecraftUuid?: string | null;
     minecraftUsername?: string | null;
+    minecraftNickname?: string | null;
     role?: string;
   }
 }
@@ -30,10 +32,12 @@ declare module "@auth/core/jwt" {
 function clearLocalIdentity(token: {
   minecraftUuid?: string | null;
   minecraftUsername?: string | null;
+  minecraftNickname?: string | null;
   role?: string;
 }) {
   token.minecraftUuid = null;
   token.minecraftUsername = null;
+  token.minecraftNickname = null;
   token.role = "unverified";
 }
 
@@ -70,6 +74,7 @@ const {
 
             token.minecraftUuid = user.minecraft_uuid;
             token.minecraftUsername = mcName;
+            token.minecraftNickname = user.nickname;
             token.role = user.role;
             await updateOnLogin(
               profile.id as string,
@@ -90,6 +95,7 @@ const {
           if (user) {
             token.minecraftUuid = user.minecraft_uuid;
             token.minecraftUsername = user.minecraft_username;
+            token.minecraftNickname = user.nickname;
             token.role = user.role;
           } else {
             clearLocalIdentity(token);
@@ -106,6 +112,7 @@ const {
       session.user.discordId = token.discordId!;
       session.user.minecraftUuid = token.minecraftUuid ?? null;
       session.user.minecraftUsername = token.minecraftUsername ?? null;
+      session.user.minecraftNickname = token.minecraftNickname ?? null;
       session.user.role = token.role ?? "unverified";
       return session;
     },

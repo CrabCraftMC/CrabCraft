@@ -7,12 +7,14 @@ export async function getUserForAuth(
 ): Promise<{
   minecraft_uuid: string | null;
   minecraft_username: string | null;
+  nickname: string | null;
   role: string;
 } | null> {
   const rows = await db
     .select({
       minecraft_uuid: players.minecraft_uuid,
       minecraft_username: players.minecraft_username,
+      nickname: players.nickname,
       role: players.role,
     })
     .from(players)

@@ -101,7 +101,7 @@ function fixtureFetch(fixture: Fixture): typeof fetch {
     if (url === `https://api.crabcraft.net/players/${fixture.target.uuid}/awards?season=${fixture.seasonId}`) {
       return Response.json({ username: fixture.target.username, crown: fixture.crown });
     }
-    if (url === `https://starlightskins.lunareclipse.studio/render/default/${fixture.target.uuid}/full`) {
+    if (url === `https://mc-api.io/render/full/${fixture.target.uuid}`) {
       return new Response(null, { status: 503 });
     }
     if (url === `https://mc-heads.net/body/${fixture.target.uuid}/300`) {

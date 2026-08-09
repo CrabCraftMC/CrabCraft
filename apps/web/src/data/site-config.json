@@ -124,7 +124,7 @@
                 "buttonText": "READ",
                 "url": "https://wiki.crabcraft.net",
                 "bgGradient": "from-[#1E701E] to-[#388E3C]",
-                "image": "/wiki-player.webp",
+                "image": "/reading.webp",
                 "imageScale": "scale-50 sm:scale-58 lg:scale-68",
                 "colSpan": "lg:col-span-2",
                 "bgTextSize": "text-[35px] sm:text-[40px] md:text-[42px] lg:text-[50px]",

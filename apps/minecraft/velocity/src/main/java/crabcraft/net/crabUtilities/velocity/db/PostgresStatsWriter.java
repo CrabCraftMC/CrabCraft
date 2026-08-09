@@ -105,6 +105,7 @@ public class PostgresStatsWriter {
         config.setDriverClassName("org.postgresql.Driver");
         this.dataSource = new HikariDataSource(config);
         GallerySchema.ensure(this.dataSource, logger);
+        WebToolSchema.ensure(this.dataSource, logger);
     }
 
     public void writePlayerSeasonStats(String uuid, String season, ComputedStats stats) {

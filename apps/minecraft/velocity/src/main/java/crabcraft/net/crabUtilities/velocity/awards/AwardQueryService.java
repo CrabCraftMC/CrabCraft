@@ -52,6 +52,7 @@ public final class AwardQueryService {
                         scores.award_id,
                         scores.minecraft_uuid AS best_uuid,
                         u.minecraft_username AS best_username,
+                        u.nickname AS best_nickname,
                         scores.score AS best_score
                     FROM player_award_scores scores
                     LEFT JOIN players u ON u.minecraft_uuid = scores.minecraft_uuid
@@ -69,6 +70,7 @@ public final class AwardQueryService {
                         JsonObject leader = new JsonObject();
                         leader.addProperty("uuid", rs.getString("best_uuid"));
                         leader.addProperty("username", rs.getString("best_username"));
+                        leader.addProperty("nickname", rs.getString("best_nickname"));
                         leader.addProperty("score", rs.getDouble("best_score"));
                         leaderMap.put(rs.getString("award_id"), leader);
                     }
@@ -160,6 +162,7 @@ public final class AwardQueryService {
                     SELECT
                         ranked.minecraft_uuid,
                         u.minecraft_username,
+                        u.nickname,
                         ranked.score,
                         ranked.rnk,
                         CASE WHEN ranked.rnk <= 3 THEN ranked.rnk::int ELSE 0 END AS medal
@@ -189,6 +192,7 @@ public final class AwardQueryService {
                         entry.addProperty("rank", rs.getInt("rnk"));
                         entry.addProperty("uuid", rs.getString("minecraft_uuid"));
                         entry.addProperty("username", rs.getString("minecraft_username"));
+                        entry.addProperty("nickname", rs.getString("nickname"));
                         entry.addProperty("score", rs.getDouble("score"));
                         entry.addProperty("medal", rs.getInt("medal"));
                         leaderboard.add(entry);
@@ -272,6 +276,7 @@ public final class AwardQueryService {
                      SELECT
                          crowns.minecraft_uuid,
                          u.minecraft_username,
+                         u.nickname,
                          crowns.gold,
                          crowns.silver,
                          crowns.bronze,
@@ -292,6 +297,7 @@ public final class AwardQueryService {
                         entry.addProperty("rank", rank);
                         entry.addProperty("uuid", rs.getString("minecraft_uuid"));
                         entry.addProperty("username", rs.getString("minecraft_username"));
+                        entry.addProperty("nickname", rs.getString("nickname"));
                         entry.addProperty("gold", rs.getInt("gold"));
                         entry.addProperty("silver", rs.getInt("silver"));
                         entry.addProperty("bronze", rs.getInt("bronze"));

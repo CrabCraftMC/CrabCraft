@@ -6,10 +6,12 @@ import type { Metadata } from "next";
 import { Search } from "lucide-react";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
+import { playerDisplayName } from "@/lib/playerName";
 
 interface PlayerResult {
   minecraft_uuid: string;
   minecraft_username: string;
+  nickname: string | null;
 }
 
 export default function SearchPage() {
@@ -70,7 +72,7 @@ export default function SearchPage() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter a Minecraft username..."
+            placeholder="Enter a Minecraft username or nickname..."
             className="flex-1 py-3 text-base bg-transparent text-foreground placeholder-gray-400 dark:placeholder-gray-500 outline-none"
           />
         </Squircle>
@@ -94,12 +96,12 @@ export default function SearchPage() {
                 >
                   <PixelIcon
                     src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/28`}
-                    alt={player.minecraft_username}
+                    alt={playerDisplayName(player.nickname, player.minecraft_username)}
                     size={28}
                     imgClassName="rounded"
                   />
                   <span className="text-foreground text-sm font-medium">
-                    {player.minecraft_username}
+                    {playerDisplayName(player.nickname, player.minecraft_username)}
                   </span>
                 </Link>
               ))}

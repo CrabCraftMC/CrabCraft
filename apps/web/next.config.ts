@@ -8,6 +8,7 @@ const galleryMediaUrl = parseGalleryMediaOrigin(
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  allowedDevOrigins: ["mac", "100.125.113.118"],
   outputFileTracingRoot: path.join(import.meta.dirname, "../../"),
   experimental: {
     optimizePackageImports: ["react-icons", "gsap", "@gsap/react", "lucide-react"],
@@ -36,7 +37,7 @@ const nextConfig: NextConfig = {
       process.env.NODE_ENV === "development"
         ? "'self' 'unsafe-inline' 'unsafe-eval' https://web.maxmoon.sh"
         : "'self' 'unsafe-inline' https://web.maxmoon.sh";
-    const csp = `default-src 'self'; script-src ${scriptSrc}; img-src 'self' data: https://mc-heads.net https://cdn.discordapp.com ${galleryMediaUrl.origin} https://map.crabcraft.net https://starlightskins.lunareclipse.studio https://mc-api.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net https://web.maxmoon.sh; font-src 'self'; frame-ancestors 'none'`;
+    const csp = `default-src 'self'; script-src ${scriptSrc}; img-src 'self' data: https://mc-heads.net https://cdn.discordapp.com ${galleryMediaUrl.origin} https://map.crabcraft.net https://mc-api.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net https://web.maxmoon.sh; font-src 'self'; frame-ancestors 'none'`;
     return [
       {
         source: "/:path*.webp",
@@ -90,7 +91,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "starlightskins.lunareclipse.studio",
+        hostname: "mc-api.io",
       },
     ],
     minimumCacheTTL: 2678400,

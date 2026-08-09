@@ -5,6 +5,7 @@ import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import AdvancementsCategoryTabs from "@/components/AdvancementsCategoryTabs";
 import CompletionFireworks from "@/components/CompletionFireworks";
+import { playerDisplayName } from "@/lib/playerName";
 import {
   CATEGORY_LABELS,
   isValidCategory,
@@ -21,6 +22,7 @@ interface LeaderboardEntry {
   rank: number;
   uuid: string;
   username: string | null;
+  nickname: string | null;
   completed: number;
 }
 
@@ -82,7 +84,6 @@ const PODIUM = [
     gradient: "from-[#F59E0B] to-[#FBBF24]",
     label: "1",
     textSize: "text-[120px]",
-    render: "relaxing",
     imgH: "h-[250px]",
     avatarSize: 72,
     nameSize: "text-xl",
@@ -96,7 +97,6 @@ const PODIUM = [
     gradient: "from-[#9CA3AF] to-[#D1D5DB]",
     label: "2",
     textSize: "text-[100px]",
-    render: "archer",
     imgH: "h-[200px]",
     avatarSize: 56,
     nameSize: "text-lg",
@@ -110,7 +110,6 @@ const PODIUM = [
     gradient: "from-[#B45309] to-[#D97706]",
     label: "3",
     textSize: "text-[100px]",
-    render: "lunging",
     imgH: "h-[200px]",
     avatarSize: 56,
     nameSize: "text-lg",
@@ -177,6 +176,10 @@ export default async function AdvancementsLeaderboardPage({
             {PODIUM_ORDER.map((idx) => {
               const player = top3[idx];
               const style = PODIUM[idx];
+              const displayName = playerDisplayName(
+                player.nickname,
+                player.username,
+              );
               const playerPct = pct(player);
               const isFull = player.completed === totalAdvancements;
               return (
@@ -201,7 +204,7 @@ export default async function AdvancementsLeaderboardPage({
                     </span>
                     <div className="absolute bottom-0 right-0 pointer-events-none z-0 hidden sm:block opacity-30">
                       <Image
-                        src={`https://starlightskins.lunareclipse.studio/render/${style.render}/${player.uuid}/full`}
+                        src={`https://mc-api.io/render/full/${player.uuid}`}
                         alt=""
                         width={140}
                         height={280}
@@ -211,14 +214,14 @@ export default async function AdvancementsLeaderboardPage({
                     <div className="relative z-10 flex flex-col items-start text-left gap-3">
                       <PixelIcon
                         src={`https://mc-heads.net/avatar/${player.uuid}/100.png`}
-                        alt={player.username ?? ""}
+                        alt={displayName}
                         size={style.avatarSize}
                         imgClassName="rounded-lg"
                         className="bg-white/20 rounded-lg"
                       />
                       <div>
                         <p className={`font-bold text-white ${style.nameSize}`}>
-                          {player.username ?? "Unknown"}
+                          {displayName}
                         </p>
                         <p
                           className={`font-mc text-white/90 ${style.pctSize} mt-1`}
@@ -264,6 +267,10 @@ export default async function AdvancementsLeaderboardPage({
 
           {rest.map((player, i) => {
             const playerPct = pct(player);
+            const displayName = playerDisplayName(
+              player.nickname,
+              player.username,
+            );
             const isFull = player.completed === totalAdvancements;
             const isHigh = playerPct >= 90;
             const medalColor =
@@ -301,13 +308,13 @@ export default async function AdvancementsLeaderboardPage({
                 <div className="col-span-7 sm:col-span-4 flex items-center gap-2 min-w-0">
                   <PixelIcon
                     src={`https://mc-heads.net/avatar/${player.uuid}/64.png`}
-                    alt={player.username ?? ""}
+                    alt={displayName}
                     size={28}
                     imgClassName="rounded"
                     className="bg-gray-200 dark:bg-gray-700 rounded"
                   />
                   <span className="font-bold text-sm text-gray-700 dark:text-gray-300 truncate">
-                    {player.username ?? "Unknown"}
+                    {displayName}
                   </span>
                 </div>
                 <div className="hidden sm:flex col-span-5 items-center gap-2">

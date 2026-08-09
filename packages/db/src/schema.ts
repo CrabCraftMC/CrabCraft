@@ -249,6 +249,19 @@ export const streamChannels = pgTable(
   ],
 );
 
+// ── block_gradient_shares ─────────────────────────────────────
+// Immutable, public snapshots created by the Block Gradient web tool.
+// The short ID is derived from the normalised state, so saving an identical
+// recipe reuses the existing row.
+export const blockGradientShares = pgTable("block_gradient_shares", {
+  id: text("id").primaryKey(),
+  version: integer("version").notNull().default(1),
+  state: jsonb("state").$type<Record<string, unknown>>().notNull(),
+  created_at: integer("created_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
 // ── mc_login_history ───────────────────────────────────────────
 // Tracks every Minecraft login by UUID, independent of Discord
 // verification status. Used by the Velocity proxy to decide

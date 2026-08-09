@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
+import { playerDisplayName } from "@/lib/playerName";
 
 export const metadata: Metadata = {
   title: "Leaderboard",
@@ -14,6 +15,8 @@ export default async function LeaderboardPage() {
     rank: number;
     uuid: string;
     username: string | null;
+    nickname: string | null;
+    display_name: string;
     gold: number;
     silver: number;
     bronze: number;
@@ -32,6 +35,7 @@ export default async function LeaderboardPage() {
         ...p,
         minecraft_uuid: p.uuid,
         minecraft_username: p.username,
+        display_name: playerDisplayName(p.nickname, p.username),
       }));
     }
   } catch {}
@@ -42,7 +46,6 @@ export default async function LeaderboardPage() {
       gradient: "from-[#F59E0B] to-[#FBBF24]",
       label: "1",
       textSize: "text-[120px]",
-      render: "relaxing",
       imgH: "h-[250px]",
       avatarSize: 72,
       nameSize: "text-xl",
@@ -55,7 +58,6 @@ export default async function LeaderboardPage() {
       gradient: "from-[#9CA3AF] to-[#D1D5DB]",
       label: "2",
       textSize: "text-[100px]",
-      render: "archer",
       imgH: "h-[200px]",
       avatarSize: 56,
       nameSize: "text-lg",
@@ -68,7 +70,6 @@ export default async function LeaderboardPage() {
       gradient: "from-[#B45309] to-[#D97706]",
       label: "3",
       textSize: "text-[100px]",
-      render: "lunging",
       imgH: "h-[200px]",
       avatarSize: 56,
       nameSize: "text-lg",
@@ -123,7 +124,7 @@ export default async function LeaderboardPage() {
                     </span>
                     <div className="absolute bottom-0 right-0 pointer-events-none z-0 hidden sm:block opacity-30">
                       <Image
-                        src={`https://starlightskins.lunareclipse.studio/render/${style.render}/${player.minecraft_uuid}/full`}
+                        src={`https://mc-api.io/render/full/${player.minecraft_uuid}`}
                         alt=""
                         width={140}
                         height={280}
@@ -133,14 +134,14 @@ export default async function LeaderboardPage() {
                     <div className="relative z-10 flex flex-col items-start text-left gap-3">
                       <PixelIcon
                         src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/100.png`}
-                        alt={player.minecraft_username ?? ""}
+                        alt={player.display_name}
                         size={style.avatarSize}
                         imgClassName="rounded-lg"
                         className="bg-white/20 rounded-lg"
                       />
                       <div>
                         <p className={`font-bold text-white ${style.nameSize}`}>
-                          {player.minecraft_username ?? "Unknown"}
+                          {player.display_name}
                         </p>
                         <p
                           className={`font-mc text-white/90 ${style.ptsSize} mt-1`}
@@ -242,13 +243,13 @@ export default async function LeaderboardPage() {
               <div className="col-span-5 flex items-center gap-3">
                 <PixelIcon
                   src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/64.png`}
-                  alt={player.minecraft_username ?? ""}
+                  alt={player.display_name}
                   size={28}
                   imgClassName="rounded"
                   className="bg-gray-200 dark:bg-gray-700 rounded"
                 />
                 <span className="font-bold text-sm text-gray-700 dark:text-gray-300 truncate">
-                  {player.minecraft_username ?? "Unknown"}
+                  {player.display_name}
                 </span>
               </div>
               <div className="col-span-3 sm:col-span-1 text-center">

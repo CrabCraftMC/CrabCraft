@@ -91,7 +91,7 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
         cornerRadius={32}
         className="bg-paper-2 overflow-hidden"
       >
-        <div className="grid grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_8rem_7rem] items-center gap-4 px-5 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028]">
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_10rem_7rem] md:grid-cols-[minmax(0,1fr)_14rem_8rem] items-center gap-4 px-5 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028]">
           <span>Award</span>
           <span className="hidden sm:block text-right">Player</span>
           <span className="text-right">Value</span>
@@ -101,7 +101,7 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
             type="button"
             key={award.key}
             onClick={() => router.push(`/awards/${award.key}`)}
-            className={`grid grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_8rem_7rem] items-center gap-4 px-5 py-3 cursor-pointer transition-colors hover:bg-orange-50/60 dark:hover:bg-[#2a221b] w-full text-left ${
+            className={`grid grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_10rem_7rem] md:grid-cols-[minmax(0,1fr)_14rem_8rem] items-center gap-4 px-5 py-3 cursor-pointer transition-colors hover:bg-orange-50/60 dark:hover:bg-[#2a221b] w-full text-left ${
               i % 2 === 0
                 ? "bg-paper-2"
                 : "bg-paper/60 dark:bg-[#2a221b]/40"
@@ -136,7 +136,7 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
                   size={24}
                   imgClassName="rounded"
                 />
-                <span className="min-w-0 truncate text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-orange-500">
+                <span className="min-w-0 truncate text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-orange-500 md:overflow-visible md:text-clip">
                   {award.bestName}
                 </span>
               </Link>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef, useDeferredValue, memo } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, useDeferredValue, useTransition, memo } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import SwatchColorPicker from "./SwatchColorPicker";
 import Squircle from "@/components/Squircle";
 import {
   interpolateOklab,
   colorDistance,
-  colorDistanceLab,
   interpolateOklabValues,
   interpolateOklchValues,
   hexToRgb,
@@ -14,8 +14,11 @@ import {
   oklabToSrgb,
   rgbToHex,
 } from "@/lib/colors";
-import { RotateCcw, ArrowLeftRight, ChevronDown, Check } from "lucide-react";
+import { RotateCcw, ArrowLeftRight, ChevronDown, Check, Shuffle, Link2, Maximize2, Minimize2 } from "lucide-react";
 import blocks from "@/data/blocks.json";
+import { findClosestBlockAtRank } from "@/lib/blockGradient";
+import { createBlockGradientShareAction } from "@/app/tools/block-gradient/actions";
+import type { BlockGradientShareState } from "@/lib/blockGradientShare";
 import {
   BLOCK_GRADIENT_PRESETS,
   isBlockAllowedForPresets,
@@ -26,6 +29,8 @@ import {
 const TEXTURE_BASE = "/textures/blocks";
 
 const STORAGE_KEY = "crabcraft-block-gradient";
+const MAX_PALETTE_OPTIONS = 5;
+const BLOCK_IDS = new Set<string>(blocks.map((block) => block.id));
 
 interface GradientEndpoint {
   mode: "color" | "block";
@@ -84,16 +89,20 @@ const WallCell = memo(function WallCell({
   block,
   cellKey,
   onCellClick,
+  fillCell = false,
 }: {
   block: BlockWithLab;
   cellKey: string;
   onCellClick: (block: BlockWithLab, cellKey: string, target: HTMLElement) => void;
+  fillCell?: boolean;
 }) {
   return (
     <img
       src={`${TEXTURE_BASE}/${block.texture}.png`}
       alt=""
-      className="flex-1 min-w-0 cursor-pointer hover:brightness-125 transition-[filter] block-texture"
+      className={`${
+        fillCell ? "h-full w-full" : "flex-1 min-w-0"
+      } cursor-pointer object-cover hover:brightness-125 transition-[filter] block-texture`}
       style={{ aspectRatio: "1" }}
       onClick={(e) => {
         e.stopPropagation();
@@ -103,7 +112,13 @@ const WallCell = memo(function WallCell({
   );
 });
 
-export default function BlockGradient() {
+export default function BlockGradient({
+  initialState = null,
+  initialShareId = null,
+}: {
+  initialState?: BlockGradientShareState | null;
+  initialShareId?: string | null;
+}) {
   const [start, setStart] = useState<GradientEndpoint>({
     mode: "block",
     color: "#E79B33",
@@ -121,14 +136,30 @@ export default function BlockGradient() {
   const [steps, setSteps] = useState(12);
   const [randomness, setRandomness] = useState(20);
   const [gradientLength, setGradientLength] = useState(7);
+  const [paletteOption, setPaletteOption] = useState(0);
   // Selected preset filters, ANDed together; empty = full palette. "all"
   // is never stored — it is represented by the empty selection.
   const [blockPresets, setBlockPresets] = useState<BlockGradientPresetId[]>([]);
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [shareError, setShareError] = useState(false);
+  const [shareId, setShareId] = useState<string | null>(initialShareId);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [sharedRecipeKey, setSharedRecipeKey] = useState<string | null>(() =>
+    initialState ? JSON.stringify(initialState) : null
+  );
+  const [isSharing, startSharing] = useTransition();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [expandedWallBounds, setExpandedWallBounds] = useState({
+    width: 0,
+    height: 0,
+  });
+  const [previewTopOffset, setPreviewTopOffset] = useState(112);
+  const prefersReducedMotion = useReducedMotion();
 
   // Deferred slider values: the slider thumb and its label update
   // immediately, while the gradient/wall recomputes render at low
@@ -159,22 +190,31 @@ export default function BlockGradient() {
   } | null>(null);
 
   const presetMenuRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const expandedWallAreaRef = useRef<HTMLDivElement>(null);
 
-  // Load saved state after hydration
+  // A shared recipe takes precedence over this browser's saved settings.
   useEffect(() => {
-    const saved = loadSaved();
+    const saved = initialState ?? loadSaved();
     if (saved) {
       const hydrateEndpoint = (s: any): GradientEndpoint | null => {
-        if (!s || !s.mode || !s.color) return null;
-        // Reconstruct block name/texture from blocks list if missing
-        if (s.blockId && (!s.blockName || !s.blockTexture)) {
-          const b = blocks.find((bl: any) => bl.id === s.blockId);
-          if (b) {
-            s.blockName = b.name;
-            s.blockTexture = b.texture;
-          }
-        }
-        return s as GradientEndpoint;
+        if (
+          !s ||
+          (s.mode !== "color" && s.mode !== "block") ||
+          typeof s.color !== "string" ||
+          !/^#[0-9a-f]{6}$/i.test(s.color)
+        ) return null;
+
+        const block = typeof s.blockId === "string"
+          ? blocks.find((candidate) => candidate.id === s.blockId)
+          : null;
+        return {
+          mode: s.mode === "block" && block ? "block" : "color",
+          color: s.color,
+          blockId: block?.id ?? null,
+          blockName: block?.name ?? null,
+          blockTexture: block?.texture ?? null,
+        };
       };
       const savedStart = hydrateEndpoint(saved.start);
       const savedEnd = hydrateEndpoint(saved.end);
@@ -183,6 +223,13 @@ export default function BlockGradient() {
       if (saved.steps) setSteps(saved.steps);
       if (saved.randomness !== undefined) setRandomness(saved.randomness);
       if (saved.gradientLength) setGradientLength(saved.gradientLength);
+      if (
+        Number.isInteger(saved.paletteOption) &&
+        saved.paletteOption >= 0 &&
+        saved.paletteOption < MAX_PALETTE_OPTIONS
+      ) {
+        setPaletteOption(saved.paletteOption);
+      }
       if (Array.isArray(saved.blockPresets)) {
         setBlockPresets(
           saved.blockPresets.filter(
@@ -197,10 +244,20 @@ export default function BlockGradient() {
         // Migrate the legacy single-preset selection
         setBlockPresets([saved.blockPreset]);
       }
-      if (saved.excludedIds) setExcludedIds(saved.excludedIds);
+      if (Array.isArray(saved.excludedIds)) {
+        setExcludedIds(
+          [...new Set(saved.excludedIds)].filter(
+            (id): id is string =>
+              typeof id === "string" &&
+              BLOCK_IDS.has(id) &&
+              id !== savedStart?.blockId &&
+              id !== savedEnd?.blockId
+          )
+        );
+      }
     }
     setHydrated(true);
-  }, []);
+  }, [initialState]);
 
   // Save to localStorage on changes (only after hydration)
   useEffect(() => {
@@ -213,11 +270,12 @@ export default function BlockGradient() {
         steps,
         randomness,
         gradientLength,
+        paletteOption,
         blockPresets,
         excludedIds,
       })
     );
-  }, [start, end, steps, randomness, gradientLength, blockPresets, excludedIds, hydrated]);
+  }, [start, end, steps, randomness, gradientLength, paletteOption, blockPresets, excludedIds, hydrated]);
 
   // Close wall popover on outside click
   useEffect(() => {
@@ -231,14 +289,15 @@ export default function BlockGradient() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (presetMenuOpen) setPresetMenuOpen(false);
+      if (isPreviewExpanded) setIsPreviewExpanded(false);
+      else if (presetMenuOpen) setPresetMenuOpen(false);
       else if (showResetConfirm) setShowResetConfirm(false);
       else if (blockPickerFor) { setBlockPickerFor(null); setTooltip(null); }
       else if (wallPopover) setWallPopover(null);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [presetMenuOpen, showResetConfirm, blockPickerFor, wallPopover]);
+  }, [isPreviewExpanded, presetMenuOpen, showResetConfirm, blockPickerFor, wallPopover]);
 
   useEffect(() => {
     if (!presetMenuOpen) return;
@@ -250,6 +309,23 @@ export default function BlockGradient() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [presetMenuOpen]);
+
+  useEffect(() => {
+    if (!isPreviewExpanded || !expandedWallAreaRef.current) return;
+
+    const wallArea = expandedWallAreaRef.current;
+    const updateBounds = () => {
+      setExpandedWallBounds({
+        width: wallArea.clientWidth,
+        height: wallArea.clientHeight,
+      });
+    };
+
+    updateBounds();
+    const observer = new ResizeObserver(updateBounds);
+    observer.observe(wallArea);
+    return () => observer.disconnect();
+  }, [isPreviewExpanded]);
 
   // Pre-compute OkLAB values for all blocks
   const blocksWithLab = useMemo(() => {
@@ -330,7 +406,7 @@ export default function BlockGradient() {
 
   // Find closest block to an OkLAB color
   const findClosest = useCallback(
-    (targetLab: [number, number, number]): BlockWithLab => {
+    (targetLab: [number, number, number], rank = 0): BlockWithLab => {
       const fallbackBlock = blocksWithLab[0];
       if (!fallbackBlock) {
         throw new Error("No blocks are available for gradient matching");
@@ -341,16 +417,7 @@ export default function BlockGradient() {
           : presetBlocksWithLab.length > 0
             ? presetBlocksWithLab
             : [fallbackBlock];
-      let closest = searchBlocks[0];
-      let minDist = Infinity;
-      for (const block of searchBlocks) {
-        const dist = colorDistanceLab(targetLab, block.lab);
-        if (dist < minDist) {
-          minDist = dist;
-          closest = block;
-        }
-      }
-      return closest;
+      return findClosestBlockAtRank(targetLab, searchBlocks, rank);
     },
     [availableBlocks, presetBlocksWithLab, blocksWithLab]
   );
@@ -358,7 +425,7 @@ export default function BlockGradient() {
   // Discover all unique blocks along the gradient by oversampling. This is
   // the expensive part (100 samples × nearest-match over the palette), and
   // it is independent of the Blocks slider so drags never re-run it.
-  const uniqueGradientBlocks = useMemo(() => {
+  const uniqueGradientOptions = useMemo(() => {
     const startBlock = start.blockId
       ? presetBlocksWithLab.find((b) => b.id === start.blockId)
       : null;
@@ -366,42 +433,120 @@ export default function BlockGradient() {
       ? presetBlocksWithLab.find((b) => b.id === end.blockId)
       : null;
 
-    // Oversample at high resolution to discover all unique blocks
-    const OVERSAMPLE = 100;
-    const oversampled: BlockWithLab[] = [];
-    for (let i = 0; i < OVERSAMPLE; i++) {
-      const t = i / (OVERSAMPLE - 1);
-      const lab = interpolateOklchValues(startLab, endLab, t);
-      oversampled.push(findClosest(lab));
+    const options: BlockWithLab[][] = [];
+    const signatures = new Set<string>();
+
+    for (let rank = 0; rank < MAX_PALETTE_OPTIONS; rank++) {
+      // Oversample at high resolution to discover all unique blocks.
+      const OVERSAMPLE = 100;
+      const oversampled: BlockWithLab[] = [];
+      for (let i = 0; i < OVERSAMPLE; i++) {
+        const t = i / (OVERSAMPLE - 1);
+        const lab = interpolateOklchValues(startLab, endLab, t);
+        oversampled.push(findClosest(lab, rank));
+      }
+
+      // Collapse repeated runs before preserving the chosen endpoints.
+      const sampled = oversampled.filter(
+        (block, i) => i === 0 || block.id !== oversampled[i - 1].id
+      );
+
+      // Ranked alternatives can briefly revisit a block. Keep each block only
+      // once while pinning explicitly selected endpoints to their positions.
+      const firstBlock = startBlock ?? sampled[0];
+      const lastBlock = endBlock ?? sampled[sampled.length - 1];
+      if (!firstBlock || !lastBlock) continue;
+
+      const usedIds = new Set([firstBlock.id, lastBlock.id]);
+      const middleBlocks = sampled.slice(1, -1).filter((block) => {
+        if (usedIds.has(block.id)) return false;
+        usedIds.add(block.id);
+        return true;
+      });
+      const pinnedUnique = [
+        firstBlock,
+        ...middleBlocks,
+        ...(lastBlock.id === firstBlock.id ? [] : [lastBlock]),
+      ];
+      const signature = pinnedUnique.map((block) => block.id).join("|");
+      if (!signatures.has(signature)) {
+        signatures.add(signature);
+        options.push(pinnedUnique);
+      }
     }
 
-    // Dedup consecutive duplicates to get all unique blocks in order
-    const unique = oversampled.filter(
-      (block, i) => i === 0 || block.id !== oversampled[i - 1].id
-    );
-
-    // Pin start/end blocks
-    if (startBlock) unique[0] = startBlock;
-    if (endBlock) unique[unique.length - 1] = endBlock;
-
-    return unique;
+    return options;
   }, [startLab, endLab, findClosest, start.blockId, end.blockId, presetBlocksWithLab]);
 
-  // Select `steps` blocks evenly from the unique list (cheap)
-  const displayGradient = useMemo(() => {
-    const unique = uniqueGradientBlocks;
-    const steps = deferredSteps;
+  // Select `steps` blocks evenly from every unique option, then discard any
+  // options that become identical at the chosen display length.
+  const displayGradientOptions = useMemo(() => {
+    const options: BlockWithLab[][] = [];
+    const signatures = new Set<string>();
 
-    // If we have fewer unique blocks than requested, return all of them
-    if (unique.length <= steps) return unique;
+    for (const unique of uniqueGradientOptions) {
+      let result = unique;
+      if (unique.length > deferredSteps) {
+        result = [];
+        for (let i = 0; i < deferredSteps; i++) {
+          const idx = Math.round(
+            (i / (deferredSteps - 1)) * (unique.length - 1)
+          );
+          result.push(unique[idx]);
+        }
+      }
 
-    const result: BlockWithLab[] = [];
-    for (let i = 0; i < steps; i++) {
-      const idx = Math.round((i / (steps - 1)) * (unique.length - 1));
-      result.push(unique[idx]);
+      const signature = result.map((block) => block.id).join("|");
+      if (!signatures.has(signature)) {
+        signatures.add(signature);
+        options.push(result);
+      }
     }
-    return result;
-  }, [uniqueGradientBlocks, deferredSteps]);
+
+    return options;
+  }, [uniqueGradientOptions, deferredSteps]);
+
+  const activePaletteOption = paletteOption % displayGradientOptions.length;
+  const displayGradient = displayGradientOptions[activePaletteOption] ?? [];
+  const currentShareState = useMemo<BlockGradientShareState>(() => ({
+    start: {
+      mode: start.mode,
+      color: start.color,
+      blockId: start.blockId,
+    },
+    end: {
+      mode: end.mode,
+      color: end.color,
+      blockId: end.blockId,
+    },
+    steps,
+    randomness,
+    gradientLength,
+    paletteOption: activePaletteOption,
+    blockPresets,
+    excludedIds,
+  }), [
+    start,
+    end,
+    steps,
+    randomness,
+    gradientLength,
+    activePaletteOption,
+    blockPresets,
+    excludedIds,
+  ]);
+  const currentRecipeKey = useMemo(
+    () => JSON.stringify(currentShareState),
+    [currentShareState],
+  );
+  const isCurrentRecipeShared = Boolean(
+    shareId && sharedRecipeKey === currentRecipeKey,
+  );
+
+  useEffect(() => {
+    setShareCopied(false);
+    setShareError(false);
+  }, [currentRecipeKey]);
 
   // Build the wall grid with per-cell randomness
   const WALL_COLS = 10;
@@ -455,6 +600,66 @@ export default function BlockGradient() {
     []
   );
 
+  const toggleExpandedPreview = () => {
+    setWallPopover(null);
+    const willExpand = !isPreviewExpanded;
+    setIsPreviewExpanded(willExpand);
+    if (willExpand) {
+      const navbarBottom = document
+        .querySelector<HTMLElement>("[data-site-navbar]")
+        ?.getBoundingClientRect().bottom ?? 0;
+      const topOffset = Math.ceil(navbarBottom + 16);
+      setPreviewTopOffset(topOffset);
+
+      requestAnimationFrame(() => {
+        const preview = previewRef.current;
+        if (!preview) return;
+        window.scrollTo({
+          behavior: "smooth",
+          top: Math.max(
+            0,
+            preview.getBoundingClientRect().top + window.scrollY - topOffset,
+          ),
+        });
+      });
+    }
+  };
+
+  const verticalCellSize = Math.max(
+    0,
+    Math.min(
+      expandedWallBounds.width / WALL_COLS,
+      expandedWallBounds.height / WALL_ROWS,
+    ),
+  );
+  const horizontalCellSize = Math.max(
+    0,
+    Math.min(
+      expandedWallBounds.width / WALL_ROWS,
+      expandedWallBounds.height / WALL_COLS,
+    ),
+  );
+  const rotateExpandedWall = horizontalCellSize > verticalCellSize;
+  const expandedCellSize = rotateExpandedWall
+    ? horizontalCellSize
+    : verticalCellSize;
+  const expandedWallColumns = rotateExpandedWall ? WALL_ROWS : WALL_COLS;
+  const expandedWallRows = rotateExpandedWall ? WALL_COLS : WALL_ROWS;
+  const expandedWallCells = useMemo(() => {
+    if (!rotateExpandedWall) {
+      return wallGrid.flatMap((row, r) =>
+        row.map((block, c) => ({ block, cellKey: `${r}-${c}` })),
+      );
+    }
+
+    return Array.from({ length: WALL_COLS }, (_, c) =>
+      wallGrid.map((row, r) => ({
+        block: row[c],
+        cellKey: `${r}-${c}`,
+      })),
+    ).flat();
+  }, [rotateExpandedWall, wallGrid, WALL_COLS]);
+
   // Filtered blocks for modal
   const filteredBlocks = useMemo(() => {
     if (!blockSearch.trim()) return presetBlocks;
@@ -506,6 +711,7 @@ export default function BlockGradient() {
     setSteps(12);
     setRandomness(20);
     setGradientLength(7);
+    setPaletteOption(0);
     setBlockPresets([]);
     setExcludedIds([]);
   };
@@ -517,8 +723,66 @@ export default function BlockGradient() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const copyShareLink = async () => {
+    setShareError(false);
+    if (isCurrentRecipeShared && shareId) {
+      try {
+        const existingShareUrl = shareUrl ?? (() => {
+          const url = new URL("/tools/block-gradient", window.location.origin);
+          url.searchParams.set("share", shareId);
+          return url.toString();
+        })();
+        await navigator.clipboard.writeText(existingShareUrl);
+        setShareUrl(existingShareUrl);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 1500);
+      } catch {
+        setShareError(true);
+      }
+      return;
+    }
+
+    startSharing(async () => {
+      const result = await createBlockGradientShareAction(currentShareState);
+      if (!result.success) {
+        setShareError(true);
+        return;
+      }
+
+      try {
+        const url = new URL(
+          "/tools/block-gradient",
+          window.location.origin,
+        );
+        url.searchParams.set("share", result.id);
+        const nextShareUrl = url.toString();
+        await navigator.clipboard.writeText(nextShareUrl);
+        setShareId(result.id);
+        setShareUrl(nextShareUrl);
+        setSharedRecipeKey(currentRecipeKey);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 1500);
+      } catch {
+        setShareError(true);
+      }
+    });
+  };
+
+  const tryAnotherPalette = () => {
+    setPaletteOption((current) =>
+      displayGradientOptions.length > 1
+        ? ((current % displayGradientOptions.length) + 1) % displayGradientOptions.length
+        : current
+    );
+    setWallPopover(null);
+  };
+
   const selectedBlockId =
     blockPickerFor === "start" ? start.blockId : end.blockId;
+  const visibleShareId = isCurrentRecipeShared ? shareId : null;
+  const compactShareId = visibleShareId && visibleShareId.length > 12
+    ? `${visibleShareId.slice(0, 11)}…`
+    : visibleShareId;
 
   if (!hydrated) {
     return <div className="min-h-screen" />;
@@ -835,8 +1099,27 @@ export default function BlockGradient() {
           </div>
 
           {/* Block list */}
-          <div className="mb-2">
+          <div className="mb-2 flex items-center justify-between gap-3">
             <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Block List ({displayGradient.length})</p>
+            <button
+              type="button"
+              onClick={copyShareLink}
+              disabled={isSharing}
+              aria-label={visibleShareId ? `Copy share link ${visibleShareId}` : "Create share link"}
+              title={visibleShareId ? `Share ID: ${visibleShareId}` : "Create share link"}
+              className="inline-flex min-w-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-orange-500 transition-colors hover:bg-orange-500/10 disabled:cursor-wait disabled:opacity-60"
+            >
+              {shareCopied
+                ? <Check className="h-3.5 w-3.5 shrink-0" />
+                : <Link2 className="h-3.5 w-3.5 shrink-0" />}
+              {isSharing
+                ? "Sharing..."
+                : shareError
+                    ? "Try Again"
+                    : compactShareId
+                      ? compactShareId
+                      : "Share"}
+            </button>
           </div>
           <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))" }}>
             {displayGradient.map((block, i) => (
@@ -868,75 +1151,199 @@ export default function BlockGradient() {
             ))}
           </div>
 
-          {/* Copy button */}
-          <button
-            onClick={copyBlockList}
-            className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition-colors cursor-pointer active:scale-95"
-          >
-            {copied ? "Copied!" : "Copy Block List"}
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+            <button
+              onClick={tryAnotherPalette}
+              disabled={displayGradientOptions.length <= 1}
+              aria-label={`Try another palette. Option ${activePaletteOption + 1} of ${displayGradientOptions.length}`}
+              className="flex items-center justify-center gap-2 bg-paper hover:bg-line disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-200 font-bold py-3 px-4 rounded-xl transition-colors cursor-pointer active:scale-95"
+            >
+              <Shuffle className="w-4 h-4" />
+              Refresh Palette
+            </button>
+            <button
+              onClick={copyBlockList}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition-colors cursor-pointer active:scale-95"
+            >
+              {copied ? "Copied!" : "Copy Block List"}
+            </button>
+          </div>
 
         </Squircle>
 
         {/* Preview */}
-        <Squircle
-          cornerRadius={32}
-          className="mt-6 bg-paper-2 shadow-sm animate-in overflow-hidden"
-          style={{ animationDelay: "0.25s" }}
+        <motion.div
+          ref={previewRef}
+          layout
+          transition={{
+            layout: prefersReducedMotion
+              ? { duration: 0 }
+              : {
+                  duration: 0.5,
+                  ease: [0.4, 0, 0.2, 1],
+                },
+          }}
+          className={isPreviewExpanded
+            ? "relative mt-4 w-[calc(100vw-2rem)] scroll-m-4"
+            : ""}
+          style={isPreviewExpanded
+            ? { marginLeft: "calc(50% - 50vw + 1rem)" }
+            : undefined}
         >
-          <div className="px-6 pt-6 pb-3">
-            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
-              Preview
-            </label>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Click a block to add it to your exclusion list
-            </p>
-          </div>
-          <div className="relative">
-            {wallGrid.map((row, r) => (
-              <div key={r} className="flex">
-                {row.map((block, c) => (
-                  <WallCell
-                    key={`${r}-${c}`}
-                    block={block}
-                    cellKey={`${r}-${c}`}
-                    onCellClick={handleWallCellClick}
-                  />
+          <Squircle
+            cornerRadius={32}
+            className={`${
+              isPreviewExpanded
+                ? "flex flex-col"
+                : "mt-6"
+            } bg-paper-2 shadow-sm animate-in overflow-hidden`}
+            style={{
+              animationDelay: "0.25s",
+              height: isPreviewExpanded
+                ? `calc(100dvh - ${previewTopOffset + 16}px)`
+                : undefined,
+            }}
+          >
+            <div className={`flex shrink-0 items-start justify-between gap-4 px-6 pb-3 ${
+              isPreviewExpanded ? "pt-4" : "pt-6"
+            }`}>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
+                  Preview
+                </label>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  Click a block to add it to your exclusion list
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleExpandedPreview}
+                aria-label={isPreviewExpanded ? "Restore preview size" : "Fit preview to screen"}
+                title={isPreviewExpanded ? "Restore preview size" : "Fit preview to screen"}
+                className="flex h-9 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 text-xs font-bold text-orange-600 transition-[background-color,border-color,color,transform] hover:border-orange-500 hover:bg-orange-500 hover:text-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-2 dark:text-orange-400 dark:hover:text-white"
+              >
+                {isPreviewExpanded ? (
+                  <Minimize2 className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                )}
+                <span>{isPreviewExpanded ? "Restore" : "Fit to screen"}</span>
+              </button>
+            </div>
+            {isPreviewExpanded ? (
+              <div
+                ref={expandedWallAreaRef}
+                className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4"
+              >
+                <div
+                  className="grid overflow-hidden"
+                  style={{
+                    width: expandedCellSize * expandedWallColumns,
+                    height: expandedCellSize * expandedWallRows,
+                    gridTemplateColumns: `repeat(${expandedWallColumns}, minmax(0, 1fr))`,
+                    gridTemplateRows: `repeat(${expandedWallRows}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {expandedWallCells.map(({ block, cellKey }) => (
+                    <WallCell
+                      key={cellKey}
+                      block={block}
+                      cellKey={cellKey}
+                      onCellClick={handleWallCellClick}
+                      fillCell
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                {wallGrid.map((row, r) => (
+                  <div key={r} className="flex">
+                    {row.map((block, c) => (
+                      <WallCell
+                        key={`${r}-${c}`}
+                        block={block}
+                        cellKey={`${r}-${c}`}
+                        onCellClick={handleWallCellClick}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
-            ))}
-          </div>
-          <div className="px-6 py-4 flex flex-col gap-4 border-t border-line">
-            {/* Randomness slider */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
-                Randomness: {randomness}%
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={randomness}
-                onChange={(e) => setRandomness(Number(e.target.value))}
-                className="w-full cursor-pointer"
-              />
+            )}
+            <div className={`${
+              isPreviewExpanded
+                ? "grid grid-cols-2 gap-6 py-3"
+                : "flex flex-col gap-4 py-4"
+            } shrink-0 border-t border-line px-6`}>
+              {/* Randomness slider */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
+                  Randomness: {randomness}%
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={randomness}
+                  onChange={(e) => setRandomness(Number(e.target.value))}
+                  className="w-full cursor-pointer"
+                />
+              </div>
+              {/* Gradient length slider */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
+                  Gradient Length: {gradientLength} blocks
+                </label>
+                <input
+                  type="range"
+                  min={3}
+                  max={30}
+                  value={gradientLength}
+                  onChange={(e) => setGradientLength(Number(e.target.value))}
+                  className="w-full cursor-pointer"
+                />
+              </div>
             </div>
-            {/* Gradient length slider */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
-                Gradient Length: {gradientLength} blocks
-              </label>
-              <input
-                type="range"
-                min={3}
-                max={30}
-                value={gradientLength}
-                onChange={(e) => setGradientLength(Number(e.target.value))}
-                className="w-full cursor-pointer"
-              />
+          </Squircle>
+
+          {/* Keep the block popover with the preview panel. */}
+          {wallPopover && (
+            <div
+              className="fixed z-[60] -translate-x-1/2 -translate-y-full animate-[scaleIn_0.1s_ease-out]"
+              style={{ left: wallPopover.x, top: wallPopover.y }}
+            >
+              <div className="bg-paper-2 rounded-xl shadow-xl border border-line p-3 flex items-center gap-3">
+                <div className="w-8 h-8 flex-shrink-0 rounded overflow-hidden">
+                  <img
+                    src={`${TEXTURE_BASE}/${wallPopover.block.texture}.png`}
+                    alt=""
+                    className="w-full h-full block-texture"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                    {wallPopover.block.name}
+                  </p>
+                  {wallPopover.block.id !== start.blockId && wallPopover.block.id !== end.blockId && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        excludeBlock(wallPopover.block.id);
+                      }}
+                      className="text-[11px] text-red-500 hover:text-red-600 font-bold cursor-pointer mt-0.5"
+                    >
+                      Exclude
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <div className="w-2 h-2 bg-paper-2 border-b border-r border-line rotate-45 -mt-1.5" />
+              </div>
             </div>
-          </div>
-        </Squircle>
+          )}
+        </motion.div>
       </div>
 
       {/* Block Picker Modal */}
@@ -1051,43 +1458,6 @@ export default function BlockGradient() {
                 <p className="text-[11px] text-gray-400 font-bold mt-0.5">
                   {tooltip.subtitle}
                 </p>
-              )}
-            </div>
-          </div>
-          <div className="flex justify-center">
-            <div className="w-2 h-2 bg-paper-2 border-b border-r border-line rotate-45 -mt-1.5" />
-          </div>
-        </div>
-      )}
-
-      {/* Wall block popover */}
-      {wallPopover && (
-        <div
-          className="fixed z-[60] -translate-x-1/2 -translate-y-full animate-[scaleIn_0.1s_ease-out]"
-          style={{ left: wallPopover.x, top: wallPopover.y }}
-        >
-          <div className="bg-paper-2 rounded-xl shadow-xl border border-line p-3 flex items-center gap-3">
-            <div className="w-8 h-8 flex-shrink-0 rounded overflow-hidden">
-              <img
-                src={`${TEXTURE_BASE}/${wallPopover.block.texture}.png`}
-                alt=""
-                className="w-full h-full block-texture"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                {wallPopover.block.name}
-              </p>
-              {wallPopover.block.id !== start.blockId && wallPopover.block.id !== end.blockId && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    excludeBlock(wallPopover.block.id);
-                  }}
-                  className="text-[11px] text-red-500 hover:text-red-600 font-bold cursor-pointer mt-0.5"
-                >
-                  Exclude
-                </button>
               )}
             </div>
           </div>
