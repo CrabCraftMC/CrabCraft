@@ -88,6 +88,7 @@ def regressionTests = [
     voiceRelayRegressionTest: 'crabcraft.net.crabUtilities.voicechat.VoiceRelayRegressionTest',
     loginStreakCacheRegressionTest: 'crabcraft.net.crabUtilities.LoginStreakCacheRegressionTest',
     statsPushPathRegressionTest: 'crabcraft.net.crabUtilities.StatsPushPathRegressionTest',
+    statsPushXpLevelRegressionTest: 'crabcraft.net.crabUtilities.StatsPushXpLevelRegressionTest',
     xpLevelReaderRegressionTest: 'crabcraft.net.crabUtilities.awards.XpLevelReaderRegressionTest',
     globalChatLinkRegressionTest: 'crabcraft.net.crabUtilities.chat.GlobalChatLinkRegressionTest',
     chatMiniMessageRegressionTest: 'crabcraft.net.crabUtilities.chat.ChatMiniMessageRegressionTest',
