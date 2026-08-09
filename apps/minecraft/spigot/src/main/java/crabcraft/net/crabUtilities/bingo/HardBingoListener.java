@@ -19,6 +19,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.MusicInstrument;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -145,11 +146,11 @@ public final class HardBingoListener implements BingoDetector {
             return;
         }
         Player player = event.getPlayer();
+        if (!tracking.test(player, BingoTask.PLAY_FIVE_GOAT_HORNS)) return;
+
         ItemStack item = event.getItem();
         String instrument = instrumentKey(item);
-        if (instrument == null
-                || player.getCooldown(item) > 0
-                || !tracking.test(player, BingoTask.PLAY_FIVE_GOAT_HORNS)) {
+        if (instrument == null || player.getCooldown(item) > 0) {
             return;
         }
 
@@ -182,10 +183,14 @@ public final class HardBingoListener implements BingoDetector {
         if (item == null || item.getType() != Material.GOAT_HORN) return null;
         MusicInstrument instrument = item.getData(DataComponentTypes.INSTRUMENT);
         if (instrument == null) return null;
-        return RegistryAccess.registryAccess()
+        NamespacedKey key = RegistryAccess.registryAccess()
                 .getRegistry(RegistryKey.INSTRUMENT)
-                .getKey(instrument)
-                .asString();
+                .getKey(instrument);
+        return serialiseInstrumentKey(key);
+    }
+
+    static String serialiseInstrumentKey(NamespacedKey key) {
+        return key == null ? null : key.asString();
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
