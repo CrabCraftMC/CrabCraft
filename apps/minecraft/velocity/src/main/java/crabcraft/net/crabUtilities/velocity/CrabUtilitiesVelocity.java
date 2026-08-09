@@ -24,6 +24,7 @@ import crabcraft.net.crabUtilities.velocity.db.PlayerSettingsRepository;
 import crabcraft.net.crabUtilities.velocity.db.BingoRepository;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
+import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.VelocityChatBridge;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
@@ -127,6 +128,7 @@ public class CrabUtilitiesVelocity {
         this.chatBridge = new VelocityChatBridge(this);
         chatBridge.start();
 
+        MsgCommand.register(this);
         StaffChatToggleCommand.register(this);
         SocialSpyCommand.register(this);
         ReloadCommand.register(this);
