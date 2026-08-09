@@ -18,6 +18,19 @@ voicechat:
 api:
   port: 8080
 
+# Read-only public feed for the website. Keep disabled until players have been
+# told that normal in-game chat may be displayed publicly. The matching option
+# must also be enabled on each backend that should publish chat.
+public-chat:
+  enabled: false
+  stream: "crabcraft:public-chat"
+  replay-messages: 6
+  max-connections: 64
+  max-connections-per-ip: 2
+  allowed-origins:
+    - "https://crabcraft.net"
+    - "https://www.crabcraft.net"
+
 staff-chat:
   # MiniMessage. Placeholders: <sender>, <message>
   format: "<dark_gray>[<aqua>SC</aqua>]</dark_gray> <gray><sender></gray> <dark_gray>></dark_gray> <white><message></white>"

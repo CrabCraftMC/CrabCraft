@@ -27,7 +27,7 @@ public final class ModuleConfigManager {
                     "integrations",
                     "integrations.yml",
                     List.of("mod-protocols", "bluemap")),
-            new ModuleSpec("chat", "chat.yml", List.of("global-chat")),
+            new ModuleSpec("chat", "chat.yml", List.of("global-chat", "public-chat")),
             new ModuleSpec("voicechat", "voicechat.yml", List.of("voicechat")),
             new ModuleSpec("media", "media.yml", List.of("media")),
             new ModuleSpec("gameplay", "gameplay.yml", List.of("phantoms")),

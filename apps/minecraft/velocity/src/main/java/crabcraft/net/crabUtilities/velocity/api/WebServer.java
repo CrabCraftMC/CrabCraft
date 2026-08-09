@@ -39,6 +39,8 @@ public class WebServer {
     private static final long RATE_WINDOW_MS = 60_000;
     private static final int MAX_RATE_LIMIT_ENTRIES = 10_000;
     private static final int MAX_REQUEST_BODY_BYTES = 64 * 1024;
+    private static final int ORDINARY_HTTP_WORKERS = 4;
+    private static final int MAX_QUEUED_HTTP_REQUESTS = 128;
 
     private static final Pattern USERNAME = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
     private static final Pattern UUID_PATTERN = Pattern.compile(
@@ -70,7 +72,7 @@ public class WebServer {
             + "\"openapi\":\"3.0.3\","
             + "\"info\":{"
             + "\"title\":\"CrabCraft API\","
-            + "\"version\":\"2.0.0\","
+            + "\"version\":\"2.1.0\","
             + "\"description\":\"The CrabCraft API provides real-time and historical data from the CrabCraft Minecraft server network. "
             + "It is served directly from the Velocity proxy and requires no authentication.\\n\\n"
             + "## Rate Limiting\\n\\n"
@@ -90,6 +92,7 @@ public class WebServer {
             + "},"
             + "\"tags\":["
             + "{\"name\":\"Server\",\"description\":\"Proxy server status, backend servers, and online player information. These endpoints return live data from the running proxy.\"},"
+            + "{\"name\":\"Chat\",\"description\":\"A read-only, moderated stream of normal in-game chat for public website displays.\"},"
             + "{\"name\":\"Players\",\"description\":\"Player-specific data including online status, award scores, and advancement progress. Use a Minecraft UUID to look up a specific player.\"},"
             + "{\"name\":\"Punishments\",\"description\":\"Punishment-state checks backed by LiteBans.\"},"
             + "{\"name\":\"Awards\",\"description\":\"Awards are competitive stat-tracking categories (e.g. distance walked, mobs killed, items crafted). Each award has a leaderboard. Players earn gold, silver, and bronze medals for placing in the top 3. The crown leaderboard ranks players by their total medal points.\"},"
@@ -134,6 +137,21 @@ public class WebServer {
             + "\"version\":{\"type\":\"string\",\"description\":\"Velocity proxy version string\"}"
             + "}}}}"
             + "},"
+            + COMMON_ERRORS
+            + "}"
+            + "}"
+            + "},"
+
+            + "\"/chat/events\":{"
+            + "\"get\":{"
+            + "\"tags\":[\"Chat\"],"
+            + "\"summary\":\"Stream public in-game chat\","
+            + "\"description\":\"Opens a Server-Sent Events connection. The latest messages are replayed first, followed by new accepted normal chat. Event IDs are Redis stream IDs and are resumed from the Last-Event-ID request header when possible.\","
+            + "\"operationId\":\"streamPublicChat\","
+            + "\"responses\":{"
+            + "\"200\":{\"description\":\"SSE chat stream opened\",\"content\":{\"text/event-stream\":{\"schema\":{\"type\":\"string\"}}}},"
+            + "\"403\":{\"description\":\"Browser origin is not allowed\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"503\":{\"description\":\"Public chat is disabled or at connection capacity\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
             + "}"
@@ -579,9 +597,11 @@ public class WebServer {
 
     private final CrabUtilitiesVelocity plugin;
     private final int port;
+    private final ChatConnectionLimiter chatConnectionLimiter;
     private HttpServer httpServer;
     private ExecutorService httpExecutor;
     private ScheduledExecutorService cloudflareIpRefresher;
+    private PublicChatBroker publicChatBroker;
 
     // [count, windowStartMs] per IP
     private final ConcurrentHashMap<String, long[]> rateLimits = new ConcurrentHashMap<>();
@@ -589,6 +609,26 @@ public class WebServer {
     public WebServer(CrabUtilitiesVelocity plugin, int port) {
         this.plugin = plugin;
         this.port = port;
+        this.chatConnectionLimiter = new ChatConnectionLimiter(
+                plugin.getConfig().getPublicChatMaxConnections(),
+                plugin.getConfig().getPublicChatMaxConnectionsPerIp());
+    }
+
+    static ThreadPoolExecutor createHttpExecutor(int publicChatConnections) {
+        int chatWorkers = Math.max(0, publicChatConnections);
+        int workerLimit = chatWorkers > Integer.MAX_VALUE - ORDINARY_HTTP_WORKERS
+                ? Integer.MAX_VALUE
+                : ORDINARY_HTTP_WORKERS + chatWorkers;
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+                workerLimit,
+                workerLimit,
+                60L,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(MAX_QUEUED_HTTP_REQUESTS),
+                Thread.ofVirtual().name("crabutilities-api-", 0).factory(),
+                new ThreadPoolExecutor.AbortPolicy());
+        executor.allowCoreThreadTimeOut(true);
+        return executor;
     }
 
     public boolean isRunning() {
@@ -675,6 +715,84 @@ public class WebServer {
         }
     }
 
+    private void handlePublicChat(HttpExchange exchange) throws IOException {
+        if (!"GET".equals(exchange.getRequestMethod())) {
+            sendError(exchange, 405, "method not allowed");
+            return;
+        }
+        if (!"/chat/events".equals(exchange.getRequestURI().getPath())) {
+            sendError(exchange, 404, "not found");
+            return;
+        }
+
+        String origin = exchange.getRequestHeaders().getFirst("Origin");
+        if (origin != null) {
+            if (!plugin.getConfig().getPublicChatAllowedOrigins().contains(origin)) {
+                sendError(exchange, 403, "origin not allowed");
+                return;
+            }
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", origin);
+            exchange.getResponseHeaders().set("Vary", "Origin");
+        }
+
+        PublicChatBroker broker = publicChatBroker;
+        if (broker == null) {
+            sendError(exchange, 503, "public chat is disabled");
+            return;
+        }
+        if (isRateLimited(exchange)) {
+            sendError(exchange, 429, "rate limit exceeded");
+            return;
+        }
+
+        String ip = ClientIpResolver.resolve(exchange);
+        if (!chatConnectionLimiter.tryAcquire(ip)) {
+            sendError(exchange, 503, "public chat connection limit reached");
+            return;
+        }
+
+        PublicChatSubscription subscription;
+        try {
+            subscription = broker.subscribe(
+                    exchange.getRequestHeaders().getFirst("Last-Event-ID"),
+                    plugin.getConfig().getPublicChatReplayMessages());
+        } catch (IllegalStateException e) {
+            chatConnectionLimiter.release(ip);
+            sendError(exchange, 503, "public chat is unavailable");
+            return;
+        }
+
+        exchange.getResponseHeaders().set("Content-Type", "text/event-stream; charset=UTF-8");
+        exchange.getResponseHeaders().set("Cache-Control", "no-cache, no-transform");
+        exchange.getResponseHeaders().set("Connection", "keep-alive");
+        exchange.getResponseHeaders().set("X-Accel-Buffering", "no");
+
+        try (subscription) {
+            exchange.sendResponseHeaders(200, 0);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(": connected\nretry: 5000\n\n".getBytes(StandardCharsets.UTF_8));
+                output.flush();
+
+                while (!subscription.isClosed() && !Thread.currentThread().isInterrupted()) {
+                    PublicChatEvent event = subscription.poll(15L, TimeUnit.SECONDS);
+                    if (event == null) {
+                        if (subscription.isClosed()) break;
+                        output.write(": keep-alive\n\n".getBytes(StandardCharsets.UTF_8));
+                    } else {
+                        output.write(event.toSseBytes());
+                    }
+                    output.flush();
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (IOException ignored) {
+            // Browser and proxy disconnects are normal for a long-lived stream.
+        } finally {
+            chatConnectionLimiter.release(ip);
+        }
+    }
+
     private static java.util.Map<String, String> parseQuery(URI uri) {
         java.util.Map<String, String> params = new java.util.HashMap<>();
         String query = uri.getRawQuery();
@@ -727,18 +845,10 @@ public class WebServer {
         }
         try {
             httpServer = HttpServer.create(new InetSocketAddress(port), 0);
-            httpExecutor = new ThreadPoolExecutor(
-                    2,
-                    4,
-                    60L,
-                    TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<>(128),
-                    r -> {
-                        Thread t = new Thread(r, "crabutilities-api-worker");
-                        t.setDaemon(true);
-                        return t;
-                    },
-                    new ThreadPoolExecutor.AbortPolicy());
+            int publicChatConnections = plugin.getConfig().isPublicChatEnabled()
+                    ? plugin.getConfig().getPublicChatMaxConnections()
+                    : 0;
+            httpExecutor = createHttpExecutor(publicChatConnections);
             httpServer.setExecutor(httpExecutor);
 
             httpServer.createContext("/", exchange -> {
@@ -775,6 +885,8 @@ public class WebServer {
             registerRateLimitedGet("/ping", exchange -> {
                 sendJson(exchange, "{\"status\":\"ok\"}");
             });
+
+            httpServer.createContext("/chat/events", this::handlePublicChat);
 
             registerRateLimitedGet("/status", exchange -> {
                 JsonObject players = new JsonObject();
@@ -1124,7 +1236,15 @@ public class WebServer {
                 }
                 sendJson(exchange, GSON.toJson(result));
             });
-
+            if (plugin.getConfig().isPublicChatEnabled()) {
+                publicChatBroker = new PublicChatBroker(
+                        plugin.getConfig().getRedisHost(),
+                        plugin.getConfig().getRedisPort(),
+                        plugin.getConfig().getRedisPassword(),
+                        plugin.getConfig().getPublicChatStream(),
+                        plugin.getLogger());
+                publicChatBroker.start();
+            }
 
             httpServer.start();
             plugin.getLogger().info("Web API started on port {}", port);
@@ -1140,6 +1260,10 @@ public class WebServer {
 
             return true;
         } catch (IOException e) {
+            if (publicChatBroker != null) {
+                publicChatBroker.close();
+                publicChatBroker = null;
+            }
             if (httpExecutor != null) {
                 httpExecutor.shutdownNow();
                 httpExecutor = null;
@@ -1153,6 +1277,10 @@ public class WebServer {
         if (cloudflareIpRefresher != null) {
             cloudflareIpRefresher.shutdownNow();
             cloudflareIpRefresher = null;
+        }
+        if (publicChatBroker != null) {
+            publicChatBroker.close();
+            publicChatBroker = null;
         }
         if (httpServer != null) {
             httpServer.stop(0);
