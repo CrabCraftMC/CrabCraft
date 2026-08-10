@@ -4,12 +4,10 @@ import de.maxhenkel.voicechat.api.VoicechatConnection;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
 import de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel;
-import de.maxhenkel.voicechat.api.mp3.Mp3Decoder;
 import de.maxhenkel.voicechat.api.opus.OpusEncoder;
 import de.maxhenkel.voicechat.api.opus.OpusEncoderMode;
 import crabcraft.net.crabUtilities.media.VoiceMediaRegistry;
 
-import javax.sound.sampled.AudioFormat;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -29,8 +27,9 @@ final class CallRingtonePlayer implements AutoCloseable {
     static final int FRAME_SAMPLES = 960;
     static final double RINGTONE_GAIN = 0.5D;
     private static final int SAMPLES_PER_MILLISECOND = 48;
-    private static final String INCOMING_RESOURCE = "crabcraft/call/incoming_ringtone.mp3";
-    private static final String OUTGOING_RESOURCE = "crabcraft/call/outgoing_ringtone.mp3";
+    // 48 kHz mono, signed 16-bit little-endian PCM avoids a native MP3 decoder at runtime.
+    private static final String INCOMING_RESOURCE = "crabcraft/call/incoming_ringtone.pcm";
+    private static final String OUTGOING_RESOURCE = "crabcraft/call/outgoing_ringtone.pcm";
 
     private final VoicechatServerApi api;
     private final Logger logger;
@@ -40,7 +39,7 @@ final class CallRingtonePlayer implements AutoCloseable {
     private volatile boolean closed;
 
     CallRingtonePlayer(VoicechatServerApi api, Logger logger) throws IOException {
-        this(api, decodeClip(api, INCOMING_RESOURCE), decodeClip(api, OUTGOING_RESOURCE),
+        this(api, loadClip(INCOMING_RESOURCE), loadClip(OUTGOING_RESOURCE),
                 System::currentTimeMillis, logger);
     }
 
@@ -112,19 +111,19 @@ final class CallRingtonePlayer implements AutoCloseable {
                 .getBytes(StandardCharsets.UTF_8));
     }
 
-    private static short[] decodeClip(VoicechatServerApi api, String resource) throws IOException {
+    static short[] loadClip(String resource) throws IOException {
         try (InputStream input = CallRingtonePlayer.class.getClassLoader()
                 .getResourceAsStream(resource)) {
             if (input == null) throw new IOException("Missing bundled call ringtone " + resource);
-            Mp3Decoder decoder = api.createMp3Decoder(input);
-            if (decoder == null) throw new IOException("Could not create MP3 decoder for " + resource);
-            AudioFormat format = decoder.getAudioFormat();
-            if (format.getChannels() != 1 || Math.round(format.getSampleRate()) != 48_000) {
-                throw new IOException("Call ringtone must be 48 kHz mono: " + resource);
+            byte[] encoded = input.readAllBytes();
+            if (encoded.length == 0 || (encoded.length & 1) != 0) {
+                throw new IOException("Call ringtone contains invalid PCM audio: " + resource);
             }
-            short[] decoded = decoder.decode();
-            if (decoded == null || decoded.length == 0) {
-                throw new IOException("Call ringtone decoded to no audio: " + resource);
+
+            short[] decoded = new short[encoded.length / 2];
+            for (int i = 0; i < decoded.length; i++) {
+                int offset = i * 2;
+                decoded[i] = (short) ((encoded[offset] & 0xFF) | (encoded[offset + 1] << 8));
             }
             OpusVolumeScaler.applyGain(decoded, RINGTONE_GAIN);
             return decoded;

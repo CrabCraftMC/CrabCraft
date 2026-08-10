@@ -216,7 +216,9 @@ final class VoiceRelayRegressionTest {
                 "call volume category changed");
         for (String resource : List.of(
                 "crabcraft/call/incoming_ringtone.mp3",
-                "crabcraft/call/outgoing_ringtone.mp3")) {
+                "crabcraft/call/outgoing_ringtone.mp3",
+                "crabcraft/call/incoming_ringtone.pcm",
+                "crabcraft/call/outgoing_ringtone.pcm")) {
             try (InputStream input = VoiceRelayRegressionTest.class.getClassLoader()
                     .getResourceAsStream(resource)) {
                 check(input != null, "missing bundled ringtone " + resource);
@@ -224,6 +226,26 @@ final class VoiceRelayRegressionTest {
                 throw new AssertionError("could not read bundled ringtone " + resource, e);
             }
         }
+
+        for (String resource : List.of(
+                "crabcraft/call/incoming_ringtone.pcm",
+                "crabcraft/call/outgoing_ringtone.pcm")) {
+            try {
+                short[] clip = CallRingtonePlayer.loadClip(resource);
+                check(clip.length > CallRingtonePlayer.FRAME_SAMPLES,
+                        "bundled ringtone is too short " + resource);
+                check(hasAudibleSample(clip), "bundled ringtone is silent " + resource);
+            } catch (Exception e) {
+                throw new AssertionError("could not load bundled ringtone " + resource, e);
+            }
+        }
+    }
+
+    private static boolean hasAudibleSample(short[] clip) {
+        for (short sample : clip) {
+            if (sample != 0) return true;
+        }
+        return false;
     }
 
     private static StaticSoundPacket staticPacket(
