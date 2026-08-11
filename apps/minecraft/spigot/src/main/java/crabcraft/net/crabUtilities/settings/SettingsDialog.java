@@ -83,7 +83,7 @@ public class SettingsDialog {
                                 mini(CrabMessages.HIGHLIGHT_TAG + "Bingo messages"),
                                 toggleOptions(current.isBingoMessages())).build(),
                         DialogInput.singleOption(COORDINATE_HUD_MESSAGES_KEY,
-                                mini(CrabMessages.HIGHLIGHT_TAG + "Coordinate hud"),
+                                mini(CrabMessages.HIGHLIGHT_TAG + "Coordinate HUD"),
                                 toggleOptions(current.isCoordinateHud())).build()))
                 .canCloseWithEscape(true)
                 .build();
