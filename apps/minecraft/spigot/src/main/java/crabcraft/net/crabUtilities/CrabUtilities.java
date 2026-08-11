@@ -20,12 +20,7 @@ import crabcraft.net.crabUtilities.heads.PlayerHeadDropsListener;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
 import crabcraft.net.crabUtilities.netherportals.CustomNetherPortalListener;
 import crabcraft.net.crabUtilities.recipes.UnlockAllRecipesManager;
-import crabcraft.net.crabUtilities.shulker.ShulkerShellListener;
-import crabcraft.net.crabUtilities.settings.LocatorBarManager;
-import crabcraft.net.crabUtilities.settings.PhantomManager;
-import crabcraft.net.crabUtilities.settings.PlayerSettingsService;
-import crabcraft.net.crabUtilities.settings.SettingsCommand;
-import crabcraft.net.crabUtilities.settings.SettingsDialog;
+import crabcraft.net.crabUtilities.settings.*;import crabcraft.net.crabUtilities.shulker.ShulkerShellListener;
 import crabcraft.net.crabUtilities.slime.SlimeCommand;
 import crabcraft.net.crabUtilities.slime.SlimeMapListener;
 import crabcraft.net.crabUtilities.sleep.SleepBroadcastListener;
@@ -66,6 +61,7 @@ public final class CrabUtilities extends JavaPlugin {
     private PlayerSettingsService playerSettingsService;
     private PhantomManager phantomManager;
     private LocatorBarManager locatorBarManager;
+    private CoordinateHudManager coordinateHudManager;
     private SettingsDialog settingsDialog;
     private SignMarkerService signMarkerService;
     private HappyGhastSpeedManager happyGhastSpeedManager;
@@ -506,12 +502,15 @@ public final class CrabUtilities extends JavaPlugin {
         this.playerSettingsService = new PlayerSettingsService(this);
         this.phantomManager = new PhantomManager(this, playerSettingsService);
         this.locatorBarManager = new LocatorBarManager(this, playerSettingsService);
+        this.coordinateHudManager = new CoordinateHudManager(this, playerSettingsService);
         this.settingsDialog = new SettingsDialog(playerSettingsService);
 
         Bukkit.getPluginManager().registerEvents(playerSettingsService, this);
         Bukkit.getPluginManager().registerEvents(phantomManager, this);
         Bukkit.getPluginManager().registerEvents(locatorBarManager, this);
+        Bukkit.getPluginManager().registerEvents(coordinateHudManager, this);
 
+        coordinateHudManager.start();
         locatorBarManager.start();
         playerSettingsService.start();
         phantomManager.start();
@@ -532,6 +531,11 @@ public final class CrabUtilities extends JavaPlugin {
         if (phantomManager != null) {
             HandlerList.unregisterAll(phantomManager);
             phantomManager = null;
+        }
+        if (coordinateHudManager != null) {
+            HandlerList.unregisterAll(coordinateHudManager);
+            coordinateHudManager.shutdown();
+            coordinateHudManager = null;
         }
         if (playerSettingsService != null) {
             HandlerList.unregisterAll(playerSettingsService);

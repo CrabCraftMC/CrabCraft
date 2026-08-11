@@ -78,8 +78,11 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
             case "bingo" -> handleToggle(player, args, "Bingo messages",
                     settingsService.isBingoMessagesEnabled(uuid),
                     value -> settingsService.setBingoMessages(uuid, value));
+            case "coordinatehud" -> handleToggle(player, args, "Coordinate hud",
+                    settingsService.isCoordinateHudEnabled(uuid),
+                    value -> settingsService.setCoordinateHud(uuid, value));
             default -> player.sendMessage(CrabMessages.error(
-                    "Usage: /settings [phantoms|mentions|messages|locatorbar|bingo] ..."));
+                    "Usage: /settings [phantoms|mentions|messages|locatorbar|bingo|coordinatehud] ..."));
         }
         return true;
     }
