@@ -12,7 +12,7 @@ import crabcraft.net.crabUtilities.chat.GlobalChatService;
 import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
 import crabcraft.net.crabUtilities.chat.bridge.PaperChatBridge;
 import crabcraft.net.crabUtilities.config.ModuleConfigManager;
-import crabcraft.net.crabUtilities.enderman.EndermanGriefListener;
+import crabcraft.net.crabUtilities.coordinates.CoordinateHelperCommand;import crabcraft.net.crabUtilities.enderman.EndermanGriefListener;
 import crabcraft.net.crabUtilities.endportals.EndPortalBlockerListener;
 import crabcraft.net.crabUtilities.happyghast.HappyGhastSpeedManager;
 import crabcraft.net.crabUtilities.heads.PersistentHeadsListener;
@@ -197,6 +197,8 @@ public final class CrabUtilities extends JavaPlugin {
         SpectatorBackCommand spectatorBackCommand = new SpectatorBackCommand();
         Bukkit.getPluginManager().registerEvents(spectatorBackCommand, this);
         getCommand("specback").setExecutor(spectatorBackCommand);
+
+        getCommand("portalcoords").setExecutor(new CoordinateHelperCommand());
 
         // Private and staff chat enter through Paper so InteractiveChat, emoji
         // plugins and other local processors see them before Velocity routes

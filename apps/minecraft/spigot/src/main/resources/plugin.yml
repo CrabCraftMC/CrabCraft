@@ -15,6 +15,9 @@ commands:
   crabutilities:
     description: CrabUtilities admin commands.
     usage: /crabutilities <reload|update|viewdistance>
+  portalcoords:
+    description: Portal coordinate utilities.
+    usage: /portalcoords [at <x> <z> in <overworld|nether>]
   jadehandshake:
     description: Resend the Jade server handshake to your client.
     permission: crabutilities.jade.handshake
