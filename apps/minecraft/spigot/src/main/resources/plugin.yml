@@ -23,7 +23,7 @@ commands:
     permission: crabutilities.jade.handshake
   settings:
     description: Open your personal settings menu.
-    usage: /settings [phantoms <on|off|safe>|mentions <on|off>|messages <on|off>|locatorbar <on|off>|bingo <on|off>]
+    usage: /settings [phantoms <on|off|safe>|mentions <on|off>|messages <on|off>|locatorbar <on|off>|bingo <on|off>|coordinatehud <on|off>]
     permission: crabutilities.settings
   slime:
     description: Show nearby slime chunks or check the chunk you are standing in.

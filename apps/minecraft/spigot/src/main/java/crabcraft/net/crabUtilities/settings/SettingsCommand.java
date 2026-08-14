@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 public class SettingsCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS =
-            List.of("phantoms", "mentions", "messages", "locatorbar", "bingo");
+            List.of("phantoms", "mentions", "messages", "locatorbar", "bingo", "coordinatehud");
     private static final List<String> PHANTOM_VALUES = List.of("on", "off", "safe");
     private static final List<String> TOGGLE_VALUES = List.of("on", "off");
 
@@ -158,7 +158,8 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
                     : (args[0].equalsIgnoreCase("mentions") || args[0].equalsIgnoreCase("messages")
                             || args[0].equalsIgnoreCase("locatorbar") || args[0].equalsIgnoreCase("locator")
                             || args[0].equalsIgnoreCase("locator-bar")
-                            || args[0].equalsIgnoreCase("bingo"))
+                            || args[0].equalsIgnoreCase("bingo")
+                            || args[0].equalsIgnoreCase("coordinatehud"))
                         ? TOGGLE_VALUES : List.of();
             return values.stream()
                     .filter(s -> s.startsWith(args[1].toLowerCase(Locale.ROOT)))
