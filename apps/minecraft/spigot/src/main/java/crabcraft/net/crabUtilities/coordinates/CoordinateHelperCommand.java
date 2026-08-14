@@ -38,7 +38,7 @@ public class CoordinateHelperCommand implements CommandExecutor, TabCompleter {
 
         public int convertToOtherCoordinate(int coordinate) {
             if (this == OVERWORLD) {
-                return coordinate / 8;
+                return Math.floorDiv(coordinate, 8);
             }
             return coordinate * 8;
         }
