@@ -21,24 +21,27 @@ public final class PlayerSettings {
     public static final boolean DEFAULT_ACCEPT_MESSAGES = true;
     public static final boolean DEFAULT_LOCATOR_BAR = false;
     public static final boolean DEFAULT_BINGO_MESSAGES = true;
+    public static final boolean DEFAULT_COORDINATE_HUD = false;
 
     public static final PlayerSettings DEFAULTS =
             new PlayerSettings(DEFAULT_PHANTOM_MODE, DEFAULT_MENTION_PINGS,
-                    DEFAULT_ACCEPT_MESSAGES, DEFAULT_LOCATOR_BAR, DEFAULT_BINGO_MESSAGES);
+                    DEFAULT_ACCEPT_MESSAGES, DEFAULT_LOCATOR_BAR, DEFAULT_BINGO_MESSAGES, DEFAULT_COORDINATE_HUD);
 
     private final PhantomMode phantomMode;
     private final boolean mentionPings;
     private final boolean acceptMessages;
     private final boolean locatorBar;
     private final boolean bingoMessages;
+    private final boolean coordinateHud;
 
     public PlayerSettings(PhantomMode phantomMode, boolean mentionPings,
-                          boolean acceptMessages, boolean locatorBar, boolean bingoMessages) {
+                          boolean acceptMessages, boolean locatorBar, boolean bingoMessages, boolean coordinateHud) {
         this.phantomMode = phantomMode == null ? DEFAULT_PHANTOM_MODE : phantomMode;
         this.mentionPings = mentionPings;
         this.acceptMessages = acceptMessages;
         this.locatorBar = locatorBar;
         this.bingoMessages = bingoMessages;
+        this.coordinateHud = coordinateHud;
     }
 
     public PhantomMode getPhantomMode() {
@@ -61,24 +64,32 @@ public final class PlayerSettings {
         return bingoMessages;
     }
 
+    public boolean isCoordinateHud() {
+        return coordinateHud;
+    }
+
     public PlayerSettings withPhantomMode(PhantomMode mode) {
-        return new PlayerSettings(mode, mentionPings, acceptMessages, locatorBar, bingoMessages);
+        return new PlayerSettings(mode, mentionPings, acceptMessages, locatorBar, bingoMessages, coordinateHud);
     }
 
     public PlayerSettings withMentionPings(boolean value) {
-        return new PlayerSettings(phantomMode, value, acceptMessages, locatorBar, bingoMessages);
+        return new PlayerSettings(phantomMode, value, acceptMessages, locatorBar, bingoMessages, coordinateHud);
     }
 
     public PlayerSettings withAcceptMessages(boolean value) {
-        return new PlayerSettings(phantomMode, mentionPings, value, locatorBar, bingoMessages);
+        return new PlayerSettings(phantomMode, mentionPings, value, locatorBar, bingoMessages, coordinateHud);
     }
 
     public PlayerSettings withLocatorBar(boolean value) {
-        return new PlayerSettings(phantomMode, mentionPings, acceptMessages, value, bingoMessages);
+        return new PlayerSettings(phantomMode, mentionPings, acceptMessages, value, bingoMessages, coordinateHud);
     }
 
     public PlayerSettings withBingoMessages(boolean value) {
-        return new PlayerSettings(phantomMode, mentionPings, acceptMessages, locatorBar, value);
+        return new PlayerSettings(phantomMode, mentionPings, acceptMessages, locatorBar, value, coordinateHud);
+    }
+
+    public PlayerSettings withCoordinateHud(boolean value) {
+        return new PlayerSettings(phantomMode, mentionPings, acceptMessages, locatorBar, bingoMessages, value);
     }
 
     public JsonObject toJson() {
@@ -88,6 +99,7 @@ public final class PlayerSettings {
         obj.addProperty("acceptMessages", acceptMessages);
         obj.addProperty("locatorBar", locatorBar);
         obj.addProperty("bingoMessages", bingoMessages);
+        obj.addProperty("coordinateHud", coordinateHud);
         return obj;
     }
 
@@ -105,7 +117,8 @@ public final class PlayerSettings {
                 parseBool(obj.get("mentionPings"), DEFAULT_MENTION_PINGS),
                 parseBool(obj.get("acceptMessages"), DEFAULT_ACCEPT_MESSAGES),
                 parseBool(obj.get("locatorBar"), DEFAULT_LOCATOR_BAR),
-                parseBool(obj.get("bingoMessages"), DEFAULT_BINGO_MESSAGES));
+                parseBool(obj.get("bingoMessages"), DEFAULT_BINGO_MESSAGES),
+                parseBool(obj.get("coordinateHud"), DEFAULT_COORDINATE_HUD));
     }
 
     private static PhantomMode parsePhantomMode(JsonElement element) {

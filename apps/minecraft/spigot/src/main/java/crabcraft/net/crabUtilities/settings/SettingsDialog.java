@@ -41,6 +41,7 @@ public class SettingsDialog {
     private static final String ACCEPT_MESSAGES_KEY = "acceptMessages";
     private static final String LOCATOR_BAR_KEY = "locatorBar";
     private static final String BINGO_MESSAGES_KEY = "bingoMessages";
+    private static final String COORDINATE_HUD_MESSAGES_KEY = "coordinateHud";
     private static final String TOGGLE_ON = "on";
     private static final String TOGGLE_OFF = "off";
 
@@ -80,7 +81,10 @@ public class SettingsDialog {
                                 toggleOptions(current.isLocatorBar())).build(),
                         DialogInput.singleOption(BINGO_MESSAGES_KEY,
                                 mini(CrabMessages.HIGHLIGHT_TAG + "Bingo messages"),
-                                toggleOptions(current.isBingoMessages())).build()))
+                                toggleOptions(current.isBingoMessages())).build(),
+                        DialogInput.singleOption(COORDINATE_HUD_MESSAGES_KEY,
+                                mini(CrabMessages.HIGHLIGHT_TAG + "Coordinate HUD"),
+                                toggleOptions(current.isCoordinateHud())).build()))
                 .canCloseWithEscape(true)
                 .build();
 
@@ -116,8 +120,10 @@ public class SettingsDialog {
         boolean locatorBar = selectedToggle(view.getText(LOCATOR_BAR_KEY), current.isLocatorBar());
         boolean bingoMessages = selectedToggle(
                 view.getText(BINGO_MESSAGES_KEY), current.isBingoMessages());
+        boolean coordinateHud = selectedToggle(
+                view.getText(COORDINATE_HUD_MESSAGES_KEY), current.isCoordinateHud());
 
-        settingsService.setAll(uuid, mode, mentionPings, acceptMessages, locatorBar, bingoMessages);
+        settingsService.setAll(uuid, mode, mentionPings, acceptMessages, locatorBar, bingoMessages, coordinateHud);
         audience.sendMessage(CrabMessages.success("Settings saved."));
     }
 
