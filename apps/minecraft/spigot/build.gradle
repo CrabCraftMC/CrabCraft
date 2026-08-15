@@ -131,6 +131,7 @@ def regressionTests = [
     bingoTaskRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoTaskRegressionTest',
     hardBingoListenerRegressionTest: 'crabcraft.net.crabUtilities.bingo.HardBingoListenerRegressionTest',
     bingoCardTwoListenerRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoCardTwoListenerRegressionTest',
+    bingoCardThreeCoreListenerRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoCardThreeCoreListenerRegressionTest',
     spectatorBackRegressionTest: 'crabcraft.net.crabUtilities.spectator.SpectatorBackRegressionTest',
     endPortalBlockingRegressionTest: 'crabcraft.net.crabUtilities.endportals.EndPortalBlockerListenerRegressionTest',
 ]
