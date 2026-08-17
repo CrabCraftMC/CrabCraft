@@ -155,6 +155,11 @@ public final class BingoCardThreeChallengeListener implements BingoDetector {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onCreeperPowered(CreeperPowerEvent event) {
         Creeper creeper = event.getEntity();
+        if (ChargedCreeperAttributionPolicy.shouldPreserve(
+                creeper.isPowered(), event.getCause())) {
+            return;
+        }
+
         clearChargedCreeperAttribution(creeper);
         if (event.getCause() != CreeperPowerEvent.PowerCause.LIGHTNING
                 || event.getLightning() == null) {
@@ -376,4 +381,13 @@ public final class BingoCardThreeChallengeListener implements BingoDetector {
     private record AttemptToken(long detectorGeneration, long playerGeneration) {}
 
     private record PersistentMarker(UUID playerId, long timestamp) {}
+
+    static final class ChargedCreeperAttributionPolicy {
+        private ChargedCreeperAttributionPolicy() {}
+
+        static boolean shouldPreserve(
+                boolean alreadyPowered, CreeperPowerEvent.PowerCause cause) {
+            return alreadyPowered && cause == CreeperPowerEvent.PowerCause.LIGHTNING;
+        }
+    }
 }
