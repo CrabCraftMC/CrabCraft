@@ -26,7 +26,7 @@
     "figma-squircle": "^1.1.0",
     "framer-motion": "^12.42.2",
     "gsap": "^3.13.0",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^1.27.0",
     "next": "^16.2.10",
     "next-auth": "5.0.0-beta.30",
     "postprocessing": "^6.39.2",
