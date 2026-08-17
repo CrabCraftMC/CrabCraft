@@ -48,7 +48,7 @@ public class GlobalChatService {
     private static final String CHANNEL = "crabutilities:globalchat";
     private static final Pattern URL_PATTERN = Pattern.compile(
             "(?i)\\bhttps?://(?:[^\\s<>()\"']*[^\\s<>()\"'.,!?;:])");
-    private final CrabUtilities plugin;
+    public final CrabUtilities plugin;
     private final String host;
     private final int port;
     private final String password;

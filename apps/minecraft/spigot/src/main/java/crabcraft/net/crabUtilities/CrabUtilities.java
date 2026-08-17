@@ -6,10 +6,7 @@ import crabcraft.net.crabUtilities.awards.SuspiciousBrushTracker;
 import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
 import crabcraft.net.crabUtilities.bingo.BingoManager;
 import crabcraft.net.crabUtilities.cauldron.CauldronRecipeListener;
-import crabcraft.net.crabUtilities.chat.EssentialsMentionAutocompleteListener;
-import crabcraft.net.crabUtilities.chat.GlobalChatListener;
-import crabcraft.net.crabUtilities.chat.GlobalChatService;
-import crabcraft.net.crabUtilities.chat.MentionAutocompleteListener;
+import crabcraft.net.crabUtilities.chat.*;
 import crabcraft.net.crabUtilities.chat.bridge.PaperChatBridge;
 import crabcraft.net.crabUtilities.config.ModuleConfigManager;
 import crabcraft.net.crabUtilities.coordinates.CoordinateHelperCommand;import crabcraft.net.crabUtilities.enderman.EndermanGriefListener;
@@ -73,6 +70,7 @@ public final class CrabUtilities extends JavaPlugin {
     private SimpleVoiceAnimationsIntegration simpleVoiceAnimationsIntegration;
     private ModuleConfigManager moduleConfigManager;
     private BingoManager bingoManager;
+    private GorkManager gorkManager;
 
     @Override
     public void onEnable() {
@@ -492,6 +490,9 @@ public final class CrabUtilities extends JavaPlugin {
     }
 
     private void startGlobalChatService() {
+        // Initialize @gork
+        this.gorkManager = new GorkManager();
+
         this.globalChatService = new GlobalChatService(this);
         globalChatService.start();
         this.globalChatListener = new GlobalChatListener(globalChatService);
@@ -732,5 +733,9 @@ public final class CrabUtilities extends JavaPlugin {
         stopAccurateBlockPlacement();
         JadeBootstrap.disable(this);
         AppleSkinIntegration.disable(this);
+    }
+
+    public GorkManager getGorkManager() {
+        return gorkManager;
     }
 }
