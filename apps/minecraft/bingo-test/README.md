@@ -1,11 +1,11 @@
-# CrabBingoCard2Test
+# CrabBingoCard3Test
 
-This is a standalone Paper 26.2 test harness for Bingo #2. It has no Redis, database, Discord or
+This is a standalone Paper 26.2 test harness for Bingo #3. It has no Redis, database, Discord or
 production CrabUtilities dependency. Creative and Survival players are both tracked.
 
 ## Install
 
-1. Put `CrabBingoCard2Test.jar` in the server's `plugins` directory.
+1. Put `CrabBingoCard3Test.jar` in the server's `plugins` directory.
 2. Remove any older Crab bingo test JAR.
 3. Restart Paper and join the server.
 
@@ -13,19 +13,23 @@ The plugin sends the 16-task checklist when you join. `/bingotest` or `/bingotes
 again, `/bingotest details <1-16>` explains an exact detector, and `/bingotest reset` clears your
 memory-only progress and all detector attribution state.
 
-The test harness registers only the Bingo #2 listener. It does not announce to Discord, store
-progress or activate any Bingo #1 detector.
+The test harness registers only the four Bingo #3 detector groups. It does not announce to
+Discord, store progress or activate any detector from an earlier card.
 
 ## Important test setup
 
-- **Self-arrow Totem:** use Survival, set `pvp=true`, leave any no-friendly-fire scoreboard team,
-  hold a Totem and arrange for your own returning arrow to deal the fatal hit.
-- **Copper golem statue:** use Survival and keep `doTileDrops` enabled so the mined statue can
-  produce its item drop.
-- **TNT minecart:** this is not a direct right-click action. Break its rail, light the supporting
-  block so fire overlaps the minecart, then wait for the minecart to explode.
-- **Shelf hotbar swap:** use exactly three connected, powered shelves facing the same direction,
-  then interact to exchange all nine shelf slots with all nine hotbar slots.
+- **Third-colour sheep:** use two differently coloured parents; the lamb must be a different
+  colour from both of them.
+- **Fox Totem:** drop the Totem yourself, let the fox pick it up, then make that exact fox take
+  otherwise-fatal damage.
+- **Johnny Vindicator:** apply the `Johnny` name yourself after starting the test, then let that
+  exact Vindicator deal the final blow to another hostile mob.
+- **Shulker duplication:** the bullet must originally target you and then hit a different Shulker.
+- **Leashed Frog:** leash the Frog yourself, then either keep holding its lead or tie it to a
+  fence while it eats a small Magma Cube and creates a Froglight.
+- **Charged Creeper head:** charge the Creeper with lightning from your Channeling trident, then
+  use that exact Creeper's explosion to produce the head.
+- **Copper trumpet:** play the Note Block sound once for each of the four copper oxidation stages.
 
 Use `/bingotest details <number>` for the detector-specific rules for every other square.
 
@@ -35,4 +39,4 @@ Build from `apps/minecraft` with:
 ./gradlew :bingo-test:clean :bingo-test:check :bingo-test:build
 ```
 
-The JAR is written to `bingo-test/build/libs/CrabBingoCard2Test.jar`.
+The JAR is written to `bingo-test/build/libs/CrabBingoCard3Test.jar`.

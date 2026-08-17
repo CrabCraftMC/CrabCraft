@@ -54,7 +54,31 @@ export const SECOND_BINGO_CARD = {
   ] satisfies BingoTaskDefinition[],
 } as const;
 
-export const PREPARED_BINGO_CARDS = [FIRST_BINGO_CARD, SECOND_BINGO_CARD];
+export const THIRD_BINGO_CARD = {
+  number: 3,
+  startsAt: 1_786_953_600,
+  endsAt: 1_787_526_000,
+  tasks: [
+    { id: "sulfur_cube_tnt_ignite", label: "Feed TNT to a Sulfur Cube, then ignite it" },
+    { id: "breed_third_colour_sheep", label: "Breed two sheep to produce a third colour" },
+    { id: "unlock_ominous_vault", label: "Unlock an Ominous Vault" },
+    { id: "fox_uses_totem", label: "Give a fox a Totem of Undying and make it activate it" },
+    { id: "tame_nautilus", label: "Tame a Nautilus" },
+    { id: "johnny_vindicator_kill", label: "Name a Vindicator Johnny and have it kill a hostile mob" },
+    { id: "hook_ghast", label: "Hook a Ghast with a fishing rod" },
+    { id: "water_bottle_extinguish_three", label: "Extinguish three burning mobs with one splash water bottle" },
+    { id: "shulker_bullet_duplicate", label: "Use a Shulker bullet aimed at you to duplicate another Shulker" },
+    { id: "warm_ridden_strider", label: "Ride a shivering Strider into lava to warm it up" },
+    { id: "raid_bell_reveal_three", label: "Ring a bell during a raid to reveal three raiders" },
+    { id: "piercing_arrow_hit_three", label: "Hit three mobs with one Piercing crossbow arrow" },
+    { id: "leashed_frog_froglight", label: "Keep a Frog leashed while it creates a Froglight" },
+    { id: "charged_creeper_mob_head", label: "Charge a Creeper, then use it to obtain a mob head" },
+    { id: "golden_dandelion_hoglin", label: "Stop a baby Hoglin ageing with a Golden Dandelion" },
+    { id: "four_copper_trumpet_sounds", label: "Play all four copper-trumpet sounds with Note Blocks" },
+  ] satisfies BingoTaskDefinition[],
+} as const;
+
+export const PREPARED_BINGO_CARDS = [FIRST_BINGO_CARD, SECOND_BINGO_CARD, THIRD_BINGO_CARD];
 
 /** Task IDs that have a deployed Paper detector, not merely a planned card entry. */
 export const SUPPORTED_BINGO_TASK_IDS = new Set(
