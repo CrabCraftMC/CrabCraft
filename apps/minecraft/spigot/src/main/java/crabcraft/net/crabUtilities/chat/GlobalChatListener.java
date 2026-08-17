@@ -44,7 +44,7 @@ public class GlobalChatListener implements Listener {
 
         @Nullable String gorkMessage = plugin.getGorkManager().processMessage(rawMessage);
         if (gorkMessage != null) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.getServer().sendMessage(GorkManager.decorateMessage(gorkMessage)), 10L);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.getOnlinePlayers().forEach((player -> player.sendMessage(GorkManager.decorateMessage(gorkMessage)))), 10L);
         }
     }
 
