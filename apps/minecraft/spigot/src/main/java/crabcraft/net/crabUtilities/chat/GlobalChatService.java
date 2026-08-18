@@ -249,9 +249,10 @@ public class GlobalChatService {
             if (isGorkEnabled()) {
                 String response = gorkManager.processMessage(rawMessage);
                 if (response != null) {
-                    Component responseLine = GorkManager.decorateMessage(response);
-                    deliverLocally(responseLine, Set.of());
-                    publishGork(response);
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        deliverLocally(GorkManager.decorateMessage(response), Set.of());
+                        publishGork(response);
+                    }, 20L);
                 }
             }
         });
