@@ -39,6 +39,10 @@ repositories {
         name = "codemc"
         url = uri("https://repo.codemc.io/repository/maven-releases/")
     }
+    maven {
+        name = "nexo"
+        url = uri("https://repo.nexomc.com/releases")
+    }
 }
 
 dependencies {
@@ -56,6 +60,7 @@ dependencies {
     compileOnly("de.bluecolored:bluemap-api:2.7.7")
     compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
     testCompileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
+    compileOnly("com.nexomc:nexo:1.27.0")
     compileOnly("org.projectlombok:lombok:1.18.46")
     annotationProcessor("org.projectlombok:lombok:1.18.46")
     implementation("redis.clients:jedis:5.1.0")

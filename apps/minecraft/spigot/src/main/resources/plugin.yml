@@ -11,6 +11,7 @@ softdepend:
   - packetevents
   - PlaceholderAPI
   - BlueMap
+  - Nexo
 commands:
   crabutilities:
     description: CrabUtilities admin commands.
@@ -32,6 +33,9 @@ commands:
     description: Return to where you entered spectator mode.
     usage: /specback
     permission: crabutilities.specback
+  model:
+    description: Apply a custom cosmetic model to a helmet or split it back out.
+    usage: /model <merge|split>
   msg:
     description: Send a cross-server private message.
     usage: /msg <player> <message>
@@ -69,6 +73,12 @@ permissions:
   crabutilities.specback:
     description: Return to where you entered spectator mode.
     default: op
+  crabutilities.model.merge:
+    description: Apply a held custom item's model to a held helmet.
+    default: true
+  crabutilities.model.split:
+    description: Remove an applied model and recover the original custom item.
+    default: true
   crabutilities.bluemap.marker:
     description: Create BlueMap markers by writing the marker keyword on a sign.
     default: true
