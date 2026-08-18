@@ -249,9 +249,11 @@ public class GlobalChatService {
             if (isGorkEnabled()) {
                 String response = gorkManager.processMessage(rawMessage);
                 if (response != null) {
-                    Component responseLine = GorkManager.decorateMessage(response);
-                    deliverLocally(responseLine, Set.of());
-                    publishGork(response);
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        Component responseLine = GorkManager.decorateMessage(response);
+                        deliverLocally(responseLine, Set.of());
+                        publishGork(responseLine);
+                    }, 20L);
                 }
             }
         });
@@ -302,13 +304,13 @@ public class GlobalChatService {
         });
     }
 
-    private void publishGork(String response) {
+    private void publishGork(Component response) {
         JedisPool pool = jedisPool;
         if (stopped || pool == null || pool.isClosed()) return;
         JsonObject envelope = new JsonObject();
         envelope.addProperty("type", "gork");
         envelope.addProperty("origin", serverId.toString());
-        envelope.addProperty("message", response);
+        envelope.addProperty("component", GsonComponentSerializer.gson().serialize(response));
         String payload = envelope.toString();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (Jedis jedis = pool.getResource()) {
@@ -362,9 +364,18 @@ public class GlobalChatService {
         }
         if ("gork".equals(envelope.has("type") ? envelope.get("type").getAsString() : "")) {
             if (!isGorkEnabled()) return;
-            String response = envelope.has("message") ? envelope.get("message").getAsString() : "";
-            if (response.isEmpty()) return;
-            runOnMain(() -> deliverLocally(GorkManager.decorateMessage(response), Set.of()));
+            String componentJson = envelope.has("component")
+                    ? envelope.get("component").getAsString() : "";
+            if (componentJson.isEmpty()) return;
+            Component response;
+            try {
+                response = GsonComponentSerializer.gson().deserialize(componentJson);
+            } catch (Exception e) {
+                plugin.getLogger().fine("Invalid Gork component received: " + e.getMessage());
+                return;
+            }
+            Component responseLine = response;
+            runOnMain(() -> deliverLocally(responseLine, Set.of()));
             return;
         }
         String username = envelope.has("username") ? envelope.get("username").getAsString() : "";
