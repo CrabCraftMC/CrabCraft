@@ -48,12 +48,14 @@ public class GlobalChatService {
     private static final String CHANNEL = "crabutilities:globalchat";
     private static final Pattern URL_PATTERN = Pattern.compile(
             "(?i)\\bhttps?://(?:[^\\s<>()\"']*[^\\s<>()\"'.,!?;:])");
-    public final CrabUtilities plugin;
+    private final CrabUtilities plugin;
     private final String host;
     private final int port;
     private final String password;
 
     private final boolean enabled;
+    private final boolean gorkEnabled;
+    private final GorkManager gorkManager = new GorkManager();
     private final boolean publicChatEnabled;
     private final String publicChatStream;
     private final long publicChatMaxMessages;
@@ -78,6 +80,7 @@ public class GlobalChatService {
         this.password = plugin.getConfig().getString("redis.password", "");
 
         this.enabled = plugin.getConfig().getBoolean("global-chat.enabled", false);
+        this.gorkEnabled = plugin.getConfig().getBoolean("global-chat.gork.enabled", true);
         this.publicChatEnabled = plugin.getConfig().getBoolean("public-chat.enabled", false);
         String configuredPublicChatStream = plugin.getConfig()
                 .getString("public-chat.stream", "crabcraft:public-chat");
@@ -129,6 +132,10 @@ public class GlobalChatService {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public boolean isGorkEnabled() {
+        return enabled && gorkEnabled;
     }
 
     private void startSubscriber() {
@@ -238,6 +245,15 @@ public class GlobalChatService {
             deliverLocally(rendered.line(), rendered.mentioned());
             publishPublicChat(senderUuid, username, rawMessage);
             publish(senderUuid, username, displayName, rawMessage);
+
+            if (isGorkEnabled()) {
+                String response = gorkManager.processMessage(rawMessage);
+                if (response != null) {
+                    Component responseLine = GorkManager.decorateMessage(response);
+                    deliverLocally(responseLine, Set.of());
+                    publishGork(response);
+                }
+            }
         });
     }
 
@@ -286,6 +302,23 @@ public class GlobalChatService {
         });
     }
 
+    private void publishGork(String response) {
+        JedisPool pool = jedisPool;
+        if (stopped || pool == null || pool.isClosed()) return;
+        JsonObject envelope = new JsonObject();
+        envelope.addProperty("type", "gork");
+        envelope.addProperty("origin", serverId.toString());
+        envelope.addProperty("message", response);
+        String payload = envelope.toString();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try (Jedis jedis = pool.getResource()) {
+                jedis.publish(CHANNEL, payload);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Gork response publish failed: " + e.getMessage());
+            }
+        });
+    }
+
     /** Publishes the accepted message as plain visible text for public consumers. */
     public void publishPublicChat(UUID senderUuid, String username, String rawMessage) {
         if (!publicChatEnabled || stopped) return;
@@ -325,6 +358,13 @@ public class GlobalChatService {
         JsonObject envelope = JsonParser.parseString(payload).getAsJsonObject();
         String origin = envelope.has("origin") ? envelope.get("origin").getAsString() : "";
         if (serverId.toString().equals(origin)) {
+            return;
+        }
+        if ("gork".equals(envelope.has("type") ? envelope.get("type").getAsString() : "")) {
+            if (!isGorkEnabled()) return;
+            String response = envelope.has("message") ? envelope.get("message").getAsString() : "";
+            if (response.isEmpty()) return;
+            runOnMain(() -> deliverLocally(GorkManager.decorateMessage(response), Set.of()));
             return;
         }
         String username = envelope.has("username") ? envelope.get("username").getAsString() : "";

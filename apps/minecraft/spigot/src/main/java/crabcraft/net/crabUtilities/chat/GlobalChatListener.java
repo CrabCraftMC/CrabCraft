@@ -1,15 +1,10 @@
 package crabcraft.net.crabUtilities.chat;
 
-import crabcraft.net.crabUtilities.CrabUtilities;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -40,12 +35,6 @@ public class GlobalChatListener implements Listener {
         }
         String rawMessage = PlainTextComponentSerializer.plainText().serialize(event.message());
         event.message(SafeChatMiniMessage.deserialize(rawMessage));
-        CrabUtilities plugin = this.service.plugin;
-
-        @Nullable String gorkMessage = plugin.getGorkManager().processMessage(rawMessage);
-        if (gorkMessage != null) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> Bukkit.getOnlinePlayers().forEach((player -> player.sendMessage(GorkManager.decorateMessage(gorkMessage)))), 10L);
-        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

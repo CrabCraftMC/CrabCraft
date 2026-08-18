@@ -8,6 +8,10 @@
 # chat local. Staff chat is unaffected.
 global-chat:
   enabled: false
+  # Respond to @gork and synchronise responses to other global-chat servers.
+  # This is only active when global chat is enabled on this server.
+  gork:
+    enabled: true
   # MiniMessage format. Placeholders: <display_name>, <username>, <message>.
   format: "<display_name><gray>:</gray> <message>"
   mentions:

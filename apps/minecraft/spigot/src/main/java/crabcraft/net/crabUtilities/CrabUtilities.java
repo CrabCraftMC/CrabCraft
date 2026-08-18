@@ -70,7 +70,6 @@ public final class CrabUtilities extends JavaPlugin {
     private SimpleVoiceAnimationsIntegration simpleVoiceAnimationsIntegration;
     private ModuleConfigManager moduleConfigManager;
     private BingoManager bingoManager;
-    private GorkManager gorkManager;
 
     @Override
     public void onEnable() {
@@ -490,9 +489,6 @@ public final class CrabUtilities extends JavaPlugin {
     }
 
     private void startGlobalChatService() {
-        // Initialize @gork
-        this.gorkManager = new GorkManager();
-
         this.globalChatService = new GlobalChatService(this);
         globalChatService.start();
         this.globalChatListener = new GlobalChatListener(globalChatService);
@@ -735,7 +731,4 @@ public final class CrabUtilities extends JavaPlugin {
         AppleSkinIntegration.disable(this);
     }
 
-    public GorkManager getGorkManager() {
-        return gorkManager;
-    }
 }
