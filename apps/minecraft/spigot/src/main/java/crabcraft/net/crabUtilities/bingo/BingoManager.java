@@ -78,7 +78,13 @@ public final class BingoManager {
                 plugin, this::isTracking, this::complete, this::logHornProgress);
         BingoCardTwoListener cardTwoDetector = new BingoCardTwoListener(
                 plugin, this::isTracking, this::complete);
-        detectors = List.of(cardOneDetector, cardTwoDetector);
+        detectors = List.of(
+                cardOneDetector,
+                cardTwoDetector,
+                new BingoCardThreeCoreListener(plugin, this::isTracking, this::complete),
+                new BingoCardThreeAdventureListener(plugin, this::isTracking, this::complete),
+                new BingoCardThreeCombatListener(plugin, this::isTracking, this::complete),
+                new BingoCardThreeChallengeListener(plugin, this::isTracking, this::complete));
         detectors.forEach(detector ->
                 plugin.getServer().getPluginManager().registerEvents(detector, plugin));
         running = true;

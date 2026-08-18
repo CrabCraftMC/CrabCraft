@@ -135,7 +135,71 @@ public enum BingoTask {
     MINE_COPPER_GOLEM_STATUE(
             "mine_copper_golem_statue",
             "Mine a copper golem statue so it drops.",
-            "Break any copper golem statue variant yourself and make it produce a statue item drop. This normally requires Survival.");
+            "Break any copper golem statue variant yourself and make it produce a statue item drop. This normally requires Survival."),
+    SULFUR_CUBE_TNT_IGNITE(
+            "sulfur_cube_tnt_ignite",
+            "Feed TNT to a Sulfur Cube, then ignite it.",
+            "Give TNT to a Sulfur Cube yourself, then personally ignite that same Sulfur Cube."),
+    BREED_THIRD_COLOUR_SHEEP(
+            "breed_third_colour_sheep",
+            "Breed two sheep to produce a third colour.",
+            "Breed two differently coloured sheep so their lamb has a colour different from both parents."),
+    UNLOCK_OMINOUS_VAULT(
+            "unlock_ominous_vault",
+            "Unlock an Ominous Vault.",
+            "Use an Ominous Trial Key yourself to unlock an Ominous Vault that has not rewarded you before."),
+    FOX_USES_TOTEM(
+            "fox_uses_totem",
+            "Give a fox a Totem of Undying and make it activate it.",
+            "Drop a Totem of Undying that a fox picks up, then make that same fox survive fatal damage by activating it."),
+    TAME_NAUTILUS(
+            "tame_nautilus",
+            "Tame a Nautilus.",
+            "Successfully tame a Nautilus yourself after this card starts."),
+    JOHNNY_VINDICATOR_KILL(
+            "johnny_vindicator_kill",
+            "Name a Vindicator Johnny and have it kill a hostile mob.",
+            "Use a name tag to name a Vindicator Johnny, then have that same Vindicator deal the final blow to another hostile mob."),
+    HOOK_GHAST(
+            "hook_ghast",
+            "Hook a Ghast with a fishing rod.",
+            "Cast the fishing rod yourself and make its hook catch a Ghast."),
+    WATER_BOTTLE_EXTINGUISH_THREE(
+            "water_bottle_extinguish_three",
+            "Extinguish three burning mobs with one splash water bottle.",
+            "Throw one splash water bottle that extinguishes at least three distinct burning non-player mobs."),
+    SHULKER_BULLET_DUPLICATE(
+            "shulker_bullet_duplicate",
+            "Use a Shulker bullet aimed at you to duplicate another Shulker.",
+            "Make a Shulker bullet that was targeting you hit a different Shulker and cause it to duplicate."),
+    WARM_RIDDEN_STRIDER(
+            "warm_ridden_strider",
+            "Ride a shivering Strider into lava to warm it up.",
+            "Mount a cold, shivering Strider and remain its rider as it enters lava and becomes warm."),
+    RAID_BELL_REVEAL_THREE(
+            "raid_bell_reveal_three",
+            "Ring a bell during a raid to reveal three raiders.",
+            "Ring a bell yourself during an active raid and make at least three surviving raiders receive the glowing reveal effect."),
+    PIERCING_ARROW_HIT_THREE(
+            "piercing_arrow_hit_three",
+            "Hit three mobs with one Piercing crossbow arrow.",
+            "Fire a Piercing-enchanted crossbow arrow that damages at least three distinct non-player mobs before it stops."),
+    LEASHED_FROG_FROGLIGHT(
+            "leashed_frog_froglight",
+            "Keep a Frog leashed while it creates a Froglight.",
+            "Leash a Frog yourself, either by holding its lead or tying it to a fence, and keep it leashed until that same Frog eats a small Magma Cube and creates a Froglight."),
+    CHARGED_CREEPER_MOB_HEAD(
+            "charged_creeper_mob_head",
+            "Charge a Creeper, then use it to obtain a mob head.",
+            "Charge a Creeper with lightning from your Channeling trident, then have that same Creeper explode and produce a mob head."),
+    GOLDEN_DANDELION_HOGLIN(
+            "golden_dandelion_hoglin",
+            "Stop a baby Hoglin ageing with a Golden Dandelion.",
+            "Use a Golden Dandelion yourself on a baby Hoglin so it permanently stops ageing."),
+    FOUR_COPPER_TRUMPET_SOUNDS(
+            "four_copper_trumpet_sounds",
+            "Play all four copper-trumpet sounds with Note Blocks.",
+            "Personally play the copper-trumpet Note Block sound once at each of the four copper oxidation stages.");
 
     private static final List<BingoTask> CARD_ONE = List.of(
             GROW_TREE_IN_NETHER,
@@ -171,6 +235,23 @@ public enum BingoTask {
             LEASHED_BEE_STING,
             CREEPER_RINGS_BELL,
             MINE_COPPER_GOLEM_STATUE);
+    private static final List<BingoTask> CARD_THREE = List.of(
+            SULFUR_CUBE_TNT_IGNITE,
+            BREED_THIRD_COLOUR_SHEEP,
+            UNLOCK_OMINOUS_VAULT,
+            FOX_USES_TOTEM,
+            TAME_NAUTILUS,
+            JOHNNY_VINDICATOR_KILL,
+            HOOK_GHAST,
+            WATER_BOTTLE_EXTINGUISH_THREE,
+            SHULKER_BULLET_DUPLICATE,
+            WARM_RIDDEN_STRIDER,
+            RAID_BELL_REVEAL_THREE,
+            PIERCING_ARROW_HIT_THREE,
+            LEASHED_FROG_FROGLIGHT,
+            CHARGED_CREEPER_MOB_HEAD,
+            GOLDEN_DANDELION_HOGLIN,
+            FOUR_COPPER_TRUMPET_SOUNDS);
     private static final List<BingoTask> ALL_DEPLOYED = List.of(values());
     private static final Map<String, BingoTask> BY_ID;
 
@@ -213,6 +294,10 @@ public enum BingoTask {
 
     public static List<BingoTask> cardTwo() {
         return CARD_TWO;
+    }
+
+    public static List<BingoTask> cardThree() {
+        return CARD_THREE;
     }
 
     public static List<BingoTask> allDeployed() {

@@ -152,6 +152,10 @@ public class PlayerSettingsService implements Listener {
         return get(uuid).isBingoMessages();
     }
 
+    public boolean isCoordinateHudEnabled(UUID uuid) {
+        return get(uuid).isCoordinateHud();
+    }
+
     /**
      * Whether this player's record has been resolved yet (loaded from Redis,
      * or seeded with defaults when Redis is unavailable). Callers that would
@@ -188,11 +192,13 @@ public class PlayerSettingsService implements Listener {
         update(uuid, current -> current.withBingoMessages(value));
     }
 
+    public void setCoordinateHud(UUID uuid, boolean value) {
+        update(uuid, current -> current.withCoordinateHud(value));
+    }
+
     /** Replaces every setting at once (used by the dialog, which submits them together). */
-    public void setAll(UUID uuid, PhantomMode mode, boolean mentionPings,
-                       boolean acceptMessages, boolean locatorBar, boolean bingoMessages) {
-        update(uuid, current -> new PlayerSettings(
-                mode, mentionPings, acceptMessages, locatorBar, bingoMessages));
+    public void setAll(UUID uuid, PhantomMode mode, boolean mentionPings, boolean acceptMessages, boolean locatorBar, boolean bingoMessages, boolean coordinateHud) {
+        update(uuid, _ -> new PlayerSettings(mode, mentionPings, acceptMessages, locatorBar, bingoMessages, coordinateHud));
     }
 
     /**

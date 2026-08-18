@@ -1,7 +1,7 @@
 package crabcraft.net.bingotest;
 
 import crabcraft.net.crabUtilities.CrabMessages;
-import crabcraft.net.crabUtilities.bingo.BingoCardTwoListener;
+import crabcraft.net.crabUtilities.bingo.BingoDetector;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.IntStream;
@@ -15,11 +15,11 @@ import org.jetbrains.annotations.Nullable;
 
 final class BingoTestCommand implements CommandExecutor, TabCompleter {
     private final BingoTestManager manager;
-    private final BingoCardTwoListener listener;
+    private final List<BingoDetector> detectors;
 
-    BingoTestCommand(BingoTestManager manager, BingoCardTwoListener listener) {
+    BingoTestCommand(BingoTestManager manager, List<BingoDetector> detectors) {
         this.manager = manager;
-        this.listener = listener;
+        this.detectors = List.copyOf(detectors);
     }
 
     @Override
@@ -40,7 +40,9 @@ final class BingoTestCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args[0].equalsIgnoreCase("reset") && args.length == 1) {
-            listener.resetPlayer(player.getUniqueId());
+            for (BingoDetector detector : detectors) {
+                detector.resetPlayer(player.getUniqueId());
+            }
             manager.reset(player);
             return true;
         }

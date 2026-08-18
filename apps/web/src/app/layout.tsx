@@ -134,6 +134,7 @@ export default async function RootLayout({
             strategy="lazyOnload"
             data-website-id="b47dfe1d-3ed3-49d8-948a-96776107f338"
             data-domains="crabcraft.net,www.crabcraft.net"
+            data-performance="true"
           />
         )}
       </body>

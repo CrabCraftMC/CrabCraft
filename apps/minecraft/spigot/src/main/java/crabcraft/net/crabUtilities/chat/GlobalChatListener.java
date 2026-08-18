@@ -33,7 +33,6 @@ public class GlobalChatListener implements Listener {
             event.viewers().clear();
             return;
         }
-
         String rawMessage = PlainTextComponentSerializer.plainText().serialize(event.message());
         event.message(SafeChatMiniMessage.deserialize(rawMessage));
     }
