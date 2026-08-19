@@ -32,6 +32,7 @@ import crabcraft.net.crabUtilities.villagers.SharedVillagerDiscountListener;
 import crabcraft.net.crabUtilities.voicechat.SimpleVoiceAnimationsIntegration;
 import crabcraft.net.crabUtilities.voicechat.VoicechatIntegration;
 import crabcraft.net.crabUtilities.media.MediaFeature;
+import crabcraft.net.crabUtilities.model.ModelCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
@@ -192,6 +193,12 @@ public final class CrabUtilities extends JavaPlugin {
         getCommand("specback").setExecutor(spectatorBackCommand);
 
         getCommand("portalcoords").setExecutor(new CoordinateHelperCommand());
+
+        ModelCommand modelCommand = ModelCommand.create(this);
+        Bukkit.getPluginManager().registerEvents(modelCommand, this);
+        Bukkit.getPluginManager().registerEvents(modelCommand.protectionListener(), this);
+        getCommand("model").setExecutor(modelCommand);
+        getCommand("model").setTabCompleter(modelCommand);
 
         // Private and staff chat enter through Paper so InteractiveChat, emoji
         // plugins and other local processors see them before Velocity routes
