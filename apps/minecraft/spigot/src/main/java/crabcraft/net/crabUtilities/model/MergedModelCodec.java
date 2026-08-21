@@ -84,6 +84,7 @@ final class MergedModelCodec {
                         resultData.get(nexoItemIdKey, PersistentDataType.STRING))
                 && hasSamePatch(source, result, DataComponentTypes.ITEM_MODEL)
                 && hasSamePatch(source, result, DataComponentTypes.CUSTOM_MODEL_DATA)
+                && hasSamePatch(source, result, DataComponentTypes.DYED_COLOR)
                 && hasSamePatch(source, result, DataComponentTypes.EQUIPPABLE)
                 && hasSamePatch(source, result, DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE);
     }
@@ -116,6 +117,7 @@ final class MergedModelCodec {
         Key itemModel = Objects.requireNonNull(cosmetic.getData(DataComponentTypes.ITEM_MODEL));
         merged.setData(DataComponentTypes.ITEM_MODEL, itemModel);
         copyPatch(cosmetic, merged, DataComponentTypes.CUSTOM_MODEL_DATA);
+        copyPatch(cosmetic, merged, DataComponentTypes.DYED_COLOR);
 
         Equippable targetEquippable = Objects.requireNonNull(
                 target.getData(DataComponentTypes.EQUIPPABLE));
@@ -175,6 +177,7 @@ final class MergedModelCodec {
         ItemStack restored = merged.asOne();
         restorePatch(stored.originalTarget(), restored, DataComponentTypes.ITEM_MODEL);
         restorePatch(stored.originalTarget(), restored, DataComponentTypes.CUSTOM_MODEL_DATA);
+        restorePatch(stored.originalTarget(), restored, DataComponentTypes.DYED_COLOR);
         restorePatch(stored.originalTarget(), restored, DataComponentTypes.EQUIPPABLE);
         restorePatch(
                 stored.originalTarget(), restored, DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE);
