@@ -97,6 +97,8 @@ def regressionTests = [
                 'crabcraft.net.crabUtilities.velocity.awards.AwardSweetBerriesRegressionTest',
         awardNewDefinitionsRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.awards.AwardNewDefinitionsRegressionTest',
+        advancementLeaderboardRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.advancements.AdvancementLeaderboardRegressionTest',
         updateDownloaderRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.update.UpdateDownloaderRegressionTest',
 ]
