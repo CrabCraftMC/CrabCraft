@@ -11,7 +11,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "discord.js";
 
-const RULES_BANNER_URL = "https://crabcraft.net/welcome.webp";
+const RULES_BANNER_URL = "https://crabcraft.net/rules-info.png";
 
 const TICKET_CHANNEL_URL =
   "https://discord.com/channels/1215756131671212163/1397191941782896670";
