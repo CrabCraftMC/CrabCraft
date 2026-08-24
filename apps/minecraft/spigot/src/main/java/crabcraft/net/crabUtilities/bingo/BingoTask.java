@@ -199,7 +199,71 @@ public enum BingoTask {
     FOUR_COPPER_TRUMPET_SOUNDS(
             "four_copper_trumpet_sounds",
             "Play all four copper-trumpet sounds with Note Blocks.",
-            "Personally play the copper-trumpet Note Block sound once at each of the four copper oxidation stages.");
+            "Personally play the copper-trumpet Note Block sound once at each of the four copper oxidation stages."),
+    SULFUR_CUBE_DIAMOND_BUCKET(
+            "sulfur_cube_diamond_bucket",
+            "Catch a Sulfur Cube carrying a Diamond Block in a bucket.",
+            "Use an empty Bucket to catch an adult, unignited Sulfur Cube while it is carrying a Diamond Block."),
+    SNOW_GOLEM_KILLS_BLAZE(
+            "snow_golem_kills_blaze",
+            "Build a Snow Golem and have it kill a Blaze.",
+            "Build a Snow Golem yourself, then have that same golem's snowball deal the final blow to a Blaze."),
+    FOUR_BY_FOUR_NETHER_PORTAL(
+            "four_by_four_nether_portal",
+            "Build and light a Nether portal with a 4×4 interior.",
+            "Build a Nether portal frame whose open interior is exactly four blocks wide and four blocks high, then light it yourself."),
+    CROSSBOW_FIREWORK_KILL_TWO(
+            "crossbow_firework_kill_two",
+            "Kill two hostile mobs with one crossbow Firework.",
+            "Fire a Firework Rocket from a crossbow and make that single rocket deal the final blow to two distinct hostile mobs."),
+    HAPPY_GHAST_HOSTILE_BOAT(
+            "happy_ghast_hostile_boat",
+            "Leash a Boat carrying a hostile mob to a harnessed Happy Ghast.",
+            "Equip an adult Happy Ghast with a harness yourself, then personally leash a Boat carrying a hostile mob to that same ghast."),
+    SPEAR_HIT_THREE(
+            "spear_hit_three",
+            "Hit three mobs with one Spear charge.",
+            "Use one charged Spear attack to damage three distinct non-player mobs."),
+    SILVERFISH_HIDE_IN_STONE(
+            "silverfish_hide_in_stone",
+            "Name a Silverfish, then let it hide inside stone.",
+            "Name a Silverfish yourself, then let that exact Silverfish enter a compatible stone block and turn it into an infested block."),
+    TREE_WITH_BEE_NEST(
+            "tree_with_bee_nest",
+            "Use bone meal to grow a tree containing a Bee Nest.",
+            "Use bone meal on a sapling and make that growth generate a tree containing a Bee Nest."),
+    BROWN_MOOSHROOM_WITHER_STEW(
+            "brown_mooshroom_wither_stew",
+            "Feed a Brown Mooshroom a Wither Rose, then milk its Suspicious Stew.",
+            "Feed a Wither Rose to a Brown Mooshroom yourself, then use a Bowl on that same Mooshroom to collect its Suspicious Stew."),
+    PISTON_PUSH_TWELVE(
+            "piston_push_twelve",
+            "Use a Lever attached to a Piston to push 12 blocks.",
+            "Use a Lever attached directly to a Piston and make that Piston extend while pushing the maximum load of 12 blocks."),
+    ENDER_PEARL_TELEPORT_HUNDRED(
+            "ender_pearl_teleport_hundred",
+            "Teleport 100+ horizontal blocks with one Ender Pearl.",
+            "Use one Ender Pearl to teleport at least 100 blocks horizontally from where you started. Vertical distance does not count."),
+    REFLECTED_BREEZE_WIND_CHARGE(
+            "reflected_breeze_wind_charge",
+            "Kill a Breeze with its own deflected Wind Charge.",
+            "Deflect a Breeze's Wind Charge yourself and make that reflected projectile deal the final blow to the Breeze that fired it."),
+    PROJECTILE_SMASH_FILLED_POT(
+            "projectile_smash_filled_pot",
+            "Smash a filled Decorated Pot with a projectile fired from 10+ blocks.",
+            "Fire a projectile that travels at least ten blocks before smashing a Decorated Pot that contains an item."),
+    CURE_POISON_HONEY_BOTTLE(
+            "cure_poison_honey_bottle",
+            "Cure Poison by drinking a Honey Bottle.",
+            "Drink a Honey Bottle while poisoned and remove the Poison effect."),
+    FREEZE_SKELETON_STRAY(
+            "freeze_skeleton_stray",
+            "Freeze a Skeleton into a Stray using Powder Snow you placed.",
+            "Place the Powder Snow yourself, then keep a Skeleton inside that Powder Snow until it converts into a Stray."),
+    SCULK_CATALYST_PLAYER_KILL(
+            "sculk_catalyst_player_kill",
+            "Kill a hostile mob beside a Sculk Catalyst to spread Sculk.",
+            "Personally kill a hostile mob close enough to a Sculk Catalyst for its experience to make that catalyst spread Sculk.");
 
     private static final List<BingoTask> CARD_ONE = List.of(
             GROW_TREE_IN_NETHER,
@@ -252,6 +316,23 @@ public enum BingoTask {
             CHARGED_CREEPER_MOB_HEAD,
             GOLDEN_DANDELION_HOGLIN,
             FOUR_COPPER_TRUMPET_SOUNDS);
+    private static final List<BingoTask> CARD_FOUR = List.of(
+            SULFUR_CUBE_DIAMOND_BUCKET,
+            SNOW_GOLEM_KILLS_BLAZE,
+            FOUR_BY_FOUR_NETHER_PORTAL,
+            CROSSBOW_FIREWORK_KILL_TWO,
+            HAPPY_GHAST_HOSTILE_BOAT,
+            SPEAR_HIT_THREE,
+            SILVERFISH_HIDE_IN_STONE,
+            TREE_WITH_BEE_NEST,
+            BROWN_MOOSHROOM_WITHER_STEW,
+            PISTON_PUSH_TWELVE,
+            ENDER_PEARL_TELEPORT_HUNDRED,
+            REFLECTED_BREEZE_WIND_CHARGE,
+            PROJECTILE_SMASH_FILLED_POT,
+            CURE_POISON_HONEY_BOTTLE,
+            FREEZE_SKELETON_STRAY,
+            SCULK_CATALYST_PLAYER_KILL);
     private static final List<BingoTask> ALL_DEPLOYED = List.of(values());
     private static final Map<String, BingoTask> BY_ID;
 
@@ -298,6 +379,10 @@ public enum BingoTask {
 
     public static List<BingoTask> cardThree() {
         return CARD_THREE;
+    }
+
+    public static List<BingoTask> cardFour() {
+        return CARD_FOUR;
     }
 
     public static List<BingoTask> allDeployed() {

@@ -78,7 +78,63 @@ export const THIRD_BINGO_CARD = {
   ] satisfies BingoTaskDefinition[],
 } as const;
 
-export const PREPARED_BINGO_CARDS = [FIRST_BINGO_CARD, SECOND_BINGO_CARD, THIRD_BINGO_CARD];
+export const FOURTH_BINGO_CARD = {
+  number: 4,
+  startsAt: 1_787_558_400,
+  endsAt: 1_788_130_800,
+  tasks: [
+    {
+      id: "sulfur_cube_diamond_bucket",
+      label: "Catch a Sulfur Cube carrying a Diamond Block in a bucket",
+    },
+    { id: "snow_golem_kills_blaze", label: "Build a Snow Golem and have it kill a Blaze" },
+    { id: "four_by_four_nether_portal", label: "Build and light a Nether portal with a 4×4 interior" },
+    { id: "crossbow_firework_kill_two", label: "Kill two hostile mobs with one crossbow Firework" },
+    {
+      id: "happy_ghast_hostile_boat",
+      label: "Leash a Boat carrying a hostile mob to a harnessed Happy Ghast",
+    },
+    { id: "spear_hit_three", label: "Hit three mobs with one Spear charge" },
+    {
+      id: "silverfish_hide_in_stone",
+      label: "Name a Silverfish, then let it hide inside stone",
+    },
+    { id: "tree_with_bee_nest", label: "Use bone meal to grow a tree containing a Bee Nest" },
+    {
+      id: "brown_mooshroom_wither_stew",
+      label: "Feed a Brown Mooshroom a Wither Rose, then milk its Suspicious Stew",
+    },
+    { id: "piston_push_twelve", label: "Use a Lever attached to a Piston to push 12 blocks" },
+    {
+      id: "ender_pearl_teleport_hundred",
+      label: "Teleport 100+ horizontal blocks with one Ender Pearl",
+    },
+    { id: "reflected_breeze_wind_charge", label: "Kill a Breeze with its own deflected Wind Charge" },
+    {
+      id: "projectile_smash_filled_pot",
+      label: "Smash a filled Decorated Pot with a projectile fired from 10+ blocks",
+    },
+    {
+      id: "cure_poison_honey_bottle",
+      label: "Cure Poison by drinking a Honey Bottle",
+    },
+    {
+      id: "freeze_skeleton_stray",
+      label: "Freeze a Skeleton into a Stray using Powder Snow you placed",
+    },
+    {
+      id: "sculk_catalyst_player_kill",
+      label: "Kill a hostile mob beside a Sculk Catalyst to spread Sculk",
+    },
+  ] satisfies BingoTaskDefinition[],
+} as const;
+
+export const PREPARED_BINGO_CARDS = [
+  FIRST_BINGO_CARD,
+  SECOND_BINGO_CARD,
+  THIRD_BINGO_CARD,
+  FOURTH_BINGO_CARD,
+];
 
 /** Task IDs that have a deployed Paper detector, not merely a planned card entry. */
 export const SUPPORTED_BINGO_TASK_IDS = new Set(
