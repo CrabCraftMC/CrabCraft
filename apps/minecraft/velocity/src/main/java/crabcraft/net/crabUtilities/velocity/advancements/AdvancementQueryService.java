@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -118,63 +119,69 @@ public final class AdvancementQueryService {
         if (limit <= 0 || limit > 100) limit = 100;
         if (offset < 0) offset = 0;
 
-        String categoryFilter = "";
-        if (category != null && registry.isValidCategory(category)) {
-            categoryFilter = " AND advancement_id LIKE 'minecraft:" + category + "/%'";
-        }
+        boolean validCategory = registry.isValidCategory(category);
+        String categoryPrefix = validCategory ? "minecraft:" + category + "/" : null;
+        String[] registeredAdvancementIds = registry.getAll().keySet().stream()
+                .filter(id -> !validCategory || id.startsWith(categoryPrefix))
+                .toArray(String[]::new);
 
         int total = 0;
         JsonArray leaderboard = new JsonArray();
         try (Connection conn = dataSource.getConnection()) {
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT COUNT(DISTINCT minecraft_uuid)::int"
-                    + " FROM player_advancements"
-                    + " WHERE season = ? AND completed = true"
-                    + " AND advancement_id NOT LIKE 'minecraft:recipes/%'"
-                    + categoryFilter)) {
-                stmt.setString(1, season);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) total = rs.getInt(1);
-                }
-            }
-
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT"
-                    + " p.minecraft_uuid,"
-                    + " u.minecraft_username,"
-                    + " u.nickname,"
-                    + " COUNT(*) FILTER (WHERE p.completed = true)::int AS completed"
-                    + " FROM player_advancements p"
-                    + " LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid"
-                    + " WHERE p.season = ?"
-                    + " AND p.advancement_id NOT LIKE 'minecraft:recipes/%'"
-                    + categoryFilter
-                    + " GROUP BY p.minecraft_uuid, u.minecraft_username, u.nickname"
-                    + " HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0"
-                    + " ORDER BY completed DESC, p.minecraft_uuid"
-                    + " LIMIT ? OFFSET ?")) {
-                stmt.setString(1, season);
-                stmt.setInt(2, limit);
-                stmt.setInt(3, offset);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    int rank = offset;
-                    while (rs.next()) {
-                        rank++;
-                        JsonObject entry = new JsonObject();
-                        entry.addProperty("rank", rank);
-                        entry.addProperty("uuid", rs.getString("minecraft_uuid"));
-                        entry.addProperty("username", rs.getString("minecraft_username"));
-                        entry.addProperty("nickname", rs.getString("nickname"));
-                        entry.addProperty("completed", rs.getInt("completed"));
-                        leaderboard.add(entry);
+            Array registeredIds = conn.createArrayOf("text", registeredAdvancementIds);
+            try {
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "SELECT COUNT(DISTINCT p.minecraft_uuid)::int"
+                        + " FROM player_advancements p"
+                        + " WHERE p.season = ? AND p.completed = true"
+                        + " AND p.advancement_id = ANY (?)")) {
+                    stmt.setString(1, season);
+                    stmt.setArray(2, registeredIds);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) total = rs.getInt(1);
                     }
                 }
+
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "SELECT"
+                        + " p.minecraft_uuid,"
+                        + " u.minecraft_username,"
+                        + " u.nickname,"
+                        + " COUNT(*) FILTER (WHERE p.completed = true)::int AS completed"
+                        + " FROM player_advancements p"
+                        + " LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid"
+                        + " WHERE p.season = ?"
+                        + " AND p.advancement_id = ANY (?)"
+                        + " GROUP BY p.minecraft_uuid, u.minecraft_username, u.nickname"
+                        + " HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0"
+                        + " ORDER BY completed DESC, p.minecraft_uuid"
+                        + " LIMIT ? OFFSET ?")) {
+                    stmt.setString(1, season);
+                    stmt.setArray(2, registeredIds);
+                    stmt.setInt(3, limit);
+                    stmt.setInt(4, offset);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        int rank = offset;
+                        while (rs.next()) {
+                            rank++;
+                            JsonObject entry = new JsonObject();
+                            entry.addProperty("rank", rank);
+                            entry.addProperty("uuid", rs.getString("minecraft_uuid"));
+                            entry.addProperty("username", rs.getString("minecraft_username"));
+                            entry.addProperty("nickname", rs.getString("nickname"));
+                            entry.addProperty("completed", rs.getInt("completed"));
+                            leaderboard.add(entry);
+                        }
+                    }
+                }
+            } finally {
+                registeredIds.free();
             }
         } catch (SQLException e) {
             logger.error("Failed to load advancement leaderboard", e);
         }
 
-        int advTotal = (category != null && registry.isValidCategory(category))
+        int advTotal = validCategory
                 ? registry.getTotalForCategory(category)
                 : registry.getTotal();
 
@@ -182,7 +189,7 @@ public final class AdvancementQueryService {
         response.add("leaderboard", leaderboard);
         response.addProperty("total", total);
         response.addProperty("totalAdvancements", advTotal);
-        if (category != null && registry.isValidCategory(category)) {
+        if (validCategory) {
             response.addProperty("category", category);
         }
         response.addProperty("offset", offset);
