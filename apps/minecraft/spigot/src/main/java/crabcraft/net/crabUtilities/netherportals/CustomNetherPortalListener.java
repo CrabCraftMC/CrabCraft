@@ -124,7 +124,13 @@ public class CustomNetherPortalListener implements Listener {
             return;
         }
 
-        event.setCancelled(new PortalShapeFinder(this.plugin, block, axis, settings, this.portalRegistry).start());
+        event.setCancelled(new PortalShapeFinder(
+                this.plugin,
+                block,
+                axis,
+                settings,
+                this.portalRegistry,
+                event.getIgnitingEntity()).start());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

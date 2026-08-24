@@ -4,8 +4,8 @@ import org.bukkit.Axis;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Orientable;
 import org.bukkit.util.RayTraceResult;
@@ -66,11 +66,11 @@ enum PortalAxis {
         return result != null && settings.isPortalFrame(result.getHitBlock());
     }
 
-    void applyTo(final Block block) {
-        final BlockData data = block.getBlockData();
+    void applyTo(final BlockState state) {
+        final BlockData data = state.getBlockData();
         if (data instanceof final Orientable orientable && orientable.getAxis() != this.axis) {
             orientable.setAxis(this.axis);
-            block.setBlockData(orientable);
+            state.setBlockData(orientable);
         }
     }
 }

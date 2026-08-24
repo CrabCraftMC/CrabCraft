@@ -1,9 +1,17 @@
 package crabcraft.net.crabUtilities.netherportals;
 
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.BlockState;
+import org.bukkit.entity.Player;
+import org.bukkit.event.world.PortalCreateEvent;
 
 public final class CustomPortalDestinationRegressionTest {
 
@@ -18,6 +26,8 @@ public final class CustomPortalDestinationRegressionTest {
         portalCollapseExcludesVanillaSizes();
         portalCollapseOnlyAcceptsFrameBlocksInThePortalPlane();
         overlappingCollapseRequestsAreDetectable();
+        customPortalCreationPublishesPlayerAndAppliesStates();
+        cancelledCustomPortalCreationAppliesNothing();
     }
 
     private static void normalPortalLinkedToLargePortalUsesLargePortalBottom() {
@@ -184,6 +194,102 @@ public final class CustomPortalDestinationRegressionTest {
         check(full.overlaps(remainingSubset), "partially-cleared portal could be queued twice");
         check(remainingSubset.overlaps(full), "collapse overlap check must be symmetric");
         check(!full.overlaps(separate), "separate custom portals were incorrectly merged for collapse");
+    }
+
+    private static void customPortalCreationPublishesPlayerAndAppliesStates() {
+        final World world = proxy(World.class);
+        final Player player = proxy(Player.class);
+        final AtomicInteger updates = new AtomicInteger();
+        final List<BlockState> proposedStates = portalStates(16, updates);
+        final AtomicReference<PortalCreateEvent> published = new AtomicReference<>();
+
+        final boolean applied = PortalShapeFinder.fireAndApplyPortal(
+                proposedStates, world, player, event -> {
+                    check(updates.get() == 0,
+                            "custom portal states changed before PortalCreateEvent was published");
+                    published.set(event);
+                });
+
+        final PortalCreateEvent event = published.get();
+        check(applied, "an accepted custom portal proposal was not applied");
+        check(event != null, "custom portal creation did not publish PortalCreateEvent");
+        check(event.getReason() == PortalCreateEvent.CreateReason.FIRE,
+                "custom portal creation used the wrong event reason");
+        check(event.getEntity() == player,
+                "custom portal creation lost the igniting player");
+        check(event.getBlocks().equals(proposedStates) && event.getBlocks().size() == 16,
+                "custom portal creation did not publish the exact proposed states");
+        check(event.getBlocks().stream().allMatch(state -> state.getType() == Material.NETHER_PORTAL),
+                "custom portal event did not expose proposed Nether portal states");
+        check(updates.get() == proposedStates.size(),
+                "accepted custom portal creation did not apply every proposed state");
+    }
+
+    private static void cancelledCustomPortalCreationAppliesNothing() {
+        final AtomicInteger updates = new AtomicInteger();
+        final List<BlockState> proposedStates = portalStates(16, updates);
+
+        final boolean applied = PortalShapeFinder.fireAndApplyPortal(
+                proposedStates,
+                proxy(World.class),
+                proxy(Player.class),
+                event -> event.setCancelled(true));
+
+        check(!applied, "a cancelled custom portal proposal was reported as applied");
+        check(updates.get() == 0,
+                "a cancelled custom portal proposal changed live blocks");
+    }
+
+    private static List<BlockState> portalStates(final int count, final AtomicInteger updates) {
+        final List<BlockState> states = new ArrayList<>(count);
+        for (int index = 0; index < count; index++) {
+            states.add(proxy(BlockState.class, (proxy, method, args) -> {
+                if (method.getName().equals("getType")) {
+                    return Material.NETHER_PORTAL;
+                }
+                if (method.getName().equals("update")) {
+                    check(args != null
+                                    && args.length == 2
+                                    && Boolean.TRUE.equals(args[0])
+                                    && Boolean.FALSE.equals(args[1]),
+                            "portal state updates must be forced without intermediate physics");
+                    updates.incrementAndGet();
+                    return true;
+                }
+                return defaultValue(proxy, method.getName(), method.getReturnType(), args);
+            }));
+        }
+        return states;
+    }
+
+    private static <T> T proxy(final Class<T> type) {
+        return proxy(type, (proxy, method, args) ->
+                defaultValue(proxy, method.getName(), method.getReturnType(), args));
+    }
+
+    private static <T> T proxy(final Class<T> type, final java.lang.reflect.InvocationHandler handler) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, handler));
+    }
+
+    private static Object defaultValue(
+            final Object proxy,
+            final String methodName,
+            final Class<?> returnType,
+            final Object[] args
+    ) {
+        if (methodName.equals("equals")) return proxy == args[0];
+        if (methodName.equals("hashCode")) return System.identityHashCode(proxy);
+        if (methodName.equals("toString")) return "test-proxy";
+        if (!returnType.isPrimitive()) return null;
+        if (returnType == boolean.class) return false;
+        if (returnType == char.class) return '\0';
+        if (returnType == byte.class) return (byte) 0;
+        if (returnType == short.class) return (short) 0;
+        if (returnType == int.class) return 0;
+        if (returnType == long.class) return 0L;
+        if (returnType == float.class) return 0.0F;
+        if (returnType == double.class) return 0.0D;
+        return null;
     }
 
     private static CustomPortalBounds rectangle(

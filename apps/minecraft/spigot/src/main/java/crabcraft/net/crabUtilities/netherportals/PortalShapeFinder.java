@@ -2,15 +2,23 @@ package crabcraft.net.crabUtilities.netherportals;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
+import org.bukkit.entity.Entity;
+import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.ToIntFunction;
 
 /**
@@ -34,6 +42,7 @@ final class PortalShapeFinder {
     private final PortalSettings settings;
     private final PortalAxis axis;
     private final CustomPortalRegistry registry;
+    private final @Nullable Entity creator;
     // Weakly-consistent concurrent sets so the flood can add newly discovered
     // interior blocks while an outer iteration over the same set is in flight,
     // without a ConcurrentModificationException. Everything runs on the main
@@ -47,12 +56,14 @@ final class PortalShapeFinder {
             final Block first,
             final PortalAxis axis,
             final PortalSettings settings,
-            final CustomPortalRegistry registry
+            final CustomPortalRegistry registry,
+            final @Nullable Entity creator
     ) {
         this.plugin = plugin;
         this.settings = settings;
         this.axis = axis;
         this.registry = registry;
+        this.creator = creator;
         this.portalInterior = ConcurrentHashMap.newKeySet();
         this.portalInterior.add(first);
         this.checkedLocations = ConcurrentHashMap.newKeySet();
@@ -120,18 +131,48 @@ final class PortalShapeFinder {
                 return false;
             }
 
-            // Defer the block changes a tick so we don't mutate the world from
-            // inside the ignite event.
+            // Defer the proposal and block changes a tick so we don't mutate
+            // the world from inside the ignite event.
             this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
+                final World world = this.portalInterior.iterator().next().getWorld();
+                final List<BlockState> proposedStates = new ArrayList<>(this.portalInterior.size());
                 this.portalInterior.forEach(block -> {
-                    block.setType(Material.NETHER_PORTAL);
-                    this.axis.applyTo(block);
+                    final BlockState state = block.getState();
+                    state.setType(Material.NETHER_PORTAL);
+                    this.axis.applyTo(state);
+                    proposedStates.add(state);
                 });
-                this.registry.register(this.portalInterior.iterator().next().getWorld(), this.axis, this.portalInterior);
+
+                if (fireAndApplyPortal(
+                        proposedStates,
+                        world,
+                        this.creator,
+                        event -> this.plugin.getServer().getPluginManager().callEvent(event))
+                        && this.portalInterior.stream()
+                                .allMatch(block -> CustomPortalRegistry.axisOf(block) == this.axis)) {
+                    this.registry.register(world, this.axis, this.portalInterior);
+                }
             }, 1L);
             return true;
         }
         return false;
+    }
+
+    static boolean fireAndApplyPortal(
+            final List<BlockState> proposedStates,
+            final World world,
+            final @Nullable Entity creator,
+            final Consumer<PortalCreateEvent> eventDispatcher
+    ) {
+        final PortalCreateEvent event = new PortalCreateEvent(
+                proposedStates, world, creator, PortalCreateEvent.CreateReason.FIRE);
+        eventDispatcher.accept(event);
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        proposedStates.forEach(state -> state.update(true, false));
+        return true;
     }
 
     private boolean checkSurrounding(final Block source) {
