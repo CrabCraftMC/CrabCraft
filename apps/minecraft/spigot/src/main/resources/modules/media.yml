@@ -38,8 +38,8 @@ media:
       # Maximum decoded horn clips retained on disk using LRU eviction.
       size: 50
   providers:
-    # "auto" provisions a pinned, SHA-256-verified build; an explicit path
-    # uses that binary; an empty value uses PATH without downloading.
+    # "auto" provisions the latest SHA-256-verified yt-dlp release and a pinned
+    # FFmpeg build; an explicit path uses that binary; an empty value uses PATH.
     yt-dlp-path: "auto"
     ffmpeg-path: "auto"
     # Optional Netscape-format cookies file for restricted media.

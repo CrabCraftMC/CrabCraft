@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
@@ -25,10 +26,12 @@ import java.util.concurrent.TimeUnit;
  * configured path -> binary on PATH -> auto-downloaded static build -> unavailable.
  */
 public final class BinaryProvisioner {
-  private static final String YT_DLP_URL =
-    "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp_linux";
-  private static final String YT_DLP_SHA256 =
-    "6bbb3d314cde4febe36e5fa1d55462e29c974f63444e707871834f6d8cc210ae";
+  private static final String YT_DLP_LATEST_RELEASE =
+    "https://github.com/yt-dlp/yt-dlp/releases/latest/download/";
+  private static final String YT_DLP_ASSET = "yt-dlp_linux";
+  private static final String YT_DLP_CHECKSUMS = "SHA2-256SUMS";
+  private static final int MAX_CHECKSUM_BYTES = 64 * 1024;
+  private static final long MAX_BINARY_BYTES = 256L * 1024 * 1024;
   private static final String FFMPEG_URL_AMD64 =
     "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-linux-x64";
   private static final String FFMPEG_SHA256_AMD64 =
@@ -69,11 +72,27 @@ public final class BinaryProvisioner {
     if (verify("yt-dlp", "--version")) return "yt-dlp";
     if (isAuto(configPath)) {
       File out = new File(binDir, "yt-dlp");
-      if (verifiedDownloadedBinary(out, YT_DLP_SHA256, "--version")) return out.getAbsolutePath();
-      if (downloadTo(YT_DLP_URL, out, YT_DLP_SHA256)
-        && out.setExecutable(true)
-        && verify(out.getAbsolutePath(), "--version"))
+      File checksum = new File(binDir, "yt-dlp.sha256");
+      String storedSha256 = readStoredSha256(checksum.toPath());
+      if (storedSha256 != null
+        && hasSha256(out.toPath(), storedSha256)
+        && verify(out.getAbsolutePath(), "--version")) {
         return out.getAbsolutePath();
+      }
+      if (out.isFile() || checksum.isFile()) {
+        MediaFeature.warn("Removing unverified cached binary {}", out.getAbsolutePath());
+        try { Files.deleteIfExists(out.toPath()); } catch (Exception ignored) {}
+        try { Files.deleteIfExists(checksum.toPath()); } catch (Exception ignored) {}
+      }
+
+      Download download = latestYtDlpDownload();
+      if (download != null
+        && downloadTo(download.url(), out, download.sha256())
+        && out.setExecutable(true)
+        && verify(out.getAbsolutePath(), "--version")
+        && storeSha256(checksum.toPath(), download.sha256())) {
+        return out.getAbsolutePath();
+      }
     }
     return null;
   }
@@ -118,6 +137,82 @@ public final class BinaryProvisioner {
   }
 
   private record Download(String url, String sha256) {}
+
+  private Download latestYtDlpDownload() {
+    String checksumsUrl = YT_DLP_LATEST_RELEASE + YT_DLP_CHECKSUMS;
+    try {
+      HttpClient client = httpClient();
+      HttpRequest request = HttpRequest.newBuilder().uri(URI.create(checksumsUrl))
+        .timeout(Duration.ofSeconds(30))
+        .header("Accept", "application/octet-stream")
+        .header("User-Agent", "CrabUtilities")
+        .GET().build();
+      HttpResponse<InputStream> response = client.send(
+        request, HttpResponse.BodyHandlers.ofInputStream());
+      if (response.statusCode() != 200) {
+        response.body().close();
+        MediaFeature.warn("Could not fetch latest yt-dlp checksums (HTTP {})",
+          response.statusCode());
+        return null;
+      }
+      String checksums;
+      try (InputStream in = response.body()) {
+        byte[] bytes = in.readNBytes(MAX_CHECKSUM_BYTES + 1);
+        if (bytes.length > MAX_CHECKSUM_BYTES) {
+          MediaFeature.warn("Latest yt-dlp checksum file exceeds 64 KiB");
+          return null;
+        }
+        checksums = new String(bytes, StandardCharsets.UTF_8);
+      }
+      String sha256 = publishedSha256(checksums, YT_DLP_ASSET);
+      if (sha256 == null) {
+        MediaFeature.warn("Latest yt-dlp release has no valid checksum for {}", YT_DLP_ASSET);
+        return null;
+      }
+      return new Download(YT_DLP_LATEST_RELEASE + YT_DLP_ASSET, sha256);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    } catch (Exception e) {
+      MediaFeature.warn("Could not resolve latest yt-dlp release: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  static String publishedSha256(String checksums, String assetName) {
+    if (checksums == null || assetName == null) return null;
+    for (String line : checksums.split("\\R")) {
+      String trimmed = line.trim();
+      if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
+      String[] parts = trimmed.split("\\s+", 2);
+      if (parts.length != 2) continue;
+      String name = parts[1].startsWith("*") ? parts[1].substring(1) : parts[1];
+      if (name.equals(assetName) && parts[0].matches("(?i)^[0-9a-f]{64}$")) {
+        return parts[0].toLowerCase();
+      }
+    }
+    return null;
+  }
+
+  private static String readStoredSha256(Path file) {
+    try {
+      String value = Files.readString(file, StandardCharsets.UTF_8).trim();
+      return value.matches("(?i)^[0-9a-f]{64}$") ? value.toLowerCase() : null;
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
+  private static boolean storeSha256(Path file, String sha256) {
+    try {
+      Files.writeString(file, sha256 + System.lineSeparator(), StandardCharsets.UTF_8,
+        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+      return true;
+    } catch (IOException e) {
+      MediaFeature.warn("Could not store yt-dlp checksum: {}", e.getMessage());
+      return false;
+    }
+  }
 
   private static boolean isExplicit(String p) {
     return p != null && !p.isBlank() && !p.equalsIgnoreCase("auto");
@@ -169,20 +264,36 @@ public final class BinaryProvisioner {
     MediaFeature.info("Downloading {} ...", url);
     Path tmp = out.toPath().resolveSibling(out.getName() + ".tmp");
     try {
-      HttpClient client = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(15))
-        .followRedirects(HttpClient.Redirect.NORMAL)
-        .build();
+      HttpClient client = httpClient();
       HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url))
-        .timeout(Duration.ofMinutes(5)).GET().build();
+        .timeout(Duration.ofMinutes(5))
+        .header("Accept", "application/octet-stream")
+        .header("User-Agent", "CrabUtilities")
+        .GET().build();
       HttpResponse<InputStream> resp = client.send(req, HttpResponse.BodyHandlers.ofInputStream());
       if (resp.statusCode() != 200) {
         MediaFeature.warn("Download failed (HTTP {}): {}", resp.statusCode(), url);
         resp.body().close();
         return false;
       }
+      long contentLength = resp.headers().firstValueAsLong("Content-Length").orElse(-1L);
+      if (contentLength > MAX_BINARY_BYTES) {
+        MediaFeature.warn("Downloaded binary is too large: {}", url);
+        resp.body().close();
+        return false;
+      }
       try (InputStream in = resp.body(); OutputStream o = Files.newOutputStream(tmp)) {
-        in.transferTo(o);
+        byte[] buffer = new byte[8192];
+        long downloaded = 0L;
+        int read;
+        while ((read = in.read(buffer)) >= 0) {
+          if (read == 0) continue;
+          downloaded += read;
+          if (downloaded > MAX_BINARY_BYTES) {
+            throw new IOException("downloaded binary exceeds 256 MiB");
+          }
+          o.write(buffer, 0, read);
+        }
       }
       if (!hasSha256(tmp, expectedSha256)) {
         MediaFeature.warn("Downloaded binary failed SHA-256 verification: {}", url);
@@ -196,6 +307,13 @@ public final class BinaryProvisioner {
       try { Files.deleteIfExists(tmp); } catch (Exception ignored) {}
       return false;
     }
+  }
+
+  private static HttpClient httpClient() {
+    return HttpClient.newBuilder()
+      .connectTimeout(Duration.ofSeconds(15))
+      .followRedirects(HttpClient.Redirect.NORMAL)
+      .build();
   }
 
   static boolean hasSha256(Path file, String expectedSha256) {
