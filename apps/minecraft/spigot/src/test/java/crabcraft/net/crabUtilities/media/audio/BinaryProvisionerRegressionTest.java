@@ -6,6 +6,7 @@ public final class BinaryProvisionerRegressionTest {
 
   public static void main(String[] args) throws Exception {
     verifyRepeatedResolverFailuresAreDeduplicated();
+    verifyPublishedChecksumsAreParsed();
     var file = Files.createTempFile("crabutilities-sha256", ".bin");
     try {
       check(BinaryProvisioner.hasSha256(file,
@@ -17,6 +18,21 @@ public final class BinaryProvisionerRegressionTest {
     } finally {
       Files.deleteIfExists(file);
     }
+  }
+
+  private static void verifyPublishedChecksumsAreParsed() {
+    String expected = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    String checksums = """
+      # yt-dlp release checksums
+      0000000000000000000000000000000000000000000000000000000000000000  yt-dlp
+      %s  yt-dlp_linux
+      """.formatted(expected.toUpperCase());
+    check(expected.equals(BinaryProvisioner.publishedSha256(checksums, "yt-dlp_linux")),
+      "the latest Linux binary checksum should be parsed and normalised");
+    check(BinaryProvisioner.publishedSha256(checksums, "missing") == null,
+      "a missing release asset must not inherit another asset's checksum");
+    check(BinaryProvisioner.publishedSha256("not-a-digest  yt-dlp_linux", "yt-dlp_linux") == null,
+      "an invalid published checksum must be rejected");
   }
 
   private static void verifyRepeatedResolverFailuresAreDeduplicated() {
