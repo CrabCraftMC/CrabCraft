@@ -1,5 +1,9 @@
+plugins {
+    id 'xyz.jpenilla.run-paper'
+}
+
 base {
-    archivesName = 'CrabBingoCard4Test'
+    archivesName = 'CrabBingoCard5Test'
 }
 
 sourceSets.main.java {
@@ -8,10 +12,10 @@ sourceSets.main.java {
     include 'crabcraft/net/crabUtilities/CrabMessages.java'
     include 'crabcraft/net/crabUtilities/bingo/BingoTask.java'
     include 'crabcraft/net/crabUtilities/bingo/BingoDetector.java'
-    include 'crabcraft/net/crabUtilities/bingo/BingoCardFourMobListener.java'
-    include 'crabcraft/net/crabUtilities/bingo/BingoCardFourWorldListener.java'
-    include 'crabcraft/net/crabUtilities/bingo/BingoCardFourCombatListener.java'
-    include 'crabcraft/net/crabUtilities/bingo/BingoCardFourMechanicsListener.java'
+    include 'crabcraft/net/crabUtilities/bingo/BingoCardFiveWorldListener.java'
+    include 'crabcraft/net/crabUtilities/bingo/BingoCardFiveMobListener.java'
+    include 'crabcraft/net/crabUtilities/bingo/BingoCardFiveMechanicsListener.java'
+    include 'crabcraft/net/crabUtilities/bingo/BingoCardFiveChallengeListener.java'
 }
 
 repositories {
@@ -30,7 +34,25 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.jar {
-    archiveFileName.set('CrabBingoCard4Test.jar')
+    archiveFileName.set('CrabBingoCard5Test.jar')
+}
+
+tasks.register('prepareBingoTestServer', Copy) {
+    from(layout.projectDirectory.file('server.properties'))
+    into(layout.projectDirectory.dir('run'))
+}
+
+tasks {
+    runServer {
+        dependsOn prepareBingoTestServer
+        minecraftVersion('26.2')
+        build(87)
+        jvmArgs(
+            '-Xms512M',
+            '-Xmx2G',
+            '-Dcom.mojang.eula.agree=true'
+        )
+    }
 }
 
 tasks.register('playerProgressRegressionTest', JavaExec) {
@@ -46,9 +68,9 @@ tasks.register('testJarContentsRegressionTest') {
 
     doLast {
         File archive = tasks.named('jar').get().archiveFile.get().asFile
-        if (archive.name != 'CrabBingoCard4Test.jar') {
+        if (archive.name != 'CrabBingoCard5Test.jar') {
             throw new GradleException(
-                'Unexpected Card #4 test JAR name: ' + archive.name)
+                'Unexpected Card #5 test JAR name: ' + archive.name)
         }
 
         Set<String> entries = new HashSet<>()
@@ -66,33 +88,34 @@ tasks.register('testJarContentsRegressionTest') {
             'crabcraft/net/crabUtilities/CrabMessages.class',
             'crabcraft/net/crabUtilities/bingo/BingoTask.class',
             'crabcraft/net/crabUtilities/bingo/BingoDetector.class',
-            'crabcraft/net/crabUtilities/bingo/BingoCardFourMobListener.class',
-            'crabcraft/net/crabUtilities/bingo/BingoCardFourWorldListener.class',
-            'crabcraft/net/crabUtilities/bingo/BingoCardFourCombatListener.class',
-            'crabcraft/net/crabUtilities/bingo/BingoCardFourMechanicsListener.class',
+            'crabcraft/net/crabUtilities/bingo/BingoCardFiveWorldListener.class',
+            'crabcraft/net/crabUtilities/bingo/BingoCardFiveMobListener.class',
+            'crabcraft/net/crabUtilities/bingo/BingoCardFiveMechanicsListener.class',
+            'crabcraft/net/crabUtilities/bingo/BingoCardFiveChallengeListener.class',
         ]
         List<String> missing = required.findAll { !entries.contains(it) }
         if (!missing.isEmpty()) {
             throw new GradleException(
-                'Card #4 test JAR is missing required entries: ' + missing.join(', '))
+                'Card #5 test JAR is missing required entries: ' + missing.join(', '))
         }
 
         if (entries.any {
                 it.contains('HardBingoListener')
                     || it.contains('BingoCardTwoListener')
                     || it.contains('BingoCardThree')
+                    || it.contains('BingoCardFour')
             }) {
-            throw new GradleException('Card #4 test JAR contains a listener from another card')
+            throw new GradleException('Card #5 test JAR contains a listener from another card')
         }
 
         List<String> allowedProductionClasses = [
             'crabcraft/net/crabUtilities/CrabMessages.class',
             'crabcraft/net/crabUtilities/bingo/BingoTask.class',
             'crabcraft/net/crabUtilities/bingo/BingoDetector.class',
-            'crabcraft/net/crabUtilities/bingo/BingoCardFourMobListener.class',
-            'crabcraft/net/crabUtilities/bingo/BingoCardFourWorldListener.class',
-            'crabcraft/net/crabUtilities/bingo/BingoCardFourCombatListener.class',
-            'crabcraft/net/crabUtilities/bingo/BingoCardFourMechanicsListener.class',
+            'crabcraft/net/crabUtilities/bingo/BingoCardFiveWorldListener.class',
+            'crabcraft/net/crabUtilities/bingo/BingoCardFiveMobListener.class',
+            'crabcraft/net/crabUtilities/bingo/BingoCardFiveMechanicsListener.class',
+            'crabcraft/net/crabUtilities/bingo/BingoCardFiveChallengeListener.class',
         ]
         Set<String> forbidden = entries.findAll { entry ->
             entry.startsWith('crabcraft/net/crabUtilities/')
@@ -102,7 +125,7 @@ tasks.register('testJarContentsRegressionTest') {
         }
         if (!forbidden.isEmpty()) {
             throw new GradleException(
-                'Card #4 test JAR contains unrelated production classes: ' + forbidden.join(', '))
+                'Card #5 test JAR contains unrelated production classes: ' + forbidden.join(', '))
         }
 
         File pluginMetadataFile = zipTree(archive).matching {
@@ -110,10 +133,10 @@ tasks.register('testJarContentsRegressionTest') {
         }.singleFile
         String pluginMetadata = pluginMetadataFile.getText('UTF-8')
         List<String> requiredMetadata = [
-            'name: CrabBingoCard4Test',
+            'name: CrabBingoCard5Test',
             'main: crabcraft.net.bingotest.CrabBingoTestPlugin',
             "api-version: '26.2'",
-            'description: Bingo #4 task detector test harness.',
+            'description: Bingo #5 task detector test harness.',
             'bingotest:',
             'permission: crabbingotest.use',
         ]
@@ -122,7 +145,7 @@ tasks.register('testJarContentsRegressionTest') {
         }
         if (!missingMetadata.isEmpty()) {
             throw new GradleException(
-                'Card #4 test plugin.yml is missing metadata: ' + missingMetadata.join(', '))
+                'Card #5 test plugin.yml is missing metadata: ' + missingMetadata.join(', '))
         }
     }
 }

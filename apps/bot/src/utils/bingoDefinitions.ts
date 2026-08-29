@@ -129,11 +129,47 @@ export const FOURTH_BINGO_CARD = {
   ] satisfies BingoTaskDefinition[],
 } as const;
 
+// Goal ideas adapted from Joshimuz/mcbingo's v5 pool; detector wording is
+// CrabCraft-specific so every square has an explicit player attribution rule.
+export const FIFTH_BINGO_CARD = {
+  number: 5,
+  startsAt: 1_788_163_200,
+  endsAt: 1_788_735_600,
+  tasks: [
+    { id: "build_ten_tall_dripleaf", label: "Build a 10-block-tall Big Dripleaf" },
+    { id: "mob_equips_dropped_helmet", label: "Drop a helmet that a hostile mob equips" },
+    { id: "clean_banner_pattern", label: "Clean a pattern off a Banner" },
+    { id: "feed_panda_cake", label: "Feed a Panda a Cake" },
+    { id: "remove_enchantment_grindstone", label: "Remove an enchantment with a Grindstone" },
+    { id: "name_hoglin_zoglin", label: "Name a Hoglin, then convert it into a Zoglin" },
+    { id: "lodestone_compass", label: "Make a Compass point to a Lodestone" },
+    {
+      id: "enderman_killed_by_endermites_only",
+      label: "Name an Enderman, then have only Endermites kill it",
+    },
+    {
+      id: "fill_chiseled_bookshelf_enchanted",
+      label: "Fill a Chiseled Bookshelf with Enchanted Books",
+    },
+    { id: "disarm_pillager", label: "Disarm a Pillager by making it break its Crossbow" },
+    { id: "hatch_thrown_chicken", label: "Hatch a Chicken from an Egg you throw" },
+    { id: "snow_every_height", label: "Place every height of Snow next to each other" },
+    { id: "repair_iron_golem", label: "Repair a damaged Iron Golem" },
+    { id: "power_furnace_minecart", label: "Power a Minecart with Furnace" },
+    {
+      id: "player_end_crystal_hostile_kill",
+      label: "Kill a hostile mob with an End Crystal you placed",
+    },
+    { id: "wear_four_armour_materials", label: "Wear four different armour materials at once" },
+  ] satisfies BingoTaskDefinition[],
+} as const;
+
 export const PREPARED_BINGO_CARDS = [
   FIRST_BINGO_CARD,
   SECOND_BINGO_CARD,
   THIRD_BINGO_CARD,
   FOURTH_BINGO_CARD,
+  FIFTH_BINGO_CARD,
 ];
 
 /** Task IDs that have a deployed Paper detector, not merely a planned card entry. */

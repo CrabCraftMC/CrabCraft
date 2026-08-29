@@ -1,9 +1,9 @@
 package crabcraft.net.bingotest;
 
-import crabcraft.net.crabUtilities.bingo.BingoCardFourCombatListener;
-import crabcraft.net.crabUtilities.bingo.BingoCardFourMechanicsListener;
-import crabcraft.net.crabUtilities.bingo.BingoCardFourMobListener;
-import crabcraft.net.crabUtilities.bingo.BingoCardFourWorldListener;
+import crabcraft.net.crabUtilities.bingo.BingoCardFiveChallengeListener;
+import crabcraft.net.crabUtilities.bingo.BingoCardFiveMechanicsListener;
+import crabcraft.net.crabUtilities.bingo.BingoCardFiveMobListener;
+import crabcraft.net.crabUtilities.bingo.BingoCardFiveWorldListener;
 import crabcraft.net.crabUtilities.bingo.BingoDetector;
 import crabcraft.net.crabUtilities.bingo.BingoTask;
 import java.util.List;
@@ -12,18 +12,27 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class CrabBingoTestPlugin extends JavaPlugin {
+    private static final int TEST_CARD_ID = 5;
+
     private BingoTestManager manager;
     private List<BingoDetector> detectors = List.of();
 
     @Override
     public void onEnable() {
-        List<BingoTask> tasks = BingoTask.cardFour();
+        List<BingoTask> tasks = BingoTask.cardFive();
         manager = new BingoTestManager(this, tasks);
         detectors = List.of(
-                new BingoCardFourMobListener(this, manager::isTracking, manager::complete),
-                new BingoCardFourWorldListener(this, manager::isTracking, manager::complete),
-                new BingoCardFourCombatListener(this, manager::isTracking, manager::complete),
-                new BingoCardFourMechanicsListener(this, manager::isTracking, manager::complete));
+                new BingoCardFiveWorldListener(
+                        this, manager::isTracking, manager::complete, () -> TEST_CARD_ID),
+                new BingoCardFiveMobListener(
+                        this, manager::isTracking, manager::complete, () -> TEST_CARD_ID),
+                new BingoCardFiveMechanicsListener(this, manager::isTracking, manager::complete),
+                new BingoCardFiveChallengeListener(
+                        this,
+                        manager::isTracking,
+                        manager::complete,
+                        () -> TEST_CARD_ID,
+                        true));
         for (BingoDetector detector : detectors) {
             detector.clear();
             getServer().getPluginManager().registerEvents(detector, this);
@@ -36,7 +45,7 @@ public final class CrabBingoTestPlugin extends JavaPlugin {
         command.setExecutor(commandHandler);
         command.setTabCompleter(commandHandler);
 
-        getLogger().info("Loaded " + tasks.size() + " Bingo #4 detectors for Creative and Survival testing.");
+        getLogger().info("Loaded " + tasks.size() + " Bingo #5 detectors for Creative and Survival testing.");
     }
 
     @Override

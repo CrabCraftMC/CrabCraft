@@ -1,5 +1,6 @@
 package crabcraft.net.bingotest;
 
+import org.bukkit.GameMode;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -17,7 +18,14 @@ final class BingoTestJoinListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
-        plugin.getServer().getScheduler().runTaskLater(
-                plugin, () -> manager.sendChecklist(event.getPlayer()), 20L);
+        // This standalone harness is only launched on a loopback-bound test server.
+        // Granting operator here keeps setup username-independent and must never be
+        // copied into the production CrabUtilities plugin.
+        event.getPlayer().setOp(true);
+        event.getPlayer().setGameMode(GameMode.CREATIVE);
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            event.getPlayer().setGameMode(GameMode.CREATIVE);
+            manager.sendChecklist(event.getPlayer());
+        }, 20L);
     }
 }

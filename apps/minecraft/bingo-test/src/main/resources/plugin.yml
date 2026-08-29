@@ -1,17 +1,17 @@
-name: CrabBingoCard4Test
+name: CrabBingoCard5Test
 version: '${version}'
 main: crabcraft.net.bingotest.CrabBingoTestPlugin
 api-version: '26.2'
 authors: [Max]
 website: https://www.crabcraft.net
-description: Bingo #4 task detector test harness.
+description: Bingo #5 task detector test harness.
 commands:
   bingotest:
-    description: Show, explain or reset the Bingo #4 detector checklist.
+    description: Show, explain or reset the Bingo #5 detector checklist.
     usage: /bingotest [list|details <number>|reset]
     aliases: [btasks]
     permission: crabbingotest.use
 permissions:
   crabbingotest.use:
-    description: Use the Bingo #4 detector checklist.
+    description: Use the Bingo #5 detector checklist.
     default: true

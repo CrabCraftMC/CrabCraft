@@ -88,7 +88,14 @@ public final class BingoManager {
                 new BingoCardFourMobListener(plugin, this::isTracking, this::complete),
                 new BingoCardFourWorldListener(plugin, this::isTracking, this::complete),
                 new BingoCardFourCombatListener(plugin, this::isTracking, this::complete),
-                new BingoCardFourMechanicsListener(plugin, this::isTracking, this::complete));
+                new BingoCardFourMechanicsListener(plugin, this::isTracking, this::complete),
+                new BingoCardFiveWorldListener(
+                        plugin, this::isTracking, this::complete, this::activeCardId),
+                new BingoCardFiveMobListener(
+                        plugin, this::isTracking, this::complete, this::activeCardId),
+                new BingoCardFiveMechanicsListener(plugin, this::isTracking, this::complete),
+                new BingoCardFiveChallengeListener(
+                        plugin, this::isTracking, this::complete, this::activeCardId));
         detectors.forEach(detector ->
                 plugin.getServer().getPluginManager().registerEvents(detector, plugin));
         running = true;
@@ -149,6 +156,11 @@ public final class BingoManager {
     boolean isTracking(Player player, BingoTask task) {
         BingoActiveCard card = activeCard;
         return isEligible(player) && card != null && card.contains(task);
+    }
+
+    private int activeCardId() {
+        BingoActiveCard card = activeCard;
+        return card == null ? Integer.MIN_VALUE : card.id();
     }
 
     private void logHornProgress(Player player, HardBingoListener.HornProgress progress) {
