@@ -23,7 +23,7 @@ final class BingoTestManager {
         this.tasks = List.copyOf(tasks);
         this.taskSet = Set.copyOf(tasks);
         if (this.tasks.size() != 16 || this.taskSet.size() != 16) {
-            throw new IllegalArgumentException("The Bingo #4 test card must contain 16 unique tasks");
+            throw new IllegalArgumentException("The Bingo #5 test card must contain 16 unique tasks");
         }
     }
 
@@ -33,7 +33,7 @@ final class BingoTestManager {
 
     void complete(Player player, BingoTask task) {
         if (!taskSet.contains(task)) {
-            plugin.getLogger().warning("Ignored non-Card #4 detector completion: " + task.id());
+            plugin.getLogger().warning("Ignored non-Card #5 detector completion: " + task.id());
             return;
         }
 
@@ -46,7 +46,7 @@ final class BingoTestManager {
     void sendChecklist(Player player) {
         PlayerProgress progress = progressFor(player);
         player.sendMessage(Component.empty());
-        player.sendMessage(CrabMessages.text("Bingo #4 detector checklist")
+        player.sendMessage(CrabMessages.text("Bingo #5 detector checklist")
                 .append(Component.space())
                 .append(CrabMessages.highlight(progress.completedCount() + "/" + tasks.size())));
 
@@ -108,11 +108,11 @@ final class BingoTestManager {
         player.sendMessage(CrabMessages.muted("Completed")
                 .append(Component.space())
                 .append(CrabMessages.highlight(task.description())));
-        plugin.getLogger().info(player.getName() + " completed Card #4 detector " + task.id());
+        plugin.getLogger().info(player.getName() + " completed Card #5 detector " + task.id());
 
         if (progress.isChecklistComplete()) {
             player.sendMessage(CrabMessages.success(
-                            "All 16 Bingo #4 detectors have passed!")
+                            "All 16 Bingo #5 detectors have passed!")
                     .decorate(TextDecoration.BOLD));
         }
     }

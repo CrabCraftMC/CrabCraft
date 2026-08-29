@@ -263,7 +263,71 @@ public enum BingoTask {
     SCULK_CATALYST_PLAYER_KILL(
             "sculk_catalyst_player_kill",
             "Kill a hostile mob beside a Sculk Catalyst to spread Sculk.",
-            "Personally kill a hostile mob close enough to a Sculk Catalyst for its experience to make that catalyst spread Sculk.");
+            "Personally kill a hostile mob close enough to a Sculk Catalyst for its experience to make that catalyst spread Sculk."),
+    BUILD_TEN_TALL_DRIPLEAF(
+            "build_ten_tall_dripleaf",
+            "Build a 10-block-tall Big Dripleaf.",
+            "Place or grow every block in one vertical column of at least ten Big Dripleaf stems and leaves after the card starts."),
+    MOB_EQUIPS_DROPPED_HELMET(
+            "mob_equips_dropped_helmet",
+            "Drop a helmet that a hostile mob equips.",
+            "Drop a wearable helmet, mob head or carved pumpkin yourself and have a hostile mob pick up and equip that exact item."),
+    CLEAN_BANNER_PATTERN(
+            "clean_banner_pattern",
+            "Clean a pattern off a Banner.",
+            "Use a water-filled Cauldron to remove at least one pattern from a Banner you are holding."),
+    FEED_PANDA_CAKE(
+            "feed_panda_cake",
+            "Feed a Panda a Cake.",
+            "Drop a Cake yourself and have a Panda pick up and eat that exact dropped item."),
+    REMOVE_ENCHANTMENT_GRINDSTONE(
+            "remove_enchantment_grindstone",
+            "Remove an enchantment with a Grindstone.",
+            "Take a Grindstone result that removes at least one non-curse enchantment from an input item."),
+    NAME_HOGLIN_ZOGLIN(
+            "name_hoglin_zoglin",
+            "Name a Hoglin, then convert it into a Zoglin.",
+            "Name a Hoglin yourself, move that exact Hoglin out of the Nether and wait for it to convert into a Zoglin."),
+    LODESTONE_COMPASS(
+            "lodestone_compass",
+            "Make a Compass point to a Lodestone.",
+            "Use a Compass on a Lodestone yourself so that the Compass becomes bound to that block."),
+    ENDERMAN_KILLED_BY_ENDERMITES_ONLY(
+            "enderman_killed_by_endermites_only",
+            "Name an Enderman, then have only Endermites kill it.",
+            "Name an Enderman yourself; from then until it dies, every source of damage must be an Endermite and an Endermite must deal the final blow."),
+    FILL_CHISELED_BOOKSHELF_ENCHANTED(
+            "fill_chiseled_bookshelf_enchanted",
+            "Fill a Chiseled Bookshelf with Enchanted Books.",
+            "Insert the final Enchanted Book yourself so that all six slots of one Chiseled Bookshelf contain Enchanted Books."),
+    DISARM_PILLAGER(
+            "disarm_pillager",
+            "Disarm a Pillager by making it break its Crossbow.",
+            "Keep a Pillager targeting you until a shot uses up its Crossbow and leaves that Pillager unarmed."),
+    HATCH_THROWN_CHICKEN(
+            "hatch_thrown_chicken",
+            "Hatch a Chicken from an Egg you throw.",
+            "Throw an Egg yourself and have that exact Egg hatch at least one Chicken."),
+    SNOW_EVERY_HEIGHT(
+            "snow_every_height",
+            "Place every height of Snow next to each other.",
+            "After the card starts, place a connected set of eight Snow layers whose thicknesses cover every value from one through eight."),
+    REPAIR_IRON_GOLEM(
+            "repair_iron_golem",
+            "Repair a damaged Iron Golem.",
+            "Use an Iron Ingot yourself to restore health to an Iron Golem that was already damaged."),
+    POWER_FURNACE_MINECART(
+            "power_furnace_minecart",
+            "Power a Minecart with Furnace.",
+            "Use Coal or Charcoal yourself to add fuel to a Minecart with Furnace."),
+    PLAYER_END_CRYSTAL_HOSTILE_KILL(
+            "player_end_crystal_hostile_kill",
+            "Kill a hostile mob with an End Crystal you placed.",
+            "Place an End Crystal yourself and make that exact Crystal's explosion deal the final blow to a hostile mob."),
+    WEAR_FOUR_ARMOUR_MATERIALS(
+            "wear_four_armour_materials",
+            "Wear four different armour materials at once.",
+            "Simultaneously equip a helmet, chestplate, leggings and boots whose four base material families are all different.");
 
     private static final List<BingoTask> CARD_ONE = List.of(
             GROW_TREE_IN_NETHER,
@@ -333,6 +397,23 @@ public enum BingoTask {
             CURE_POISON_HONEY_BOTTLE,
             FREEZE_SKELETON_STRAY,
             SCULK_CATALYST_PLAYER_KILL);
+    private static final List<BingoTask> CARD_FIVE = List.of(
+            BUILD_TEN_TALL_DRIPLEAF,
+            MOB_EQUIPS_DROPPED_HELMET,
+            CLEAN_BANNER_PATTERN,
+            FEED_PANDA_CAKE,
+            REMOVE_ENCHANTMENT_GRINDSTONE,
+            NAME_HOGLIN_ZOGLIN,
+            LODESTONE_COMPASS,
+            ENDERMAN_KILLED_BY_ENDERMITES_ONLY,
+            FILL_CHISELED_BOOKSHELF_ENCHANTED,
+            DISARM_PILLAGER,
+            HATCH_THROWN_CHICKEN,
+            SNOW_EVERY_HEIGHT,
+            REPAIR_IRON_GOLEM,
+            POWER_FURNACE_MINECART,
+            PLAYER_END_CRYSTAL_HOSTILE_KILL,
+            WEAR_FOUR_ARMOUR_MATERIALS);
     private static final List<BingoTask> ALL_DEPLOYED = List.of(values());
     private static final Map<String, BingoTask> BY_ID;
 
@@ -383,6 +464,10 @@ public enum BingoTask {
 
     public static List<BingoTask> cardFour() {
         return CARD_FOUR;
+    }
+
+    public static List<BingoTask> cardFive() {
+        return CARD_FIVE;
     }
 
     public static List<BingoTask> allDeployed() {
