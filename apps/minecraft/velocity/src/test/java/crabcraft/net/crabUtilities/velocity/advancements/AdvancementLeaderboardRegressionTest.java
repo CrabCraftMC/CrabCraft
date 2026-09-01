@@ -27,6 +27,8 @@ final class AdvancementLeaderboardRegressionTest {
         check(dataSource.sql.size() == 2, "expected both leaderboard queries to run");
         check(dataSource.sql.stream().allMatch(sql -> sql.contains("= any (?)")),
                 "a leaderboard query does not filter against the advancement registry");
+        check(dataSource.sql.stream().allMatch(sql -> sql.contains("is_discord_member")),
+                "a leaderboard query does not exclude departed Discord members");
         check(dataSource.boundAdvancementIds.size() == 2,
                 "the registry IDs were not bound to both leaderboard queries");
         check(dataSource.boundAdvancementIds.stream().allMatch(ids -> ids.size() == 126),

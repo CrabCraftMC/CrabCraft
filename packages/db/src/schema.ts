@@ -34,6 +34,10 @@ export const players = pgTable("players", {
   nickname: text("nickname"),
   nickname_raw: text("nickname_raw"),
   role: playerRoleEnum("role").notNull().default("unverified"),
+  // Reconciled from the configured Discord guild on every bot startup and
+  // updated immediately by guildMemberAdd/guildMemberRemove events. Historical
+  // stats remain stored when a member leaves, but ranking queries exclude them.
+  is_discord_member: boolean("is_discord_member").notNull().default(true),
   created_at: integer("created_at")
     .notNull()
     .$defaultFn(() => Math.floor(Date.now() / 1000)),

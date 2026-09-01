@@ -517,16 +517,19 @@ public final class LoginStreakService {
         // Alt accounts are excluded — they only ever hold a one-day streak
         // and should not occupy leaderboard ranks alongside main accounts.
         String notAlt = "AND NOT EXISTS (SELECT 1 FROM player_alts pa WHERE pa.minecraft_uuid = s.minecraft_uuid) ";
+        String isDiscordMember = "AND EXISTS (SELECT 1 FROM players eligible_player " +
+                "WHERE eligible_player.minecraft_uuid = s.minecraft_uuid " +
+                "AND eligible_player.is_discord_member = true) ";
 
         String listSql = "SELECT s.minecraft_uuid, s.current_streak, s.longest_streak, " +
                 "s.last_login_at, s.streak_started_at, p.minecraft_username " +
                 "FROM player_login_streaks s " +
                 "LEFT JOIN players p ON p.minecraft_uuid = s.minecraft_uuid " +
-                "WHERE s." + column + " > 0 " + activeFilter + notAlt +
+                "WHERE s." + column + " > 0 " + activeFilter + notAlt + isDiscordMember +
                 "ORDER BY s." + column + " DESC, s.last_login_at DESC " +
                 "LIMIT ? OFFSET ?";
         String countSql = "SELECT COUNT(*) FROM player_login_streaks s " +
-                "WHERE s." + column + " > 0 " + activeFilter + notAlt;
+                "WHERE s." + column + " > 0 " + activeFilter + notAlt + isDiscordMember;
 
         JsonArray entries = new JsonArray();
         int total = 0;

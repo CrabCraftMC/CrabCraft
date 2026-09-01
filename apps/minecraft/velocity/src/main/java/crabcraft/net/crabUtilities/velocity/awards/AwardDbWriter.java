@@ -39,6 +39,11 @@ public final class AwardDbWriter {
                   SELECT 1 FROM player_alts alt
                   WHERE alt.minecraft_uuid = scores.minecraft_uuid
               )
+              AND EXISTS (
+                  SELECT 1 FROM players eligible_player
+                  WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+                    AND eligible_player.is_discord_member = true
+              )
         )
         UPDATE player_award_scores scores
         SET medal = ranked.rnk::int
