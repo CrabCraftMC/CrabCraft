@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
+    # Prefer Infisical universal-auth bootstrap variables here. Direct runtime
+    # secrets remain supported when Infisical is not configured.
     env_file:
       - ../apps/web/.env
     deploy:

@@ -55,6 +55,7 @@ COPY --from=infisical /bin/infisical /usr/local/bin/infisical
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --chown=nextjs:nodejs --chmod=755 apps/web/start.sh ./apps/web/start.sh
 
 ARG GIT_COMMIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
@@ -64,4 +65,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "apps/web/server.js"]
+CMD ["apps/web/start.sh"]
