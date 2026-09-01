@@ -35,9 +35,9 @@ const nextConfig: NextConfig = {
   async headers() {
     const scriptSrc =
       process.env.NODE_ENV === "development"
-        ? "'self' 'unsafe-inline' 'unsafe-eval' https://web.maxmoon.sh"
-        : "'self' 'unsafe-inline' https://web.maxmoon.sh";
-    const csp = `default-src 'self'; script-src ${scriptSrc}; img-src 'self' data: https://mc-heads.net https://cdn.discordapp.com ${galleryMediaUrl.origin} https://map.crabcraft.net https://mc-api.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net https://web.maxmoon.sh; font-src 'self'; frame-ancestors 'none'`;
+        ? "'self' 'unsafe-inline' 'unsafe-eval' https://eu-assets.i.posthog.com"
+        : "'self' 'unsafe-inline' https://eu-assets.i.posthog.com";
+    const csp = `default-src 'self'; script-src ${scriptSrc}; img-src 'self' data: https://mc-heads.net https://cdn.discordapp.com ${galleryMediaUrl.origin} https://map.crabcraft.net https://mc-api.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net https://eu.i.posthog.com https://eu-assets.i.posthog.com; font-src 'self'; frame-ancestors 'none'`;
     return [
       {
         source: "/:path*.webp",
