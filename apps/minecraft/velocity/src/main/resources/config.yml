@@ -76,8 +76,8 @@ database:
   username: "crabcraft"
   password: ""
 
-# Privacy-preserving product analytics. Keep disabled until both the project
-# token and the same person salt used by the website and bot are configured.
+# Product analytics. Keep disabled until both the project token and the same
+# identity salt used by the website and bot are configured.
 analytics:
   enabled: false
   project-token: ""

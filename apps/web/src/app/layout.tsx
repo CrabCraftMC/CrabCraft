@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Unbounded } from "next/font/google";
 import { minecraftAnalyticsId } from "@crabcraft/shared/analytics-identity";
 import { auth, getAvatarUrl } from "@/lib/auth";
+import { buildWebAnalyticsIdentity } from "@/lib/analyticsIdentity";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GridPattern from "@/components/GridPattern";
@@ -86,6 +87,19 @@ export default async function RootLayout({
         process.env.POSTHOG_PERSON_SALT ?? "",
       )
     : null;
+  const analyticsIdentity = buildWebAnalyticsIdentity(
+    analyticsId,
+    session?.user?.minecraftUuid
+      ? {
+          discordId: session.user.discordId,
+          discordUsername: session.user.name,
+          minecraftUuid: session.user.minecraftUuid,
+          minecraftUsername: session.user.minecraftUsername,
+          minecraftNickname: session.user.minecraftNickname,
+          role: session.user.role,
+        }
+      : null,
+  );
 
   let userData = null;
   if (session?.user) {
@@ -126,7 +140,7 @@ export default async function RootLayout({
           <Footer />
         </div>
         <CommandMenu />
-        <AnalyticsIdentity analyticsId={analyticsId} />
+        <AnalyticsIdentity identity={analyticsIdentity} />
         {/* Only nudge signed-out visitors to join — signed-in users already have. */}
         {!userData && <MascotJoin />}
       </body>

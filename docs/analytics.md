@@ -21,17 +21,19 @@ shutdown. Bot and proxy queues are flushed during graceful shutdown.
 
 ### Identity
 
-The three runtimes derive one stable distinct ID from the canonical Minecraft
-UUID:
+The three runtimes derive one stable internal distinct ID from the canonical
+Minecraft UUID:
 
 ```text
 cc_ + hex(HMAC-SHA256(person_salt, "minecraft:" + lowercase_uuid_without_dashes))
 ```
 
-The raw Minecraft UUID, username, Discord ID, IP address, and nickname are never
-sent to PostHog. The secret `person_salt` must be identical in all three
-runtimes. It is not a PostHog key and must not be exposed through a
-`NEXT_PUBLIC_` environment variable.
+The internal ID preserves cross-runtime and historical identity continuity.
+Each identified PostHog person also stores the readable `minecraft_uuid`,
+`minecraft_username`, `minecraft_nickname`, `discord_id`, `discord_username`,
+and CrabCraft `role` properties when that runtime has them. The secret
+`person_salt` must be identical in all three runtimes. It is not a PostHog key
+and must not be exposed through a `NEXT_PUBLIC_` environment variable.
 
 Changing the salt permanently breaks historical identity continuity. Treat a
 rotation as a deliberate analytics reset. A fixed regression vector in both
@@ -39,28 +41,40 @@ Java and TypeScript prevents either implementation from silently diverging.
 
 Anonymous website visits use PostHog's browser-generated identity. When a
 visitor signs in with a linked Minecraft account, the browser identifies as the
-pseudonymous `cc_…` value. Signing out resets browser identity.
+shared `cc_…` value and updates all linked identity properties. Signing out
+resets browser identity.
 
-## Privacy contract
+## Data boundary
 
-Do not add any of the following to event names, properties, deduplication keys,
-person properties, groups, exception messages, or feature-flag properties:
+Person profiles intentionally contain Minecraft and Discord identity. Website
+requests also receive PostHog's normal GeoIP enrichment, and Velocity passes
+the player's connection IP as `$ip` so server events resolve to the player
+rather than the proxy host. Bot events disable GeoIP because the bot only knows
+its own server IP. In PostHog project settings, leave **Discard client IP data**
+off if GeoIP enrichment is wanted.
+
+Do not add secrets or private content to event names, properties,
+deduplication keys, person properties, groups, exception messages, or
+feature-flag properties:
 
 - chat, direct messages, ticket or application answers, denial reasons, or
   gallery captions;
-- usernames, nicknames, raw Minecraft UUIDs, Discord IDs, IP addresses, email
-  addresses, webhook URLs, or access tokens;
-- world coordinates, inventories, message IDs, channel IDs, or free-form user
-  input.
+- email addresses, webhook URLs, access tokens, passwords, or authentication
+  codes;
+- world coordinates, inventories, or unrestricted free-form user input.
 
-The browser SDK disables DOM autocapture, element attributes, element text, and
-browser IP collection. Session replay is off by default. If explicitly enabled,
-all input values and rendered text are masked. Server events disable GeoIP and
-person-profile processing.
+The browser SDK keeps DOM autocapture disabled because the website emits named
+product events, but it retains standard page-view, referrer, campaign, route,
+browser, device, and GeoIP metadata. Session replay is off by default. If
+explicitly enabled, input values and rendered text remain masked and captured
+network requests are discarded. These replay controls prevent credentials and
+private page content from becoming recordings; they do not remove the person
+profile fields above.
 
-Event properties should be low-cardinality product facts: season, tool,
-command name, backend name, boolean outcome, duration, setting key/value, or
-aggregate counts. Deduplication IDs are hashed before they leave a server.
+Event properties should normally describe the action: season, tool, command
+name, backend name, boolean outcome, duration, setting key/value, or aggregate
+counts. Durable identity belongs on the person profile. Deduplication IDs are
+hashed before they leave a server.
 
 ## Configuration
 
@@ -123,6 +137,17 @@ POSTHOG_ENVIRONMENT=production
 Both the token and salt are required. If only one is present, analytics stays
 disabled and the bot logs a warning.
 
+After enabling PostHog, create or update profiles for every player already in
+PostgreSQL:
+
+```sh
+bun run --cwd apps/bot analytics:sync-identities -- --dry-run
+bun run --cwd apps/bot analytics:sync-identities
+```
+
+The sync emits PostHog identify calls only; it does not fabricate gameplay
+events or alter PostgreSQL.
+
 ### Velocity
 
 Configure `plugins/CrabUtilities/config.yml`:
@@ -184,8 +209,8 @@ Start with a small set of decision-oriented dashboards:
    conversion.
 8. Operations: application acceptance rate and review-duration percentiles.
 
-Do not use raw event volume as a proxy for unique people. Prefer unique
-pseudonymous users, cohorts, funnels, and retention.
+Do not use raw event volume as a proxy for unique people. Prefer unique users,
+cohorts, funnels, and retention.
 
 Pre-membership website activity is intentionally anonymous. PostHog can merge
 that history if the same browser is later identified after account linking, but
@@ -211,14 +236,18 @@ putting identifying or high-cardinality values into flag properties.
 2. Configure a development PostHog project and use the same test salt in all
    runtimes.
 3. Link one test player, visit the website, run a Discord command, and join the
-   proxy. Confirm all events share one `cc_…` distinct ID.
-4. Inspect browser and server payloads. Confirm there are no names, raw IDs,
-   coordinates, content, or IP/GeoIP properties.
+   proxy. Confirm all events share one `cc_…` distinct ID and one person profile
+   with the expected Minecraft and Discord properties.
+4. Inspect browser and Velocity events. Confirm GeoIP describes the player, not
+   the web, bot, or proxy host, and confirm secrets, private content, and world
+   coordinates are absent.
 5. Verify application resolution and bingo events are deduplicated after a
    retry or duplicate delivery.
-6. Build the dashboards above, add an `environment = production` filter, then
+6. Run `analytics:sync-identities` once to populate profiles for existing
+   linked players.
+7. Build the dashboards above, add an `environment = production` filter, then
    enable production ingestion.
-7. Only then consider session replay. Verify masking manually before setting
+8. Only then consider session replay. Verify masking manually before setting
    `NEXT_PUBLIC_POSTHOG_SESSION_REPLAY=true`.
 
 Useful local checks:

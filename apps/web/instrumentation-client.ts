@@ -10,13 +10,13 @@ if (projectToken) {
       defaults: "2026-05-30",
       autocapture: false,
       capture_exceptions: false,
-      ip: false,
       mask_all_element_attributes: true,
       mask_all_text: true,
+      mask_personal_data_properties: true,
       person_profiles: "identified_only",
-      respect_dnt: true,
       session_recording: {
         maskAllInputs: true,
+        maskCapturedNetworkRequestFn: () => null,
         maskTextSelector: "*",
       },
       disable_session_recording:

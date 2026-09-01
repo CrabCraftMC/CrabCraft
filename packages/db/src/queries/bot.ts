@@ -2072,15 +2072,19 @@ export async function clearPlayerMinecraftLinkByDiscordId(
 // ── player profile card (/playerinfo) ───────────────────────────
 
 export interface PlayerIdentity {
+  discord_id: string;
   minecraft_uuid: string;
   minecraft_username: string | null;
+  nickname: string | null;
   discord_username: string;
   role: string;
 }
 
 const PLAYER_IDENTITY_COLUMNS = {
+  discord_id: players.discord_id,
   minecraft_uuid: players.minecraft_uuid,
   minecraft_username: players.minecraft_username,
+  nickname: players.nickname,
   discord_username: players.discord_username,
   role: players.role,
 } as const;
@@ -2096,6 +2100,32 @@ export async function getPlayerByMinecraftUsername(
     .limit(1);
   if (!row?.minecraft_uuid) return null;
   return row as PlayerIdentity;
+}
+
+/** Resolve a linked player by Discord ID. */
+export async function getPlayerByDiscordId(
+  discordId: string,
+): Promise<PlayerIdentity | null> {
+  const [row] = await db
+    .select(PLAYER_IDENTITY_COLUMNS)
+    .from(players)
+    .where(eq(players.discord_id, discordId))
+    .limit(1);
+  if (!row?.minecraft_uuid) return null;
+  return row as PlayerIdentity;
+}
+
+/** All linked identities for a one-off analytics person-profile sync. */
+export async function getAllPlayerAnalyticsIdentities(): Promise<PlayerIdentity[]> {
+  const rows = await db
+    .select(PLAYER_IDENTITY_COLUMNS)
+    .from(players)
+    .where(isNotNull(players.minecraft_uuid));
+  return rows.flatMap((row) =>
+    row.minecraft_uuid
+      ? [{ ...row, minecraft_uuid: row.minecraft_uuid }]
+      : [],
+  );
 }
 
 /** The linked Discord id for a Minecraft UUID, if any. */

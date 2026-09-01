@@ -6,9 +6,12 @@ import posthog from "posthog-js";
 const IDENTIFIED_MARKER = "crabcraft-posthog-identified";
 
 export default function AnalyticsIdentity({
-  analyticsId,
+  identity,
 }: {
-  analyticsId: string | null;
+  identity: {
+    distinctId: string;
+    properties: Record<string, string>;
+  } | null;
 }) {
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return;
@@ -18,9 +21,9 @@ export default function AnalyticsIdentity({
       const currentUserId =
         posthog.get_property("$user_id") ??
         (distinctId.startsWith("cc_") ? distinctId : null);
-      if (analyticsId) {
-        if (currentUserId && currentUserId !== analyticsId) posthog.reset();
-        if (currentUserId !== analyticsId) posthog.identify(analyticsId);
+      if (identity) {
+        if (currentUserId && currentUserId !== identity.distinctId) posthog.reset();
+        posthog.identify(identity.distinctId, identity.properties);
         localStorage.setItem(IDENTIFIED_MARKER, "true");
       } else if (
         currentUserId ||
@@ -32,7 +35,7 @@ export default function AnalyticsIdentity({
     } catch {
       // Identity analytics must not interfere with rendering or authentication.
     }
-  }, [analyticsId]);
+  }, [identity]);
 
   return null;
 }
