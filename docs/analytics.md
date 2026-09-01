@@ -54,9 +54,13 @@ person properties, groups, exception messages, or feature-flag properties:
   input.
 
 The browser SDK disables DOM autocapture, element attributes, element text, and
-browser IP collection. Session replay is off by default. If explicitly enabled,
-all input values and rendered text are masked. Server events disable GeoIP and
-person-profile processing.
+browser IP collection. Before any browser event is sent, dynamic player and
+gallery route identifiers are replaced with route templates, query strings and
+fragments are removed, external referrers are reduced to their origin, and page
+titles and campaign identifiers are discarded. Session replay is off by
+default. If explicitly enabled, all input values and rendered text are masked,
+and network requests and replay URLs are discarded. Server events disable GeoIP
+and person-profile processing.
 
 Event properties should be low-cardinality product facts: season, tool,
 command name, backend name, boolean outcome, duration, setting key/value, or
