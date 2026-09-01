@@ -86,6 +86,15 @@ salt is server-only. Leave the token empty to disable browser analytics. Enable
 replay only after the privacy configuration has been verified against a
 production-like page.
 
+`NEXT_PUBLIC_` values are compiled into the browser bundle. For the production
+image, configure `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`,
+`NEXT_PUBLIC_POSTHOG_HOST`, and optionally
+`NEXT_PUBLIC_POSTHOG_SESSION_REPLAY` as variables on the GitHub `release`
+environment before the image is built. Configure `POSTHOG_PERSON_SALT` only in
+the runtime environment on the web host; never expose it as a build argument or
+`NEXT_PUBLIC_` value. For a local build, put all of the values above in
+`apps/web/.env` before running the build.
+
 ### Discord bot
 
 Set these in `apps/bot/.env` or the bot's secret store:
