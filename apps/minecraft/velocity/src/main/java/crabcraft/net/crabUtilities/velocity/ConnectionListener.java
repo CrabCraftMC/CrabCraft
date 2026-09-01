@@ -78,6 +78,11 @@ public class ConnectionListener {
     public void onLogin(LoginEvent event) {
         Player player = event.getPlayer();
         String uuid = player.getUniqueId().toString();
+        String clientIp = player.getRemoteAddress().getAddress() == null
+                ? ""
+                : player.getRemoteAddress().getAddress().getHostAddress();
+        plugin.getAnalyticsService().registerPlayer(
+                player.getUniqueId(), player.getUsername(), clientIp);
 
         // Warm the player's settings (Postgres -> cache + Redis hash) so the
         // backend sees them on join and proxy features (message DND) can read them.

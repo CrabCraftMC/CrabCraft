@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { canonicalMinecraftUuid } from "@crabcraft/shared/analytics";
 import { minecraftAnalyticsId } from "@crabcraft/shared/analytics-identity";
+import { analyticsPerson } from "../src/utils/analyticsIdentity";
 
 describe("analytics identity", () => {
   test("normalises dashed and undashed UUIDs to one identity", () => {
@@ -32,5 +33,34 @@ describe("analytics identity", () => {
         "  ",
       ),
     ).toBeNull();
+  });
+
+  test("exposes linked Minecraft and Discord identity as person properties", () => {
+    expect(
+      analyticsPerson(
+        "123e4567-e89b-12d3-a456-426614174000",
+        "test-salt",
+        {
+          discord_id: "123456789",
+          discord_username: "crab.friend",
+          minecraft_uuid: "123e4567-e89b-12d3-a456-426614174000",
+          minecraft_username: "CrabPlayer",
+          nickname: "Crabby",
+          role: "member",
+        },
+      ),
+    ).toEqual({
+      distinctId:
+        "cc_dbb943fa5348a97b451a8496c14fd88a699eb513165e7b16c3436e6c6bcfdf72",
+      properties: {
+        discord_id: "123456789",
+        discord_username: "crab.friend",
+        minecraft_uuid: "123e4567-e89b-12d3-a456-426614174000",
+        minecraft_nickname: "Crabby",
+        minecraft_username: "CrabPlayer",
+        name: "CrabPlayer",
+        role: "member",
+      },
+    });
   });
 });

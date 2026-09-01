@@ -14,10 +14,11 @@ import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Best-effort, personless PostHog analytics for proxy events. PostgreSQL
- * remains authoritative; analytics failure must never affect gameplay.
+ * Best-effort PostHog analytics and player identity for proxy events.
+ * PostgreSQL remains authoritative; analytics failure must never affect gameplay.
  */
 public final class AnalyticsService implements AutoCloseable {
 
@@ -31,6 +32,7 @@ public final class AnalyticsService implements AutoCloseable {
     private final String personSalt;
     private final String environment;
     private final PostHogInterface client;
+    private final Map<UUID, PlayerIdentity> playerIdentities = new ConcurrentHashMap<>();
     private volatile boolean closed;
 
     public AnalyticsService(VelocityConfig config, Logger logger) {
@@ -70,6 +72,12 @@ public final class AnalyticsService implements AutoCloseable {
         return client != null && !closed;
     }
 
+    public void registerPlayer(UUID minecraftUuid, String username, String ipAddress) {
+        if (minecraftUuid == null) return;
+        playerIdentities.put(minecraftUuid, new PlayerIdentity(
+                normalise(username), normalise(ipAddress)));
+    }
+
     public void capture(UUID minecraftUuid, String event, Map<String, ?> properties) {
         capture(minecraftUuid, event, properties, null);
     }
@@ -89,17 +97,24 @@ public final class AnalyticsService implements AutoCloseable {
             if (properties != null) safeProperties.putAll(properties);
             safeProperties.put("source", "velocity");
             safeProperties.put("environment", environment);
-            safeProperties.put("$process_person_profile", false);
-            safeProperties.put("$geoip_disable", true);
+            PlayerIdentity identity = playerIdentities.get(minecraftUuid);
+            if (identity != null && !identity.ipAddress().isEmpty()) {
+                // PostHog uses $ip for GeoIP enrichment of server-side events.
+                safeProperties.put("$ip", identity.ipAddress());
+            }
             if (dedupeKey != null && !dedupeKey.isBlank()) {
                 safeProperties.put("$insert_id", sha256(
                         distinctId + ":" + event + ":" + dedupeKey));
             }
 
+            String username = identity == null ? "" : identity.username();
             activeClient.capture(
                     distinctId,
                     event,
-                    PostHogCaptureOptions.builder().properties(safeProperties).build());
+                    PostHogCaptureOptions.builder()
+                            .properties(safeProperties)
+                            .userProperties(personProperties(minecraftUuid, username))
+                            .build());
         } catch (Exception e) {
             logger.debug("PostHog capture failed: {}", e.getMessage());
         }
@@ -137,6 +152,17 @@ public final class AnalyticsService implements AutoCloseable {
         }
     }
 
+    static Map<String, Object> personProperties(UUID minecraftUuid, String username) {
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("minecraft_uuid", minecraftUuid.toString().toLowerCase());
+        String normalisedUsername = normalise(username);
+        if (!normalisedUsername.isEmpty()) {
+            properties.put("name", normalisedUsername);
+            properties.put("minecraft_username", normalisedUsername);
+        }
+        return properties;
+    }
+
     private static String sha256(String value) throws Exception {
         byte[] digest = MessageDigest.getInstance("SHA-256")
                 .digest(value.getBytes(StandardCharsets.UTF_8));
@@ -151,6 +177,8 @@ public final class AnalyticsService implements AutoCloseable {
         String normalised = normalise(value);
         return normalised.isEmpty() ? fallback : normalised;
     }
+
+    private record PlayerIdentity(String username, String ipAddress) {}
 
     @Override
     public void close() {

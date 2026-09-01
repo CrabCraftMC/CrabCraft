@@ -4,7 +4,7 @@ import {
   type AnalyticsEventName,
   type AnalyticsProperties,
 } from "@crabcraft/shared/analytics";
-import { minecraftAnalyticsId } from "@crabcraft/shared/analytics-identity";
+import { analyticsPerson, type LinkedAnalyticsIdentity } from "./analyticsIdentity.js";
 import config from "./config.js";
 import logger from "./logger.js";
 import * as appDb from "./appDb.js";
@@ -29,7 +29,6 @@ function createClient(): PostHog | null {
       flushAt: 20,
       flushInterval: 10_000,
       requestTimeout: 3_000,
-      privacyMode: true,
     });
   } catch (error) {
     logger.warn(`PostHog analytics disabled: ${String(error)}`);
@@ -44,40 +43,83 @@ export interface AnalyticsCaptureOptions {
   dedupeKey?: string;
 }
 
-export function captureMinecraftEvent(
+function captureEvent(
   minecraftUuid: string,
   event: AnalyticsEventName,
-  properties: AnalyticsProperties = {},
-  options: AnalyticsCaptureOptions = {},
+  properties: AnalyticsProperties,
+  options: AnalyticsCaptureOptions,
+  identity: LinkedAnalyticsIdentity | null,
 ): void {
   if (!client) return;
-  const distinctId = minecraftAnalyticsId(
+  const person = analyticsPerson(
     minecraftUuid,
     config.POSTHOG_PERSON_SALT,
+    identity,
   );
-  if (!distinctId) return;
+  if (!person) return;
 
   try {
     const insertId = options.dedupeKey
       ? createHash("sha256")
-          .update(`${distinctId}:${event}:${options.dedupeKey}`)
+          .update(`${person.distinctId}:${event}:${options.dedupeKey}`)
           .digest("hex")
       : null;
     client.capture({
-      distinctId,
+      distinctId: person.distinctId,
       event,
+      // A bot event otherwise resolves to the bot host, not the player.
       disableGeoip: true,
       properties: {
         ...properties,
         source: "discord_bot",
         environment: config.POSTHOG_ENVIRONMENT,
-        $process_person_profile: false,
+        $set: person.properties,
         ...(insertId ? { $insert_id: insertId } : {}),
       },
     });
   } catch (error) {
     logger.debug(`PostHog capture failed: ${String(error)}`);
   }
+}
+
+function trackIdentityLookup(pending: Promise<void>): void {
+  pendingIdentityLookups.add(pending);
+  void pending.then(
+    () => pendingIdentityLookups.delete(pending),
+    () => pendingIdentityLookups.delete(pending),
+  );
+}
+
+async function captureMinecraftEventWithIdentity(
+  minecraftUuid: string,
+  event: AnalyticsEventName,
+  properties: AnalyticsProperties,
+  options: AnalyticsCaptureOptions,
+): Promise<void> {
+  if (!client) return;
+  let identity: LinkedAnalyticsIdentity | null = null;
+  try {
+    identity = await appDb.getPlayerByMinecraftUuid(minecraftUuid);
+  } catch (error) {
+    logger.debug(`PostHog identity lookup failed: ${String(error)}`);
+  }
+  captureEvent(minecraftUuid, event, properties, options, identity);
+}
+
+export function captureMinecraftEvent(
+  minecraftUuid: string,
+  event: AnalyticsEventName,
+  properties: AnalyticsProperties = {},
+  options: AnalyticsCaptureOptions = {},
+): void {
+  trackIdentityLookup(
+    captureMinecraftEventWithIdentity(
+      minecraftUuid,
+      event,
+      properties,
+      options,
+    ),
+  );
 }
 
 async function captureLinkedDiscordEvent(
@@ -88,9 +130,9 @@ async function captureLinkedDiscordEvent(
 ): Promise<void> {
   if (!client) return;
   try {
-    const minecraftUuid = await appDb.getMinecraftUuidByDiscordId(discordId);
-    if (minecraftUuid) {
-      captureMinecraftEvent(minecraftUuid, event, properties, options);
+    const identity = await appDb.getPlayerByDiscordId(discordId);
+    if (identity) {
+      captureEvent(identity.minecraft_uuid, event, properties, options, identity);
     }
   } catch (error) {
     logger.debug(`PostHog identity lookup failed: ${String(error)}`);
@@ -109,11 +151,7 @@ export function captureDiscordEvent(
     properties,
     options,
   );
-  pendingIdentityLookups.add(pending);
-  void pending.then(
-    () => pendingIdentityLookups.delete(pending),
-    () => pendingIdentityLookups.delete(pending),
-  );
+  trackIdentityLookup(pending);
   return pending;
 }
 

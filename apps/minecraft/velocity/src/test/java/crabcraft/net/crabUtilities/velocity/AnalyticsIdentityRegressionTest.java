@@ -1,5 +1,8 @@
 package crabcraft.net.crabUtilities.velocity;
 
+import java.util.Map;
+import java.util.UUID;
+
 public final class AnalyticsIdentityRegressionTest {
 
     private AnalyticsIdentityRegressionTest() {}
@@ -18,6 +21,16 @@ public final class AnalyticsIdentityRegressionTest {
                 || AnalyticsService.analyticsId(
                         "123e4567-e89b-12d3-a456-426614174000", "") != null) {
             throw new AssertionError("Invalid analytics identities must be rejected");
+        }
+
+        Map<String, Object> properties = AnalyticsService.personProperties(
+                UUID.fromString("123e4567-e89b-12d3-a456-426614174000"),
+                "CrabPlayer");
+        if (!"123e4567-e89b-12d3-a456-426614174000".equals(
+                properties.get("minecraft_uuid"))
+                || !"CrabPlayer".equals(properties.get("minecraft_username"))
+                || !"CrabPlayer".equals(properties.get("name"))) {
+            throw new AssertionError("Raw Minecraft identity is missing from person properties");
         }
     }
 }
