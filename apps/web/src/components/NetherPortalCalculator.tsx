@@ -9,6 +9,7 @@ import {
 import Squircle from "@/components/Squircle";
 import { parsePortalCoordinates } from "@/data/portal-coordinates";
 import { RotateCcw, ArrowLeftRight, Info, AlertTriangle, Link2 } from "lucide-react";
+import { captureWebToolCompleted } from "@/lib/analytics";
 
 const STORAGE_KEY = "crabcraft-nether-portal";
 
@@ -101,6 +102,7 @@ export default function NetherPortalCalculator() {
     raw: string,
     apply: (n: number) => void
   ) => {
+    captureWebToolCompleted("portal_calculator", "edit_coordinates");
     const clean = sanitize(raw);
     setEditingField(field);
     setEditingValue(clean);
@@ -121,6 +123,9 @@ export default function NetherPortalCalculator() {
     if (!coordinates) return;
 
     event.preventDefault();
+    captureWebToolCompleted("portal_calculator", "paste_coordinates", {
+      dimension,
+    });
     setEditingField(null);
 
     const scale = dimension === "nether" ? 8 : 1;

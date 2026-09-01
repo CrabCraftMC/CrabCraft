@@ -20,6 +20,8 @@ import {
   type SceneId,
 } from "./data/sceneOrder";
 import type { WrappedData } from "@/lib/wrappedTypes";
+import { AnalyticsEvent } from "@crabcraft/shared/analytics";
+import { captureWebEvent } from "@/lib/analytics";
 
 const SCENE_TRANSITION_VARIANTS = {
   enter: (direction: number) => ({ x: `${direction * 100}%`, opacity: 0 }),
@@ -83,6 +85,7 @@ export default function WrappedStory({ data }: { data: WrappedData }) {
   const haptics = useHaptics();
   const reduced = useReducedMotion();
   const previousIndex = useRef(controller.current);
+  const completionCaptured = useRef(false);
 
   const currentId = SCENE_IDS[controller.current];
   const CurrentScene = SCENE_COMPONENTS[currentId];
@@ -99,6 +102,18 @@ export default function WrappedStory({ data }: { data: WrappedData }) {
       haptics.light();
     }
   }, [controller.current, haptics]);
+
+  useEffect(() => {
+    if (
+      controller.current === SCENE_IDS.length - 1 &&
+      !completionCaptured.current
+    ) {
+      completionCaptured.current = true;
+      captureWebEvent(AnalyticsEvent.WRAPPED_COMPLETED, {
+        season: data.season,
+      });
+    }
+  }, [controller.current, data.season]);
 
   const nextSceneImages = useMemo(() => {
     // Preload the player skin used by the Intro/Summary scenes.

@@ -19,6 +19,8 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -197,6 +199,13 @@ public class ConnectionListener {
             String previousServerName = previousServer.getServerInfo().getName();
             if (isIgnored(currentServerName) || isIgnored(previousServerName)) return;
 
+            plugin.getAnalyticsService().capture(
+                    player.getUniqueId(),
+                    AnalyticsService.SERVER_SWITCHED,
+                    properties(
+                            "from_server", previousServerName,
+                            "to_server", currentServerName));
+
             Component displayName = getDisplayName(player);
             Component message = MINI_MESSAGE.deserialize(
                     "<yellow><name> swapped to the <server> server</yellow>",
@@ -214,7 +223,20 @@ public class ConnectionListener {
     public void onDisconnect(DisconnectEvent event) {
         Player player = event.getPlayer();
         jadeHandshakes.remove(player.getUniqueId());
-        finishLoginStreakSession(player.getUniqueId());
+        RegisteredServer lastServer = player.getCurrentServer()
+                .map(conn -> conn.getServer())
+                .orElse(null);
+        long sessionDuration = finishLoginStreakSession(player.getUniqueId());
+        if (sessionDuration > 0L) {
+            plugin.getAnalyticsService().capture(
+                    player.getUniqueId(),
+                    AnalyticsService.PLAYER_SESSION_ENDED,
+                    properties(
+                            "duration_seconds", sessionDuration,
+                            "last_server", lastServer == null
+                                    ? null
+                                    : lastServer.getServerInfo().getName()));
+        }
 
         var settingsService = plugin.getPlayerSettingsService();
         if (settingsService != null) {
@@ -222,10 +244,6 @@ public class ConnectionListener {
         }
 
         if (!announcedPlayers.remove(player.getUniqueId())) return;
-
-        RegisteredServer lastServer = player.getCurrentServer()
-                .map(conn -> conn.getServer())
-                .orElse(null);
 
         if (lastServer != null && isIgnored(lastServer.getServerInfo().getName())) return;
 
@@ -254,6 +272,12 @@ public class ConnectionListener {
             if (segment != null) {
                 recordLoginStreakPlaytime(session, segment, false);
             }
+            plugin.getAnalyticsService().capture(
+                    playerId,
+                    AnalyticsService.PLAYER_SESSION_ENDED,
+                    properties(
+                            "duration_seconds", session.durationSeconds(now),
+                            "disconnect_reason", "proxy_shutdown"));
         }
     }
 
@@ -310,14 +334,16 @@ public class ConnectionListener {
         if (snapshot != null) publish.accept(snapshot);
     }
 
-    private void finishLoginStreakSession(UUID playerId) {
+    private long finishLoginStreakSession(UUID playerId) {
         ActiveStreakSession session = activeStreakSessions.remove(playerId);
-        if (session == null) return;
+        if (session == null) return 0L;
 
-        CreditSegment segment = session.close(epochSeconds());
+        long now = epochSeconds();
+        CreditSegment segment = session.close(now);
         if (segment != null) {
             recordLoginStreakPlaytime(session, segment, false);
         }
+        return session.durationSeconds(now);
     }
 
     private void creditActiveLoginStreakSession(ActiveStreakSession session) {
@@ -348,6 +374,16 @@ public class ConnectionListener {
             if (result == null) return;
             if (result.streakSnapshot != null && streakPublisher != null) {
                 streakPublisher.publish(uuid, result.streakSnapshot, streakService.getResetHourUtc());
+            }
+            if (result.streakSnapshot != null) {
+                plugin.getAnalyticsService().capture(
+                        playerId,
+                        AnalyticsService.LOGIN_DAY_QUALIFIED,
+                        properties(
+                                "current_streak", result.streakSnapshot.currentStreak,
+                                "longest_streak", result.streakSnapshot.longestStreak,
+                                "season", plugin.getStatsQueryService().getCurrentSeason()),
+                        String.valueOf(result.streakSnapshot.lastLoginAt));
             }
             if (reschedule && result.progress != null
                     && isCurrentStreakSession(session)
@@ -436,6 +472,16 @@ public class ConnectionListener {
             plugin.getPgWriter().upsertPlayer(playerUuid, playerName, plain, raw);
             plugin.getPgWriter().upsertAltUsername(playerUuid, playerName);
             plugin.getPgWriter().recordMcLogin(playerUuid);
+            String backendServer = player.getCurrentServer()
+                    .map(connection -> connection.getServer().getServerInfo().getName())
+                    .orElse(null);
+            plugin.getAnalyticsService().capture(
+                    playerId,
+                    AnalyticsService.PLAYER_JOINED,
+                    properties(
+                            "backend_server", backendServer,
+                            "first_join", firstJoin,
+                            "season", plugin.getStatsQueryService().getCurrentSeason()));
         });
     }
 
@@ -572,14 +618,25 @@ public class ConnectionListener {
         }
     }
 
+    private static Map<String, Object> properties(Object... pairs) {
+        Map<String, Object> properties = new HashMap<>();
+        for (int index = 0; index + 1 < pairs.length; index += 2) {
+            Object value = pairs[index + 1];
+            if (value != null) properties.put(String.valueOf(pairs[index]), value);
+        }
+        return properties;
+    }
+
     private static final class ActiveStreakSession {
         private final UUID playerId;
+        private final long startedAt;
         private long lastCreditedAt;
         private boolean closed;
         private ScheduledTask qualificationTask;
 
         private ActiveStreakSession(UUID playerId, long startedAt) {
             this.playerId = playerId;
+            this.startedAt = startedAt;
             this.lastCreditedAt = startedAt;
         }
 
@@ -616,6 +673,10 @@ public class ConnectionListener {
 
         private synchronized long secondsSinceLastCredit(long now) {
             return Math.max(0L, now - lastCreditedAt);
+        }
+
+        private long durationSeconds(long now) {
+            return Math.max(0L, now - startedAt);
         }
     }
 

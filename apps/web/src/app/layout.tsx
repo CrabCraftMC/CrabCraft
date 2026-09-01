@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Geist_Mono, Unbounded } from "next/font/google";
+import { minecraftAnalyticsId } from "@crabcraft/shared/analytics-identity";
 import { auth, getAvatarUrl } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GridPattern from "@/components/GridPattern";
 import CommandMenu from "@/components/CommandMenu";
 import MascotJoin from "@/components/MascotJoin";
+import AnalyticsIdentity from "@/components/AnalyticsIdentity";
 import "@/styles/globals.css";
 
 const unbounded = Unbounded({
@@ -79,6 +80,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  const analyticsId = session?.user?.minecraftUuid
+    ? minecraftAnalyticsId(
+        session.user.minecraftUuid,
+        process.env.POSTHOG_PERSON_SALT ?? "",
+      )
+    : null;
 
   let userData = null;
   if (session?.user) {
@@ -108,13 +115,6 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           suppressHydrationWarning
         />
-        {process.env.NODE_ENV === "production" && (
-          <script
-            defer
-            src="https://web.maxmoon.sh/recorder.js"
-            data-website-id="b47dfe1d-3ed3-49d8-948a-96776107f338"
-          />
-        )}
       </head>
       <body className={`${unbounded.variable} ${geistMono.variable} font-sans antialiased bg-paper transition-colors duration-200 relative`}>
         <div className="fixed inset-0 z-0 pointer-events-none">
@@ -126,17 +126,9 @@ export default async function RootLayout({
           <Footer />
         </div>
         <CommandMenu />
+        <AnalyticsIdentity analyticsId={analyticsId} />
         {/* Only nudge signed-out visitors to join — signed-in users already have. */}
         {!userData && <MascotJoin />}
-        {process.env.NODE_ENV === "production" && (
-          <Script
-            src="https://web.maxmoon.sh/script.js"
-            strategy="lazyOnload"
-            data-website-id="b47dfe1d-3ed3-49d8-948a-96776107f338"
-            data-domains="crabcraft.net,www.crabcraft.net"
-            data-performance="true"
-          />
-        )}
       </body>
     </html>
   );

@@ -42,6 +42,8 @@ import {
   SEASON_PLAY_BUTTON_ID,
   buildOpenTicketButton,
 } from "../utils/seasonAccess.js";
+import { AnalyticsEvent } from "@crabcraft/shared/analytics";
+import { captureMinecraftEvent } from "../utils/analytics.js";
 
 function intakeString(intake: unknown, key: string): string | null {
   if (typeof intake !== "object" || intake === null) return null;
@@ -1100,6 +1102,22 @@ export default class ButtonInteractionEvent extends Event {
       } catch (e) {
         logger.error("Failed to upsert player on accept:", e);
       }
+
+      captureMinecraftEvent(
+        UUID,
+        AnalyticsEvent.APPLICATION_RESOLVED,
+        {
+          outcome: "accepted",
+          review_duration_seconds: Math.max(
+            0,
+            Math.floor(Date.now() / 1_000) - application.applied_at,
+          ),
+          season: application.season,
+        },
+        {
+          dedupeKey: `${application.id}:${application.applied_at}:accepted`,
+        },
+      );
 
       // (application status was already flipped above as the race guard)
 
