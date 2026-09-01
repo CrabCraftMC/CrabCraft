@@ -108,13 +108,6 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           suppressHydrationWarning
         />
-        {process.env.NODE_ENV === "production" && (
-          <script
-            defer
-            src="https://web.maxmoon.sh/recorder.js"
-            data-website-id="b47dfe1d-3ed3-49d8-948a-96776107f338"
-          />
-        )}
       </head>
       <body className={`${unbounded.variable} ${geistMono.variable} font-sans antialiased bg-paper transition-colors duration-200 relative`}>
         <div className="fixed inset-0 z-0 pointer-events-none">
