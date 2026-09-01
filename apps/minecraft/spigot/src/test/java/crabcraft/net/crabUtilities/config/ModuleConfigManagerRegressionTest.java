@@ -84,6 +84,8 @@ public final class ModuleConfigManagerRegressionTest {
                 "BlueMap path was routed to the wrong module");
         check(moduleName("public-chat.enabled").equals("chat"),
                 "public chat path was routed to the wrong module");
+        check(moduleName("restricted-area.enabled").equals("gameplay"),
+                "restricted area path was routed to the wrong module");
         check(moduleName("tweaks.view-distance.enabled").equals("tweaks"),
                 "tweak path was routed to the wrong module");
         check(ModuleConfigManager.moduleForPathStatic("redis.host") == null,
