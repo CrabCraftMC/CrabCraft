@@ -1100,7 +1100,7 @@ export async function upsertUser(data: UpsertUserData): Promise<void> {
 
 export async function createApplication(
   data: CreateApplicationData,
-): Promise<number> {
+): Promise<{ id: number; appliedAt: number }> {
   // Applications are unique per (discord_id, season). A re-application for
   // the same season (e.g. after a denial) upserts onto the existing row and
   // resets it to a fresh pending state. When season is null the unique index
@@ -1118,6 +1118,7 @@ export async function createApplication(
       join_reason: data.joinReason ?? null,
       favourite_wood: data.favouriteWood ?? null,
       season: data.season ?? null,
+      applied_at: now,
     })
     .onConflictDoUpdate({
       target: [applications.discord_id, applications.season],
@@ -1137,8 +1138,8 @@ export async function createApplication(
         applied_at: now,
       },
     })
-    .returning({ id: applications.id });
-  return row.id;
+    .returning({ id: applications.id, appliedAt: applications.applied_at });
+  return row;
 }
 
 export async function setPolicyAgreed(
@@ -1253,8 +1254,8 @@ export async function denyApplication(
   discordId: string,
   reason: string,
   resolvedBy: string,
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const updated = await db
     .update(applications)
     .set({
       status: "denied",
@@ -1267,7 +1268,9 @@ export async function denyApplication(
         eq(applications.discord_id, discordId),
         eq(applications.status, "pending"),
       ),
-    );
+    )
+    .returning({ id: applications.id });
+  return updated.length > 0;
 }
 
 export async function getLatestApplication(discordId: string) {
@@ -2105,6 +2108,18 @@ export async function getDiscordIdByMinecraftUuid(
     .where(eq(players.minecraft_uuid, uuid))
     .limit(1);
   return row?.discord_id ?? null;
+}
+
+/** Resolve a linked Minecraft UUID without exposing Discord identity to analytics. */
+export async function getMinecraftUuidByDiscordId(
+  discordId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ minecraftUuid: players.minecraft_uuid })
+    .from(players)
+    .where(eq(players.discord_id, discordId))
+    .limit(1);
+  return row?.minecraftUuid ?? null;
 }
 
 /** The linked Discord id for a Minecraft username (case-insensitive), if any. */

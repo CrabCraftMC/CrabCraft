@@ -7,6 +7,7 @@ logger.info("Starting Crabby...");
 import { loadCommands } from "./handlers/commands.js";
 import { loadEvents } from "./handlers/events.js";
 import { closePool } from "./utils/database.js";
+import { shutdownAnalytics } from "./utils/analytics.js";
 
 import type SlashCommand from "./structures/SlashCommand.js";
 
@@ -45,6 +46,7 @@ export const commands: Collection<string, SlashCommand> = new Collection();
 async function shutdown(signal: string) {
   logger.info(`Received ${signal}, shutting down gracefully...`);
   client.destroy();
+  await shutdownAnalytics();
   await closePool();
   process.exit(0);
 }

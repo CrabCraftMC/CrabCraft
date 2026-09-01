@@ -1,12 +1,17 @@
 package crabcraft.net.crabUtilities.velocity;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import crabcraft.net.crabUtilities.velocity.db.PlayerSettingsRepository;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPubSub;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,6 +38,9 @@ public class PlayerSettingsService {
     public static final String HASH_KEY = "crabutilities:settings";
     public static final String SET_CHANNEL = "crabutilities:settings-set";
     public static final String UPDATE_CHANNEL = "crabutilities:settings-updates";
+    private static final List<String> ANALYTICS_SETTINGS = List.of(
+            "phantoms", "mentionPings", "acceptMessages",
+            "locatorBar", "bingoMessages", "coordinateHud");
 
     private final CrabUtilitiesVelocity plugin;
     private final PlayerSettingsRepository repository;
@@ -169,9 +177,34 @@ public class PlayerSettingsService {
         settings.remove("uuid");
         String settingsJson = settings.toString();
 
-        cache.put(uuid, settings);
+        JsonObject previous = cache.put(uuid, settings);
         plugin.runDatabaseTask("settings-save", () -> repository.save(uuid.toString(), settingsJson));
         persistToRedis(uuid, settings, true);
+        captureSettingChanges(uuid, previous, settings);
+    }
+
+    private void captureSettingChanges(UUID uuid, JsonObject previous, JsonObject settings) {
+        if (previous == null) return;
+        for (String key : ANALYTICS_SETTINGS) {
+            JsonElement oldValue = previous.get(key);
+            JsonElement newValue = settings.get(key);
+            if (Objects.equals(oldValue, newValue)) continue;
+            Object analyticsValue = analyticsValue(newValue);
+            if (analyticsValue == null) continue;
+            plugin.getAnalyticsService().capture(
+                    uuid,
+                    AnalyticsService.PLAYER_SETTING_CHANGED,
+                    Map.of("setting", key, "value", analyticsValue));
+        }
+    }
+
+    private static Object analyticsValue(JsonElement value) {
+        if (value == null || !value.isJsonPrimitive()) return null;
+        JsonPrimitive primitive = value.getAsJsonPrimitive();
+        if (primitive.isBoolean()) return primitive.getAsBoolean();
+        if (primitive.isNumber()) return primitive.getAsNumber();
+        if (primitive.isString()) return primitive.getAsString();
+        return null;
     }
 
     private void startSubscriber() {

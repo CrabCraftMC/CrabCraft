@@ -3,6 +3,8 @@ import { commands } from "../index.js";
 import Event from "../structures/Event.js";
 import logger from "../utils/logger.js";
 import { errorContainer } from "../utils/embeds.js";
+import { AnalyticsEvent } from "@crabcraft/shared/analytics";
+import { captureDiscordEvent } from "../utils/analytics.js";
 
 const cooldowns = new Map<string, Map<string, number>>();
 
@@ -13,6 +15,7 @@ export default class ChatInteractionEvent extends Event {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.isChatInputCommand()) return;
+    const startedAt = Date.now();
 
     const command = commands.get(interaction.commandName);
 
@@ -64,10 +67,28 @@ export default class ChatInteractionEvent extends Event {
 
     try {
       await command.execute(interaction);
+      void captureDiscordEvent(
+        interaction.user.id,
+        AnalyticsEvent.DISCORD_COMMAND_COMPLETED,
+        {
+          command: interaction.commandName,
+          duration_ms: Date.now() - startedAt,
+          success: true,
+        },
+      );
     } catch (error) {
       logger.error(
         `Error executing command ${interaction.commandName} by ${interaction.user.username}`,
         error,
+      );
+      void captureDiscordEvent(
+        interaction.user.id,
+        AnalyticsEvent.DISCORD_COMMAND_COMPLETED,
+        {
+          command: interaction.commandName,
+          duration_ms: Date.now() - startedAt,
+          success: false,
+        },
       );
     }
   }

@@ -98,7 +98,7 @@ export async function recordBingoCompletion(event: {
   taskId: string;
   completedAt: number;
   sourceBackend: string | null;
-}): Promise<boolean> {
+}): Promise<{ inserted: boolean; ownerMinecraftUuid: string }> {
   return db.transaction(async (tx) => {
     const [card] = await tx
       .select()
@@ -108,7 +108,9 @@ export async function recordBingoCompletion(event: {
     if (!card
       || event.completedAt < card.starts_at
       || event.completedAt >= card.ends_at
-      || !card.tasks.some((task) => task.id === event.taskId)) return false;
+      || !card.tasks.some((task) => task.id === event.taskId)) {
+      return { inserted: false, ownerMinecraftUuid: event.minecraftUuid };
+    }
 
     let ownerUuid = event.minecraftUuid;
     const [primary] = await tx
@@ -138,7 +140,9 @@ export async function recordBingoCompletion(event: {
       })
       .onConflictDoNothing()
       .returning({ taskId: bingoPlayerProgress.task_id });
-    if (inserted.length === 0) return false;
+    if (inserted.length === 0) {
+      return { inserted: false, ownerMinecraftUuid: ownerUuid };
+    }
 
     const rows = await tx
       .select({ taskId: bingoPlayerProgress.task_id })
@@ -152,7 +156,9 @@ export async function recordBingoCompletion(event: {
     const blackoutAt = hasBingoBlackout(card.tasks, completed)
       ? event.completedAt
       : null;
-    if (lineAt === null && blackoutAt === null) return true;
+    if (lineAt === null && blackoutAt === null) {
+      return { inserted: true, ownerMinecraftUuid: ownerUuid };
+    }
 
     await tx
       .insert(bingoPlayerMilestones)
@@ -169,7 +175,7 @@ export async function recordBingoCompletion(event: {
           blackout_completed_at: sql`COALESCE(${bingoPlayerMilestones.blackout_completed_at}, excluded.blackout_completed_at)`,
         },
       });
-    return true;
+    return { inserted: true, ownerMinecraftUuid: ownerUuid };
   });
 }
 

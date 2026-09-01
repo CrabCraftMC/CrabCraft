@@ -169,6 +169,10 @@ interface IConfig {
   GALLERY_MEDIA_BASE_URL: string;
   GALLERY_CLOUDFLARE_ZONE_ID: string;
   GALLERY_CLOUDFLARE_CACHE_PURGE_TOKEN: string;
+  POSTHOG_PROJECT_TOKEN: string;
+  POSTHOG_HOST: string;
+  POSTHOG_PERSON_SALT: string;
+  POSTHOG_ENVIRONMENT: string;
 
   // Discord IDs (config.json)
   GUILD_ID: string;
@@ -225,6 +229,16 @@ const config: IConfig = {
     process.env.GALLERY_CLOUDFLARE_ZONE_ID?.trim() ?? "",
   GALLERY_CLOUDFLARE_CACHE_PURGE_TOKEN:
     process.env.GALLERY_CLOUDFLARE_CACHE_PURGE_TOKEN?.trim() ?? "",
+  POSTHOG_PROJECT_TOKEN: process.env.POSTHOG_PROJECT_TOKEN?.trim() ?? "",
+  POSTHOG_HOST: normalizeOptionalUrl(
+    "POSTHOG_HOST",
+    "https://eu.i.posthog.com",
+  ),
+  POSTHOG_PERSON_SALT: process.env.POSTHOG_PERSON_SALT?.trim() ?? "",
+  POSTHOG_ENVIRONMENT:
+    process.env.POSTHOG_ENVIRONMENT?.trim() ||
+    process.env.NODE_ENV?.trim() ||
+    "production",
 
   GUILD_ID: ids.guildId,
   MOD_ROLE_ID: ids.roles.mod,

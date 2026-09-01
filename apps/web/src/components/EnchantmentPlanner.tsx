@@ -14,6 +14,7 @@ import {
   Sparkles,
   WandSparkles,
 } from "lucide-react";
+import { captureWebToolCompleted } from "@/lib/analytics";
 
 const STORAGE_KEY = "crabcraft-enchantment-planner";
 const BOOK_ICON = "/minecraft/item/enchanted_book.png";
@@ -667,11 +668,15 @@ export default function EnchantmentPlanner() {
 
   const copyCommand = useCallback((command: string) => {
     navigator.clipboard.writeText(command);
+    captureWebToolCompleted("enchantment_planner", "copy_command", {
+      item: itemKey,
+      selected_enchantments: selectedEntries.length,
+    });
     setCopiedCommand(command);
     setTimeout(() => {
       setCopiedCommand((current) => (current === command ? null : current));
     }, 1500);
-  }, []);
+  }, [itemKey, selectedEntries.length]);
 
   const renderEnchantmentCard = (id: string) => {
     const enchantment = ENCHANTMENTS[id];

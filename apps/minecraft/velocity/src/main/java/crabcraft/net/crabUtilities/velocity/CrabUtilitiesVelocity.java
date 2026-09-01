@@ -90,6 +90,7 @@ public class CrabUtilitiesVelocity {
     private LoginStreakPublisher loginStreakPublisher;
     private ConnectionListener connectionListener;
     private PlayerSettingsService playerSettingsService;
+    private AnalyticsService analyticsService;
     private LiteBansInfractionService liteBansInfractionService;
     private PunishmentEventPublisher punishmentEventPublisher;
     private LuckPerms luckPerms;
@@ -107,6 +108,7 @@ public class CrabUtilitiesVelocity {
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent event) {
         this.config = VelocityConfig.load(dataDirectory, logger);
+        this.analyticsService = new AnalyticsService(config, logger);
         this.nicknameCache = new NicknameCache();
         this.pendingJoinManager = new PendingJoinManager();
         this.messageManager = new MessageManager(this);
@@ -154,6 +156,9 @@ public class CrabUtilitiesVelocity {
             if (connectionListener != null) {
                 connectionListener.shutdown();
             }
+            if (analyticsService != null) {
+                analyticsService.close();
+            }
             stopRuntimeConsumers();
             shutdownDatabaseExecutor("shutdown");
             if (pgWriter != null) {
@@ -172,16 +177,21 @@ public class CrabUtilitiesVelocity {
             shutdownDatabaseExecutor("reload");
 
             PostgresStatsWriter oldPgWriter = this.pgWriter;
+            AnalyticsService oldAnalyticsService = this.analyticsService;
             PostgresStatsWriter newPgWriter = new PostgresStatsWriter(
                 newConfig.getDbUrl(), newConfig.getDbUsername(), newConfig.getDbPassword(), logger
             );
 
             this.config = newConfig;
+            this.analyticsService = new AnalyticsService(newConfig, logger);
             this.pgWriter = newPgWriter;
             initialiseDatabaseServices(newConfig);
 
             if (oldPgWriter != null) {
                 oldPgWriter.close();
+            }
+            if (oldAnalyticsService != null) {
+                oldAnalyticsService.close();
             }
 
             startRuntimeConsumers(newConfig);
@@ -283,6 +293,7 @@ public class CrabUtilitiesVelocity {
     public LoginStreakService getLoginStreakService() { return loginStreakService; }
     public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
     public PlayerSettingsService getPlayerSettingsService() { return playerSettingsService; }
+    public AnalyticsService getAnalyticsService() { return analyticsService; }
     public LiteBansInfractionService getLiteBansInfractionService() { return liteBansInfractionService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
     public CallManager getCallManager() { return callManager; }
