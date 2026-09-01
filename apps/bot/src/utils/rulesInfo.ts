@@ -15,6 +15,8 @@ const RULES_BANNER_URL = "https://crabcraft.net/rules-info.png";
 
 const TICKET_CHANNEL_URL =
   "https://discord.com/channels/1215756131671212163/1397191941782896670";
+const FAQS_CHANNEL_URL =
+  "https://discord.com/channels/1215756131671212163/1377256699496366191";
 const MODPACK_URL = "https://modrinth.com/modpack/crabcraft-modpack";
 
 /** A divider separator with small spacing (matches the source layout). */
@@ -98,6 +100,11 @@ export function buildRulesInfoComponents() {
         .setLabel("Official Modpack")
         .setEmoji("📦")
         .setURL(MODPACK_URL),
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel("FAQs")
+        .setEmoji("❓")
+        .setURL(FAQS_CHANNEL_URL),
     );
 
   return [welcome, rules, commitment, links, buttons];
