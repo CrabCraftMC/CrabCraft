@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { Boxes, Package, RotateCcw, Sparkles } from "lucide-react";
-import { captureWebToolCompleted } from "@/lib/analytics";
+import { trackUmamiEventOnce } from "@/lib/umami";
 
 const STORAGE_KEY = "crabcraft-beacon-calculator";
 
@@ -144,8 +144,9 @@ export default function BeaconCalculator() {
                       key={entry.level}
                       onClick={() => {
                         setLevel(entry.level);
-                        captureWebToolCompleted("beacon_calculator", "change_level", {
-                          level: entry.level,
+                        trackUmamiEventOnce("beacon-calculator", "tool-used", {
+                          tool: "beacon-calculator",
+                          action: "select-level",
                         });
                       }}
                       className={`py-2 rounded-xl text-sm font-bold cursor-pointer transition-colors ${
@@ -170,7 +171,10 @@ export default function BeaconCalculator() {
                       key={entry.name}
                       onClick={() => {
                         setMaterial(entry.name);
-                        captureWebToolCompleted("beacon_calculator", "change_material");
+                        trackUmamiEventOnce("beacon-calculator", "tool-used", {
+                          tool: "beacon-calculator",
+                          action: "select-material",
+                        });
                       }}
                       className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm font-bold cursor-pointer transition-colors ${
                         material === entry.name

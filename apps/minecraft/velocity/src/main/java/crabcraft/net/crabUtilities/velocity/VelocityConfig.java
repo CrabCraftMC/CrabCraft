@@ -75,11 +75,6 @@ public class VelocityConfig {
     private final long voicechatPlayerHomeTtlSeconds;
     private final int loginStreakResetHourUtc;
     private final int loginStreakRequiredPlaySeconds;
-    private final boolean analyticsEnabled;
-    private final String analyticsProjectToken;
-    private final String analyticsHost;
-    private final String analyticsPersonSalt;
-    private final String analyticsEnvironment;
 
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
                            String redisChannel, String redisPunishmentStream,
@@ -108,10 +103,7 @@ public class VelocityConfig {
                            boolean voicechatCrossServerEnabled,
                            long voicechatPlayerHomeTtlSeconds,
                            int loginStreakResetHourUtc,
-                           int loginStreakRequiredPlaySeconds,
-                           boolean analyticsEnabled, String analyticsProjectToken,
-                           String analyticsHost, String analyticsPersonSalt,
-                           String analyticsEnvironment) {
+                           int loginStreakRequiredPlaySeconds) {
         this.redisHost = redisHost;
         this.redisPort = redisPort;
         this.redisPassword = redisPassword;
@@ -157,11 +149,6 @@ public class VelocityConfig {
         this.voicechatPlayerHomeTtlSeconds = voicechatPlayerHomeTtlSeconds;
         this.loginStreakResetHourUtc = loginStreakResetHourUtc;
         this.loginStreakRequiredPlaySeconds = loginStreakRequiredPlaySeconds;
-        this.analyticsEnabled = analyticsEnabled;
-        this.analyticsProjectToken = analyticsProjectToken;
-        this.analyticsHost = analyticsHost;
-        this.analyticsPersonSalt = analyticsPersonSalt;
-        this.analyticsEnvironment = analyticsEnvironment;
     }
 
     public static VelocityConfig load(Path dataDirectory, Logger logger) {
@@ -293,13 +280,6 @@ public class VelocityConfig {
             int streakRequiredMinutes = root.node("login-streaks", "required-play-minutes")
                     .getInt(LoginStreakService.DEFAULT_REQUIRED_PLAY_MINUTES);
 
-            ConfigurationNode analytics = root.node("analytics");
-            boolean analyticsEnabled = analytics.node("enabled").getBoolean(false);
-            String analyticsProjectToken = analytics.node("project-token").getString("");
-            String analyticsHost = analytics.node("host").getString("https://eu.i.posthog.com");
-            String analyticsPersonSalt = analytics.node("person-salt").getString("");
-            String analyticsEnvironment = analytics.node("environment").getString("production");
-
             return new VelocityConfig(host, port, password, channel,
                     punishmentStream, punishmentWatchIntervalSeconds, format,
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
@@ -313,9 +293,7 @@ public class VelocityConfig {
                     dbUrl, dbUsername, dbPassword,
                     updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken,
                     vcEnabled, vcHomeTtl, streakResetHour,
-                    LoginStreakService.minutesToSeconds(streakRequiredMinutes),
-                    analyticsEnabled, analyticsProjectToken, analyticsHost,
-                    analyticsPersonSalt, analyticsEnvironment);
+                    LoginStreakService.minutesToSeconds(streakRequiredMinutes));
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat",
@@ -332,8 +310,7 @@ public class VelocityConfig {
                     "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "",
                     true, 6L, false, "CrabCraftMC/CrabCraft", "",
                     true, 300L, LoginStreakService.DEFAULT_RESET_HOUR_UTC,
-                    LoginStreakService.minutesToSeconds(LoginStreakService.DEFAULT_REQUIRED_PLAY_MINUTES),
-                    false, "", "https://eu.i.posthog.com", "", "production");
+                    LoginStreakService.minutesToSeconds(LoginStreakService.DEFAULT_REQUIRED_PLAY_MINUTES));
         }
     }
 
@@ -382,9 +359,4 @@ public class VelocityConfig {
     public long getVoicechatPlayerHomeTtlSeconds() { return voicechatPlayerHomeTtlSeconds; }
     public int getLoginStreakResetHourUtc() { return loginStreakResetHourUtc; }
     public int getLoginStreakRequiredPlaySeconds() { return loginStreakRequiredPlaySeconds; }
-    public boolean isAnalyticsEnabled() { return analyticsEnabled; }
-    public String getAnalyticsProjectToken() { return analyticsProjectToken; }
-    public String getAnalyticsHost() { return analyticsHost; }
-    public String getAnalyticsPersonSalt() { return analyticsPersonSalt; }
-    public String getAnalyticsEnvironment() { return analyticsEnvironment; }
 }

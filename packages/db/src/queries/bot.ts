@@ -1100,7 +1100,7 @@ export async function upsertUser(data: UpsertUserData): Promise<void> {
 
 export async function createApplication(
   data: CreateApplicationData,
-): Promise<{ id: number; appliedAt: number }> {
+): Promise<number> {
   // Applications are unique per (discord_id, season). A re-application for
   // the same season (e.g. after a denial) upserts onto the existing row and
   // resets it to a fresh pending state. When season is null the unique index
@@ -1118,7 +1118,6 @@ export async function createApplication(
       join_reason: data.joinReason ?? null,
       favourite_wood: data.favouriteWood ?? null,
       season: data.season ?? null,
-      applied_at: now,
     })
     .onConflictDoUpdate({
       target: [applications.discord_id, applications.season],
@@ -1138,8 +1137,8 @@ export async function createApplication(
         applied_at: now,
       },
     })
-    .returning({ id: applications.id, appliedAt: applications.applied_at });
-  return row;
+    .returning({ id: applications.id });
+  return row.id;
 }
 
 export async function setPolicyAgreed(
@@ -1254,8 +1253,8 @@ export async function denyApplication(
   discordId: string,
   reason: string,
   resolvedBy: string,
-): Promise<boolean> {
-  const updated = await db
+): Promise<void> {
+  await db
     .update(applications)
     .set({
       status: "denied",
@@ -1268,9 +1267,7 @@ export async function denyApplication(
         eq(applications.discord_id, discordId),
         eq(applications.status, "pending"),
       ),
-    )
-    .returning({ id: applications.id });
-  return updated.length > 0;
+    );
 }
 
 export async function getLatestApplication(discordId: string) {
@@ -2072,19 +2069,15 @@ export async function clearPlayerMinecraftLinkByDiscordId(
 // ── player profile card (/playerinfo) ───────────────────────────
 
 export interface PlayerIdentity {
-  discord_id: string;
   minecraft_uuid: string;
   minecraft_username: string | null;
-  nickname: string | null;
   discord_username: string;
   role: string;
 }
 
 const PLAYER_IDENTITY_COLUMNS = {
-  discord_id: players.discord_id,
   minecraft_uuid: players.minecraft_uuid,
   minecraft_username: players.minecraft_username,
-  nickname: players.nickname,
   discord_username: players.discord_username,
   role: players.role,
 } as const;
@@ -2102,32 +2095,6 @@ export async function getPlayerByMinecraftUsername(
   return row as PlayerIdentity;
 }
 
-/** Resolve a linked player by Discord ID. */
-export async function getPlayerByDiscordId(
-  discordId: string,
-): Promise<PlayerIdentity | null> {
-  const [row] = await db
-    .select(PLAYER_IDENTITY_COLUMNS)
-    .from(players)
-    .where(eq(players.discord_id, discordId))
-    .limit(1);
-  if (!row?.minecraft_uuid) return null;
-  return row as PlayerIdentity;
-}
-
-/** All linked identities for a one-off analytics person-profile sync. */
-export async function getAllPlayerAnalyticsIdentities(): Promise<PlayerIdentity[]> {
-  const rows = await db
-    .select(PLAYER_IDENTITY_COLUMNS)
-    .from(players)
-    .where(isNotNull(players.minecraft_uuid));
-  return rows.flatMap((row) =>
-    row.minecraft_uuid
-      ? [{ ...row, minecraft_uuid: row.minecraft_uuid }]
-      : [],
-  );
-}
-
 /** The linked Discord id for a Minecraft UUID, if any. */
 export async function getDiscordIdByMinecraftUuid(
   uuid: string,
@@ -2138,18 +2105,6 @@ export async function getDiscordIdByMinecraftUuid(
     .where(eq(players.minecraft_uuid, uuid))
     .limit(1);
   return row?.discord_id ?? null;
-}
-
-/** Resolve a linked Minecraft UUID without exposing Discord identity to analytics. */
-export async function getMinecraftUuidByDiscordId(
-  discordId: string,
-): Promise<string | null> {
-  const [row] = await db
-    .select({ minecraftUuid: players.minecraft_uuid })
-    .from(players)
-    .where(eq(players.discord_id, discordId))
-    .limit(1);
-  return row?.minecraftUuid ?? null;
 }
 
 /** The linked Discord id for a Minecraft username (case-insensitive), if any. */

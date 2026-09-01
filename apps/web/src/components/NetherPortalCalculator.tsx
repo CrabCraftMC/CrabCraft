@@ -9,7 +9,7 @@ import {
 import Squircle from "@/components/Squircle";
 import { parsePortalCoordinates } from "@/data/portal-coordinates";
 import { RotateCcw, ArrowLeftRight, Info, AlertTriangle, Link2 } from "lucide-react";
-import { captureWebToolCompleted } from "@/lib/analytics";
+import { trackUmamiEventOnce } from "@/lib/umami";
 
 const STORAGE_KEY = "crabcraft-nether-portal";
 
@@ -102,7 +102,10 @@ export default function NetherPortalCalculator() {
     raw: string,
     apply: (n: number) => void
   ) => {
-    captureWebToolCompleted("portal_calculator", "edit_coordinates");
+    trackUmamiEventOnce("portal-calculator", "tool-used", {
+      tool: "portal-calculator",
+      action: "edit-coordinates",
+    });
     const clean = sanitize(raw);
     setEditingField(field);
     setEditingValue(clean);
@@ -123,8 +126,9 @@ export default function NetherPortalCalculator() {
     if (!coordinates) return;
 
     event.preventDefault();
-    captureWebToolCompleted("portal_calculator", "paste_coordinates", {
-      dimension,
+    trackUmamiEventOnce("portal-calculator", "tool-used", {
+      tool: "portal-calculator",
+      action: "paste-coordinates",
     });
     setEditingField(null);
 

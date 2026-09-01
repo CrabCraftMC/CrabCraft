@@ -26,14 +26,6 @@ ARG GIT_COMMIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
 ARG GALLERY_MEDIA_BASE_URL
 ENV GALLERY_MEDIA_BASE_URL=${GALLERY_MEDIA_BASE_URL}
-ARG NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
-ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=${NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN}
-ARG NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
-ENV NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST}
-ARG NEXT_PUBLIC_POSTHOG_ENVIRONMENT=production
-ENV NEXT_PUBLIC_POSTHOG_ENVIRONMENT=${NEXT_PUBLIC_POSTHOG_ENVIRONMENT}
-ARG NEXT_PUBLIC_POSTHOG_SESSION_REPLAY=false
-ENV NEXT_PUBLIC_POSTHOG_SESSION_REPLAY=${NEXT_PUBLIC_POSTHOG_SESSION_REPLAY}
 
 WORKDIR /app/apps/web
 RUN bun run build
@@ -55,7 +47,6 @@ COPY --from=infisical /bin/infisical /usr/local/bin/infisical
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --chown=nextjs:nodejs --chmod=755 apps/web/start.sh ./apps/web/start.sh
 
 ARG GIT_COMMIT_SHA
 ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
@@ -65,4 +56,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["apps/web/start.sh"]
+CMD ["node", "apps/web/server.js"]

@@ -11,7 +11,6 @@ import {
   RotateCcw,
   Users,
 } from "lucide-react";
-import { captureWebToolCompleted } from "@/lib/analytics";
 
 const STORAGE_KEY = "crabcraft-stack-calculator";
 const MAX_ITEMS = 999_999_999;
@@ -179,9 +178,6 @@ export default function StackCalculator() {
     navigator.clipboard.writeText(
       `${formatAmount(totalItems)} items at ${stackSize} per stack: ${breakdownText(breakdown)}.${splitText}`
     );
-    captureWebToolCompleted("stack_calculator", "copy_summary", {
-      stack_size: stackSize,
-    });
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [
@@ -326,6 +322,9 @@ export default function StackCalculator() {
                 </div>
                 <button
                   onClick={copySummary}
+                  data-umami-event="tool-result-copied"
+                  data-umami-event-tool="stack-calculator"
+                  data-umami-event-result="summary"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 text-sm transition-colors cursor-pointer active:scale-95"
                 >
                   {copied ? (

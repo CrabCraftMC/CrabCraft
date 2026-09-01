@@ -143,6 +143,9 @@ export default async function HomePage() {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-umami-event="community-link-opened"
+                data-umami-event-destination={item.subtitle}
+                data-umami-event-location="home-hero"
                 className={`relative z-10 block cursor-pointer ${item.buttonBg} text-white font-bold py-3 px-6 rounded-full w-full text-center text-xl shadow-lg transition-transform hover:scale-105`}
               >
                 {item.buttonText}
@@ -399,6 +402,9 @@ export default async function HomePage() {
             href="https://discord.crabcraft.net"
             target="_blank"
             rel="noopener noreferrer"
+            data-umami-event="community-link-opened"
+            data-umami-event-destination="Discord"
+            data-umami-event-location="home-footer-cta"
             className="block"
           >
             <Squircle cornerRadius={32} className="card-hover animate-in p-8 lg:p-12 overflow-hidden bg-gradient-to-r from-[#F97316] to-[#FB923C] cursor-pointer" style={{ animationDelay: "0.9s" }}>

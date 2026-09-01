@@ -29,7 +29,6 @@
     "lucide-react": "^0.562.0",
     "next": "^16.2.10",
     "next-auth": "5.0.0-beta.30",
-    "posthog-js": "^1.424.0",
     "postprocessing": "^6.39.2",
     "react": "^19.2.7",
     "react-colorful": "^5.8.0",

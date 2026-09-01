@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Squircle from "@/components/Squircle";
 import { RotateCcw, Link2, Unlink2 } from "lucide-react";
-import { captureWebToolCompleted } from "@/lib/analytics";
+import { trackUmamiEventOnce } from "@/lib/umami";
 
 const STORAGE_KEY = "crabcraft-circle-gen";
 
@@ -75,7 +75,10 @@ export default function CircleGenerator() {
 
   const updateWidth = useCallback(
     (v: number) => {
-      captureWebToolCompleted("circle_generator", "change_dimensions");
+      trackUmamiEventOnce("circle-generator", "tool-used", {
+        tool: "circle-generator",
+        action: "change-dimensions",
+      });
       const clamped = Math.max(1, Math.min(128, v));
       setWidth(clamped);
       if (linked) setHeight(clamped);
@@ -85,7 +88,10 @@ export default function CircleGenerator() {
 
   const updateHeight = useCallback(
     (v: number) => {
-      captureWebToolCompleted("circle_generator", "change_dimensions");
+      trackUmamiEventOnce("circle-generator", "tool-used", {
+        tool: "circle-generator",
+        action: "change-dimensions",
+      });
       const clamped = Math.max(1, Math.min(128, v));
       setHeight(clamped);
       if (linked) setWidth(clamped);
@@ -316,8 +322,9 @@ export default function CircleGenerator() {
                   key={m}
                   onClick={() => {
                     setMode(m);
-                    captureWebToolCompleted("circle_generator", "change_mode", {
-                      mode: m,
+                    trackUmamiEventOnce("circle-generator", "tool-used", {
+                      tool: "circle-generator",
+                      action: "change-mode",
                     });
                   }}
                   className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-bold cursor-pointer transition-colors capitalize ${

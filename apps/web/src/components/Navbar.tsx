@@ -13,8 +13,6 @@ import Squircle from "./Squircle";
 import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings, ImageIcon } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import config from "../data/site-config.json";
-import { AnalyticsEvent } from "@crabcraft/shared/analytics";
-import { captureWebEvent } from "@/lib/analytics";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, ImageIcon,
@@ -103,9 +101,6 @@ export default function Navbar({ user }: { user?: UserData | null }) {
     const copyIp = () => {
         trigger();
         navigator.clipboard.writeText("crabcraft.net");
-        captureWebEvent(AnalyticsEvent.SERVER_ADDRESS_COPIED, {
-            location: "navbar",
-        });
         setIpCopied(true);
         if (ipCopiedTimer.current) clearTimeout(ipCopiedTimer.current);
         ipCopiedTimer.current = setTimeout(() => setIpCopied(false), 2000);
@@ -136,6 +131,8 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                             <button
                                 type="button"
                                 onClick={copyIp}
+                                data-umami-event="server-ip-copied"
+                                data-umami-event-location="navbar"
                                 title="Click to copy server IP"
                                 aria-label="Copy server IP"
                                 className="relative font-bold text-base text-orange-500 tracking-wide text-left cursor-pointer"
@@ -242,6 +239,8 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                     <div className="hidden md:flex flex-1 justify-end items-center gap-5 text-gray-800 dark:text-gray-200">
                         <button
                             onClick={() => window.dispatchEvent(new Event("open-command-menu"))}
+                            data-umami-event="site-search-opened"
+                            data-umami-event-location="navbar-desktop"
                             aria-label="Search"
                             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-paper transition-colors cursor-pointer"
                         >
@@ -285,7 +284,12 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 <button onClick={toggleDarkMode} aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-paper transition-colors cursor-pointer">
                                     {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                                 </button>
-                                <button onClick={() => signIn("discord")} className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-orange-500 transition-colors cursor-pointer">
+                                <button
+                                    onClick={() => signIn("discord")}
+                                    data-umami-event="discord-sign-in-started"
+                                    data-umami-event-location="navbar-desktop"
+                                    className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-orange-500 transition-colors cursor-pointer"
+                                >
                                     <LogIn className="w-4 h-4" />
                                     Sign In
                                 </button>
@@ -360,6 +364,8 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                         {/* Search */}
                         <button
                             onClick={() => { setIsMenuOpen(false); window.dispatchEvent(new Event("open-command-menu")); }}
+                            data-umami-event="site-search-opened"
+                            data-umami-event-location="navbar-mobile"
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-paper/60 dark:hover:bg-white/5 transition-colors w-full cursor-pointer mb-2"
                         >
                             <Search className="w-4 h-4" />
@@ -457,6 +463,8 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                             <div className="pt-2 mt-2">
                                 <button
                                     onClick={() => { setIsMenuOpen(false); signIn("discord"); }}
+                                    data-umami-event="discord-sign-in-started"
+                                    data-umami-event-location="navbar-mobile"
                                     className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-colors cursor-pointer"
                                 >
                                     <LogIn className="w-4 h-4" />

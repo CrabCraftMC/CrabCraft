@@ -49,8 +49,6 @@ import {
   DENY_REASON_PRESET_SELECT_ID,
   resolveDenyReason,
 } from "../utils/denyReasons.js";
-import { AnalyticsEvent } from "@crabcraft/shared/analytics";
-import { captureMinecraftEvent } from "../utils/analytics.js";
 
 const ACCEPTED_VALUES = [
   "y",
@@ -596,29 +594,7 @@ export default class ModalInteractionEvent extends Event {
       // Update application status in database
       if (applicantId) {
         try {
-          const application = await appDb.getLatestApplication(applicantId);
-          const denied = await appDb.denyApplication(
-            applicantId,
-            reason,
-            interaction.user.id,
-          );
-          if (denied && application?.minecraft_uuid) {
-            captureMinecraftEvent(
-              application.minecraft_uuid,
-              AnalyticsEvent.APPLICATION_RESOLVED,
-              {
-                outcome: "denied",
-                review_duration_seconds: Math.max(
-                  0,
-                  Math.floor(Date.now() / 1_000) - application.applied_at,
-                ),
-                season: application.season,
-              },
-              {
-                dedupeKey: `${application.id}:${application.applied_at}:denied`,
-              },
-            );
-          }
+          await appDb.denyApplication(applicantId, reason, interaction.user.id);
         } catch (e) {
           logger.error("Failed to update deny status in database:", e);
         }
@@ -732,13 +708,12 @@ export default class ModalInteractionEvent extends Event {
     // saved. The MC link in `players` is claimed at accept time only.
     const currentSeason = await appDb.getCurrentSeason().catch(() => null);
     let persisted = false;
-    let applicationRecord: { id: number; appliedAt: number } | null = null;
     try {
       await appDb.upsertUser({
         discordId: interaction.user.id,
         discordUsername: interaction.user.username,
       });
-      applicationRecord = await appDb.createApplication({
+      await appDb.createApplication({
         discordId: interaction.user.id,
         discordUsername: interaction.user.username,
         minecraftUsername: minecraftUsername,
@@ -754,7 +729,7 @@ export default class ModalInteractionEvent extends Event {
       logger.error("Failed to persist application to database:", e);
     }
 
-    if (!persisted || !applicationRecord) {
+    if (!persisted) {
       await channel
         .send({
           components: [
@@ -768,18 +743,6 @@ export default class ModalInteractionEvent extends Event {
       await interaction.deleteReply().catch(() => null);
       return;
     }
-
-    captureMinecraftEvent(
-      UUID,
-      AnalyticsEvent.APPLICATION_SUBMITTED,
-      {
-        season: currentSeason?.id ?? null,
-        voice_chat_opt_in: ACCEPTED_VALUES.includes(ingameVoice),
-      },
-      {
-        dedupeKey: `${applicationRecord.id}:${applicationRecord.appliedAt}`,
-      },
-    );
 
     // Application-submitted message (fresh) with Accept / Deny / Edit.
     const submittedMessage = await channel

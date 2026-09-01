@@ -27,7 +27,6 @@ import {
   prepareBlockPalette,
   type PixelArtResult,
 } from "@/lib/pixelArt";
-import { captureWebToolCompleted } from "@/lib/analytics";
 
 const DEFAULT_DETAIL = 64;
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -653,13 +652,9 @@ export default function PixelArtGenerator() {
                   <a
                     href={downloadUrl}
                     download={downloadFilename}
-                    onClick={() =>
-                      captureWebToolCompleted("pixel_art_generator", "download", {
-                        block_count: result?.blockCount ?? 0,
-                        height: result?.height ?? 0,
-                        width: result?.width ?? 0,
-                      })
-                    }
+                    data-umami-event="tool-result-downloaded"
+                    data-umami-event-tool="pixel-art-generator"
+                    data-umami-event-result="png"
                     className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-orange-700 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-2"
                   >
                     <Download className="h-4 w-4" />
