@@ -86,6 +86,29 @@ salt is server-only. Leave the token empty to disable browser analytics. Enable
 replay only after the privacy configuration has been verified against a
 production-like page.
 
+`NEXT_PUBLIC_` values are compiled into the browser bundle. For the production
+image, configure `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`,
+`NEXT_PUBLIC_POSTHOG_HOST`, and optionally
+`NEXT_PUBLIC_POSTHOG_SESSION_REPLAY` as variables on the GitHub `release`
+environment before the image is built.
+
+The production container can fetch `POSTHOG_PERSON_SALT` from Infisical at
+startup. Store the salt in the selected Infisical project/environment and put
+only these universal-auth bootstrap values in `apps/web/.env` on the host:
+
+```dotenv
+INFISICAL_CLIENT_ID=...
+INFISICAL_CLIENT_SECRET=...
+INFISICAL_PROJECT_ID=...
+INFISICAL_ENV=production
+# INFISICAL_DOMAIN=https://your-infisical.example.com  # optional
+```
+
+If those values are absent, the container falls back to directly supplied
+runtime environment variables. Never expose `POSTHOG_PERSON_SALT` as a build
+argument or `NEXT_PUBLIC_` value. For a local build, put all of the PostHog
+values above directly in `apps/web/.env` before running the build.
+
 ### Discord bot
 
 Set these in `apps/bot/.env` or the bot's secret store:
