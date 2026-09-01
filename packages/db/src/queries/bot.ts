@@ -1083,6 +1083,7 @@ export async function upsertUser(data: UpsertUserData): Promise<void> {
         discord_username: data.discordUsername,
         minecraft_username: data.minecraftUsername ?? null,
         minecraft_uuid: data.minecraftUuid ?? null,
+        is_discord_member: true,
       })
       .onConflictDoUpdate({
         target: players.discord_id,
@@ -1090,6 +1091,7 @@ export async function upsertUser(data: UpsertUserData): Promise<void> {
           discord_username: sql`excluded.discord_username`,
           minecraft_username: sql`COALESCE(excluded.minecraft_username, ${players.minecraft_username})`,
           minecraft_uuid: sql`COALESCE(excluded.minecraft_uuid, ${players.minecraft_uuid})`,
+          is_discord_member: true,
           updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
         },
       });
@@ -1840,6 +1842,37 @@ export interface SyncablePlayerAltIdentity {
   minecraft_username: string;
 }
 
+const RESET_AWARD_MEDALS = sql`
+  UPDATE player_award_scores
+  SET medal = 0
+`;
+
+const RECOMPUTE_ELIGIBLE_AWARD_MEDALS = sql`
+  WITH ranked AS (
+    SELECT
+      scores.id,
+      RANK() OVER (
+        PARTITION BY scores.season, scores.award_id
+        ORDER BY scores.score DESC
+      ) AS rank
+    FROM player_award_scores scores
+    WHERE scores.score > 0
+      AND NOT EXISTS (
+        SELECT 1 FROM player_alts alt
+        WHERE alt.minecraft_uuid = scores.minecraft_uuid
+      )
+      AND EXISTS (
+        SELECT 1 FROM players eligible_player
+        WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+          AND eligible_player.is_discord_member = true
+      )
+  )
+  UPDATE player_award_scores scores
+  SET medal = ranked.rank::int
+  FROM ranked
+  WHERE scores.id = ranked.id AND ranked.rank <= 3
+`;
+
 export async function getSyncablePlayerIdentities(): Promise<SyncablePlayerIdentity[]> {
   return db
     .select({
@@ -1849,6 +1882,80 @@ export async function getSyncablePlayerIdentities(): Promise<SyncablePlayerIdent
       minecraft_username: players.minecraft_username,
     })
     .from(players);
+}
+
+/** Update one player's durable Discord-guild membership state. */
+export async function setPlayerDiscordMembership(
+  discordId: string,
+  isMember: boolean,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const changedRows = await tx
+      .update(players)
+      .set({
+        is_discord_member: isMember,
+        updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+      })
+      .where(
+        and(
+          eq(players.discord_id, discordId),
+          ne(players.is_discord_member, isMember),
+        ),
+      )
+      .returning({ discord_id: players.discord_id });
+
+    if (changedRows.length === 0) return;
+
+    await tx.execute(RESET_AWARD_MEDALS);
+    await tx.execute(RECOMPUTE_ELIGIBLE_AWARD_MEDALS);
+  });
+}
+
+/**
+ * Replace the stored membership snapshot atomically.
+ *
+ * Existing rows default to membership=true when the column is first deployed;
+ * this startup reconciliation is therefore also the backfill for players who
+ * left before membership tracking existed.
+ */
+export async function reconcilePlayerDiscordMembership(
+  guildMemberDiscordIds: readonly string[],
+): Promise<{ members: number; nonMembers: number }> {
+  return db.transaction(async (tx) => {
+    await tx
+      .update(players)
+      .set({
+        is_discord_member: false,
+        updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+      });
+
+    if (guildMemberDiscordIds.length > 0) {
+      await tx
+        .update(players)
+        .set({
+          is_discord_member: true,
+          updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+        })
+        .where(inArray(players.discord_id, [...guildMemberDiscordIds]));
+    }
+
+    // Membership changes alter podium positions. Reassign every season's
+    // persisted medals inside the same transaction as the membership seed.
+    await tx.execute(RESET_AWARD_MEDALS);
+    await tx.execute(RECOMPUTE_ELIGIBLE_AWARD_MEDALS);
+
+    const [counts] = await tx
+      .select({
+        members: sql<number>`COUNT(*) FILTER (WHERE ${players.is_discord_member} = true)::int`,
+        nonMembers: sql<number>`COUNT(*) FILTER (WHERE ${players.is_discord_member} = false)::int`,
+      })
+      .from(players);
+
+    return {
+      members: Number(counts?.members ?? 0),
+      nonMembers: Number(counts?.nonMembers ?? 0),
+    };
+  });
 }
 
 export async function getSyncablePlayerAltIdentities(): Promise<SyncablePlayerAltIdentity[]> {

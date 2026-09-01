@@ -41,6 +41,8 @@ final class AwardAltExclusionRegressionTest {
         check(rankingQueries.size() == 7, "expected every public award query to be exercised");
         check(rankingQueries.stream().allMatch(sql -> sql.contains("player_alts")),
                 "a public award query does not exclude alt accounts");
+        check(rankingQueries.stream().allMatch(sql -> sql.contains("is_discord_member")),
+                "a public award query does not exclude departed Discord members");
         check(rankingQueries.stream().filter(sql -> sql.contains("rank() over")).count() == 5,
                 "medal-bearing award queries do not derive ranks after filtering alts");
 
@@ -52,6 +54,8 @@ final class AwardAltExclusionRegressionTest {
                 "stale alt medals are not cleared");
         check(dataSource.sql.get(1).contains("player_alts"),
                 "alt accounts can still consume medal positions");
+        check(dataSource.sql.get(1).contains("is_discord_member"),
+                "departed Discord members can still consume medal positions");
     }
 
     private static final class CapturingDataSource extends HikariDataSource {

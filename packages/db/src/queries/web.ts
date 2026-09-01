@@ -1240,7 +1240,7 @@ export async function getAwardLeaderboard(
       medal: playerAwardScores.medal,
     })
     .from(playerAwardScores)
-    .leftJoin(
+    .innerJoin(
       players,
       eq(players.minecraft_uuid, playerAwardScores.minecraft_uuid),
     )
@@ -1248,6 +1248,7 @@ export async function getAwardLeaderboard(
       and(
         eq(playerAwardScores.award_id, awardId),
         eq(playerAwardScores.season, season),
+        eq(players.is_discord_member, true),
       ),
     )
     .orderBy(desc(playerAwardScores.score))
@@ -1280,6 +1281,11 @@ export async function getAwardsSummary(
       LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid
       WHERE p.season = ${season}
         AND p.score > 0
+        AND EXISTS (
+          SELECT 1 FROM players eligible_player
+          WHERE eligible_player.minecraft_uuid = p.minecraft_uuid
+            AND eligible_player.is_discord_member = true
+        )
       ORDER BY p.award_id, p.score DESC
     `,
   );
@@ -1330,6 +1336,11 @@ export async function getCrownLeaderboard(
            + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
         FROM player_award_scores
         WHERE season = ${season}
+          AND EXISTS (
+            SELECT 1 FROM players eligible_player
+            WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
+              AND eligible_player.is_discord_member = true
+          )
         GROUP BY minecraft_uuid
       ) c
       LEFT JOIN players u ON u.minecraft_uuid = c.minecraft_uuid
@@ -1378,6 +1389,11 @@ export async function getPlayerAwardHoldings(
         FROM player_award_scores
         WHERE season = ${season}
           AND score > 0
+          AND EXISTS (
+            SELECT 1 FROM players eligible_player
+            WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
+              AND eligible_player.is_discord_member = true
+          )
       ) ranked
       WHERE minecraft_uuid = ${uuid} AND medal > 0
       ORDER BY medal ASC, score DESC
@@ -1422,6 +1438,11 @@ export async function getPlayerCrownScore(
            + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
         FROM player_award_scores
         WHERE season = ${season}
+          AND EXISTS (
+            SELECT 1 FROM players eligible_player
+            WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
+              AND eligible_player.is_discord_member = true
+          )
         GROUP BY minecraft_uuid
       ),
       ranked AS (
@@ -1482,6 +1503,11 @@ export async function getPlayerAwardScores(
         FROM player_award_scores
         WHERE season = ${season}
           AND score > 0
+          AND EXISTS (
+            SELECT 1 FROM players eligible_player
+            WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
+              AND eligible_player.is_discord_member = true
+          )
       ) ranked
       WHERE minecraft_uuid = ${uuid}
     `,

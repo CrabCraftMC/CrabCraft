@@ -62,6 +62,11 @@ public final class AwardQueryService {
                           SELECT 1 FROM player_alts alt
                           WHERE alt.minecraft_uuid = scores.minecraft_uuid
                       )
+                      AND EXISTS (
+                          SELECT 1 FROM players eligible_player
+                          WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+                            AND eligible_player.is_discord_member = true
+                      )
                     ORDER BY scores.award_id, scores.score DESC, scores.minecraft_uuid
                     """)) {
                 stmt.setString(1, season);
@@ -149,6 +154,11 @@ public final class AwardQueryService {
                           SELECT 1 FROM player_alts alt
                           WHERE alt.minecraft_uuid = scores.minecraft_uuid
                       )
+                      AND EXISTS (
+                          SELECT 1 FROM players eligible_player
+                          WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+                            AND eligible_player.is_discord_member = true
+                      )
                     """)) {
                 stmt.setString(1, awardId);
                 stmt.setString(2, season);
@@ -176,6 +186,11 @@ public final class AwardQueryService {
                           AND NOT EXISTS (
                               SELECT 1 FROM player_alts alt
                               WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                          )
+                          AND EXISTS (
+                              SELECT 1 FROM players eligible_player
+                              WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+                                AND eligible_player.is_discord_member = true
                           )
                     ) ranked
                     LEFT JOIN players u ON u.minecraft_uuid = ranked.minecraft_uuid
@@ -235,6 +250,11 @@ public final class AwardQueryService {
                               SELECT 1 FROM player_alts alt
                               WHERE alt.minecraft_uuid = scores.minecraft_uuid
                           )
+                          AND EXISTS (
+                              SELECT 1 FROM players eligible_player
+                              WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+                                AND eligible_player.is_discord_member = true
+                          )
                     )
                     SELECT COUNT(DISTINCT minecraft_uuid)::int
                     FROM ranked_scores
@@ -258,6 +278,11 @@ public final class AwardQueryService {
                            AND NOT EXISTS (
                                SELECT 1 FROM player_alts alt
                                WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                           )
+                           AND EXISTS (
+                               SELECT 1 FROM players eligible_player
+                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+                                 AND eligible_player.is_discord_member = true
                            )
                      ),
                      crowns AS (
@@ -348,6 +373,11 @@ public final class AwardQueryService {
                               SELECT 1 FROM player_alts alt
                               WHERE alt.minecraft_uuid = scores.minecraft_uuid
                           )
+                          AND EXISTS (
+                              SELECT 1 FROM players eligible_player
+                              WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+                                AND eligible_player.is_discord_member = true
+                          )
                     ) ranked
                     WHERE minecraft_uuid = ?
                     """)) {
@@ -382,6 +412,11 @@ public final class AwardQueryService {
                           AND NOT EXISTS (
                               SELECT 1 FROM player_alts alt
                               WHERE alt.minecraft_uuid = scores.minecraft_uuid
+                          )
+                          AND EXISTS (
+                              SELECT 1 FROM players eligible_player
+                              WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
+                                AND eligible_player.is_discord_member = true
                           )
                     ),
                     crown AS (

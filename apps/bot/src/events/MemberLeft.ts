@@ -19,6 +19,14 @@ export default class MemberLeftEvent extends Event {
     if (member.user.bot) return;
     if (member.guild.id !== config.GUILD_ID) return;
 
+    // Keep their identity and historical stats, but immediately remove them
+    // from all community leaderboards and award rankings.
+    try {
+      await appDb.setPlayerDiscordMembership(member.id, false);
+    } catch (error) {
+      logger.error("Failed to mark departing member as outside the guild:", error);
+    }
+
     // 1. Find the applicant's application channel. Teardown happens after the
     //    departure log so any transcript file appears beneath the log message.
     let applicationChannelRow: Awaited<

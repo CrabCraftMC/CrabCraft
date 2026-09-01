@@ -134,7 +134,10 @@ public final class AdvancementQueryService {
                         "SELECT COUNT(DISTINCT p.minecraft_uuid)::int"
                         + " FROM player_advancements p"
                         + " WHERE p.season = ? AND p.completed = true"
-                        + " AND p.advancement_id = ANY (?)")) {
+                        + " AND p.advancement_id = ANY (?)"
+                        + " AND EXISTS (SELECT 1 FROM players eligible_player"
+                        + " WHERE eligible_player.minecraft_uuid = p.minecraft_uuid"
+                        + " AND eligible_player.is_discord_member = true)")) {
                     stmt.setString(1, season);
                     stmt.setArray(2, registeredIds);
                     try (ResultSet rs = stmt.executeQuery()) {
@@ -152,6 +155,9 @@ public final class AdvancementQueryService {
                         + " LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid"
                         + " WHERE p.season = ?"
                         + " AND p.advancement_id = ANY (?)"
+                        + " AND EXISTS (SELECT 1 FROM players eligible_player"
+                        + " WHERE eligible_player.minecraft_uuid = p.minecraft_uuid"
+                        + " AND eligible_player.is_discord_member = true)"
                         + " GROUP BY p.minecraft_uuid, u.minecraft_username, u.nickname"
                         + " HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0"
                         + " ORDER BY completed DESC, p.minecraft_uuid"

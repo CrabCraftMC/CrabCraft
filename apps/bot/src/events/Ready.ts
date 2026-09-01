@@ -38,6 +38,7 @@ import { startPunishmentRoleSync } from "../utils/punishmentRoleSync.js";
 import { startBotPlayerStatus } from "../utils/botStatus.js";
 import { startGallerySync } from "../utils/gallerySync.js";
 import { startBingoService } from "../utils/bingoService.js";
+import { syncPlayerDiscordMembership } from "../utils/discordMembershipSync.js";
 
 export default class ReadyEvent extends Event {
   constructor() {
@@ -48,6 +49,16 @@ export default class ReadyEvent extends Event {
     logger.info(
       `${client.user?.tag} logged into Discord in ${Date.now() - start}ms`,
     );
+
+    // Backfill and repair leaderboard eligibility from the authoritative guild
+    // roster before starting any leaderboard refresh work. A failed Discord
+    // fetch leaves the previous database snapshot untouched.
+    try {
+      const guild = await client.guilds.fetch(config.GUILD_ID);
+      await syncPlayerDiscordMembership(guild);
+    } catch (error) {
+      logger.error("Discord membership reconcile failed:", error);
+    }
 
     // One-time migration: adopt any pre-existing topic-based application
     // channels into the application_channels table so in-flight applications
