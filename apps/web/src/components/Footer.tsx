@@ -88,6 +88,9 @@ export default function Footer() {
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      data-umami-event="community-link-opened"
+                      data-umami-event-destination={link.name}
+                      data-umami-event-location="footer"
                       className="text-sm text-gray-600 transition-colors hover:text-orange-500 dark:text-gray-400"
                     >
                       {link.name}
@@ -122,6 +125,9 @@ export default function Footer() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={socialLabels[social.platform] ?? social.platform}
+                      data-umami-event="social-link-opened"
+                      data-umami-event-platform={social.platform}
+                      data-umami-event-location="footer"
                       className="text-gray-400 dark:text-gray-500 hover:text-orange-500 transition-colors"
                     >
                       <svg

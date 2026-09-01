@@ -322,6 +322,9 @@ export default function StackCalculator() {
                 </div>
                 <button
                   onClick={copySummary}
+                  data-umami-event="tool-result-copied"
+                  data-umami-event-tool="stack-calculator"
+                  data-umami-event-result="summary"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 text-sm transition-colors cursor-pointer active:scale-95"
                 >
                   {copied ? (

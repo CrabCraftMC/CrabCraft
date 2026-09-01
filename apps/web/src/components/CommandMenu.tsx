@@ -12,6 +12,7 @@ import { Instagram } from "lucide-react";
 import PixelIcon from "@/components/PixelIcon";
 import config from "@/data/site-config.json";
 import { playerDisplayName } from "@/lib/playerName";
+import { trackUmamiEvent } from "@/lib/umami";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight, BookOpen,
@@ -208,6 +209,9 @@ export default function CommandMenu() {
   const navigate = useCallback(
     (result: Result) => {
       trigger();
+      trackUmamiEvent("site-search-result-selected", {
+        category: result.category,
+      });
       setOpen(false);
       if (result.external) {
         window.open(result.url, "_blank", "noopener,noreferrer");

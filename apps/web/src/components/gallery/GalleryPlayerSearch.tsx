@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import PixelIcon from "@/components/PixelIcon";
 import { playerDisplayName } from "@/lib/playerName";
+import { trackUmamiEvent } from "@/lib/umami";
 import {
   galleryHref,
   type GalleryPlayerFilterOption,
@@ -107,6 +108,9 @@ export default function GalleryPlayerSearch({
   }, [activeIndex, listboxId, showDropdown]);
 
   const navigateToPlayer = (player: string | null) => {
+    trackUmamiEvent("gallery-player-filter-changed", {
+      state: player ? "applied" : "cleared",
+    });
     setOpen(false);
     startTransition(() => {
       router.push(

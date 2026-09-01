@@ -81,6 +81,9 @@ export default async function ApplicationsPage() {
               href="https://discord.crabcraft.net"
               target="_blank"
               rel="noopener noreferrer"
+              data-umami-event="community-link-opened"
+              data-umami-event-destination="Discord"
+              data-umami-event-location="applications-empty-state"
               className="inline-block mt-4 text-orange-500 hover:underline font-bold"
             >
               Apply via Discord &rarr;

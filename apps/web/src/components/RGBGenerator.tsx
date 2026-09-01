@@ -668,10 +668,16 @@ export default function RGBGenerator() {
                                 rows={4}
                                 aria-label="Generated nickname output, click to copy"
                                 onClick={() => copyToClipboard(output, "output")}
+                                data-umami-event="tool-result-copied"
+                                data-umami-event-tool="rgb-nickname"
+                                data-umami-event-result="formatted-output"
                                 className="w-full px-4 py-3 rounded-xl border border-line bg-paper text-sm font-mono resize-none focus:outline-none cursor-pointer"
                             />
                             <button
                                 onClick={() => copyToClipboard(nickCommand, "nick")}
+                                data-umami-event="tool-result-copied"
+                                data-umami-event-tool="rgb-nickname"
+                                data-umami-event-result="nick-command"
                                 className="w-full mt-3 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition-colors cursor-pointer active:scale-95"
                             >
                                 {copied === "nick" ? "Copied!" : "Copy /nick"}

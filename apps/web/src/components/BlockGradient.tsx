@@ -19,6 +19,7 @@ import blocks from "@/data/blocks.json";
 import { findClosestBlockAtRank } from "@/lib/blockGradient";
 import { createBlockGradientShareAction } from "@/app/tools/block-gradient/actions";
 import type { BlockGradientShareState } from "@/lib/blockGradientShare";
+import { trackUmamiEvent } from "@/lib/umami";
 import {
   BLOCK_GRADIENT_PRESETS,
   isBlockAllowedForPresets,
@@ -733,6 +734,10 @@ export default function BlockGradient({
           return url.toString();
         })();
         await navigator.clipboard.writeText(existingShareUrl);
+        trackUmamiEvent("tool-share-link-copied", {
+          tool: "block-gradient",
+          result: "existing-link",
+        });
         setShareUrl(existingShareUrl);
         setShareCopied(true);
         setTimeout(() => setShareCopied(false), 1500);
@@ -757,6 +762,10 @@ export default function BlockGradient({
         url.searchParams.set("share", result.id);
         const nextShareUrl = url.toString();
         await navigator.clipboard.writeText(nextShareUrl);
+        trackUmamiEvent("tool-share-link-copied", {
+          tool: "block-gradient",
+          result: "new-link",
+        });
         setShareId(result.id);
         setShareUrl(nextShareUrl);
         setSharedRecipeKey(currentRecipeKey);
@@ -1163,6 +1172,9 @@ export default function BlockGradient({
             </button>
             <button
               onClick={copyBlockList}
+              data-umami-event="tool-result-copied"
+              data-umami-event-tool="block-gradient"
+              data-umami-event-result="block-list"
               className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl transition-colors cursor-pointer active:scale-95"
             >
               {copied ? "Copied!" : "Copy Block List"}

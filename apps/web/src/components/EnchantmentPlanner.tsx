@@ -997,6 +997,9 @@ export default function EnchantmentPlanner() {
                           </code>
                           <button
                             onClick={() => copyCommand(command)}
+                            data-umami-event="tool-result-copied"
+                            data-umami-event-tool="enchantment-planner"
+                            data-umami-event-result="give-command"
                             aria-label={`Copy command ${command}`}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-white transition-colors hover:bg-orange-600 cursor-pointer"
                           >

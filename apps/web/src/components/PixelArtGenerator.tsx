@@ -652,6 +652,9 @@ export default function PixelArtGenerator() {
                   <a
                     href={downloadUrl}
                     download={downloadFilename}
+                    data-umami-event="tool-result-downloaded"
+                    data-umami-event-tool="pixel-art-generator"
+                    data-umami-event-result="png"
                     className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-orange-700 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-2"
                   >
                     <Download className="h-4 w-4" />

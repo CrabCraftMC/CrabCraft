@@ -20,6 +20,7 @@ import {
   type SceneId,
 } from "./data/sceneOrder";
 import type { WrappedData } from "@/lib/wrappedTypes";
+import { trackUmamiEvent } from "@/lib/umami";
 
 const SCENE_TRANSITION_VARIANTS = {
   enter: (direction: number) => ({ x: `${direction * 100}%`, opacity: 0 }),
@@ -83,6 +84,7 @@ export default function WrappedStory({ data }: { data: WrappedData }) {
   const haptics = useHaptics();
   const reduced = useReducedMotion();
   const previousIndex = useRef(controller.current);
+  const completionTracked = useRef(false);
 
   const currentId = SCENE_IDS[controller.current];
   const CurrentScene = SCENE_COMPONENTS[currentId];
@@ -99,6 +101,17 @@ export default function WrappedStory({ data }: { data: WrappedData }) {
       haptics.light();
     }
   }, [controller.current, haptics]);
+
+  useEffect(() => {
+    if (
+      controller.current === SCENE_IDS.length - 1 &&
+      !completionTracked.current
+    ) {
+      completionTracked.current = trackUmamiEvent("wrapped-completed", {
+        season: data.season,
+      });
+    }
+  }, [controller.current, data.season]);
 
   const nextSceneImages = useMemo(() => {
     // Preload the player skin used by the Intro/Summary scenes.
