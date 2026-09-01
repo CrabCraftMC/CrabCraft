@@ -76,15 +76,6 @@ database:
   username: "crabcraft"
   password: ""
 
-# Product analytics. Keep disabled until both the project token and the same
-# identity salt used by the website and bot are configured.
-analytics:
-  enabled: false
-  project-token: ""
-  host: "https://eu.i.posthog.com"
-  person-salt: ""
-  environment: "production"
-
 # All-time login streaks. A "day" is a fixed 24h window rolling over at
 # reset-hour-utc:00 UTC; a player must be online required-play-minutes total
 # (across sessions) within that day to earn +1. One missed day is forgiven;

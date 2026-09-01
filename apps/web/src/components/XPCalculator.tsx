@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Squircle from "@/components/Squircle";
 import { BarChart3, Check, Copy, FlaskConical, RotateCcw, Sparkles, Target } from "lucide-react";
-import { captureWebToolCompleted } from "@/lib/analytics";
 
 const STORAGE_KEY = "crabcraft-xp-calculator";
 
@@ -116,7 +115,6 @@ export default function XPCalculator() {
     navigator.clipboard.writeText(
       `Minecraft XP: level ${currentLevel} (${progress}%) to level ${targetLevel} needs ${neededXp} XP, about ${bottlesAverage} bottles of enchanting on average.`
     );
-    captureWebToolCompleted("xp_calculator", "copy_summary");
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [bottlesAverage, currentLevel, neededXp, progress, targetLevel]);

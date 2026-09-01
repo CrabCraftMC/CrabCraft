@@ -21,8 +21,6 @@ import config from "./config.js";
 import logger from "./logger.js";
 import { PREPARED_BINGO_CARDS, SUPPORTED_BINGO_TASK_IDS } from "./bingoDefinitions.js";
 import { generateBingoCardImage } from "./bingoView.js";
-import { AnalyticsEvent } from "@crabcraft/shared/analytics";
-import { captureMinecraftEvent } from "./analytics.js";
 
 const RECONCILE_INTERVAL_MS = 30_000;
 const REDIS_BLOCK_MS = 10_000;
@@ -249,21 +247,7 @@ async function processEntries(
       processed = true;
       const event = parseCompletion(fields);
       if (event) {
-        const completion = await recordBingoCompletion(event);
-        if (completion.inserted) {
-          captureMinecraftEvent(
-            completion.ownerMinecraftUuid,
-            AnalyticsEvent.BINGO_SQUARE_COMPLETED,
-            {
-              card_id: event.cardId,
-              source_backend: event.sourceBackend,
-              task_id: event.taskId,
-            },
-            {
-              dedupeKey: `${event.cardId}:${event.taskId}`,
-            },
-          );
-        }
+        await recordBingoCompletion(event);
         await deliverPendingMilestones(client);
       } else {
         logger.warn(`Ignoring malformed bingo completion event ${id}`);

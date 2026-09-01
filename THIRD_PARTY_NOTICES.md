@@ -20,16 +20,6 @@ Copyright (c) 2021 jmattingley23. Licensed under the MIT Licence. The required l
 - View Distance Tweaks' MIT notice is preserved under `apps/minecraft/spigot/src/main/resources/view-distance-tweaks/LICENSE`.
 - The Unbounded font used by the Discord bot is licensed under the SIL Open Font Licence 1.1; its licence is preserved beside the font at `apps/bot/assets/player-card/OFL.txt`.
 
-## PostHog SDKs
-
-The website, Discord bot, and Velocity proxy use PostHog's official JavaScript,
-Node.js, and JVM SDKs. The JVM SDK and its runtime dependencies are bundled into
-the shaded Velocity plug-in. PostHog's SDKs are copyright PostHog, Inc. The
-browser SDK is distributed under Apache-2.0 and MIT licences; the Node.js and
-JVM SDKs are distributed under the MIT Licence. Their sources are available
-from [PostHog/posthog-js](https://github.com/PostHog/posthog-js) and
-[PostHog/posthog-android](https://github.com/PostHog/posthog-android).
-
 ## Minecraft artwork and textures
 
 Minecraft names, textures, icons, screenshots, and other game-derived artwork are not granted under any CrabCraft source-code licence merely because they are present in this repository. Review the applicable Mojang/Microsoft usage terms before public redistribution. Texture downloads used during web builds are pinned to immutable upstream revisions for integrity, but integrity pinning does not grant redistribution rights.

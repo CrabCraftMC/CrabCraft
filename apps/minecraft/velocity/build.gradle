@@ -35,7 +35,6 @@ dependencies {
     implementation("redis.clients:jedis:5.1.0")
     implementation("org.postgresql:postgresql:42.7.13")
     implementation("com.zaxxer:HikariCP:7.1.0")
-    implementation("com.posthog:posthog-server:2.16.0")
 }
 
 shadowJar {
@@ -47,9 +46,6 @@ shadowJar {
     relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
     relocate 'org.json', 'crabcraft.net.libs.json'
     relocate 'com.zaxxer.hikari', 'crabcraft.net.libs.hikari'
-    relocate 'com.posthog', 'crabcraft.net.libs.posthog'
-    relocate 'okhttp3', 'crabcraft.net.libs.okhttp3'
-    relocate 'okio', 'crabcraft.net.libs.okio'
     // NB: org.postgresql is intentionally NOT relocated. Shadow can't
     // reliably rewrite the JDBC driver's ServiceLoader entry when the
     // package is moved, which makes HikariCP fail with "No suitable
@@ -60,9 +56,6 @@ shadowJar {
     filesMatching('META-INF/services/**') {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
-    filesMatching('META-INF/*.kotlin_module') {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
 }
 
 tasks.jar {
@@ -70,8 +63,6 @@ tasks.jar {
 }
 
 def regressionTests = [
-        analyticsIdentityRegressionTest:
-                'crabcraft.net.crabUtilities.velocity.AnalyticsIdentityRegressionTest',
         loginStreakCacheSeedRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.LoginStreakCacheSeedRegressionTest',
         nicknameRegressionTest:

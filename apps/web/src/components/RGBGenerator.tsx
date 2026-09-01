@@ -6,7 +6,6 @@ import { useWebHaptics } from "web-haptics/react";
 import SwatchColorPicker from "./SwatchColorPicker";
 import Squircle from "@/components/Squircle";
 import { rgbToHex, interpolateColors } from "@/lib/colors";
-import { captureWebToolCompleted } from "@/lib/analytics";
 
 type Format = "minimessage" | "ampersand" | "section" | "ampersand-hex";
 
@@ -288,9 +287,6 @@ export default function RGBGenerator() {
 
     const copyToClipboard = (value: string, label: string) => {
         navigator.clipboard.writeText(value);
-        captureWebToolCompleted("rgb_nickname", "copy_output", {
-            format,
-        });
         trigger();
         setCopied(label);
         setTimeout(() => setCopied(null), 1500);

@@ -25,7 +25,6 @@ import {
   isBlockGradientPresetId,
   type BlockGradientPresetId,
 } from "@/lib/blockGradientPresets";
-import { captureWebToolCompleted } from "@/lib/analytics";
 
 const TEXTURE_BASE = "/textures/blocks";
 
@@ -720,9 +719,6 @@ export default function BlockGradient({
   const copyBlockList = () => {
     const names = displayGradient.map((b) => b.name).join(", ");
     navigator.clipboard.writeText(names);
-    captureWebToolCompleted("block_gradient", "copy_block_list", {
-      gradient_length: displayGradient.length,
-    });
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -737,9 +733,6 @@ export default function BlockGradient({
           return url.toString();
         })();
         await navigator.clipboard.writeText(existingShareUrl);
-        captureWebToolCompleted("block_gradient", "copy_share_link", {
-          gradient_length: displayGradient.length,
-        });
         setShareUrl(existingShareUrl);
         setShareCopied(true);
         setTimeout(() => setShareCopied(false), 1500);
@@ -764,9 +757,6 @@ export default function BlockGradient({
         url.searchParams.set("share", result.id);
         const nextShareUrl = url.toString();
         await navigator.clipboard.writeText(nextShareUrl);
-        captureWebToolCompleted("block_gradient", "create_share_link", {
-          gradient_length: displayGradient.length,
-        });
         setShareId(result.id);
         setShareUrl(nextShareUrl);
         setSharedRecipeKey(currentRecipeKey);

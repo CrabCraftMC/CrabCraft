@@ -7,7 +7,6 @@
     "dev": "bun --watch src/index.ts",
     "build": "tsc --project tsconfig.json",
     "test": "bun test tests",
-    "analytics:sync-identities": "bun src/scripts/posthogIdentitySync.ts",
     "gallery:backfill": "bun src/scripts/galleryBackfill.ts",
     "clean": "rm -rf dist"
   },
@@ -21,7 +20,6 @@
     "figma-squircle": "^1.1.0",
     "ioredis": "^5.8.2",
     "mariadb": "^3.5.3",
-    "posthog-node": "^5.51.6",
     "sharp": "^0.35.3",
     "tiktok-live-connector": "2.4.0",
     "winston": "^3.13.0"

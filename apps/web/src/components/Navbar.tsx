@@ -13,8 +13,6 @@ import Squircle from "./Squircle";
 import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings, ImageIcon } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import config from "../data/site-config.json";
-import { AnalyticsEvent } from "@crabcraft/shared/analytics";
-import { captureWebEvent } from "@/lib/analytics";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, ImageIcon,
@@ -103,9 +101,6 @@ export default function Navbar({ user }: { user?: UserData | null }) {
     const copyIp = () => {
         trigger();
         navigator.clipboard.writeText("crabcraft.net");
-        captureWebEvent(AnalyticsEvent.SERVER_ADDRESS_COPIED, {
-            location: "navbar",
-        });
         setIpCopied(true);
         if (ipCopiedTimer.current) clearTimeout(ipCopiedTimer.current);
         ipCopiedTimer.current = setTimeout(() => setIpCopied(false), 2000);

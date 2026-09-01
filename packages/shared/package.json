@@ -3,8 +3,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./analytics": "./src/analytics.ts",
-    "./analytics-identity": "./src/analyticsIdentity.ts",
     "./types": "./src/types.ts",
     "./mojang": "./src/mojang.ts"
   },

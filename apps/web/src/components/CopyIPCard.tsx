@@ -8,8 +8,6 @@ import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { ColoredNickname } from "@/lib/parseMinecraftColors";
 import { playerDisplayName } from "@/lib/playerName";
-import { AnalyticsEvent } from "@crabcraft/shared/analytics";
-import { captureWebEvent } from "@/lib/analytics";
 
 interface OnlinePlayer {
   name: string;
@@ -99,9 +97,6 @@ export default function CopyIPCard({
 
   const handleCopy = () => {
     navigator.clipboard.writeText("crabcraft.net");
-    captureWebEvent(AnalyticsEvent.SERVER_ADDRESS_COPIED, {
-      location: "home_card",
-    });
     trigger();
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);

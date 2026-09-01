@@ -123,10 +123,6 @@ PostgreSQL is the durable source of truth. Redis carries cross-server messages
 and short-lived state. The Velocity API connects live Minecraft state to the
 web and bot, while the shared packages keep identity and data contracts aligned.
 
-Product analytics spans those three runtimes without sending raw player
-identifiers or community content. See the [PostHog analytics guide](docs/analytics.md)
-for the event contract, privacy rules, configuration, rollout, and dashboards.
-
 ## Getting started
 
 ### Prerequisites
