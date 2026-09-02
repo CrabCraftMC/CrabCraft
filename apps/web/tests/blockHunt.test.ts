@@ -7,6 +7,7 @@ import {
   getBlockHuntDailyPuzzle,
   normaliseBlockGuess,
 } from "../src/lib/blockHunt";
+import { formatBlockHuntShare } from "../src/lib/blockHuntShare";
 
 describe("block hunt", () => {
   test("includes 100 distinct daily puzzles with distinct clue wording", () => {
@@ -46,5 +47,19 @@ describe("block hunt", () => {
     expect(getBlockHuntDailyNumber(secondDay)).toBe(2);
     expect(getBlockHuntDailyPuzzle(firstDay)).toBe(BLOCK_HUNT_PUZZLES[0]);
     expect(getBlockHuntDailyPuzzle(secondDay)).toBe(BLOCK_HUNT_PUZZLES[1]);
+  });
+
+  test("formats a spoiler-free result for sharing", () => {
+    expect(
+      formatBlockHuntShare({
+        dailyNumber: 8,
+        phase: "won",
+        attemptCount: 3,
+        cluesRevealed: 4,
+        elapsedMs: 83_000,
+      }),
+    ).toBe(
+      "Block Hunt #8\n⬛⬛🟧⬜⬜⬜\nSolved in 3 guesses · 4 of 6 clues · 01:23\nhttps://crabcraft.net/tools/block-hunt",
+    );
   });
 });

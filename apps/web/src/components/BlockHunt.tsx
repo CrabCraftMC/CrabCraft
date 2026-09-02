@@ -10,10 +10,12 @@ import {
 } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
   Play,
   Search,
+  Share2,
   SkipForward,
   X,
 } from "lucide-react";
@@ -25,6 +27,7 @@ import {
   getBlockHuntDailyPuzzle,
   normaliseBlockGuess,
 } from "@/lib/blockHunt";
+import { formatBlockHuntShare } from "@/lib/blockHuntShare";
 import { trackUmamiEvent } from "@/lib/umami";
 
 const STORAGE_PREFIX = "crabcraft-block-hunt-timed";
@@ -222,6 +225,10 @@ export default function BlockHunt() {
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [guess, setGuess] = useState("");
   const [message, setMessage] = useState("");
+  const [shareStatus, setShareStatus] = useState<
+    "idle" | "copying" | "copied"
+  >("idle");
+  const [shareError, setShareError] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [activeOption, setActiveOption] = useState(0);
   const [clueIndex, setClueIndex] = useState(0);
@@ -261,6 +268,8 @@ export default function BlockHunt() {
     setGame(saved);
     setGuess("");
     setMessage("");
+    setShareStatus("idle");
+    setShareError("");
     setSearchOpen(false);
     setClockNow(Date.now());
     setLoadedKey(puzzleKey);
@@ -434,6 +443,33 @@ export default function BlockHunt() {
       mode: "daily",
       clue: game.cluesRevealed + 1,
     });
+  };
+
+  const shareResult = async () => {
+    setShareStatus("copying");
+    setShareError("");
+
+    try {
+      await navigator.clipboard.writeText(
+        formatBlockHuntShare({
+          dailyNumber,
+          phase: game.phase === "won" ? "won" : "lost",
+          attemptCount,
+          cluesRevealed: game.cluesRevealed,
+          elapsedMs,
+        }),
+      );
+      setShareStatus("copied");
+      window.setTimeout(() => setShareStatus("idle"), 1800);
+      trackUmamiEvent("block-hunt-result-shared", {
+        mode: "daily",
+        guesses: attemptCount,
+        seconds: Math.floor(elapsedMs / 1000),
+      });
+    } catch {
+      setShareStatus("idle");
+      setShareError("Could not copy the result. Please try again.");
+    }
   };
 
   const messageIsError = Boolean(message) && message !== "Clue revealed.";
@@ -674,6 +710,31 @@ export default function BlockHunt() {
               <p className="mt-1 text-lg font-bold tabular-nums text-gray-800 dark:text-gray-100">
                 Time {formatDuration(elapsedMs)}
               </p>
+              <button
+                type="button"
+                onClick={shareResult}
+                disabled={shareStatus === "copying"}
+                className="mt-6 inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-paper px-5 text-xs font-bold text-gray-700 transition-colors hover:text-orange-500 disabled:cursor-wait disabled:opacity-50 dark:text-gray-200"
+              >
+                {shareStatus === "copied" ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+                {shareStatus === "copying"
+                  ? "Copying"
+                  : shareStatus === "copied"
+                    ? "Copied"
+                    : "Share result"}
+              </button>
+              {shareError && (
+                <p
+                  aria-live="polite"
+                  className="mt-3 text-xs font-semibold text-red-500"
+                >
+                  {shareError}
+                </p>
+              )}
             </div>
           ))}
 
