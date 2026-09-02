@@ -21,6 +21,7 @@ import {
   getHuntPuzzleCount,
   HUNT_CLUES,
 } from "../src/lib/hunt";
+import { ITEM_HUNT_PUZZLES } from "../src/lib/itemHunt";
 import {
   getHuntCatalogue,
   getHuntEntry,
@@ -146,6 +147,44 @@ describe("block hunt", () => {
           HUNT_CLUES,
         );
       }
+    }
+  });
+
+  test("starts Item Hunt with broad clues rather than an answer fingerprint", () => {
+    const puzzle = getHuntDailyPuzzle(
+      "item",
+      new Date("2026-09-02T12:00:00Z"),
+    );
+
+    expect(puzzle.answer).toBe("Echo Shard");
+    expect(puzzle.clues[0]?.text).toBe(
+      "This item has no durability and can be carried in stacks.",
+    );
+    expect(puzzle.clues[1]?.text).toBe(
+      "Crafting is its only purpose; it has no direct use action.",
+    );
+    expect(
+      puzzle.clues
+        .slice(0, 2)
+        .some((clue) =>
+          clue.text.toLowerCase().includes(puzzle.answer.toLowerCase()),
+        ),
+    ).toBeFalse();
+  });
+
+  test("every opening Item Hunt clue applies to several prepared answers", () => {
+    const openingClueCounts = new Map<string, number>();
+
+    for (const puzzle of ITEM_HUNT_PUZZLES) {
+      const openingClue = puzzle.clues[0]?.text ?? "";
+      openingClueCounts.set(
+        openingClue,
+        (openingClueCounts.get(openingClue) ?? 0) + 1,
+      );
+    }
+
+    for (const count of openingClueCounts.values()) {
+      expect(count).toBeGreaterThanOrEqual(5);
     }
   });
 

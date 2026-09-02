@@ -64,7 +64,7 @@ const INITIAL_GAME: SavedGame = {
   timerEnabled: true,
 };
 
-const HUNT_STORAGE_VERSION = 3;
+const HUNT_STORAGE_VERSION = 5;
 
 function readSavedGame(key: string): SavedGame {
   try {
