@@ -16,7 +16,7 @@ import { trackUmamiEvent } from "@/lib/umami";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Home, BarChart3, Trophy, Palette, Rainbow, Circle, ArrowLeftRight, BookOpen,
-  Boxes, Sparkles, ImageIcon,
+  Boxes, Sparkles, ImageIcon, Search,
   youtube: FaYoutube, instagram: Instagram, tiktok: FaTiktok, discord: FaDiscord,
 };
 

@@ -23,6 +23,11 @@
         ],
         "tools": [
             {
+                "name": "Block Hunt",
+                "url": "/tools/block-hunt",
+                "icon": "Search"
+            },
+            {
                 "name": "RGB Nickname",
                 "url": "/tools/rgb-nickname",
                 "icon": "Palette"

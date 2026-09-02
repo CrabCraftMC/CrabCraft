@@ -15,7 +15,7 @@ import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import config from "../data/site-config.json";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, ImageIcon,
+    Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, ImageIcon, Search,
     youtube: FaYoutube,
     instagram: Instagram,
     tiktok: FaTiktok,
