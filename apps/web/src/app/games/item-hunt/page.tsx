@@ -4,37 +4,49 @@ import dynamic from "next/dynamic";
 const BlockHunt = dynamic(() => import("@/components/BlockHunt"));
 
 export const metadata: Metadata = {
-  title: "Minecraft Item Hunt",
+  title: "Item Hunt | Daily Minecraft Guessing Game",
   description:
-    "Guess the mystery Minecraft item from six progressively easier clues in CrabCraft's daily item game.",
+    "Play Item Hunt, a free daily Minecraft item guessing game. Reveal up to six clues, identify the mystery item, and share your result.",
   alternates: {
     canonical: "https://crabcraft.net/games/item-hunt",
   },
   openGraph: {
-    title: "Minecraft Item Hunt - CrabCraft",
+    title: "Item Hunt | Daily Minecraft Guessing Game",
     description:
-      "Six clues. One mystery Minecraft item. See how quickly you can find it.",
+      "Reveal up to six clues and identify today's mystery Minecraft item.",
     url: "https://crabcraft.net/games/item-hunt",
     images: ["/logo.png"],
   },
-  keywords: [
-    "Minecraft",
-    "item guessing game",
-    "Minecraft quiz",
-    "daily game",
-    "Minecraft items",
-  ],
+  twitter: {
+    card: "summary",
+    title: "Item Hunt | Daily Minecraft Guessing Game",
+    description:
+      "Reveal up to six clues and identify today's mystery Minecraft item.",
+  },
 };
 
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "Game",
-  name: "Minecraft Item Hunt",
+  "@type": "WebApplication",
+  name: "Item Hunt",
+  alternateName: "Minecraft Item Hunt",
   description:
-    "A daily Minecraft item guessing game with six progressively easier clues.",
+    "A free daily Minecraft item guessing game with up to six clues.",
   url: "https://crabcraft.net/games/item-hunt",
-  gamePlatform: "Web browser",
   applicationCategory: "GameApplication",
+  operatingSystem: "Any",
+  browserRequirements: "Requires JavaScript",
+  isAccessibleForFree: true,
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "GBP",
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "CrabCraft",
+    url: "https://crabcraft.net",
+  },
 };
 
 export default function ItemHuntPage() {

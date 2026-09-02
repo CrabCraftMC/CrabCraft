@@ -4,38 +4,49 @@ import dynamic from "next/dynamic";
 const BlockHunt = dynamic(() => import("@/components/BlockHunt"));
 
 export const metadata: Metadata = {
-  title: "Minecraft Block Hunt",
+  title: "Block Hunt | Daily Minecraft Guessing Game",
   description:
-    "Guess the mystery Minecraft block from six progressively easier technical clues in CrabCraft's daily block game.",
+    "Play Block Hunt, a free daily Minecraft block guessing game. Use up to six clues to identify the mystery block, then share how quickly you found it.",
   alternates: {
     canonical: "https://crabcraft.net/games/block-hunt",
   },
   openGraph: {
-    title: "Minecraft Block Hunt - CrabCraft",
+    title: "Block Hunt | Daily Minecraft Guessing Game",
     description:
-      "Six clues. One mystery Minecraft block. See how quickly you can find it.",
+      "Use up to six clues to identify today's mystery Minecraft block.",
     url: "https://crabcraft.net/games/block-hunt",
     images: ["/logo.png"],
   },
-  keywords: [
-    "Minecraft",
-    "block guessing game",
-    "Minecraft quiz",
-    "daily game",
-    "Minecraft blocks",
-    "block properties",
-  ],
+  twitter: {
+    card: "summary",
+    title: "Block Hunt | Daily Minecraft Guessing Game",
+    description:
+      "Use up to six clues to identify today's mystery Minecraft block.",
+  },
 };
 
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "Game",
-  name: "Minecraft Block Hunt",
+  "@type": "WebApplication",
+  name: "Block Hunt",
+  alternateName: "Minecraft Block Hunt",
   description:
-    "A daily Minecraft block guessing game with six progressively easier technical clues.",
+    "A free daily Minecraft block guessing game with up to six clues.",
   url: "https://crabcraft.net/games/block-hunt",
-  gamePlatform: "Web browser",
   applicationCategory: "GameApplication",
+  operatingSystem: "Any",
+  browserRequirements: "Requires JavaScript",
+  isAccessibleForFree: true,
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "GBP",
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "CrabCraft",
+    url: "https://crabcraft.net",
+  },
 };
 
 export default function BlockHuntPage() {

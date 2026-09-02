@@ -580,6 +580,9 @@ export default function BlockHunt({ kind = "block" }: { kind?: HuntKind }) {
             </span>
             <span>Hunt</span>
           </h1>
+          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+            {config.description}
+          </p>
         </div>
 
         <div className="mx-auto max-w-2xl">

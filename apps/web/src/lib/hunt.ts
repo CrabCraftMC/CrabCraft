@@ -16,6 +16,7 @@ export type HuntPuzzle = {
 export type HuntConfig = {
   kind: HuntKind;
   name: string;
+  description: string;
   singular: string;
   plural: string;
   route: string;
@@ -28,6 +29,7 @@ export const HUNT_CONFIG: Record<HuntKind, HuntConfig> = {
   block: {
     kind: "block",
     name: "Block Hunt",
+    description: "Guess today's Minecraft block using up to six clues.",
     singular: "block",
     plural: "blocks",
     route: "/games/block-hunt",
@@ -36,6 +38,8 @@ export const HUNT_CONFIG: Record<HuntKind, HuntConfig> = {
   item: {
     kind: "item",
     name: "Item Hunt",
+    description:
+      "Guess today's Minecraft item before all six clues are revealed.",
     singular: "item",
     plural: "items",
     route: "/games/item-hunt",
@@ -44,6 +48,8 @@ export const HUNT_CONFIG: Record<HuntKind, HuntConfig> = {
   mob: {
     kind: "mob",
     name: "Mob Hunt",
+    description:
+      "Guess today's Minecraft mob before all six clues are revealed.",
     singular: "mob",
     plural: "mobs",
     route: "/games/mob-hunt",
