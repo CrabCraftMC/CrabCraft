@@ -43,6 +43,6 @@ export function formatBlockHuntShare({
     `Block Hunt #${dailyNumber}`,
     formatProgress(phase, attemptCount),
     `${outcome} · ${cluesRevealed} of ${BLOCK_HUNT_CLUES} clues · ${formatDuration(elapsedMs)}`,
-    "https://crabcraft.net/tools/block-hunt",
+    "https://crabcraft.net/games/block-hunt",
   ].join("\n");
 }

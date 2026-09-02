@@ -7,6 +7,7 @@ import {
   getBlockHuntDailyPuzzle,
   normaliseBlockGuess,
 } from "../src/lib/blockHunt";
+import { parseBlockHuntGlossary } from "../src/lib/blockHuntGlossary";
 import { formatBlockHuntShare } from "../src/lib/blockHuntShare";
 
 describe("block hunt", () => {
@@ -59,7 +60,21 @@ describe("block hunt", () => {
         elapsedMs: 83_000,
       }),
     ).toBe(
-      "Block Hunt #8\n⬛⬛🟧⬜⬜⬜\nSolved in 3 guesses · 4 of 6 clues · 01:23\nhttps://crabcraft.net/tools/block-hunt",
+      "Block Hunt #8\n⬛⬛🟧⬜⬜⬜\nSolved in 3 guesses · 4 of 6 clues · 01:23\nhttps://crabcraft.net/games/block-hunt",
+    );
+  });
+
+  test("only marks complete glossary terms", () => {
+    const parts = parseBlockHuntGlossary(
+      "It gives XP, but explodes in the wrong dimension.",
+    );
+    const markedTerms = parts
+      .filter((part) => part.definition)
+      .map((part) => part.text);
+
+    expect(markedTerms).toEqual(["XP"]);
+    expect(parts.map((part) => part.text).join("")).toBe(
+      "It gives XP, but explodes in the wrong dimension.",
     );
   });
 });

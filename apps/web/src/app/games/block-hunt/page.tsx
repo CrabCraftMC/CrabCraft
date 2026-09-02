@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Guess the mystery Minecraft block from six progressively easier technical clues in CrabCraft's daily block game.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/block-hunt",
+    canonical: "https://crabcraft.net/games/block-hunt",
   },
   openGraph: {
     title: "Minecraft Block Hunt - CrabCraft",
     description:
       "Six clues. One mystery Minecraft block. See how quickly you can find it.",
-    url: "https://crabcraft.net/tools/block-hunt",
+    url: "https://crabcraft.net/games/block-hunt",
     images: ["/logo.png"],
   },
   keywords: [
@@ -33,7 +33,7 @@ const jsonLd = {
   name: "Minecraft Block Hunt",
   description:
     "A daily Minecraft block guessing game with six progressively easier technical clues.",
-  url: "https://crabcraft.net/tools/block-hunt",
+  url: "https://crabcraft.net/games/block-hunt",
   gamePlatform: "Web browser",
   applicationCategory: "GameApplication",
 };

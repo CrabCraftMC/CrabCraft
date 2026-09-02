@@ -8,6 +8,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Check,
@@ -27,92 +28,12 @@ import {
   getBlockHuntDailyPuzzle,
   normaliseBlockGuess,
 } from "@/lib/blockHunt";
+import { parseBlockHuntGlossary } from "@/lib/blockHuntGlossary";
 import { formatBlockHuntShare } from "@/lib/blockHuntShare";
 import { trackUmamiEvent } from "@/lib/umami";
 
 const STORAGE_PREFIX = "crabcraft-block-hunt-timed";
 const TEXTURE_BASE = "/textures/blocks";
-
-const CLUE_GLOSSARY = [
-  {
-    term: "ticking block entity",
-    definition: "A block that stores extra data and updates its behaviour about 20 times a second.",
-  },
-  {
-    term: "opaque full cube",
-    definition: "A complete cube that blocks light passing through it.",
-  },
-  {
-    term: "blast resistance",
-    definition: "How strongly a block resists explosions. Higher values are tougher.",
-  },
-  {
-    term: "comparator output",
-    definition: "The redstone signal strength a comparator reads from this block.",
-  },
-  {
-    term: "oxidation stages",
-    definition: "The four ageing states copper passes through over time.",
-  },
-  {
-    term: "collision height",
-    definition: "The height of the solid shape that players and mobs bump into.",
-  },
-  {
-    term: "signal strength",
-    definition: "A redstone power level from 0 to 15.",
-  },
-  {
-    term: "block entity",
-    definition: "A block that stores extra data, such as contents or a changing state.",
-  },
-  {
-    term: "luminance",
-    definition: "The light level emitted by a block, from 0 to 15.",
-  },
-  {
-    term: "hardness",
-    definition: "How long a block takes to break. Higher values take longer.",
-  },
-  {
-    term: "conductive",
-    definition: "Redstone power can pass through this solid block.",
-  },
-  {
-    term: "light level",
-    definition: "A brightness value from 0 to 15.",
-  },
-  {
-    term: "full cube",
-    definition: "Its shape fills the entire one-block space.",
-  },
-  {
-    term: "Silk Touch",
-    definition: "An enchantment that makes many blocks drop themselves unchanged.",
-  },
-  {
-    term: "map colour",
-    definition: "The colour used when this block appears on a filled map.",
-  },
-  {
-    term: "XP",
-    definition: "Experience points used for enchanting and equipment repairs.",
-  },
-] as const;
-
-const CLUE_GLOSSARY_LOOKUP = new Map(
-  CLUE_GLOSSARY.map(({ term, definition }) => [
-    term.toLocaleLowerCase("en-GB"),
-    definition,
-  ]),
-);
-
-const CLUE_GLOSSARY_PATTERN = new RegExp(
-  `(${CLUE_GLOSSARY.map(({ term }) =>
-    term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-  ).join("|")})`,
-  "gi",
-);
 
 const BLOCK_OPTIONS = [
   ...new Map(blocks.map((block) => [block.name, block])).values(),
@@ -179,37 +100,92 @@ function formatDuration(milliseconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+type TooltipPosition = {
+  left: number;
+  top: number;
+  placement: "above" | "below";
+};
+
+function GlossaryTerm({
+  text,
+  definition,
+  tooltipId,
+}: {
+  text: string;
+  definition: string;
+  tooltipId: string;
+}) {
+  const [position, setPosition] = useState<TooltipPosition | null>(null);
+
+  const showTooltip = (element: HTMLButtonElement) => {
+    const bounds = element.getBoundingClientRect();
+    const tooltipWidth = Math.min(208, window.innerWidth - 24);
+    const halfWidth = tooltipWidth / 2;
+    const placement = bounds.top < 104 ? "below" : "above";
+
+    setPosition({
+      left: Math.min(
+        window.innerWidth - halfWidth - 12,
+        Math.max(halfWidth + 12, bounds.left + bounds.width / 2),
+      ),
+      top: placement === "above" ? bounds.top - 10 : bounds.bottom + 10,
+      placement,
+    });
+  };
+
+  return (
+    <span className="inline">
+      <button
+        type="button"
+        aria-describedby={position ? tooltipId : undefined}
+        onMouseEnter={(event) => showTooltip(event.currentTarget)}
+        onMouseLeave={() => setPosition(null)}
+        onFocus={(event) => showTooltip(event.currentTarget)}
+        onBlur={() => setPosition(null)}
+        className="cursor-pointer bg-transparent p-0 font-[inherit] text-[inherit] underline decoration-gray-500 decoration-dotted decoration-1 underline-offset-4 focus-visible:outline-none focus-visible:decoration-orange-500 dark:decoration-gray-400"
+      >
+        {text}
+      </button>
+      {position &&
+        createPortal(
+          <span
+            id={tooltipId}
+            role="tooltip"
+            style={{ left: position.left, top: position.top }}
+            className={`pointer-events-none fixed z-[100] w-52 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-lg bg-gray-950 px-3 py-2 text-left text-[11px] font-medium leading-4 text-white shadow-lg dark:bg-gray-50 dark:text-gray-900 ${
+              position.placement === "above" ? "-translate-y-full" : ""
+            }`}
+          >
+            {definition}
+            <span
+              aria-hidden="true"
+              className={`absolute left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-gray-950 dark:bg-gray-50 ${
+                position.placement === "above"
+                  ? "top-full -translate-y-1/2"
+                  : "bottom-full translate-y-1/2"
+              }`}
+            />
+          </span>,
+          document.body,
+        )}
+    </span>
+  );
+}
+
 function ClueText({ text, idPrefix }: { text: string; idPrefix: string }) {
   return (
     <>
-      {text.split(CLUE_GLOSSARY_PATTERN).map((part, index) => {
-        const definition = CLUE_GLOSSARY_LOOKUP.get(
-          part.toLocaleLowerCase("en-GB"),
-        );
-        if (!definition) return part;
+      {parseBlockHuntGlossary(text).map((part, index) => {
+        if (!part.definition) return part.text;
 
         const tooltipId = `${idPrefix}-${index}`;
         return (
-          <span key={tooltipId} className="group relative inline-block">
-            <button
-              type="button"
-              aria-describedby={tooltipId}
-              className="cursor-pointer bg-transparent p-0 font-[inherit] text-[inherit] underline decoration-gray-500 decoration-dotted decoration-1 underline-offset-4 focus-visible:outline-none focus-visible:decoration-orange-500 dark:decoration-gray-400"
-            >
-              {part}
-            </button>
-            <span
-              id={tooltipId}
-              role="tooltip"
-              className="pointer-events-none invisible absolute bottom-[calc(100%+0.6rem)] left-1/2 z-30 w-52 max-w-[calc(100vw-3rem)] -translate-x-1/2 rounded-lg bg-gray-950 px-3 py-2 text-left text-[11px] font-medium leading-4 text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:bg-gray-50 dark:text-gray-900"
-            >
-              {definition}
-              <span
-                aria-hidden="true"
-                className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gray-950 dark:bg-gray-50"
-              />
-            </span>
-          </span>
+          <GlossaryTerm
+            key={tooltipId}
+            text={part.text}
+            definition={part.definition}
+            tooltipId={tooltipId}
+          />
         );
       })}
     </>
