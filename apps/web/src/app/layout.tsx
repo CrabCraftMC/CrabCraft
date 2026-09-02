@@ -119,7 +119,7 @@ export default async function RootLayout({
           <Footer />
         </div>
         <CommandMenu />
-        {/* Only nudge signed-out visitors to join — signed-in users already have. */}
+        {/* Only nudge signed-out visitors to join. Signed-in users already have. */}
         {!userData && <MascotJoin />}
         {process.env.NODE_ENV === "production" && (
           <Script

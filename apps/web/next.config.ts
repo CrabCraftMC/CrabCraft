@@ -30,6 +30,11 @@ const nextConfig: NextConfig = {
         destination: "/tools/circle-generator",
         permanent: true,
       },
+      {
+        source: "/tools/block-hunt",
+        destination: "/games/block-hunt",
+        permanent: true,
+      },
     ];
   },
   async headers() {
