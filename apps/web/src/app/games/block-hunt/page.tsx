@@ -45,7 +45,7 @@ export default function BlockHuntPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <BlockHunt />
+      <BlockHunt kind="block" />
     </>
   );
 }

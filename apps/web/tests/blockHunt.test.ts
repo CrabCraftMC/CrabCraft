@@ -12,7 +12,21 @@ import {
   searchBlockHuntBlocks,
 } from "../src/lib/blockHuntCatalogue";
 import { parseBlockHuntGlossary } from "../src/lib/blockHuntGlossary";
-import { formatBlockHuntShare } from "../src/lib/blockHuntShare";
+import {
+  formatBlockHuntShare,
+  formatHuntShare,
+} from "../src/lib/blockHuntShare";
+import {
+  getHuntDailyPuzzle,
+  getHuntPuzzleCount,
+  HUNT_CLUES,
+} from "../src/lib/hunt";
+import {
+  getHuntCatalogue,
+  getHuntEntry,
+  searchHuntEntries,
+  type HuntKind,
+} from "../src/lib/huntCatalogue";
 
 describe("block hunt", () => {
   test("includes 100 distinct daily puzzles with distinct clue wording", () => {
@@ -39,7 +53,7 @@ describe("block hunt", () => {
   });
 
   test("includes the complete functionally grouped block catalogue", () => {
-    expect(BLOCK_HUNT_BLOCKS.length).toBeGreaterThan(800);
+    expect(BLOCK_HUNT_BLOCKS.length).toBeGreaterThan(850);
     expect(getBlockHuntBlock("Composter")?.name).toBe("Composter");
     expect(getBlockHuntBlock("Red Wool")?.name).toBe("Wool");
     expect(getBlockHuntBlock("White Carpet")?.name).toBe("Carpet");
@@ -92,6 +106,61 @@ describe("block hunt", () => {
       }),
     ).toBe(
       "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses\nhttps://crabcraft.net/games/block-hunt",
+    );
+  });
+
+  test("uses complete stable Java catalogues from Minecraft Wiki", () => {
+    const minimumEntries: Record<HuntKind, number> = {
+      block: 850,
+      item: 450,
+      mob: 80,
+    };
+
+    for (const kind of ["block", "item", "mob"] as const) {
+      const catalogue = getHuntCatalogue(kind);
+      expect(catalogue.version).toBe("26.2");
+      expect(catalogue.source.startsWith("https://minecraft.wiki/w/")).toBeTrue();
+      expect(catalogue.entries.length).toBeGreaterThan(minimumEntries[kind]);
+      expect(new Set(catalogue.entries.map((entry) => entry.name)).size).toBe(
+        catalogue.entries.length,
+      );
+    }
+
+    expect(getHuntEntry("item", "Diamond")?.name).toBe("Diamond");
+    expect(getHuntEntry("mob", "Warden")?.name).toBe("Warden");
+    expect(getHuntEntry("mob", "Sulfur Cube")?.name).toBe("Sulfur Cube");
+    expect(searchHuntEntries("item", "elytra")[0]?.name).toBe("Elytra");
+  });
+
+  test("has six guessable clues for every item and mob puzzle", () => {
+    expect(getHuntPuzzleCount("item")).toBe(22);
+    expect(getHuntPuzzleCount("mob")).toBe(22);
+
+    for (const kind of ["item", "mob"] as const) {
+      for (let day = 1; day <= getHuntPuzzleCount(kind); day += 1) {
+        const date = new Date(Date.UTC(2026, 8, day + 1));
+        const puzzle = getHuntDailyPuzzle(kind, date);
+        expect(puzzle.clues).toHaveLength(HUNT_CLUES);
+        expect(getHuntEntry(kind, puzzle.answer)).toBeDefined();
+        expect(new Set(puzzle.clues.map((clue) => clue.text)).size).toBe(
+          HUNT_CLUES,
+        );
+      }
+    }
+  });
+
+  test("formats each hunt type with its own name and route", () => {
+    expect(
+      formatHuntShare({
+        kind: "mob",
+        dailyNumber: 8,
+        phase: "won",
+        attemptCount: 2,
+        cluesRevealed: 3,
+        elapsedMs: 42_000,
+      }),
+    ).toBe(
+      "Mob Hunt #8 ✅\nSolved on clue 3 of 6\n2 guesses · 00:42\nhttps://crabcraft.net/games/mob-hunt",
     );
   });
 

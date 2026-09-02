@@ -21,12 +21,24 @@
                 "icon": "Trophy"
             }
         ],
-        "tools": [
+        "games": [
             {
                 "name": "Block Hunt",
                 "url": "/games/block-hunt",
-                "icon": "Search"
+                "icon": "/textures/hunt/icons/block.webp"
             },
+            {
+                "name": "Item Hunt",
+                "url": "/games/item-hunt",
+                "icon": "/textures/hunt/icons/item.webp"
+            },
+            {
+                "name": "Mob Hunt",
+                "url": "/games/mob-hunt",
+                "icon": "/textures/hunt/icons/mob.webp"
+            }
+        ],
+        "tools": [
             {
                 "name": "RGB Nickname",
                 "url": "/tools/rgb-nickname",

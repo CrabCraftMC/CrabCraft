@@ -26,7 +26,7 @@ type Result = {
   icon?: string;
   url: string;
   external?: boolean;
-  category: "Pages" | "Tools" | "Awards" | "Players" | "Socials";
+  category: "Pages" | "Games" | "Tools" | "Awards" | "Players" | "Socials";
   avatar?: string;
   searchText?: string;
 };
@@ -47,6 +47,14 @@ const TOOLS: Result[] = config.navbar.tools.map((t) => ({
   category: "Tools",
 }));
 
+const GAMES: Result[] = config.navbar.games.map((game) => ({
+  id: `game-${game.url}`,
+  label: game.name,
+  avatar: game.icon,
+  url: game.url,
+  category: "Games",
+}));
+
 const socialNames: Record<string, string> = {
   youtube: "YouTube",
   tiktok: "TikTok",
@@ -63,7 +71,7 @@ const SOCIALS: Result[] = config.navbar.socials.map((s) => ({
   category: "Socials",
 }));
 
-const STATIC_ITEMS = [...PAGES, ...TOOLS, ...SOCIALS];
+const STATIC_ITEMS = [...PAGES, ...GAMES, ...TOOLS, ...SOCIALS];
 
 export default function CommandMenu() {
   const [open, setOpen] = useState(false);
@@ -94,7 +102,7 @@ export default function CommandMenu() {
     (acc[r.category] ??= []).push(r);
     return acc;
   }, {});
-  const categoryOrder = ["Pages", "Tools", "Awards", "Players", "Socials"] as const;
+  const categoryOrder = ["Pages", "Games", "Tools", "Awards", "Players", "Socials"] as const;
   const flatResults = categoryOrder.flatMap((cat) => grouped[cat] || []);
 
   // Load the small award catalogue once, when search is first opened.
@@ -261,7 +269,7 @@ export default function CommandMenu() {
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Search pages, players, awards, tools..."
+            placeholder="Search pages, games, players, awards, tools..."
             className="flex-1 text-sm bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none"
           />
           <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold text-gray-400 bg-paper border border-line/60">

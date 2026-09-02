@@ -14,6 +14,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/awards`, changeFrequency: "daily", priority: 0.8 },
     { url: `${BASE_URL}/gallery`, changeFrequency: "daily", priority: 0.8 },
     { url: `${BASE_URL}/games/block-hunt`, changeFrequency: "daily", priority: 0.7 },
+    { url: `${BASE_URL}/games/item-hunt`, changeFrequency: "daily", priority: 0.7 },
+    { url: `${BASE_URL}/games/mob-hunt`, changeFrequency: "daily", priority: 0.7 },
     { url: `${BASE_URL}/tools/rgb-nickname`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/block-gradient`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/tools/pixel-art-generator`, changeFrequency: "monthly", priority: 0.6 },

@@ -1,4 +1,5 @@
-import { BLOCK_HUNT_CLUES } from "@/lib/blockHunt";
+import { HUNT_CLUES, HUNT_CONFIG } from "@/lib/hunt";
+import type { HuntKind } from "@/lib/huntCatalogue";
 
 type BlockHuntShareInput = {
   dailyNumber: number;
@@ -6,6 +7,10 @@ type BlockHuntShareInput = {
   attemptCount: number;
   cluesRevealed: number;
   elapsedMs: number | null;
+};
+
+type HuntShareInput = BlockHuntShareInput & {
+  kind: HuntKind;
 };
 
 function formatDuration(milliseconds: number): string {
@@ -19,24 +24,30 @@ function formatGuessCount(count: number): string {
   return `${count} ${count === 1 ? "guess" : "guesses"}`;
 }
 
-export function formatBlockHuntShare({
+export function formatHuntShare({
+  kind,
   dailyNumber,
   phase,
   attemptCount,
   cluesRevealed,
   elapsedMs,
-}: BlockHuntShareInput): string {
+}: HuntShareInput): string {
+  const config = HUNT_CONFIG[kind];
   const result =
     phase === "won"
-      ? `Solved on clue ${cluesRevealed} of ${BLOCK_HUNT_CLUES}`
-      : `Not solved after clue ${cluesRevealed} of ${BLOCK_HUNT_CLUES}`;
+      ? `Solved on clue ${cluesRevealed} of ${HUNT_CLUES}`
+      : `Not solved after clue ${cluesRevealed} of ${HUNT_CLUES}`;
 
   return [
-    `Block Hunt #${dailyNumber} ${phase === "won" ? "✅" : "❌"}`,
+    `${config.name} #${dailyNumber} ${phase === "won" ? "✅" : "❌"}`,
     result,
     elapsedMs === null
       ? formatGuessCount(attemptCount)
       : `${formatGuessCount(attemptCount)} · ${formatDuration(elapsedMs)}`,
-    "https://crabcraft.net/games/block-hunt",
+    `https://crabcraft.net${config.route}`,
   ].join("\n");
+}
+
+export function formatBlockHuntShare(input: BlockHuntShareInput): string {
+  return formatHuntShare({ kind: "block", ...input });
 }
