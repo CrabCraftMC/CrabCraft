@@ -22,6 +22,7 @@ import {
   HUNT_CLUES,
 } from "../src/lib/hunt";
 import { ITEM_HUNT_PUZZLES } from "../src/lib/itemHunt";
+import { MOB_HUNT_PUZZLES } from "../src/lib/mobHunt";
 import {
   getHuntCatalogue,
   getHuntEntry,
@@ -185,6 +186,41 @@ describe("block hunt", () => {
 
     for (const count of openingClueCounts.values()) {
       expect(count).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  test("starts Mob Hunt with broad clues rather than an answer fingerprint", () => {
+    const puzzle = getHuntDailyPuzzle(
+      "mob",
+      new Date("2026-09-02T23:00:00Z"),
+    );
+
+    expect(puzzle.answer).toBe("Guardian");
+    expect(puzzle.clues[0]?.text).toBe("This mob is classified as hostile.");
+    expect(puzzle.clues[1]?.text).toBe(
+      "Its combat includes a ranged attack.",
+    );
+    expect(
+      puzzle.clues
+        .slice(0, 2)
+        .some((clue) =>
+          clue.text.toLowerCase().includes(puzzle.answer.toLowerCase()),
+        ),
+    ).toBeFalse();
+  });
+
+  test("every early Mob Hunt clue applies to several prepared answers", () => {
+    for (const clueIndex of [0, 1]) {
+      const clueCounts = new Map<string, number>();
+
+      for (const puzzle of MOB_HUNT_PUZZLES) {
+        const clue = puzzle.clues[clueIndex]?.text ?? "";
+        clueCounts.set(clue, (clueCounts.get(clue) ?? 0) + 1);
+      }
+
+      for (const count of clueCounts.values()) {
+        expect(count).toBeGreaterThanOrEqual(3);
+      }
     }
   });
 
