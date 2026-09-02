@@ -81,6 +81,20 @@ describe("block hunt", () => {
     );
   });
 
+  test("leaves time out of an untimed shared result", () => {
+    expect(
+      formatBlockHuntShare({
+        dailyNumber: 8,
+        phase: "won",
+        attemptCount: 3,
+        cluesRevealed: 4,
+        elapsedMs: null,
+      }),
+    ).toBe(
+      "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses\nhttps://crabcraft.net/games/block-hunt",
+    );
+  });
+
   test("only marks complete glossary terms", () => {
     const parts = parseBlockHuntGlossary(
       "It gives XP, but explodes in the wrong dimension.",

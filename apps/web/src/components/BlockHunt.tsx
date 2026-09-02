@@ -50,6 +50,7 @@ type SavedGame = {
   phase: GamePhase;
   startedAt: number | null;
   elapsedMs: number | null;
+  timerEnabled: boolean;
 };
 
 const INITIAL_GAME: SavedGame = {
@@ -58,6 +59,7 @@ const INITIAL_GAME: SavedGame = {
   phase: "playing",
   startedAt: null,
   elapsedMs: null,
+  timerEnabled: true,
 };
 
 function readSavedGame(key: string): SavedGame {
@@ -78,9 +80,14 @@ function readSavedGame(key: string): SavedGame {
       (saved.elapsedMs === null ||
         (typeof saved.elapsedMs === "number" &&
           Number.isFinite(saved.elapsedMs) &&
-          saved.elapsedMs >= 0))
+          saved.elapsedMs >= 0)) &&
+      (saved.timerEnabled === undefined ||
+        typeof saved.timerEnabled === "boolean")
     ) {
-      return saved;
+      return {
+        ...saved,
+        timerEnabled: saved.timerEnabled ?? true,
+      };
     }
   } catch {
     // Ignore damaged local state and start a fresh game.
@@ -238,9 +245,10 @@ export default function BlockHunt() {
   const attemptCount =
     game.guesses.length + (game.phase === "won" ? 1 : 0);
   const guessesLeft = Math.max(0, BLOCK_HUNT_CLUES - game.guesses.length);
-  const elapsedMs =
-    game.elapsedMs ??
-    (game.startedAt === null ? 0 : Math.max(0, clockNow - game.startedAt));
+  const elapsedMs = game.timerEnabled
+    ? game.elapsedMs ??
+      (game.startedAt === null ? 0 : Math.max(0, clockNow - game.startedAt))
+    : 0;
   const currentClue = puzzle.clues[clueIndex];
   const selectedBlock = getBlockHuntBlock(guess);
 
@@ -271,12 +279,12 @@ export default function BlockHunt() {
   }, [availableClues, puzzleKey]);
 
   useEffect(() => {
-    if (!started || finished) return;
+    if (!started || finished || !game.timerEnabled) return;
 
     setClockNow(Date.now());
     const timer = window.setInterval(() => setClockNow(Date.now()), 250);
     return () => window.clearInterval(timer);
-  }, [finished, started]);
+  }, [finished, game.timerEnabled, started]);
 
   useEffect(() => {
     const closeSearch = (event: MouseEvent) => {
@@ -298,7 +306,10 @@ export default function BlockHunt() {
     const startedAt = Date.now();
     setClockNow(startedAt);
     setGame((current) => ({ ...current, startedAt, elapsedMs: null }));
-    trackUmamiEvent("block-hunt-started", { mode: "daily" });
+    trackUmamiEvent("block-hunt-started", {
+      mode: "daily",
+      timed: game.timerEnabled,
+    });
     focusGuess();
   };
 
@@ -367,7 +378,9 @@ export default function BlockHunt() {
         : normalisedGuess === normaliseBlockGuess(puzzle.answer)
     ) {
       const finalElapsedMs =
-        game.startedAt === null ? 0 : Math.max(0, Date.now() - game.startedAt);
+        game.timerEnabled && game.startedAt !== null
+          ? Math.max(0, Date.now() - game.startedAt)
+          : 0;
       setGame((current) => ({
         ...current,
         phase: "won",
@@ -380,7 +393,10 @@ export default function BlockHunt() {
         mode: "daily",
         guesses: game.guesses.length + 1,
         clues: game.cluesRevealed,
-        seconds: Math.floor(finalElapsedMs / 1000),
+        timed: game.timerEnabled,
+        ...(game.timerEnabled
+          ? { seconds: Math.floor(finalElapsedMs / 1000) }
+          : {}),
       });
       return;
     }
@@ -392,9 +408,11 @@ export default function BlockHunt() {
       game.cluesRevealed + 1,
     );
     const finalElapsedMs =
-      lost && game.startedAt !== null
+      lost && game.timerEnabled && game.startedAt !== null
         ? Math.max(0, Date.now() - game.startedAt)
-        : null;
+        : lost
+          ? 0
+          : null;
     setGame((current) => ({
       ...current,
       cluesRevealed: nextCluesRevealed,
@@ -420,7 +438,10 @@ export default function BlockHunt() {
         mode: "daily",
         guesses: nextGuesses.length,
         clues: nextCluesRevealed,
-        seconds: Math.floor((finalElapsedMs ?? 0) / 1000),
+        timed: game.timerEnabled,
+        ...(game.timerEnabled
+          ? { seconds: Math.floor((finalElapsedMs ?? 0) / 1000) }
+          : {}),
       });
     }
     if (!lost) focusGuess();
@@ -455,7 +476,7 @@ export default function BlockHunt() {
           phase: game.phase === "won" ? "won" : "lost",
           attemptCount,
           cluesRevealed: game.cluesRevealed,
-          elapsedMs,
+          elapsedMs: game.timerEnabled ? elapsedMs : null,
         }),
       );
       setShareStatus("copied");
@@ -463,7 +484,10 @@ export default function BlockHunt() {
       trackUmamiEvent("block-hunt-result-shared", {
         mode: "daily",
         guesses: attemptCount,
-        seconds: Math.floor(elapsedMs / 1000),
+        timed: game.timerEnabled,
+        ...(game.timerEnabled
+          ? { seconds: Math.floor(elapsedMs / 1000) }
+          : {}),
       });
     } catch {
       setShareStatus("idle");
@@ -487,8 +511,14 @@ export default function BlockHunt() {
             <span>Daily #{dailyNumber}</span>
             <span className="flex items-center gap-2">
               <span>{formatGuessCount(attemptCount)}</span>
-              <span aria-hidden="true">·</span>
-              <time className="tabular-nums">{formatDuration(elapsedMs)}</time>
+              {game.timerEnabled && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <time className="tabular-nums">
+                    {formatDuration(elapsedMs)}
+                  </time>
+                </>
+              )}
             </span>
           </div>
 
@@ -500,12 +530,14 @@ export default function BlockHunt() {
               <motion.div
                 initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex min-h-48 flex-col items-center justify-center text-center"
+                className="relative flex min-h-48 flex-col items-center justify-center text-center"
               >
                 <button
                   type="button"
                   onClick={startGame}
-                  aria-label="Start timed game"
+                  aria-label={
+                    game.timerEnabled ? "Start timed game" : "Start game"
+                  }
                   className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-orange-500 text-white shadow-sm transition-transform hover:scale-105 hover:bg-orange-600 active:scale-95"
                 >
                   <Play className="ml-1 h-7 w-7 fill-current" />
@@ -513,6 +545,37 @@ export default function BlockHunt() {
                 <p className="mt-3 text-sm font-bold text-gray-600 dark:text-gray-300">
                   Start
                 </p>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={game.timerEnabled}
+                  aria-label={`${game.timerEnabled ? "Turn off" : "Turn on"} timer`}
+                  onClick={() =>
+                    setGame((current) => ({
+                      ...current,
+                      timerEnabled: !current.timerEnabled,
+                    }))
+                  }
+                  className="absolute bottom-0 right-0 flex cursor-pointer items-center gap-2 text-xs font-bold text-gray-500 transition-colors hover:text-orange-500 dark:text-gray-400"
+                >
+                  <span>Timer</span>
+                  <span
+                    aria-hidden="true"
+                    className={`relative h-5 w-9 rounded-full transition-colors ${
+                      game.timerEnabled
+                        ? "bg-orange-500"
+                        : "bg-gray-300 dark:bg-gray-600"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                        game.timerEnabled
+                          ? "translate-x-[18px]"
+                          : "translate-x-0.5"
+                      }`}
+                    />
+                  </span>
+                </button>
               </motion.div>
             ) : (
               <>
@@ -702,9 +765,11 @@ export default function BlockHunt() {
                   ? `Solved in ${formatGuessCount(attemptCount)}`
                   : formatGuessCount(attemptCount)}
               </p>
-              <p className="mt-1 text-lg font-bold tabular-nums text-gray-800 dark:text-gray-100">
-                Time {formatDuration(elapsedMs)}
-              </p>
+              {game.timerEnabled && (
+                <p className="mt-1 text-lg font-bold tabular-nums text-gray-800 dark:text-gray-100">
+                  Time {formatDuration(elapsedMs)}
+                </p>
+              )}
               <button
                 type="button"
                 onClick={shareResult}
