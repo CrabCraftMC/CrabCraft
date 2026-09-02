@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import blocks from "../src/data/blocks.json";
 import {
   BLOCK_HUNT_CLUES,
   BLOCK_HUNT_PUZZLES,
@@ -7,6 +6,11 @@ import {
   getBlockHuntDailyPuzzle,
   normaliseBlockGuess,
 } from "../src/lib/blockHunt";
+import {
+  BLOCK_HUNT_BLOCKS,
+  getBlockHuntBlock,
+  searchBlockHuntBlocks,
+} from "../src/lib/blockHuntCatalogue";
 import { parseBlockHuntGlossary } from "../src/lib/blockHuntGlossary";
 import { formatBlockHuntShare } from "../src/lib/blockHuntShare";
 
@@ -24,16 +28,29 @@ describe("block hunt", () => {
   });
 
   test("every puzzle has six clues, a texture, and a guessable answer", () => {
-    const knownBlocks = new Set(blocks.map((block) => block.name));
-
     for (const puzzle of BLOCK_HUNT_PUZZLES) {
       expect(puzzle.clues).toHaveLength(BLOCK_HUNT_CLUES);
       expect(puzzle.texture.length).toBeGreaterThan(0);
-      expect(knownBlocks.has(puzzle.answer)).toBe(true);
+      expect(getBlockHuntBlock(puzzle.answer)).toBeDefined();
       expect(new Set(puzzle.clues.map((clue) => clue.text)).size).toBe(
         BLOCK_HUNT_CLUES,
       );
     }
+  });
+
+  test("includes the complete functionally grouped block catalogue", () => {
+    expect(BLOCK_HUNT_BLOCKS.length).toBeGreaterThan(800);
+    expect(getBlockHuntBlock("Composter")?.name).toBe("Composter");
+    expect(getBlockHuntBlock("Red Wool")?.name).toBe("Wool");
+    expect(getBlockHuntBlock("White Carpet")?.name).toBe("Carpet");
+    expect(getBlockHuntBlock("Blue Stained Glass")?.name).toBe("Glass");
+    expect(getBlockHuntBlock("Tinted Glass")?.name).toBe("Tinted Glass");
+    expect(searchBlockHuntBlocks("red wool").map((block) => block.name)).toEqual([
+      "Wool",
+    ]);
+    expect(new Set(BLOCK_HUNT_BLOCKS.map((block) => block.name)).size).toBe(
+      BLOCK_HUNT_BLOCKS.length,
+    );
   });
 
   test("normalises harmless spacing and case differences", () => {
