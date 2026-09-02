@@ -1,0 +1,623 @@
+{
+  "version": "26.2",
+  "source": "https://minecraft.wiki/w/Mob",
+  "sourceRevision": 3751787,
+  "entries": [
+    {
+      "id": "allay",
+      "name": "Allay",
+      "aliases": [],
+      "article": "Allay",
+      "sprite": 0
+    },
+    {
+      "id": "armadillo",
+      "name": "Armadillo",
+      "aliases": [],
+      "article": "Armadillo",
+      "sprite": 1
+    },
+    {
+      "id": "axolotl",
+      "name": "Axolotl",
+      "aliases": [],
+      "article": "Axolotl",
+      "sprite": 2
+    },
+    {
+      "id": "bat",
+      "name": "Bat",
+      "aliases": [],
+      "article": "Bat",
+      "sprite": 3
+    },
+    {
+      "id": "bee",
+      "name": "Bee",
+      "aliases": [],
+      "article": "Bee",
+      "sprite": 4
+    },
+    {
+      "id": "blaze",
+      "name": "Blaze",
+      "aliases": [],
+      "article": "Blaze",
+      "sprite": 5
+    },
+    {
+      "id": "bogged",
+      "name": "Bogged",
+      "aliases": [],
+      "article": "Bogged",
+      "sprite": 6
+    },
+    {
+      "id": "breeze",
+      "name": "Breeze",
+      "aliases": [],
+      "article": "Breeze",
+      "sprite": 7
+    },
+    {
+      "id": "camel",
+      "name": "Camel",
+      "aliases": [],
+      "article": "Camel",
+      "sprite": 8
+    },
+    {
+      "id": "camel-husk",
+      "name": "Camel Husk",
+      "aliases": [],
+      "article": "Camel Husk",
+      "sprite": 9
+    },
+    {
+      "id": "cat",
+      "name": "Cat",
+      "aliases": [],
+      "article": "Cat",
+      "sprite": 10
+    },
+    {
+      "id": "cave-spider",
+      "name": "Cave Spider",
+      "aliases": [],
+      "article": "Cave Spider",
+      "sprite": 11
+    },
+    {
+      "id": "chicken",
+      "name": "Chicken",
+      "aliases": [],
+      "article": "Chicken",
+      "sprite": 12
+    },
+    {
+      "id": "cod",
+      "name": "Cod",
+      "aliases": [],
+      "article": "Cod",
+      "sprite": 13
+    },
+    {
+      "id": "copper-golem",
+      "name": "Copper Golem",
+      "aliases": [],
+      "article": "Copper Golem",
+      "sprite": 14
+    },
+    {
+      "id": "cow",
+      "name": "Cow",
+      "aliases": [],
+      "article": "Cow",
+      "sprite": 15
+    },
+    {
+      "id": "creaking",
+      "name": "Creaking",
+      "aliases": [],
+      "article": "Creaking",
+      "sprite": 16
+    },
+    {
+      "id": "creeper",
+      "name": "Creeper",
+      "aliases": [],
+      "article": "Creeper",
+      "sprite": 17
+    },
+    {
+      "id": "dolphin",
+      "name": "Dolphin",
+      "aliases": [],
+      "article": "Dolphin",
+      "sprite": 18
+    },
+    {
+      "id": "donkey",
+      "name": "Donkey",
+      "aliases": [],
+      "article": "Donkey",
+      "sprite": 19
+    },
+    {
+      "id": "drowned",
+      "name": "Drowned",
+      "aliases": [],
+      "article": "Drowned",
+      "sprite": 20
+    },
+    {
+      "id": "elder-guardian",
+      "name": "Elder Guardian",
+      "aliases": [],
+      "article": "Elder Guardian",
+      "sprite": 21
+    },
+    {
+      "id": "ender-dragon",
+      "name": "Ender Dragon",
+      "aliases": [],
+      "article": "Ender Dragon",
+      "sprite": 22
+    },
+    {
+      "id": "enderman",
+      "name": "Enderman",
+      "aliases": [],
+      "article": "Enderman",
+      "sprite": 23
+    },
+    {
+      "id": "endermite",
+      "name": "Endermite",
+      "aliases": [],
+      "article": "Endermite",
+      "sprite": 24
+    },
+    {
+      "id": "evoker",
+      "name": "Evoker",
+      "aliases": [],
+      "article": "Evoker",
+      "sprite": 25
+    },
+    {
+      "id": "fox",
+      "name": "Fox",
+      "aliases": [],
+      "article": "Fox",
+      "sprite": 26
+    },
+    {
+      "id": "frog",
+      "name": "Frog",
+      "aliases": [],
+      "article": "Frog",
+      "sprite": 27
+    },
+    {
+      "id": "ghast",
+      "name": "Ghast",
+      "aliases": [],
+      "article": "Ghast",
+      "sprite": 28
+    },
+    {
+      "id": "glow-squid",
+      "name": "Glow Squid",
+      "aliases": [],
+      "article": "Glow Squid",
+      "sprite": 29
+    },
+    {
+      "id": "goat",
+      "name": "Goat",
+      "aliases": [],
+      "article": "Goat",
+      "sprite": 30
+    },
+    {
+      "id": "guardian",
+      "name": "Guardian",
+      "aliases": [],
+      "article": "Guardian",
+      "sprite": 31
+    },
+    {
+      "id": "happy-ghast",
+      "name": "Happy Ghast",
+      "aliases": [],
+      "article": "Happy Ghast",
+      "sprite": 32
+    },
+    {
+      "id": "hoglin",
+      "name": "Hoglin",
+      "aliases": [],
+      "article": "Hoglin",
+      "sprite": 33
+    },
+    {
+      "id": "horse",
+      "name": "Horse",
+      "aliases": [],
+      "article": "Horse",
+      "sprite": 34
+    },
+    {
+      "id": "husk",
+      "name": "Husk",
+      "aliases": [],
+      "article": "Husk",
+      "sprite": 35
+    },
+    {
+      "id": "iron-golem",
+      "name": "Iron Golem",
+      "aliases": [],
+      "article": "Iron Golem",
+      "sprite": 36
+    },
+    {
+      "id": "llama",
+      "name": "Llama",
+      "aliases": [],
+      "article": "Llama",
+      "sprite": 37
+    },
+    {
+      "id": "magma-cube",
+      "name": "Magma Cube",
+      "aliases": [],
+      "article": "Magma Cube",
+      "sprite": 38
+    },
+    {
+      "id": "mooshroom",
+      "name": "Mooshroom",
+      "aliases": [],
+      "article": "Mooshroom",
+      "sprite": 39
+    },
+    {
+      "id": "mule",
+      "name": "Mule",
+      "aliases": [],
+      "article": "Mule",
+      "sprite": 40
+    },
+    {
+      "id": "nautilus",
+      "name": "Nautilus",
+      "aliases": [],
+      "article": "Nautilus",
+      "sprite": 41
+    },
+    {
+      "id": "ocelot",
+      "name": "Ocelot",
+      "aliases": [],
+      "article": "Ocelot",
+      "sprite": 42
+    },
+    {
+      "id": "panda",
+      "name": "Panda",
+      "aliases": [],
+      "article": "Panda",
+      "sprite": 43
+    },
+    {
+      "id": "parched",
+      "name": "Parched",
+      "aliases": [],
+      "article": "Parched",
+      "sprite": 44
+    },
+    {
+      "id": "parrot",
+      "name": "Parrot",
+      "aliases": [],
+      "article": "Parrot",
+      "sprite": 45
+    },
+    {
+      "id": "phantom",
+      "name": "Phantom",
+      "aliases": [],
+      "article": "Phantom",
+      "sprite": 46
+    },
+    {
+      "id": "pig",
+      "name": "Pig",
+      "aliases": [],
+      "article": "Pig",
+      "sprite": 47
+    },
+    {
+      "id": "piglin",
+      "name": "Piglin",
+      "aliases": [],
+      "article": "Piglin",
+      "sprite": 48
+    },
+    {
+      "id": "piglin-brute",
+      "name": "Piglin Brute",
+      "aliases": [],
+      "article": "Piglin Brute",
+      "sprite": 49
+    },
+    {
+      "id": "pillager",
+      "name": "Pillager",
+      "aliases": [],
+      "article": "Pillager",
+      "sprite": 50
+    },
+    {
+      "id": "polar-bear",
+      "name": "Polar Bear",
+      "aliases": [],
+      "article": "Polar Bear",
+      "sprite": 51
+    },
+    {
+      "id": "pufferfish",
+      "name": "Pufferfish",
+      "aliases": [],
+      "article": "Pufferfish",
+      "sprite": 52
+    },
+    {
+      "id": "rabbit",
+      "name": "Rabbit",
+      "aliases": [],
+      "article": "Rabbit",
+      "sprite": 53
+    },
+    {
+      "id": "ravager",
+      "name": "Ravager",
+      "aliases": [],
+      "article": "Ravager",
+      "sprite": 54
+    },
+    {
+      "id": "salmon",
+      "name": "Salmon",
+      "aliases": [],
+      "article": "Salmon",
+      "sprite": 55
+    },
+    {
+      "id": "sheep",
+      "name": "Sheep",
+      "aliases": [],
+      "article": "Sheep",
+      "sprite": 56
+    },
+    {
+      "id": "shulker",
+      "name": "Shulker",
+      "aliases": [],
+      "article": "Shulker",
+      "sprite": 57
+    },
+    {
+      "id": "silverfish",
+      "name": "Silverfish",
+      "aliases": [],
+      "article": "Silverfish",
+      "sprite": 58
+    },
+    {
+      "id": "skeleton",
+      "name": "Skeleton",
+      "aliases": [],
+      "article": "Skeleton",
+      "sprite": 59
+    },
+    {
+      "id": "skeleton-horse",
+      "name": "Skeleton Horse",
+      "aliases": [],
+      "article": "Skeleton Horse",
+      "sprite": 60
+    },
+    {
+      "id": "slime",
+      "name": "Slime",
+      "aliases": [],
+      "article": "Slime",
+      "sprite": 61
+    },
+    {
+      "id": "sniffer",
+      "name": "Sniffer",
+      "aliases": [],
+      "article": "Sniffer",
+      "sprite": 62
+    },
+    {
+      "id": "snow-golem",
+      "name": "Snow Golem",
+      "aliases": [],
+      "article": "Snow Golem",
+      "sprite": 63
+    },
+    {
+      "id": "spider",
+      "name": "Spider",
+      "aliases": [],
+      "article": "Spider",
+      "sprite": 64
+    },
+    {
+      "id": "squid",
+      "name": "Squid",
+      "aliases": [],
+      "article": "Squid",
+      "sprite": 65
+    },
+    {
+      "id": "stray",
+      "name": "Stray",
+      "aliases": [],
+      "article": "Stray",
+      "sprite": 66
+    },
+    {
+      "id": "strider",
+      "name": "Strider",
+      "aliases": [],
+      "article": "Strider",
+      "sprite": 67
+    },
+    {
+      "id": "sulfur-cube",
+      "name": "Sulfur Cube",
+      "aliases": [],
+      "article": "Sulfur Cube",
+      "sprite": 68
+    },
+    {
+      "id": "tadpole",
+      "name": "Tadpole",
+      "aliases": [],
+      "article": "Tadpole",
+      "sprite": 69
+    },
+    {
+      "id": "trader-llama",
+      "name": "Trader Llama",
+      "aliases": [],
+      "article": "Trader Llama",
+      "sprite": 70
+    },
+    {
+      "id": "tropical-fish",
+      "name": "Tropical Fish",
+      "aliases": [],
+      "article": "Tropical Fish",
+      "sprite": 71
+    },
+    {
+      "id": "turtle",
+      "name": "Turtle",
+      "aliases": [],
+      "article": "Turtle",
+      "sprite": 72
+    },
+    {
+      "id": "vex",
+      "name": "Vex",
+      "aliases": [],
+      "article": "Vex",
+      "sprite": 73
+    },
+    {
+      "id": "villager",
+      "name": "Villager",
+      "aliases": [],
+      "article": "Villager",
+      "sprite": 74
+    },
+    {
+      "id": "vindicator",
+      "name": "Vindicator",
+      "aliases": [],
+      "article": "Vindicator",
+      "sprite": 75
+    },
+    {
+      "id": "wandering-trader",
+      "name": "Wandering Trader",
+      "aliases": [],
+      "article": "Wandering Trader",
+      "sprite": 76
+    },
+    {
+      "id": "warden",
+      "name": "Warden",
+      "aliases": [],
+      "article": "Warden",
+      "sprite": 77
+    },
+    {
+      "id": "witch",
+      "name": "Witch",
+      "aliases": [],
+      "article": "Witch",
+      "sprite": 78
+    },
+    {
+      "id": "wither",
+      "name": "Wither",
+      "aliases": [],
+      "article": "Wither",
+      "sprite": 79
+    },
+    {
+      "id": "wither-skeleton",
+      "name": "Wither Skeleton",
+      "aliases": [],
+      "article": "Wither Skeleton",
+      "sprite": 80
+    },
+    {
+      "id": "wolf",
+      "name": "Wolf",
+      "aliases": [],
+      "article": "Wolf",
+      "sprite": 81
+    },
+    {
+      "id": "zoglin",
+      "name": "Zoglin",
+      "aliases": [],
+      "article": "Zoglin",
+      "sprite": 82
+    },
+    {
+      "id": "zombie",
+      "name": "Zombie",
+      "aliases": [],
+      "article": "Zombie",
+      "sprite": 83
+    },
+    {
+      "id": "zombie-horse",
+      "name": "Zombie Horse",
+      "aliases": [],
+      "article": "Zombie Horse",
+      "sprite": 84
+    },
+    {
+      "id": "zombie-nautilus",
+      "name": "Zombie Nautilus",
+      "aliases": [],
+      "article": "Zombie Nautilus",
+      "sprite": 85
+    },
+    {
+      "id": "zombie-villager",
+      "name": "Zombie Villager",
+      "aliases": [],
+      "article": "Zombie Villager",
+      "sprite": 86
+    },
+    {
+      "id": "zombified-piglin",
+      "name": "Zombified Piglin",
+      "aliases": [],
+      "article": "Zombified Piglin",
+      "sprite": 87
+    }
+  ]
+}

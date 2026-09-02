@@ -1,6 +1,6 @@
 import type { BlockHuntPuzzle } from "@/lib/blockHunt";
 
-// Generated from Minecraft Block Property Encyclopedia data, with curated final hints.
+// Curated against the current Java Edition block pages on Minecraft Wiki.
 export const ADDITIONAL_BLOCK_HUNT_PUZZLES =
 [
   {

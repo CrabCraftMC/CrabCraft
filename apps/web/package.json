@@ -8,6 +8,7 @@
     "predev": "bun run scripts/download-textures.ts",
     "prebuild": "bun run scripts/download-textures.ts",
     "build": "next build",
+    "generate:hunts": "bun run scripts/generate-hunt-catalogues.ts",
     "test": "bun test tests",
     "start": "next start",
     "clean": "rm -rf .next"

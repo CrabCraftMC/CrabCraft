@@ -10,7 +10,7 @@ import { signIn, signOut } from "next-auth/react";
 import PixelIcon from "./PixelIcon";
 import { Button } from "./ui/button";
 import Squircle from "./Squircle";
-import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings, ImageIcon } from "lucide-react";
+import { Menu, X, Home, BookOpen, Map, BarChart3, Trophy, Palette, Boxes, Gift, Wrench, Rainbow, Circle, ArrowLeftRight, Sparkles, Instagram, Sun, Moon, LogIn, LogOut, ChevronDown, ChevronUp, ClipboardList, Search, User, Settings, ImageIcon, Gamepad2 } from "lucide-react";
 import { FaDiscord, FaTiktok, FaYoutube } from "react-icons/fa";
 import config from "../data/site-config.json";
 
@@ -54,6 +54,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
     const playerName = user?.minecraftNickname || user?.minecraftUsername || user?.name || "User";
     const { trigger } = useWebHaptics();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isGamesOpen, setIsGamesOpen] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const userBtnRef = useRef<HTMLButtonElement>(null);
@@ -74,6 +75,9 @@ export default function Navbar({ user }: { user?: UserData | null }) {
             if (!target.closest('.tools-dropdown-wrapper')) {
                 setIsToolsOpen(false);
             }
+            if (!target.closest('.games-dropdown-wrapper')) {
+                setIsGamesOpen(false);
+            }
         };
         document.addEventListener('click', handleClick);
         return () => document.removeEventListener('click', handleClick);
@@ -87,6 +91,10 @@ export default function Navbar({ user }: { user?: UserData | null }) {
             document.body.style.overflow = previousOverflow;
         };
     }, [isMenuOpen]);
+
+    useEffect(() => {
+        setIsGamesOpen(false);
+    }, [currentPath]);
 
     const toggleDarkMode = () => {
         trigger();
@@ -230,6 +238,44 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                                 })}
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Games dropdown */}
+                        <div
+                            className="games-dropdown-wrapper relative"
+                            onMouseEnter={() => setIsGamesOpen(true)}
+                            onMouseLeave={() => setIsGamesOpen(false)}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setIsGamesOpen(true)}
+                                onFocus={() => setIsGamesOpen(true)}
+                                aria-haspopup="menu"
+                                aria-expanded={isGamesOpen}
+                                className={`flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs font-bold uppercase transition-colors duration-200 hover:text-orange-500 lg:text-sm ${currentPath.startsWith("/games") ? "text-orange-500 underline decoration-orange-500 decoration-2 underline-offset-4" : "text-gray-800 dark:text-gray-200"}`}
+                            >
+                                <Gamepad2 className="h-4 w-4" />
+                                Games
+                                {isGamesOpen ? <ChevronUp className="h-3 w-3 opacity-50" /> : <ChevronDown className="h-3 w-3 opacity-50" />}
+                            </button>
+                            {isGamesOpen && (
+                                <div className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3">
+                                    <div className="w-44 rounded-2xl bg-paper-2/95 p-2 shadow-xl shadow-black/10 backdrop-blur-2xl animate-[scaleIn_0.15s_ease-out] dark:shadow-black/30">
+                                        {config.navbar.games.map((game) => {
+                                            const isGameActive = currentPath === game.url;
+                                            return (
+                                                <Link
+                                                    key={game.name}
+                                                    href={game.url}
+                                                    className={`block rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${isGameActive ? "bg-orange-500/10 text-orange-500" : "text-gray-700 hover:bg-paper dark:text-gray-200"}`}
+                                                >
+                                                    {game.name}
+                                                </Link>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -387,6 +433,26 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 <Link key={link.name} href={link.url} className={cls} onClick={() => setIsMenuOpen(false)}>
                                     {Icon && <Icon className="w-4 h-4" />}
                                     {link.name}
+                                </Link>
+                            );
+                        })}
+
+                        {/* Games section */}
+                        <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${currentPath.startsWith("/games") ? "text-orange-500" : "text-gray-700 dark:text-gray-300"}`}>
+                            <Gamepad2 className="h-4 w-4" />
+                            Games
+                        </div>
+                        {config.navbar.games.map((game) => {
+                            const isActive = currentPath === game.url;
+                            return (
+                                <Link
+                                    key={game.name}
+                                    href={game.url}
+                                    className={`flex items-center gap-3 rounded-xl py-2 pl-10 pr-3 text-sm font-medium transition-colors ${isActive ? "bg-orange-500/10 text-orange-500" : "text-gray-500 hover:bg-paper/60 dark:text-gray-400 dark:hover:bg-white/5"}`}
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    <img src={game.icon} alt="" className="h-6 w-6 object-contain [image-rendering:pixelated]" />
+                                    {game.name}
                                 </Link>
                             );
                         })}

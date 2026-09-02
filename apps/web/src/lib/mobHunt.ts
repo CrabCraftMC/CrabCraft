@@ -1,0 +1,215 @@
+import type { BlockHuntClue, BlockHuntPuzzle } from "@/lib/blockHunt";
+
+type MobHuntPuzzle = Omit<BlockHuntPuzzle, "texture">;
+
+const clueKinds: readonly BlockHuntClue["kind"][] = [
+  "data",
+  "behaviour",
+  "shape",
+  "data",
+  "behaviour",
+  "world",
+];
+
+const clueLabels = [
+  "Disposition",
+  "General behaviour",
+  "Physical profile",
+  "Distinctive trait",
+  "Distinctive behaviour",
+  "Identity",
+] as const;
+
+function mobPuzzle(
+  answer: string,
+  clues: readonly [string, string, string, string, string, string],
+): MobHuntPuzzle {
+  return {
+    answer,
+    clues: clues.map((text, index) => ({
+      kind: clueKinds[index],
+      label: clueLabels[index],
+      text,
+    })),
+  };
+}
+
+// Facts are curated from the corresponding current Java Edition pages on Minecraft Wiki.
+export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
+  mobPuzzle("Shulker", [
+    "This mob is classified as hostile.",
+    "Its combat includes a ranged attack.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "Closing its shell raises its armour to 20 points.",
+    "Its homing projectile follows grid-aligned paths and applies Levitation on impact.",
+    "This purple box-shaped End mob drops shells used for portable storage.",
+  ]),
+  mobPuzzle("Allay", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is less than one block tall.",
+    "This mob naturally regenerates 2 health each second.",
+    "After receiving an item, it collects matching dropped items within its search range.",
+    "This small blue helper delivers collected items to a player or note block.",
+  ]),
+  mobPuzzle("Axolotl", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is less than one block tall.",
+    "It can survive on land for only five minutes before taking damage unless rain or water is available.",
+    "After helping it defeat a target, a player can receive Regeneration and have Mining Fatigue removed.",
+    "This bucketable cave amphibian sometimes plays dead when injured.",
+  ]),
+  mobPuzzle("Bee", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is less than one block tall.",
+    "After one successful attack, this mob cannot attack again.",
+    "It gathers pollen from flowers, fertilises crops, and increases the honey level when it returns home.",
+    "This striped pollinator lives in nests and produces honey.",
+  ]),
+  mobPuzzle("Blaze", [
+    "This mob is classified as hostile.",
+    "This mob can spawn naturally in the Nether.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "Powder snow damages this mob.",
+    "It rises before firing a burst of three flaming projectiles, then pauses before attacking again.",
+    "This yellow Nether fortress mob attacks with fireballs.",
+  ]),
+  mobPuzzle("Bogged", [
+    "This mob is classified as hostile.",
+    "Its combat includes a ranged attack.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "Mushrooms grow from its body, and shearing removes two of them.",
+    "Its bow attack is slower than a skeleton's but applies Poison for four seconds.",
+    "This green skeleton variant fires poisoned arrows from swampy habitats.",
+  ]),
+  mobPuzzle("Breeze", [
+    "This mob is classified as hostile.",
+    "Its combat includes a ranged attack.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "Most projectile attacks cannot damage this mob.",
+    "Its wind bursts operate buttons, levers, doors, trapdoors, bells, and several other components.",
+    "This purple trial chamber mob drops breeze rods and controls the wind.",
+  ]),
+  mobPuzzle("Creaking", [
+    "This mob is classified as hostile.",
+    "Its combat relies mainly on close-range attacks.",
+    "Its hitbox is at least two blocks tall.",
+    "This mob has only one health point.",
+    "It moves only when no survival or adventure player is looking directly at it.",
+    "This wooden Pale Garden creature freezes under a player's gaze.",
+  ]),
+  mobPuzzle("Creeper", [
+    "This mob is classified as hostile.",
+    "Its combat relies mainly on close-range attacks.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "Its fuse duration and explosion radius are stored separately.",
+    "It approaches silently, begins a short fuse near a player, and abandons the explosion if the target escapes.",
+    "This iconic green monster hisses immediately before exploding.",
+  ]),
+  mobPuzzle("Enderman", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Its combat relies mainly on close-range attacks.",
+    "Its hitbox is at least two blocks tall.",
+    "This mob can spawn naturally in all three dimensions.",
+    "Direct eye contact provokes it, while wearing a carved pumpkin prevents that visual trigger.",
+    "This tall dark mob teleports and commonly drops ender pearls.",
+  ]),
+  mobPuzzle("Evoker", [
+    "This mob is classified as hostile.",
+    "Its combat includes a ranged attack.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "This mob attacks through spell warmups rather than a held weapon.",
+    "One spell raises a line of damaging fangs, while another summons flying attackers.",
+    "This robed illager summons vexes and always drops a totem of undying.",
+  ]),
+  mobPuzzle("Frog", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is less than one block tall.",
+    "Its adult variant is selected when it matures rather than when its egg is laid.",
+    "Eating the smallest magma cube creates a froglight whose colour depends on the variant.",
+    "This amphibian grows from a tadpole and is bred using slimeballs.",
+  ]),
+  mobPuzzle("Happy Ghast", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is at least two blocks tall.",
+    "This mob regenerates faster while near cloud height.",
+    "A harness turns the top of its body into a rideable platform controlled by the front passenger.",
+    "This smiling Overworld-friendly ghast variant begins life as a dried block from the Nether.",
+  ]),
+  mobPuzzle("Iron Golem", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is at least two blocks tall.",
+    "This mob has full knockback resistance.",
+    "Damage exposes progressive cracks that can be repaired by using iron ingots on it.",
+    "This large village defender can be built from four iron blocks and a carved pumpkin.",
+  ]),
+  mobPuzzle("Phantom", [
+    "This mob is classified as hostile.",
+    "Its combat relies mainly on close-range attacks.",
+    "Its hitbox is less than one block tall.",
+    "Its size data supports larger bodies, although natural examples use the smallest value.",
+    "It can spawn above players who have avoided sleep for at least three in-game days.",
+    "This nocturnal blue flyer punishes players who have not slept.",
+  ]),
+  mobPuzzle("Guardian", [
+    "This mob is classified as hostile.",
+    "Its combat includes a ranged attack.",
+    "Its hitbox is less than one block tall.",
+    "Melee attackers take damage only while this mob's spikes are extended.",
+    "It locks onto a target before releasing a beam whose damage cannot be avoided by simply moving sideways.",
+    "This spiky monument defender attacks with a charged laser beam.",
+  ]),
+  mobPuzzle("Sniffer", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "This mob has 14 health.",
+    "Adults periodically smell the ground, search for a valid spot, and dig up ancient seeds.",
+    "This huge ancient mob hatches from an egg and uncovers torchflower seeds and pitcher pods.",
+  ]),
+  mobPuzzle("Strider", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "This mob can spawn naturally in the Nether.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "This mob's movement speed changes when its body is cold.",
+    "It walks freely across lava but moves much more slowly on land and takes damage from water and rain.",
+    "This red Nether mount is the survival transport designed for lava.",
+  ]),
+  mobPuzzle("Warden", [
+    "This mob is classified as hostile.",
+    "Its combat includes a ranged attack.",
+    "Its hitbox is at least two blocks tall.",
+    "This mob has full knockback resistance.",
+    "It is blind, building anger by detecting vibrations, smelling nearby entities, or being touched.",
+    "This ancient city threat is meant to be avoided rather than fought.",
+  ]),
+  mobPuzzle("Wither", [
+    "This mob is classified as hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is at least two blocks tall.",
+    "Its armoured state is controlled by whether it is below half health.",
+    "Its three heads can target independently, with the side heads firing at secondary targets.",
+    "This player-built three-headed boss inflicts the Wither effect.",
+  ]),
+  mobPuzzle("Piglin", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "This mob can spawn naturally in the Nether.",
+    "Its hitbox is at least one block tall but under two blocks.",
+    "This mob can spawn with either a melee or ranged weapon.",
+    "Wearing at least one piece of gold armour prevents its normal hostility, but opening guarded containers still provokes it.",
+    "This gold-loving Nether humanoid becomes zombified outside its home dimension.",
+  ]),
+  mobPuzzle("Armadillo", [
+    "This mob is classified as passive, neutral, or utility rather than hostile.",
+    "Players can reproduce or create this mob without commands.",
+    "Its hitbox is less than one block tall.",
+    "This mob has 12 health.",
+    "Nearby sprinting players, undead mobs, or hostile riders can make it roll into a defensive ball.",
+    "This small savanna animal supplies the material used to craft wolf armour.",
+  ]),
+];

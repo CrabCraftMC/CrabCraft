@@ -4,35 +4,35 @@ import dynamic from "next/dynamic";
 const BlockHunt = dynamic(() => import("@/components/BlockHunt"));
 
 export const metadata: Metadata = {
-  title: "Block Hunt | Daily Minecraft Guessing Game",
+  title: "Item Hunt | Daily Minecraft Guessing Game",
   description:
-    "Play Block Hunt, a free daily Minecraft block guessing game. Use up to six clues to identify the mystery block, then share how quickly you found it.",
+    "Play Item Hunt, a free daily Minecraft item guessing game. Reveal up to six clues, identify the mystery item, and share your result.",
   alternates: {
-    canonical: "https://crabcraft.net/games/block-hunt",
+    canonical: "https://crabcraft.net/games/item-hunt",
   },
   openGraph: {
-    title: "Block Hunt | Daily Minecraft Guessing Game",
+    title: "Item Hunt | Daily Minecraft Guessing Game",
     description:
-      "Use up to six clues to identify today's mystery Minecraft block.",
-    url: "https://crabcraft.net/games/block-hunt",
+      "Reveal up to six clues and identify today's mystery Minecraft item.",
+    url: "https://crabcraft.net/games/item-hunt",
     images: ["/logo.png"],
   },
   twitter: {
     card: "summary",
-    title: "Block Hunt | Daily Minecraft Guessing Game",
+    title: "Item Hunt | Daily Minecraft Guessing Game",
     description:
-      "Use up to six clues to identify today's mystery Minecraft block.",
+      "Reveal up to six clues and identify today's mystery Minecraft item.",
   },
 };
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Block Hunt",
-  alternateName: "Minecraft Block Hunt",
+  name: "Item Hunt",
+  alternateName: "Minecraft Item Hunt",
   description:
-    "A free daily Minecraft block guessing game with up to six clues.",
-  url: "https://crabcraft.net/games/block-hunt",
+    "A free daily Minecraft item guessing game with up to six clues.",
+  url: "https://crabcraft.net/games/item-hunt",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   browserRequirements: "Requires JavaScript",
@@ -49,14 +49,14 @@ const jsonLd = {
   },
 };
 
-export default function BlockHuntPage() {
+export default function ItemHuntPage() {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <BlockHunt kind="block" />
+      <BlockHunt kind="item" />
     </>
   );
 }

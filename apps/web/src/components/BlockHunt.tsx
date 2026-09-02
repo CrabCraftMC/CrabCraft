@@ -10,8 +10,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "framer-motion";
+import Link from "next/link";
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Play,
@@ -21,27 +23,26 @@ import {
   X,
 } from "lucide-react";
 import Squircle from "@/components/Squircle";
-import blocks from "@/data/blocks.json";
 import {
-  BLOCK_HUNT_CLUES,
-  getBlockHuntDailyNumber,
-  getBlockHuntDailyPuzzle,
-  normaliseBlockGuess,
-} from "@/lib/blockHunt";
+  getHuntDailyNumber,
+  getHuntDailyPuzzle,
+  HUNT_CLUES,
+  HUNT_CONFIG,
+  HUNT_KINDS,
+} from "@/lib/hunt";
+import {
+  getHuntCatalogue,
+  getHuntEntry,
+  HUNT_ATLAS_CELL_SIZE,
+  HUNT_ATLAS_COLUMNS,
+  normaliseHuntGuess,
+  searchHuntEntries,
+  type HuntEntry,
+  type HuntKind,
+} from "@/lib/huntCatalogue";
 import { parseBlockHuntGlossary } from "@/lib/blockHuntGlossary";
-import { formatBlockHuntShare } from "@/lib/blockHuntShare";
+import { formatHuntShare } from "@/lib/blockHuntShare";
 import { trackUmamiEvent } from "@/lib/umami";
-
-const STORAGE_PREFIX = "crabcraft-block-hunt-timed";
-const TEXTURE_BASE = "/textures/blocks";
-
-const BLOCK_OPTIONS = [
-  ...new Map(blocks.map((block) => [block.name, block])).values(),
-].sort((a, b) => a.name.localeCompare(b.name, "en-GB"));
-
-const BLOCK_NAME_LOOKUP = new Map(
-  BLOCK_OPTIONS.map((block) => [normaliseBlockGuess(block.name), block]),
-);
 
 type GamePhase = "playing" | "won" | "lost";
 
@@ -51,6 +52,7 @@ type SavedGame = {
   phase: GamePhase;
   startedAt: number | null;
   elapsedMs: number | null;
+  timerEnabled: boolean;
 };
 
 const INITIAL_GAME: SavedGame = {
@@ -59,7 +61,10 @@ const INITIAL_GAME: SavedGame = {
   phase: "playing",
   startedAt: null,
   elapsedMs: null,
+  timerEnabled: true,
 };
+
+const HUNT_STORAGE_VERSION = 8;
 
 function readSavedGame(key: string): SavedGame {
   try {
@@ -68,10 +73,10 @@ function readSavedGame(key: string): SavedGame {
       saved &&
       Number.isInteger(saved.cluesRevealed) &&
       saved.cluesRevealed >= 1 &&
-      saved.cluesRevealed <= BLOCK_HUNT_CLUES &&
+      saved.cluesRevealed <= HUNT_CLUES &&
       Array.isArray(saved.guesses) &&
       saved.guesses.every((guess: unknown) => typeof guess === "string") &&
-      saved.guesses.length <= BLOCK_HUNT_CLUES &&
+      saved.guesses.length <= HUNT_CLUES &&
       ["playing", "won", "lost"].includes(saved.phase) &&
       (saved.startedAt === null ||
         (typeof saved.startedAt === "number" &&
@@ -79,9 +84,14 @@ function readSavedGame(key: string): SavedGame {
       (saved.elapsedMs === null ||
         (typeof saved.elapsedMs === "number" &&
           Number.isFinite(saved.elapsedMs) &&
-          saved.elapsedMs >= 0))
+          saved.elapsedMs >= 0)) &&
+      (saved.timerEnabled === undefined ||
+        typeof saved.timerEnabled === "boolean")
     ) {
-      return saved;
+      return {
+        ...saved,
+        timerEnabled: saved.timerEnabled ?? true,
+      };
     }
   } catch {
     // Ignore damaged local state and start a fresh game.
@@ -98,6 +108,36 @@ function formatDuration(milliseconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function HuntPreview({
+  entry,
+  kind,
+  size = HUNT_ATLAS_CELL_SIZE,
+}: {
+  entry: HuntEntry;
+  kind: HuntKind;
+  size?: number;
+}) {
+  const column = entry.sprite % HUNT_ATLAS_COLUMNS;
+  const row = Math.floor(entry.sprite / HUNT_ATLAS_COLUMNS);
+  const scale = size / HUNT_ATLAS_CELL_SIZE;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block shrink-0"
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: `url(/textures/hunt/${kind}s.webp)`,
+        backgroundPosition: `${-column * HUNT_ATLAS_CELL_SIZE * scale}px ${-row * HUNT_ATLAS_CELL_SIZE * scale}px`,
+        backgroundSize: `${HUNT_ATLAS_COLUMNS * HUNT_ATLAS_CELL_SIZE * scale}px auto`,
+        backgroundRepeat: "no-repeat",
+        imageRendering: "pixelated",
+      }}
+    />
+  );
 }
 
 type TooltipPosition = {
@@ -192,10 +232,12 @@ function ClueText({ text, idPrefix }: { text: string; idPrefix: string }) {
   );
 }
 
-export default function BlockHunt() {
-  const dailyNumber = getBlockHuntDailyNumber();
-  const puzzle = getBlockHuntDailyPuzzle();
-  const puzzleKey = `${STORAGE_PREFIX}:daily:${dailyNumber}`;
+export default function BlockHunt({ kind = "block" }: { kind?: HuntKind }) {
+  const config = HUNT_CONFIG[kind];
+  const catalogue = getHuntCatalogue(kind);
+  const dailyNumber = getHuntDailyNumber();
+  const puzzle = getHuntDailyPuzzle(kind);
+  const puzzleKey = `crabcraft-${kind}-hunt-v${HUNT_STORAGE_VERSION}:daily:${dailyNumber}`;
 
   const [game, setGame] = useState<SavedGame>(INITIAL_GAME);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
@@ -209,35 +251,31 @@ export default function BlockHunt() {
   const [activeOption, setActiveOption] = useState(0);
   const [clueIndex, setClueIndex] = useState(0);
   const [clockNow, setClockNow] = useState(() => Date.now());
+  const [huntMenuOpen, setHuntMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const huntMenuRef = useRef<HTMLSpanElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
+  const gameReady = loadedKey === puzzleKey;
   const finished = game.phase !== "playing";
   const started = game.startedAt !== null;
-  const availableClues = finished ? BLOCK_HUNT_CLUES : game.cluesRevealed;
+  const availableClues = finished ? HUNT_CLUES : game.cluesRevealed;
   const attemptCount =
     game.guesses.length + (game.phase === "won" ? 1 : 0);
-  const guessesLeft = Math.max(0, BLOCK_HUNT_CLUES - game.guesses.length);
-  const elapsedMs =
-    game.elapsedMs ??
-    (game.startedAt === null ? 0 : Math.max(0, clockNow - game.startedAt));
+  const guessesLeft = Math.max(0, HUNT_CLUES - game.guesses.length);
+  const elapsedMs = game.timerEnabled
+    ? game.elapsedMs ??
+      (game.startedAt === null ? 0 : Math.max(0, clockNow - game.startedAt))
+    : 0;
   const currentClue = puzzle.clues[clueIndex];
-  const selectedBlock = BLOCK_NAME_LOOKUP.get(normaliseBlockGuess(guess));
+  const selectedBlock = getHuntEntry(kind, guess);
+  const answerEntry = getHuntEntry(kind, puzzle.answer);
 
-  const filteredBlocks = useMemo(() => {
-    const query = normaliseBlockGuess(guess);
-    if (!query) return [];
-
-    const startsWith = [];
-    const includes = [];
-    for (const block of BLOCK_OPTIONS) {
-      const name = normaliseBlockGuess(block.name);
-      if (name.startsWith(query)) startsWith.push(block);
-      else if (name.includes(query)) includes.push(block);
-    }
-    return [...startsWith, ...includes].slice(0, 8);
-  }, [guess]);
+  const filteredBlocks = useMemo(
+    () => searchHuntEntries(kind, guess),
+    [guess, kind],
+  );
 
   useEffect(() => {
     const saved = readSavedGame(puzzleKey);
@@ -261,17 +299,24 @@ export default function BlockHunt() {
   }, [availableClues, puzzleKey]);
 
   useEffect(() => {
-    if (!started || finished) return;
+    setHuntMenuOpen(false);
+  }, [kind]);
+
+  useEffect(() => {
+    if (!started || finished || !game.timerEnabled) return;
 
     setClockNow(Date.now());
     const timer = window.setInterval(() => setClockNow(Date.now()), 250);
     return () => window.clearInterval(timer);
-  }, [finished, started]);
+  }, [finished, game.timerEnabled, started]);
 
   useEffect(() => {
     const closeSearch = (event: MouseEvent) => {
       if (!searchRef.current?.contains(event.target as Node)) {
         setSearchOpen(false);
+      }
+      if (!huntMenuRef.current?.contains(event.target as Node)) {
+        setHuntMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", closeSearch);
@@ -288,11 +333,14 @@ export default function BlockHunt() {
     const startedAt = Date.now();
     setClockNow(startedAt);
     setGame((current) => ({ ...current, startedAt, elapsedMs: null }));
-    trackUmamiEvent("block-hunt-started", { mode: "daily" });
+    trackUmamiEvent(`${kind}-hunt-started`, {
+      mode: "daily",
+      timed: game.timerEnabled,
+    });
     focusGuess();
   };
 
-  const selectBlock = (block: (typeof BLOCK_OPTIONS)[number]) => {
+  const selectBlock = (block: HuntEntry) => {
     setGuess(block.name);
     setSearchOpen(false);
     setActiveOption(0);
@@ -330,11 +378,11 @@ export default function BlockHunt() {
     event.preventDefault();
     if (game.phase !== "playing") return;
 
-    const normalisedGuess = normaliseBlockGuess(guess);
-    const canonicalGuess = BLOCK_NAME_LOOKUP.get(normalisedGuess);
+    const normalisedGuess = normaliseHuntGuess(guess);
+    const canonicalGuess = getHuntEntry(kind, normalisedGuess);
 
     if (!canonicalGuess) {
-      setMessage("Choose a Minecraft block from the list.");
+      setMessage(`Choose a Minecraft ${config.singular} from the list.`);
       setSearchOpen(true);
       focusGuess();
       return;
@@ -342,17 +390,24 @@ export default function BlockHunt() {
 
     if (
       game.guesses.some(
-        (previous) => normaliseBlockGuess(previous) === normalisedGuess,
+        (previous) => getHuntEntry(kind, previous)?.id === canonicalGuess.id,
       )
     ) {
-      setMessage("You already tried that block. Choose another one.");
+      setMessage(`You already tried that ${config.singular}. Choose another one.`);
       focusGuess();
       return;
     }
 
-    if (normalisedGuess === normaliseBlockGuess(puzzle.answer)) {
+    const answerBlock = getHuntEntry(kind, puzzle.answer);
+    if (
+      answerBlock
+        ? canonicalGuess.id === answerBlock.id
+        : normalisedGuess === normaliseHuntGuess(puzzle.answer)
+    ) {
       const finalElapsedMs =
-        game.startedAt === null ? 0 : Math.max(0, Date.now() - game.startedAt);
+        game.timerEnabled && game.startedAt !== null
+          ? Math.max(0, Date.now() - game.startedAt)
+          : 0;
       setGame((current) => ({
         ...current,
         phase: "won",
@@ -361,25 +416,30 @@ export default function BlockHunt() {
       setGuess("");
       setMessage("");
       setSearchOpen(false);
-      trackUmamiEvent("block-hunt-completed", {
+      trackUmamiEvent(`${kind}-hunt-completed`, {
         mode: "daily",
         guesses: game.guesses.length + 1,
         clues: game.cluesRevealed,
-        seconds: Math.floor(finalElapsedMs / 1000),
+        timed: game.timerEnabled,
+        ...(game.timerEnabled
+          ? { seconds: Math.floor(finalElapsedMs / 1000) }
+          : {}),
       });
       return;
     }
 
     const nextGuesses = [...game.guesses, canonicalGuess.name];
-    const lost = nextGuesses.length >= BLOCK_HUNT_CLUES;
+    const lost = nextGuesses.length >= HUNT_CLUES;
     const nextCluesRevealed = Math.min(
-      BLOCK_HUNT_CLUES,
+      HUNT_CLUES,
       game.cluesRevealed + 1,
     );
     const finalElapsedMs =
-      lost && game.startedAt !== null
+      lost && game.timerEnabled && game.startedAt !== null
         ? Math.max(0, Date.now() - game.startedAt)
-        : null;
+        : lost
+          ? 0
+          : null;
     setGame((current) => ({
       ...current,
       cluesRevealed: nextCluesRevealed,
@@ -391,22 +451,33 @@ export default function BlockHunt() {
     setSearchOpen(false);
     setMessage(
       lost
-        ? "That was the final guess. The block has been revealed."
-        : "Not that block. A new clue is available.",
+        ? `That was the final guess. The ${config.singular} has been revealed.`
+        : `Not that ${config.singular}. A new clue is available.`,
     );
-    trackUmamiEvent("block-hunt-guess", {
+    trackUmamiEvent(`${kind}-hunt-guess`, {
       mode: "daily",
       correct: false,
       guess: nextGuesses.length,
       clue: nextCluesRevealed,
     });
+    if (lost) {
+      trackUmamiEvent(`${kind}-hunt-failed`, {
+        mode: "daily",
+        guesses: nextGuesses.length,
+        clues: nextCluesRevealed,
+        timed: game.timerEnabled,
+        ...(game.timerEnabled
+          ? { seconds: Math.floor((finalElapsedMs ?? 0) / 1000) }
+          : {}),
+      });
+    }
     if (!lost) focusGuess();
   };
 
   const revealNextClue = () => {
     if (
       game.phase !== "playing" ||
-      game.cluesRevealed >= BLOCK_HUNT_CLUES
+      game.cluesRevealed >= HUNT_CLUES
     ) {
       return;
     }
@@ -415,7 +486,7 @@ export default function BlockHunt() {
       cluesRevealed: current.cluesRevealed + 1,
     }));
     setMessage("Clue revealed.");
-    trackUmamiEvent("block-hunt-clue-skipped", {
+    trackUmamiEvent(`${kind}-hunt-clue-skipped`, {
       mode: "daily",
       clue: game.cluesRevealed + 1,
     });
@@ -427,20 +498,24 @@ export default function BlockHunt() {
 
     try {
       await navigator.clipboard.writeText(
-        formatBlockHuntShare({
+        formatHuntShare({
+          kind,
           dailyNumber,
           phase: game.phase === "won" ? "won" : "lost",
           attemptCount,
           cluesRevealed: game.cluesRevealed,
-          elapsedMs,
+          elapsedMs: game.timerEnabled ? elapsedMs : null,
         }),
       );
       setShareStatus("copied");
       window.setTimeout(() => setShareStatus("idle"), 1800);
-      trackUmamiEvent("block-hunt-result-shared", {
+      trackUmamiEvent(`${kind}-hunt-result-shared`, {
         mode: "daily",
         guesses: attemptCount,
-        seconds: Math.floor(elapsedMs / 1000),
+        timed: game.timerEnabled,
+        ...(game.timerEnabled
+          ? { seconds: Math.floor(elapsedMs / 1000) }
+          : {}),
       });
     } catch {
       setShareStatus("idle");
@@ -453,36 +528,99 @@ export default function BlockHunt() {
   return (
     <div className="pt-24 pb-16">
       <div className="container mx-auto max-w-4xl px-4">
-        <div className="mb-10 text-center animate-in">
-          <h1 className="text-4xl font-bold text-orange-500 font-mc lg:text-5xl">
-            Block Hunt
+        <div className="relative z-40 mb-10 text-center animate-in">
+          <h1
+            aria-label={config.name}
+            className="flex items-center justify-center gap-2 text-4xl font-bold text-orange-500 font-mc lg:text-5xl"
+          >
+            <span ref={huntMenuRef} className="relative inline-flex">
+              <button
+                type="button"
+                aria-label={`Choose hunt type, currently ${config.name}`}
+                aria-haspopup="menu"
+                aria-expanded={huntMenuOpen}
+                onClick={() => setHuntMenuOpen((open) => !open)}
+                className="inline-flex cursor-pointer items-center gap-1.5 transition-colors hover:text-orange-600"
+              >
+                <img
+                  src={config.icon}
+                  alt=""
+                  className="h-8 w-8 object-contain [image-rendering:pixelated] lg:h-10 lg:w-10"
+                />
+                <span>{config.name.replace(" Hunt", "")}</span>
+                <ChevronDown
+                  className={`h-5 w-5 transition-transform ${huntMenuOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {huntMenuOpen && (
+                <span className="absolute left-1/2 top-full z-30 mt-3 w-44 -translate-x-1/2 rounded-xl border border-line bg-paper-2 p-1.5 text-left font-sans text-sm shadow-xl">
+                  {HUNT_KINDS.map((huntKind) => {
+                    const option = HUNT_CONFIG[huntKind];
+                    return (
+                      <Link
+                        key={huntKind}
+                        href={option.route}
+                        className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 font-bold transition-colors ${
+                          huntKind === kind
+                            ? "bg-orange-500/10 text-orange-500"
+                            : "text-gray-700 hover:bg-paper dark:text-gray-200"
+                        }`}
+                      >
+                        <img
+                          src={option.icon}
+                          alt=""
+                          className="h-7 w-7 object-contain [image-rendering:pixelated]"
+                        />
+                        {option.name.replace(" Hunt", "")}
+                      </Link>
+                    );
+                  })}
+                </span>
+              )}
+            </span>
+            <span>Hunt</span>
           </h1>
+          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+            {config.description}
+          </p>
         </div>
 
         <div className="mx-auto max-w-2xl">
           <div className="mb-4 flex items-center justify-between text-xs font-bold text-gray-400">
             <span>Daily #{dailyNumber}</span>
-            <span className="flex items-center gap-2">
-              <span>{formatGuessCount(attemptCount)}</span>
-              <span aria-hidden="true">·</span>
-              <time className="tabular-nums">{formatDuration(elapsedMs)}</time>
-            </span>
+            {gameReady && (
+              <span className="flex items-center gap-2">
+                <span>{formatGuessCount(attemptCount)}</span>
+                {game.timerEnabled && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <time className="tabular-nums">
+                      {formatDuration(elapsedMs)}
+                    </time>
+                  </>
+                )}
+              </span>
+            )}
           </div>
 
           <Squircle
             cornerRadius={24}
             className="bg-paper-2 px-6 py-8 shadow-sm sm:px-10 sm:py-10"
           >
-            {!started ? (
+            {!gameReady ? (
+              <div aria-hidden="true" className="min-h-48" />
+            ) : !started ? (
               <motion.div
                 initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex min-h-48 flex-col items-center justify-center text-center"
+                className="relative flex min-h-48 flex-col items-center justify-center text-center"
               >
                 <button
                   type="button"
                   onClick={startGame}
-                  aria-label="Start timed game"
+                  aria-label={
+                    game.timerEnabled ? "Start timed game" : "Start game"
+                  }
                   className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-orange-500 text-white shadow-sm transition-transform hover:scale-105 hover:bg-orange-600 active:scale-95"
                 >
                   <Play className="ml-1 h-7 w-7 fill-current" />
@@ -490,6 +628,37 @@ export default function BlockHunt() {
                 <p className="mt-3 text-sm font-bold text-gray-600 dark:text-gray-300">
                   Start
                 </p>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={game.timerEnabled}
+                  aria-label={`${game.timerEnabled ? "Turn off" : "Turn on"} timer`}
+                  onClick={() =>
+                    setGame((current) => ({
+                      ...current,
+                      timerEnabled: !current.timerEnabled,
+                    }))
+                  }
+                  className="absolute bottom-0 right-0 flex cursor-pointer items-center gap-2 text-xs font-bold text-gray-500 transition-colors hover:text-orange-500 dark:text-gray-400"
+                >
+                  <span>Timer</span>
+                  <span
+                    aria-hidden="true"
+                    className={`relative h-5 w-9 rounded-full transition-colors ${
+                      game.timerEnabled
+                        ? "bg-orange-500"
+                        : "bg-gray-300 dark:bg-gray-600"
+                    }`}
+                  >
+                    <span
+                      className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                        game.timerEnabled
+                          ? "translate-x-4"
+                          : "translate-x-0"
+                      }`}
+                    />
+                  </span>
+                </button>
               </motion.div>
             ) : (
               <>
@@ -505,7 +674,7 @@ export default function BlockHunt() {
                   <p className="mx-auto mt-6 max-w-xl text-lg font-semibold leading-8 text-gray-800 dark:text-gray-100 sm:text-xl">
                     <ClueText
                       text={currentClue.text}
-                      idPrefix={`block-hunt-tooltip-${dailyNumber}-${clueIndex}`}
+                      idPrefix={`${kind}-hunt-tooltip-${dailyNumber}-${clueIndex}`}
                     />
                   </p>
                 </motion.div>
@@ -523,7 +692,7 @@ export default function BlockHunt() {
                     <ChevronLeft className="h-4 w-4" /> Previous
                   </button>
                   <span className="text-center text-xs font-bold text-gray-400">
-                    Clue {clueIndex + 1} of {BLOCK_HUNT_CLUES}
+                    Clue {clueIndex + 1} of {HUNT_CLUES}
                   </span>
                   <button
                     type="button"
@@ -543,36 +712,34 @@ export default function BlockHunt() {
             )}
           </Squircle>
 
-          {started && (!finished ? (
+          {gameReady && started && (!finished ? (
             <form onSubmit={submitGuess} className="mt-8">
               <label
-                htmlFor="block-hunt-guess"
+                htmlFor={`${kind}-hunt-guess`}
                 className="mb-2 block text-sm font-bold text-gray-700 dark:text-gray-300"
               >
-                Guess the block
+                Guess the {config.singular}
               </label>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <div ref={searchRef} className="relative min-w-0 flex-1">
                   <div className="relative">
                     {selectedBlock ? (
-                      <img
-                        src={`${TEXTURE_BASE}/${selectedBlock.texture}.png`}
-                        alt=""
-                        className="pointer-events-none absolute left-2.5 top-1/2 h-8 w-8 -translate-y-1/2 rounded-md block-texture"
-                      />
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center overflow-hidden rounded-md">
+                        <HuntPreview entry={selectedBlock} kind={kind} />
+                      </span>
                     ) : (
                       <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     )}
                     <input
                       ref={inputRef}
-                      id="block-hunt-guess"
+                      id={`${kind}-hunt-guess`}
                       role="combobox"
                       aria-expanded={searchOpen}
-                      aria-controls="block-hunt-options"
+                      aria-controls={`${kind}-hunt-options`}
                       aria-autocomplete="list"
                       aria-activedescendant={
                         searchOpen && filteredBlocks[activeOption]
-                          ? `block-hunt-option-${filteredBlocks[activeOption].id}`
+                          ? `${kind}-hunt-option-${filteredBlocks[activeOption].id}`
                           : undefined
                       }
                       value={guess}
@@ -586,20 +753,20 @@ export default function BlockHunt() {
                       onKeyDown={handleSearchKeyDown}
                       autoComplete="off"
                       autoCapitalize="words"
-                      placeholder="Search blocks..."
+                      placeholder={`Search ${config.plural}...`}
                       className="h-12 w-full rounded-xl border border-line bg-paper pl-12 pr-4 text-sm font-semibold text-gray-800 outline-none transition-colors focus:border-orange-400 dark:text-gray-100"
                     />
                   </div>
 
                   {searchOpen && guess.trim() && (
                     <div
-                      id="block-hunt-options"
+                      id={`${kind}-hunt-options`}
                       role="listbox"
                       className="absolute left-0 right-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-xl border border-line bg-paper-2 p-1.5 shadow-xl themed-scrollbar"
                     >
                       {filteredBlocks.map((block, index) => (
                         <button
-                          id={`block-hunt-option-${block.id}`}
+                          id={`${kind}-hunt-option-${block.id}`}
                           key={block.id}
                           type="button"
                           role="option"
@@ -611,11 +778,9 @@ export default function BlockHunt() {
                             index === activeOption ? "bg-paper" : "hover:bg-paper"
                           }`}
                         >
-                          <img
-                            src={`${TEXTURE_BASE}/${block.texture}.png`}
-                            alt=""
-                            className="h-9 w-9 shrink-0 rounded-md block-texture"
-                          />
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md">
+                            <HuntPreview entry={block} kind={kind} />
+                          </span>
                           <span className="min-w-0 truncate text-sm font-bold text-gray-700 dark:text-gray-200">
                             {block.name}
                           </span>
@@ -623,7 +788,7 @@ export default function BlockHunt() {
                       ))}
                       {filteredBlocks.length === 0 && (
                         <p className="px-3 py-4 text-center text-sm text-gray-400">
-                          No blocks found
+                          No {config.plural} found
                         </p>
                       )}
                     </div>
@@ -649,7 +814,7 @@ export default function BlockHunt() {
                 >
                   {message || `${guessesLeft} guesses left`}
                 </p>
-                {game.cluesRevealed < BLOCK_HUNT_CLUES && (
+                {game.cluesRevealed < HUNT_CLUES && (
                   <button
                     type="button"
                     onClick={revealNextClue}
@@ -663,11 +828,15 @@ export default function BlockHunt() {
             </form>
           ) : (
             <div className="mt-8 text-center">
-              <img
-                src={`${TEXTURE_BASE}/${puzzle.texture}.png`}
-                alt={puzzle.answer}
-                className="mx-auto h-24 w-24 rounded-xl block-texture"
-              />
+              {answerEntry && (
+                <span
+                  role="img"
+                  aria-label={puzzle.answer}
+                  className="mx-auto flex h-24 w-24 items-center justify-center"
+                >
+                  <HuntPreview entry={answerEntry} kind={kind} size={96} />
+                </span>
+              )}
               <p
                 className={`mt-4 text-sm font-bold ${
                   game.phase === "won" ? "text-emerald-600" : "text-red-500"
@@ -683,9 +852,11 @@ export default function BlockHunt() {
                   ? `Solved in ${formatGuessCount(attemptCount)}`
                   : formatGuessCount(attemptCount)}
               </p>
-              <p className="mt-1 text-lg font-bold tabular-nums text-gray-800 dark:text-gray-100">
-                Time {formatDuration(elapsedMs)}
-              </p>
+              {game.timerEnabled && (
+                <p className="mt-1 text-lg font-bold tabular-nums text-gray-800 dark:text-gray-100">
+                  Time {formatDuration(elapsedMs)}
+                </p>
+              )}
               <button
                 type="button"
                 onClick={shareResult}
@@ -726,14 +897,14 @@ export default function BlockHunt() {
           )}
 
           <p className="mt-12 text-center text-[11px] text-gray-400">
-            Block properties from the{" "}
+            Java Edition {catalogue.version} data and images from{" "}
             <a
-              href="https://joakimthorsen.github.io/MCPropertyEncyclopedia/"
+              href={catalogue.source}
               target="_blank"
               rel="noopener noreferrer"
               className="cursor-pointer underline underline-offset-2 hover:text-orange-500"
             >
-              Minecraft Block Property Encyclopedia
+              Minecraft Wiki
             </a>
           </p>
         </div>

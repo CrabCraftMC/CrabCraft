@@ -1,0 +1,6400 @@
+{
+  "version": "26.2",
+  "source": "https://minecraft.wiki/w/Block",
+  "sourceRevision": 3731942,
+  "entries": [
+    {
+      "id": "acacia-button",
+      "name": "Acacia Button",
+      "aliases": [],
+      "article": "Acacia Button",
+      "sprite": 0
+    },
+    {
+      "id": "acacia-door",
+      "name": "Acacia Door",
+      "aliases": [],
+      "article": "Acacia Door",
+      "sprite": 1
+    },
+    {
+      "id": "acacia-fence",
+      "name": "Acacia Fence",
+      "aliases": [],
+      "article": "Acacia Fence",
+      "sprite": 2
+    },
+    {
+      "id": "acacia-fence-gate",
+      "name": "Acacia Fence Gate",
+      "aliases": [],
+      "article": "Acacia Fence Gate",
+      "sprite": 3
+    },
+    {
+      "id": "acacia-hanging-sign",
+      "name": "Acacia Hanging Sign",
+      "aliases": [],
+      "article": "Acacia Hanging Sign",
+      "sprite": 4
+    },
+    {
+      "id": "acacia-leaves",
+      "name": "Acacia Leaves",
+      "aliases": [],
+      "article": "Acacia Leaves",
+      "sprite": 5
+    },
+    {
+      "id": "acacia-log",
+      "name": "Acacia Log",
+      "aliases": [],
+      "article": "Acacia Log",
+      "sprite": 6
+    },
+    {
+      "id": "acacia-planks",
+      "name": "Acacia Planks",
+      "aliases": [],
+      "article": "Acacia Planks",
+      "sprite": 7
+    },
+    {
+      "id": "acacia-pressure-plate",
+      "name": "Acacia Pressure Plate",
+      "aliases": [],
+      "article": "Acacia Pressure Plate",
+      "sprite": 8
+    },
+    {
+      "id": "acacia-sapling",
+      "name": "Acacia Sapling",
+      "aliases": [],
+      "article": "Acacia Sapling",
+      "sprite": 9
+    },
+    {
+      "id": "acacia-shelf",
+      "name": "Acacia Shelf",
+      "aliases": [],
+      "article": "Acacia Shelf",
+      "sprite": 10
+    },
+    {
+      "id": "acacia-sign",
+      "name": "Acacia Sign",
+      "aliases": [],
+      "article": "Acacia Sign",
+      "sprite": 11
+    },
+    {
+      "id": "acacia-slab",
+      "name": "Acacia Slab",
+      "aliases": [],
+      "article": "Acacia Slab",
+      "sprite": 12
+    },
+    {
+      "id": "acacia-stairs",
+      "name": "Acacia Stairs",
+      "aliases": [],
+      "article": "Acacia Stairs",
+      "sprite": 13
+    },
+    {
+      "id": "acacia-trapdoor",
+      "name": "Acacia Trapdoor",
+      "aliases": [],
+      "article": "Acacia Trapdoor",
+      "sprite": 14
+    },
+    {
+      "id": "acacia-wood",
+      "name": "Acacia Wood",
+      "aliases": [],
+      "article": "Acacia Wood",
+      "sprite": 15
+    },
+    {
+      "id": "activator-rail",
+      "name": "Activator Rail",
+      "aliases": [],
+      "article": "Activator Rail",
+      "sprite": 16
+    },
+    {
+      "id": "allium",
+      "name": "Allium",
+      "aliases": [],
+      "article": "Allium",
+      "sprite": 17
+    },
+    {
+      "id": "amethyst-cluster",
+      "name": "Amethyst Cluster",
+      "aliases": [],
+      "article": "Amethyst Cluster",
+      "sprite": 18
+    },
+    {
+      "id": "ancient-debris",
+      "name": "Ancient Debris",
+      "aliases": [],
+      "article": "Ancient Debris",
+      "sprite": 19
+    },
+    {
+      "id": "andesite",
+      "name": "Andesite",
+      "aliases": [],
+      "article": "Andesite",
+      "sprite": 20
+    },
+    {
+      "id": "andesite-slab",
+      "name": "Andesite Slab",
+      "aliases": [],
+      "article": "Andesite Slab",
+      "sprite": 21
+    },
+    {
+      "id": "andesite-stairs",
+      "name": "Andesite Stairs",
+      "aliases": [],
+      "article": "Andesite Stairs",
+      "sprite": 22
+    },
+    {
+      "id": "andesite-wall",
+      "name": "Andesite Wall",
+      "aliases": [],
+      "article": "Andesite Wall",
+      "sprite": 23
+    },
+    {
+      "id": "anvil",
+      "name": "Anvil",
+      "aliases": [],
+      "article": "Anvil",
+      "sprite": 24
+    },
+    {
+      "id": "azalea",
+      "name": "Azalea",
+      "aliases": [],
+      "article": "Azalea",
+      "sprite": 25
+    },
+    {
+      "id": "azalea-leaves",
+      "name": "Azalea Leaves",
+      "aliases": [],
+      "article": "Azalea Leaves",
+      "sprite": 26
+    },
+    {
+      "id": "azure-bluet",
+      "name": "Azure Bluet",
+      "aliases": [],
+      "article": "Azure Bluet",
+      "sprite": 27
+    },
+    {
+      "id": "bamboo",
+      "name": "Bamboo",
+      "aliases": [],
+      "article": "Bamboo",
+      "sprite": 28
+    },
+    {
+      "id": "bamboo-button",
+      "name": "Bamboo Button",
+      "aliases": [],
+      "article": "Bamboo Button",
+      "sprite": 29
+    },
+    {
+      "id": "bamboo-door",
+      "name": "Bamboo Door",
+      "aliases": [],
+      "article": "Bamboo Door",
+      "sprite": 30
+    },
+    {
+      "id": "bamboo-fence",
+      "name": "Bamboo Fence",
+      "aliases": [],
+      "article": "Bamboo Fence",
+      "sprite": 31
+    },
+    {
+      "id": "bamboo-fence-gate",
+      "name": "Bamboo Fence Gate",
+      "aliases": [],
+      "article": "Bamboo Fence Gate",
+      "sprite": 32
+    },
+    {
+      "id": "bamboo-hanging-sign",
+      "name": "Bamboo Hanging Sign",
+      "aliases": [],
+      "article": "Bamboo Hanging Sign",
+      "sprite": 33
+    },
+    {
+      "id": "bamboo-mosaic",
+      "name": "Bamboo Mosaic",
+      "aliases": [],
+      "article": "Bamboo Mosaic",
+      "sprite": 34
+    },
+    {
+      "id": "bamboo-mosaic-slab",
+      "name": "Bamboo Mosaic Slab",
+      "aliases": [],
+      "article": "Bamboo Mosaic Slab",
+      "sprite": 35
+    },
+    {
+      "id": "bamboo-mosaic-stairs",
+      "name": "Bamboo Mosaic Stairs",
+      "aliases": [],
+      "article": "Bamboo Mosaic Stairs",
+      "sprite": 36
+    },
+    {
+      "id": "bamboo-planks",
+      "name": "Bamboo Planks",
+      "aliases": [],
+      "article": "Bamboo Planks",
+      "sprite": 37
+    },
+    {
+      "id": "bamboo-pressure-plate",
+      "name": "Bamboo Pressure Plate",
+      "aliases": [],
+      "article": "Bamboo Pressure Plate",
+      "sprite": 38
+    },
+    {
+      "id": "bamboo-shelf",
+      "name": "Bamboo Shelf",
+      "aliases": [],
+      "article": "Bamboo Shelf",
+      "sprite": 39
+    },
+    {
+      "id": "bamboo-shoot",
+      "name": "Bamboo Shoot",
+      "aliases": [],
+      "article": "Bamboo Shoot",
+      "sprite": 40
+    },
+    {
+      "id": "bamboo-sign",
+      "name": "Bamboo Sign",
+      "aliases": [],
+      "article": "Bamboo Sign",
+      "sprite": 41
+    },
+    {
+      "id": "bamboo-slab",
+      "name": "Bamboo Slab",
+      "aliases": [],
+      "article": "Bamboo Slab",
+      "sprite": 42
+    },
+    {
+      "id": "bamboo-stairs",
+      "name": "Bamboo Stairs",
+      "aliases": [],
+      "article": "Bamboo Stairs",
+      "sprite": 43
+    },
+    {
+      "id": "bamboo-trapdoor",
+      "name": "Bamboo Trapdoor",
+      "aliases": [],
+      "article": "Bamboo Trapdoor",
+      "sprite": 44
+    },
+    {
+      "id": "banner",
+      "name": "Banner",
+      "aliases": [
+        "Black Banner",
+        "Blue Banner",
+        "Brown Banner",
+        "Cyan Banner",
+        "Gray Banner",
+        "Green Banner",
+        "Light Blue Banner",
+        "Light Gray Banner",
+        "Lime Banner",
+        "Magenta Banner",
+        "Orange Banner",
+        "Pink Banner",
+        "Purple Banner",
+        "Red Banner",
+        "White Banner",
+        "Yellow Banner"
+      ],
+      "article": "White Banner",
+      "sprite": 45
+    },
+    {
+      "id": "barrel",
+      "name": "Barrel",
+      "aliases": [],
+      "article": "Barrel",
+      "sprite": 46
+    },
+    {
+      "id": "barrier",
+      "name": "Barrier",
+      "aliases": [],
+      "article": "Barrier",
+      "sprite": 47
+    },
+    {
+      "id": "basalt",
+      "name": "Basalt",
+      "aliases": [],
+      "article": "Basalt",
+      "sprite": 48
+    },
+    {
+      "id": "beacon",
+      "name": "Beacon",
+      "aliases": [],
+      "article": "Beacon",
+      "sprite": 49
+    },
+    {
+      "id": "bed",
+      "name": "Bed",
+      "aliases": [
+        "Black Bed",
+        "Blue Bed",
+        "Brown Bed",
+        "Cyan Bed",
+        "Gray Bed",
+        "Green Bed",
+        "Light Blue Bed",
+        "Light Gray Bed",
+        "Lime Bed",
+        "Magenta Bed",
+        "Orange Bed",
+        "Pink Bed",
+        "Purple Bed",
+        "Red Bed",
+        "White Bed",
+        "Yellow Bed"
+      ],
+      "article": "White Bed",
+      "sprite": 50
+    },
+    {
+      "id": "bedrock",
+      "name": "Bedrock",
+      "aliases": [],
+      "article": "Bedrock",
+      "sprite": 51
+    },
+    {
+      "id": "bee-nest",
+      "name": "Bee Nest",
+      "aliases": [],
+      "article": "Bee Nest",
+      "sprite": 52
+    },
+    {
+      "id": "beehive",
+      "name": "Beehive",
+      "aliases": [],
+      "article": "Beehive",
+      "sprite": 53
+    },
+    {
+      "id": "beetroots",
+      "name": "Beetroots",
+      "aliases": [],
+      "article": "Beetroot Seeds",
+      "sprite": 54
+    },
+    {
+      "id": "bell",
+      "name": "Bell",
+      "aliases": [],
+      "article": "Bell",
+      "sprite": 55
+    },
+    {
+      "id": "big-dripleaf",
+      "name": "Big Dripleaf",
+      "aliases": [],
+      "article": "Big Dripleaf",
+      "sprite": 56
+    },
+    {
+      "id": "birch-button",
+      "name": "Birch Button",
+      "aliases": [],
+      "article": "Birch Button",
+      "sprite": 57
+    },
+    {
+      "id": "birch-door",
+      "name": "Birch Door",
+      "aliases": [],
+      "article": "Birch Door",
+      "sprite": 58
+    },
+    {
+      "id": "birch-fence",
+      "name": "Birch Fence",
+      "aliases": [],
+      "article": "Birch Fence",
+      "sprite": 59
+    },
+    {
+      "id": "birch-fence-gate",
+      "name": "Birch Fence Gate",
+      "aliases": [],
+      "article": "Birch Fence Gate",
+      "sprite": 60
+    },
+    {
+      "id": "birch-hanging-sign",
+      "name": "Birch Hanging Sign",
+      "aliases": [],
+      "article": "Birch Hanging Sign",
+      "sprite": 61
+    },
+    {
+      "id": "birch-leaves",
+      "name": "Birch Leaves",
+      "aliases": [],
+      "article": "Birch Leaves",
+      "sprite": 62
+    },
+    {
+      "id": "birch-log",
+      "name": "Birch Log",
+      "aliases": [],
+      "article": "Birch Log",
+      "sprite": 63
+    },
+    {
+      "id": "birch-planks",
+      "name": "Birch Planks",
+      "aliases": [],
+      "article": "Birch Planks",
+      "sprite": 64
+    },
+    {
+      "id": "birch-pressure-plate",
+      "name": "Birch Pressure Plate",
+      "aliases": [],
+      "article": "Birch Pressure Plate",
+      "sprite": 65
+    },
+    {
+      "id": "birch-sapling",
+      "name": "Birch Sapling",
+      "aliases": [],
+      "article": "Birch Sapling",
+      "sprite": 66
+    },
+    {
+      "id": "birch-shelf",
+      "name": "Birch Shelf",
+      "aliases": [],
+      "article": "Birch Shelf",
+      "sprite": 67
+    },
+    {
+      "id": "birch-sign",
+      "name": "Birch Sign",
+      "aliases": [],
+      "article": "Birch Sign",
+      "sprite": 68
+    },
+    {
+      "id": "birch-slab",
+      "name": "Birch Slab",
+      "aliases": [],
+      "article": "Birch Slab",
+      "sprite": 69
+    },
+    {
+      "id": "birch-stairs",
+      "name": "Birch Stairs",
+      "aliases": [],
+      "article": "Birch Stairs",
+      "sprite": 70
+    },
+    {
+      "id": "birch-trapdoor",
+      "name": "Birch Trapdoor",
+      "aliases": [],
+      "article": "Birch Trapdoor",
+      "sprite": 71
+    },
+    {
+      "id": "birch-wood",
+      "name": "Birch Wood",
+      "aliases": [],
+      "article": "Birch Wood",
+      "sprite": 72
+    },
+    {
+      "id": "blackstone",
+      "name": "Blackstone",
+      "aliases": [],
+      "article": "Blackstone",
+      "sprite": 73
+    },
+    {
+      "id": "blackstone-slab",
+      "name": "Blackstone Slab",
+      "aliases": [],
+      "article": "Blackstone Slab",
+      "sprite": 74
+    },
+    {
+      "id": "blackstone-stairs",
+      "name": "Blackstone Stairs",
+      "aliases": [],
+      "article": "Blackstone Stairs",
+      "sprite": 75
+    },
+    {
+      "id": "blackstone-wall",
+      "name": "Blackstone Wall",
+      "aliases": [],
+      "article": "Blackstone Wall",
+      "sprite": 76
+    },
+    {
+      "id": "blast-furnace",
+      "name": "Blast Furnace",
+      "aliases": [],
+      "article": "Blast Furnace",
+      "sprite": 77
+    },
+    {
+      "id": "block-of-amethyst",
+      "name": "Block of Amethyst",
+      "aliases": [
+        "Amethyst Block"
+      ],
+      "article": "Block of Amethyst",
+      "sprite": 78
+    },
+    {
+      "id": "block-of-bamboo",
+      "name": "Block of Bamboo",
+      "aliases": [],
+      "article": "Block of Bamboo",
+      "sprite": 79
+    },
+    {
+      "id": "block-of-coal",
+      "name": "Block of Coal",
+      "aliases": [],
+      "article": "Block of Coal",
+      "sprite": 80
+    },
+    {
+      "id": "block-of-copper",
+      "name": "Block of Copper",
+      "aliases": [],
+      "article": "Block of Copper",
+      "sprite": 81
+    },
+    {
+      "id": "block-of-diamond",
+      "name": "Block of Diamond",
+      "aliases": [],
+      "article": "Block of Diamond",
+      "sprite": 82
+    },
+    {
+      "id": "block-of-emerald",
+      "name": "Block of Emerald",
+      "aliases": [],
+      "article": "Block of Emerald",
+      "sprite": 83
+    },
+    {
+      "id": "block-of-gold",
+      "name": "Block of Gold",
+      "aliases": [],
+      "article": "Block of Gold",
+      "sprite": 84
+    },
+    {
+      "id": "block-of-iron",
+      "name": "Block of Iron",
+      "aliases": [],
+      "article": "Block of Iron",
+      "sprite": 85
+    },
+    {
+      "id": "block-of-lapis-lazuli",
+      "name": "Block of Lapis Lazuli",
+      "aliases": [],
+      "article": "Block of Lapis Lazuli",
+      "sprite": 86
+    },
+    {
+      "id": "block-of-netherite",
+      "name": "Block of Netherite",
+      "aliases": [],
+      "article": "Block of Netherite",
+      "sprite": 87
+    },
+    {
+      "id": "block-of-quartz",
+      "name": "Block of Quartz",
+      "aliases": [
+        "Quartz Block"
+      ],
+      "article": "Block of Quartz",
+      "sprite": 88
+    },
+    {
+      "id": "block-of-raw-copper",
+      "name": "Block of Raw Copper",
+      "aliases": [],
+      "article": "Block of Raw Copper",
+      "sprite": 89
+    },
+    {
+      "id": "block-of-raw-gold",
+      "name": "Block of Raw Gold",
+      "aliases": [],
+      "article": "Block of Raw Gold",
+      "sprite": 90
+    },
+    {
+      "id": "block-of-raw-iron",
+      "name": "Block of Raw Iron",
+      "aliases": [],
+      "article": "Block of Raw Iron",
+      "sprite": 91
+    },
+    {
+      "id": "block-of-redstone",
+      "name": "Block of Redstone",
+      "aliases": [],
+      "article": "Block of Redstone",
+      "sprite": 92
+    },
+    {
+      "id": "block-of-resin",
+      "name": "Block of Resin",
+      "aliases": [],
+      "article": "Block of Resin",
+      "sprite": 93
+    },
+    {
+      "id": "block-of-stripped-bamboo",
+      "name": "Block of Stripped Bamboo",
+      "aliases": [],
+      "article": "Block of Stripped Bamboo",
+      "sprite": 94
+    },
+    {
+      "id": "blue-ice",
+      "name": "Blue Ice",
+      "aliases": [],
+      "article": "Blue Ice",
+      "sprite": 95
+    },
+    {
+      "id": "blue-orchid",
+      "name": "Blue Orchid",
+      "aliases": [],
+      "article": "Blue Orchid",
+      "sprite": 96
+    },
+    {
+      "id": "bone-block",
+      "name": "Bone Block",
+      "aliases": [],
+      "article": "Bone Block",
+      "sprite": 97
+    },
+    {
+      "id": "bookshelf",
+      "name": "Bookshelf",
+      "aliases": [],
+      "article": "Bookshelf",
+      "sprite": 98
+    },
+    {
+      "id": "brain-coral",
+      "name": "Brain Coral",
+      "aliases": [],
+      "article": "Brain Coral",
+      "sprite": 99
+    },
+    {
+      "id": "brain-coral-block",
+      "name": "Brain Coral Block",
+      "aliases": [],
+      "article": "Brain Coral Block",
+      "sprite": 100
+    },
+    {
+      "id": "brain-coral-fan",
+      "name": "Brain Coral Fan",
+      "aliases": [],
+      "article": "Brain Coral Fan",
+      "sprite": 101
+    },
+    {
+      "id": "brewing-stand",
+      "name": "Brewing Stand",
+      "aliases": [],
+      "article": "Brewing Stand",
+      "sprite": 102
+    },
+    {
+      "id": "brick-slab",
+      "name": "Brick Slab",
+      "aliases": [],
+      "article": "Brick Slab",
+      "sprite": 103
+    },
+    {
+      "id": "brick-stairs",
+      "name": "Brick Stairs",
+      "aliases": [],
+      "article": "Brick Stairs",
+      "sprite": 104
+    },
+    {
+      "id": "brick-wall",
+      "name": "Brick Wall",
+      "aliases": [],
+      "article": "Brick Wall",
+      "sprite": 105
+    },
+    {
+      "id": "bricks",
+      "name": "Bricks",
+      "aliases": [],
+      "article": "Bricks",
+      "sprite": 106
+    },
+    {
+      "id": "brown-mushroom",
+      "name": "Brown Mushroom",
+      "aliases": [],
+      "article": "Brown Mushroom",
+      "sprite": 107
+    },
+    {
+      "id": "brown-mushroom-block",
+      "name": "Brown Mushroom Block",
+      "aliases": [],
+      "article": "Brown Mushroom Block",
+      "sprite": 108
+    },
+    {
+      "id": "bubble-column",
+      "name": "Bubble Column",
+      "aliases": [],
+      "article": "Bubble Column",
+      "sprite": 109
+    },
+    {
+      "id": "bubble-coral",
+      "name": "Bubble Coral",
+      "aliases": [],
+      "article": "Bubble Coral",
+      "sprite": 110
+    },
+    {
+      "id": "bubble-coral-block",
+      "name": "Bubble Coral Block",
+      "aliases": [],
+      "article": "Bubble Coral Block",
+      "sprite": 111
+    },
+    {
+      "id": "bubble-coral-fan",
+      "name": "Bubble Coral Fan",
+      "aliases": [],
+      "article": "Bubble Coral Fan",
+      "sprite": 112
+    },
+    {
+      "id": "budding-amethyst",
+      "name": "Budding Amethyst",
+      "aliases": [],
+      "article": "Budding Amethyst",
+      "sprite": 113
+    },
+    {
+      "id": "bush",
+      "name": "Bush",
+      "aliases": [],
+      "article": "Bush",
+      "sprite": 114
+    },
+    {
+      "id": "cactus",
+      "name": "Cactus",
+      "aliases": [],
+      "article": "Cactus",
+      "sprite": 115
+    },
+    {
+      "id": "cactus-flower",
+      "name": "Cactus Flower",
+      "aliases": [],
+      "article": "Cactus Flower",
+      "sprite": 116
+    },
+    {
+      "id": "cake",
+      "name": "Cake",
+      "aliases": [],
+      "article": "Cake",
+      "sprite": 117
+    },
+    {
+      "id": "calcite",
+      "name": "Calcite",
+      "aliases": [],
+      "article": "Calcite",
+      "sprite": 118
+    },
+    {
+      "id": "calibrated-sculk-sensor",
+      "name": "Calibrated Sculk Sensor",
+      "aliases": [],
+      "article": "Calibrated Sculk Sensor",
+      "sprite": 119
+    },
+    {
+      "id": "campfire",
+      "name": "Campfire",
+      "aliases": [],
+      "article": "Campfire",
+      "sprite": 120
+    },
+    {
+      "id": "candle",
+      "name": "Candle",
+      "aliases": [
+        "Black Candle",
+        "Blue Candle",
+        "Brown Candle",
+        "Cyan Candle",
+        "Gray Candle",
+        "Green Candle",
+        "Light Blue Candle",
+        "Light Gray Candle",
+        "Lime Candle",
+        "Magenta Candle",
+        "Orange Candle",
+        "Pink Candle",
+        "Purple Candle",
+        "Red Candle",
+        "White Candle",
+        "Yellow Candle"
+      ],
+      "article": "Candle",
+      "sprite": 121
+    },
+    {
+      "id": "carpet",
+      "name": "Carpet",
+      "aliases": [
+        "Black Carpet",
+        "Blue Carpet",
+        "Brown Carpet",
+        "Cyan Carpet",
+        "Gray Carpet",
+        "Green Carpet",
+        "Light Blue Carpet",
+        "Light Gray Carpet",
+        "Lime Carpet",
+        "Magenta Carpet",
+        "Orange Carpet",
+        "Pink Carpet",
+        "Purple Carpet",
+        "Red Carpet",
+        "White Carpet",
+        "Yellow Carpet"
+      ],
+      "article": "White Carpet",
+      "sprite": 122
+    },
+    {
+      "id": "carrot",
+      "name": "Carrot",
+      "aliases": [],
+      "article": "Carrot",
+      "sprite": 123
+    },
+    {
+      "id": "cartography-table",
+      "name": "Cartography Table",
+      "aliases": [],
+      "article": "Cartography Table",
+      "sprite": 124
+    },
+    {
+      "id": "carved-pumpkin",
+      "name": "Carved Pumpkin",
+      "aliases": [],
+      "article": "Carved Pumpkin",
+      "sprite": 125
+    },
+    {
+      "id": "cauldron",
+      "name": "Cauldron",
+      "aliases": [],
+      "article": "Cauldron",
+      "sprite": 126
+    },
+    {
+      "id": "cave-vines",
+      "name": "Cave Vines",
+      "aliases": [],
+      "article": "Cave Vines",
+      "sprite": 127
+    },
+    {
+      "id": "chain-command-block",
+      "name": "Chain Command Block",
+      "aliases": [],
+      "article": "Chain Command Block",
+      "sprite": 128
+    },
+    {
+      "id": "cherry-button",
+      "name": "Cherry Button",
+      "aliases": [],
+      "article": "Cherry Button",
+      "sprite": 129
+    },
+    {
+      "id": "cherry-door",
+      "name": "Cherry Door",
+      "aliases": [],
+      "article": "Cherry Door",
+      "sprite": 130
+    },
+    {
+      "id": "cherry-fence",
+      "name": "Cherry Fence",
+      "aliases": [],
+      "article": "Cherry Fence",
+      "sprite": 131
+    },
+    {
+      "id": "cherry-fence-gate",
+      "name": "Cherry Fence Gate",
+      "aliases": [],
+      "article": "Cherry Fence Gate",
+      "sprite": 132
+    },
+    {
+      "id": "cherry-hanging-sign",
+      "name": "Cherry Hanging Sign",
+      "aliases": [],
+      "article": "Cherry Hanging Sign",
+      "sprite": 133
+    },
+    {
+      "id": "cherry-leaves",
+      "name": "Cherry Leaves",
+      "aliases": [],
+      "article": "Cherry Leaves",
+      "sprite": 134
+    },
+    {
+      "id": "cherry-log",
+      "name": "Cherry Log",
+      "aliases": [],
+      "article": "Cherry Log",
+      "sprite": 135
+    },
+    {
+      "id": "cherry-planks",
+      "name": "Cherry Planks",
+      "aliases": [],
+      "article": "Cherry Planks",
+      "sprite": 136
+    },
+    {
+      "id": "cherry-pressure-plate",
+      "name": "Cherry Pressure Plate",
+      "aliases": [],
+      "article": "Cherry Pressure Plate",
+      "sprite": 137
+    },
+    {
+      "id": "cherry-sapling",
+      "name": "Cherry Sapling",
+      "aliases": [],
+      "article": "Cherry Sapling",
+      "sprite": 138
+    },
+    {
+      "id": "cherry-shelf",
+      "name": "Cherry Shelf",
+      "aliases": [],
+      "article": "Cherry Shelf",
+      "sprite": 139
+    },
+    {
+      "id": "cherry-sign",
+      "name": "Cherry Sign",
+      "aliases": [],
+      "article": "Cherry Sign",
+      "sprite": 140
+    },
+    {
+      "id": "cherry-slab",
+      "name": "Cherry Slab",
+      "aliases": [],
+      "article": "Cherry Slab",
+      "sprite": 141
+    },
+    {
+      "id": "cherry-stairs",
+      "name": "Cherry Stairs",
+      "aliases": [],
+      "article": "Cherry Stairs",
+      "sprite": 142
+    },
+    {
+      "id": "cherry-trapdoor",
+      "name": "Cherry Trapdoor",
+      "aliases": [],
+      "article": "Cherry Trapdoor",
+      "sprite": 143
+    },
+    {
+      "id": "cherry-wood",
+      "name": "Cherry Wood",
+      "aliases": [],
+      "article": "Cherry Wood",
+      "sprite": 144
+    },
+    {
+      "id": "chest",
+      "name": "Chest",
+      "aliases": [],
+      "article": "Chest",
+      "sprite": 145
+    },
+    {
+      "id": "chipped-anvil",
+      "name": "Chipped Anvil",
+      "aliases": [],
+      "article": "Chipped Anvil",
+      "sprite": 146
+    },
+    {
+      "id": "chiseled-bookshelf",
+      "name": "Chiseled Bookshelf",
+      "aliases": [],
+      "article": "Chiseled Bookshelf",
+      "sprite": 147
+    },
+    {
+      "id": "chiseled-cinnabar",
+      "name": "Chiseled Cinnabar",
+      "aliases": [],
+      "article": "Chiseled Cinnabar",
+      "sprite": 148
+    },
+    {
+      "id": "chiseled-copper",
+      "name": "Chiseled Copper",
+      "aliases": [],
+      "article": "Chiseled Copper",
+      "sprite": 149
+    },
+    {
+      "id": "chiseled-deepslate",
+      "name": "Chiseled Deepslate",
+      "aliases": [],
+      "article": "Chiseled Deepslate",
+      "sprite": 150
+    },
+    {
+      "id": "chiseled-nether-bricks",
+      "name": "Chiseled Nether Bricks",
+      "aliases": [],
+      "article": "Chiseled Nether Bricks",
+      "sprite": 151
+    },
+    {
+      "id": "chiseled-polished-blackstone",
+      "name": "Chiseled Polished Blackstone",
+      "aliases": [],
+      "article": "Chiseled Polished Blackstone",
+      "sprite": 152
+    },
+    {
+      "id": "chiseled-quartz-block",
+      "name": "Chiseled Quartz Block",
+      "aliases": [],
+      "article": "Chiseled Quartz Block",
+      "sprite": 153
+    },
+    {
+      "id": "chiseled-red-sandstone",
+      "name": "Chiseled Red Sandstone",
+      "aliases": [],
+      "article": "Chiseled Red Sandstone",
+      "sprite": 154
+    },
+    {
+      "id": "chiseled-resin-bricks",
+      "name": "Chiseled Resin Bricks",
+      "aliases": [],
+      "article": "Chiseled Resin Bricks",
+      "sprite": 155
+    },
+    {
+      "id": "chiseled-sandstone",
+      "name": "Chiseled Sandstone",
+      "aliases": [],
+      "article": "Chiseled Sandstone",
+      "sprite": 156
+    },
+    {
+      "id": "chiseled-stone-bricks",
+      "name": "Chiseled Stone Bricks",
+      "aliases": [],
+      "article": "Chiseled Stone Bricks",
+      "sprite": 157
+    },
+    {
+      "id": "chiseled-sulfur",
+      "name": "Chiseled Sulfur",
+      "aliases": [],
+      "article": "Chiseled Sulfur",
+      "sprite": 158
+    },
+    {
+      "id": "chiseled-tuff",
+      "name": "Chiseled Tuff",
+      "aliases": [],
+      "article": "Chiseled Tuff",
+      "sprite": 159
+    },
+    {
+      "id": "chiseled-tuff-bricks",
+      "name": "Chiseled Tuff Bricks",
+      "aliases": [],
+      "article": "Chiseled Tuff Bricks",
+      "sprite": 160
+    },
+    {
+      "id": "chorus-flower",
+      "name": "Chorus Flower",
+      "aliases": [],
+      "article": "Chorus Flower",
+      "sprite": 161
+    },
+    {
+      "id": "chorus-plant",
+      "name": "Chorus Plant",
+      "aliases": [],
+      "article": "Chorus Plant",
+      "sprite": 162
+    },
+    {
+      "id": "cinnabar",
+      "name": "Cinnabar",
+      "aliases": [],
+      "article": "Cinnabar",
+      "sprite": 163
+    },
+    {
+      "id": "cinnabar-brick-slab",
+      "name": "Cinnabar Brick Slab",
+      "aliases": [],
+      "article": "Cinnabar Brick Slab",
+      "sprite": 164
+    },
+    {
+      "id": "cinnabar-brick-stairs",
+      "name": "Cinnabar Brick Stairs",
+      "aliases": [],
+      "article": "Cinnabar Brick Stairs",
+      "sprite": 165
+    },
+    {
+      "id": "cinnabar-brick-wall",
+      "name": "Cinnabar Brick Wall",
+      "aliases": [],
+      "article": "Cinnabar Brick Wall",
+      "sprite": 166
+    },
+    {
+      "id": "cinnabar-bricks",
+      "name": "Cinnabar Bricks",
+      "aliases": [],
+      "article": "Cinnabar Bricks",
+      "sprite": 167
+    },
+    {
+      "id": "cinnabar-slab",
+      "name": "Cinnabar Slab",
+      "aliases": [],
+      "article": "Cinnabar Slab",
+      "sprite": 168
+    },
+    {
+      "id": "cinnabar-stairs",
+      "name": "Cinnabar Stairs",
+      "aliases": [],
+      "article": "Cinnabar Stairs",
+      "sprite": 169
+    },
+    {
+      "id": "cinnabar-wall",
+      "name": "Cinnabar Wall",
+      "aliases": [],
+      "article": "Cinnabar Wall",
+      "sprite": 170
+    },
+    {
+      "id": "clay",
+      "name": "Clay",
+      "aliases": [],
+      "article": "Clay",
+      "sprite": 171
+    },
+    {
+      "id": "closed-eyeblossom",
+      "name": "Closed Eyeblossom",
+      "aliases": [],
+      "article": "Closed Eyeblossom",
+      "sprite": 172
+    },
+    {
+      "id": "coal-ore",
+      "name": "Coal Ore",
+      "aliases": [],
+      "article": "Coal Ore",
+      "sprite": 173
+    },
+    {
+      "id": "coarse-dirt",
+      "name": "Coarse Dirt",
+      "aliases": [],
+      "article": "Coarse Dirt",
+      "sprite": 174
+    },
+    {
+      "id": "cobbled-deepslate",
+      "name": "Cobbled Deepslate",
+      "aliases": [],
+      "article": "Cobbled Deepslate",
+      "sprite": 175
+    },
+    {
+      "id": "cobbled-deepslate-slab",
+      "name": "Cobbled Deepslate Slab",
+      "aliases": [],
+      "article": "Cobbled Deepslate Slab",
+      "sprite": 176
+    },
+    {
+      "id": "cobbled-deepslate-stairs",
+      "name": "Cobbled Deepslate Stairs",
+      "aliases": [],
+      "article": "Cobbled Deepslate Stairs",
+      "sprite": 177
+    },
+    {
+      "id": "cobbled-deepslate-wall",
+      "name": "Cobbled Deepslate Wall",
+      "aliases": [],
+      "article": "Cobbled Deepslate Wall",
+      "sprite": 178
+    },
+    {
+      "id": "cobblestone",
+      "name": "Cobblestone",
+      "aliases": [],
+      "article": "Cobblestone",
+      "sprite": 179
+    },
+    {
+      "id": "cobblestone-slab",
+      "name": "Cobblestone Slab",
+      "aliases": [],
+      "article": "Cobblestone Slab",
+      "sprite": 180
+    },
+    {
+      "id": "cobblestone-stairs",
+      "name": "Cobblestone Stairs",
+      "aliases": [],
+      "article": "Cobblestone Stairs",
+      "sprite": 181
+    },
+    {
+      "id": "cobblestone-wall",
+      "name": "Cobblestone Wall",
+      "aliases": [],
+      "article": "Cobblestone Wall",
+      "sprite": 182
+    },
+    {
+      "id": "cobweb",
+      "name": "Cobweb",
+      "aliases": [],
+      "article": "Cobweb",
+      "sprite": 183
+    },
+    {
+      "id": "cocoa",
+      "name": "Cocoa",
+      "aliases": [],
+      "article": "Cocoa",
+      "sprite": 184
+    },
+    {
+      "id": "command-block",
+      "name": "Command Block",
+      "aliases": [],
+      "article": "Command Block",
+      "sprite": 185
+    },
+    {
+      "id": "composter",
+      "name": "Composter",
+      "aliases": [],
+      "article": "Composter",
+      "sprite": 186
+    },
+    {
+      "id": "concrete",
+      "name": "Concrete",
+      "aliases": [
+        "Black Concrete",
+        "Blue Concrete",
+        "Brown Concrete",
+        "Cyan Concrete",
+        "Gray Concrete",
+        "Green Concrete",
+        "Light Blue Concrete",
+        "Light Gray Concrete",
+        "Lime Concrete",
+        "Magenta Concrete",
+        "Orange Concrete",
+        "Pink Concrete",
+        "Purple Concrete",
+        "Red Concrete",
+        "White Concrete",
+        "Yellow Concrete"
+      ],
+      "article": "White Concrete",
+      "sprite": 187
+    },
+    {
+      "id": "concrete-powder",
+      "name": "Concrete Powder",
+      "aliases": [
+        "Black Concrete Powder",
+        "Blue Concrete Powder",
+        "Brown Concrete Powder",
+        "Cyan Concrete Powder",
+        "Gray Concrete Powder",
+        "Green Concrete Powder",
+        "Light Blue Concrete Powder",
+        "Light Gray Concrete Powder",
+        "Lime Concrete Powder",
+        "Magenta Concrete Powder",
+        "Orange Concrete Powder",
+        "Pink Concrete Powder",
+        "Purple Concrete Powder",
+        "Red Concrete Powder",
+        "White Concrete Powder",
+        "Yellow Concrete Powder"
+      ],
+      "article": "White Concrete Powder",
+      "sprite": 188
+    },
+    {
+      "id": "conduit",
+      "name": "Conduit",
+      "aliases": [],
+      "article": "Conduit",
+      "sprite": 189
+    },
+    {
+      "id": "copper-bars",
+      "name": "Copper Bars",
+      "aliases": [],
+      "article": "Copper Bars",
+      "sprite": 190
+    },
+    {
+      "id": "copper-bulb",
+      "name": "Copper Bulb",
+      "aliases": [],
+      "article": "Copper Bulb",
+      "sprite": 191
+    },
+    {
+      "id": "copper-chain",
+      "name": "Copper Chain",
+      "aliases": [],
+      "article": "Copper Chain",
+      "sprite": 192
+    },
+    {
+      "id": "copper-chest",
+      "name": "Copper Chest",
+      "aliases": [],
+      "article": "Copper Chest",
+      "sprite": 193
+    },
+    {
+      "id": "copper-door",
+      "name": "Copper Door",
+      "aliases": [],
+      "article": "Copper Door",
+      "sprite": 194
+    },
+    {
+      "id": "copper-golem-statue",
+      "name": "Copper Golem Statue",
+      "aliases": [],
+      "article": "Copper Golem Statue",
+      "sprite": 195
+    },
+    {
+      "id": "copper-grate",
+      "name": "Copper Grate",
+      "aliases": [],
+      "article": "Copper Grate",
+      "sprite": 196
+    },
+    {
+      "id": "copper-lantern",
+      "name": "Copper Lantern",
+      "aliases": [],
+      "article": "Copper Lantern",
+      "sprite": 197
+    },
+    {
+      "id": "copper-ore",
+      "name": "Copper Ore",
+      "aliases": [],
+      "article": "Copper Ore",
+      "sprite": 198
+    },
+    {
+      "id": "copper-torch",
+      "name": "Copper Torch",
+      "aliases": [],
+      "article": "Copper Torch",
+      "sprite": 199
+    },
+    {
+      "id": "copper-trapdoor",
+      "name": "Copper Trapdoor",
+      "aliases": [],
+      "article": "Copper Trapdoor",
+      "sprite": 200
+    },
+    {
+      "id": "cornflower",
+      "name": "Cornflower",
+      "aliases": [],
+      "article": "Cornflower",
+      "sprite": 201
+    },
+    {
+      "id": "cracked-deepslate-bricks",
+      "name": "Cracked Deepslate Bricks",
+      "aliases": [],
+      "article": "Cracked Deepslate Bricks",
+      "sprite": 202
+    },
+    {
+      "id": "cracked-deepslate-tiles",
+      "name": "Cracked Deepslate Tiles",
+      "aliases": [],
+      "article": "Cracked Deepslate Tiles",
+      "sprite": 203
+    },
+    {
+      "id": "cracked-nether-bricks",
+      "name": "Cracked Nether Bricks",
+      "aliases": [],
+      "article": "Cracked Nether Bricks",
+      "sprite": 204
+    },
+    {
+      "id": "cracked-polished-blackstone-bricks",
+      "name": "Cracked Polished Blackstone Bricks",
+      "aliases": [],
+      "article": "Cracked Polished Blackstone Bricks",
+      "sprite": 205
+    },
+    {
+      "id": "cracked-stone-bricks",
+      "name": "Cracked Stone Bricks",
+      "aliases": [],
+      "article": "Cracked Stone Bricks",
+      "sprite": 206
+    },
+    {
+      "id": "crafter",
+      "name": "Crafter",
+      "aliases": [],
+      "article": "Crafter",
+      "sprite": 207
+    },
+    {
+      "id": "crafting-table",
+      "name": "Crafting Table",
+      "aliases": [],
+      "article": "Crafting Table",
+      "sprite": 208
+    },
+    {
+      "id": "creaking-heart",
+      "name": "Creaking Heart",
+      "aliases": [],
+      "article": "Creaking Heart",
+      "sprite": 209
+    },
+    {
+      "id": "creeper-head",
+      "name": "Creeper Head",
+      "aliases": [],
+      "article": "Creeper Head",
+      "sprite": 210
+    },
+    {
+      "id": "crimson-button",
+      "name": "Crimson Button",
+      "aliases": [],
+      "article": "Crimson Button",
+      "sprite": 211
+    },
+    {
+      "id": "crimson-door",
+      "name": "Crimson Door",
+      "aliases": [],
+      "article": "Crimson Door",
+      "sprite": 212
+    },
+    {
+      "id": "crimson-fence",
+      "name": "Crimson Fence",
+      "aliases": [],
+      "article": "Crimson Fence",
+      "sprite": 213
+    },
+    {
+      "id": "crimson-fence-gate",
+      "name": "Crimson Fence Gate",
+      "aliases": [],
+      "article": "Crimson Fence Gate",
+      "sprite": 214
+    },
+    {
+      "id": "crimson-fungus",
+      "name": "Crimson Fungus",
+      "aliases": [],
+      "article": "Crimson Fungus",
+      "sprite": 215
+    },
+    {
+      "id": "crimson-hanging-sign",
+      "name": "Crimson Hanging Sign",
+      "aliases": [],
+      "article": "Crimson Hanging Sign",
+      "sprite": 216
+    },
+    {
+      "id": "crimson-hyphae",
+      "name": "Crimson Hyphae",
+      "aliases": [],
+      "article": "Crimson Hyphae",
+      "sprite": 217
+    },
+    {
+      "id": "crimson-nylium",
+      "name": "Crimson Nylium",
+      "aliases": [],
+      "article": "Crimson Nylium",
+      "sprite": 218
+    },
+    {
+      "id": "crimson-planks",
+      "name": "Crimson Planks",
+      "aliases": [],
+      "article": "Crimson Planks",
+      "sprite": 219
+    },
+    {
+      "id": "crimson-pressure-plate",
+      "name": "Crimson Pressure Plate",
+      "aliases": [],
+      "article": "Crimson Pressure Plate",
+      "sprite": 220
+    },
+    {
+      "id": "crimson-roots",
+      "name": "Crimson Roots",
+      "aliases": [],
+      "article": "Crimson Roots",
+      "sprite": 221
+    },
+    {
+      "id": "crimson-shelf",
+      "name": "Crimson Shelf",
+      "aliases": [],
+      "article": "Crimson Shelf",
+      "sprite": 222
+    },
+    {
+      "id": "crimson-sign",
+      "name": "Crimson Sign",
+      "aliases": [],
+      "article": "Crimson Sign",
+      "sprite": 223
+    },
+    {
+      "id": "crimson-slab",
+      "name": "Crimson Slab",
+      "aliases": [],
+      "article": "Crimson Slab",
+      "sprite": 224
+    },
+    {
+      "id": "crimson-stairs",
+      "name": "Crimson Stairs",
+      "aliases": [],
+      "article": "Crimson Stairs",
+      "sprite": 225
+    },
+    {
+      "id": "crimson-stem",
+      "name": "Crimson Stem",
+      "aliases": [],
+      "article": "Crimson Stem",
+      "sprite": 226
+    },
+    {
+      "id": "crimson-trapdoor",
+      "name": "Crimson Trapdoor",
+      "aliases": [],
+      "article": "Crimson Trapdoor",
+      "sprite": 227
+    },
+    {
+      "id": "crying-obsidian",
+      "name": "Crying Obsidian",
+      "aliases": [],
+      "article": "Crying Obsidian",
+      "sprite": 228
+    },
+    {
+      "id": "cut-copper",
+      "name": "Cut Copper",
+      "aliases": [],
+      "article": "Cut Copper",
+      "sprite": 229
+    },
+    {
+      "id": "cut-copper-slab",
+      "name": "Cut Copper Slab",
+      "aliases": [],
+      "article": "Cut Copper Slab",
+      "sprite": 230
+    },
+    {
+      "id": "cut-copper-stairs",
+      "name": "Cut Copper Stairs",
+      "aliases": [],
+      "article": "Cut Copper Stairs",
+      "sprite": 231
+    },
+    {
+      "id": "cut-red-sandstone",
+      "name": "Cut Red Sandstone",
+      "aliases": [],
+      "article": "Cut Red Sandstone",
+      "sprite": 232
+    },
+    {
+      "id": "cut-red-sandstone-slab",
+      "name": "Cut Red Sandstone Slab",
+      "aliases": [],
+      "article": "Cut Red Sandstone Slab",
+      "sprite": 233
+    },
+    {
+      "id": "cut-sandstone",
+      "name": "Cut Sandstone",
+      "aliases": [],
+      "article": "Cut Sandstone",
+      "sprite": 234
+    },
+    {
+      "id": "cut-sandstone-slab",
+      "name": "Cut Sandstone Slab",
+      "aliases": [],
+      "article": "Cut Sandstone Slab",
+      "sprite": 235
+    },
+    {
+      "id": "damaged-anvil",
+      "name": "Damaged Anvil",
+      "aliases": [],
+      "article": "Damaged Anvil",
+      "sprite": 236
+    },
+    {
+      "id": "dandelion",
+      "name": "Dandelion",
+      "aliases": [],
+      "article": "Dandelion",
+      "sprite": 237
+    },
+    {
+      "id": "dark-oak-button",
+      "name": "Dark Oak Button",
+      "aliases": [],
+      "article": "Dark Oak Button",
+      "sprite": 238
+    },
+    {
+      "id": "dark-oak-door",
+      "name": "Dark Oak Door",
+      "aliases": [],
+      "article": "Dark Oak Door",
+      "sprite": 239
+    },
+    {
+      "id": "dark-oak-fence",
+      "name": "Dark Oak Fence",
+      "aliases": [],
+      "article": "Dark Oak Fence",
+      "sprite": 240
+    },
+    {
+      "id": "dark-oak-fence-gate",
+      "name": "Dark Oak Fence Gate",
+      "aliases": [],
+      "article": "Dark Oak Fence Gate",
+      "sprite": 241
+    },
+    {
+      "id": "dark-oak-hanging-sign",
+      "name": "Dark Oak Hanging Sign",
+      "aliases": [],
+      "article": "Dark Oak Hanging Sign",
+      "sprite": 242
+    },
+    {
+      "id": "dark-oak-leaves",
+      "name": "Dark Oak Leaves",
+      "aliases": [],
+      "article": "Dark Oak Leaves",
+      "sprite": 243
+    },
+    {
+      "id": "dark-oak-log",
+      "name": "Dark Oak Log",
+      "aliases": [],
+      "article": "Dark Oak Log",
+      "sprite": 244
+    },
+    {
+      "id": "dark-oak-planks",
+      "name": "Dark Oak Planks",
+      "aliases": [],
+      "article": "Dark Oak Planks",
+      "sprite": 245
+    },
+    {
+      "id": "dark-oak-pressure-plate",
+      "name": "Dark Oak Pressure Plate",
+      "aliases": [],
+      "article": "Dark Oak Pressure Plate",
+      "sprite": 246
+    },
+    {
+      "id": "dark-oak-sapling",
+      "name": "Dark Oak Sapling",
+      "aliases": [],
+      "article": "Dark Oak Sapling",
+      "sprite": 247
+    },
+    {
+      "id": "dark-oak-shelf",
+      "name": "Dark Oak Shelf",
+      "aliases": [],
+      "article": "Dark Oak Shelf",
+      "sprite": 248
+    },
+    {
+      "id": "dark-oak-sign",
+      "name": "Dark Oak Sign",
+      "aliases": [],
+      "article": "Dark Oak Sign",
+      "sprite": 249
+    },
+    {
+      "id": "dark-oak-slab",
+      "name": "Dark Oak Slab",
+      "aliases": [],
+      "article": "Dark Oak Slab",
+      "sprite": 250
+    },
+    {
+      "id": "dark-oak-stairs",
+      "name": "Dark Oak Stairs",
+      "aliases": [],
+      "article": "Dark Oak Stairs",
+      "sprite": 251
+    },
+    {
+      "id": "dark-oak-trapdoor",
+      "name": "Dark Oak Trapdoor",
+      "aliases": [],
+      "article": "Dark Oak Trapdoor",
+      "sprite": 252
+    },
+    {
+      "id": "dark-oak-wood",
+      "name": "Dark Oak Wood",
+      "aliases": [],
+      "article": "Dark Oak Wood",
+      "sprite": 253
+    },
+    {
+      "id": "dark-prismarine",
+      "name": "Dark Prismarine",
+      "aliases": [],
+      "article": "Dark Prismarine",
+      "sprite": 254
+    },
+    {
+      "id": "dark-prismarine-slab",
+      "name": "Dark Prismarine Slab",
+      "aliases": [],
+      "article": "Dark Prismarine Slab",
+      "sprite": 255
+    },
+    {
+      "id": "dark-prismarine-stairs",
+      "name": "Dark Prismarine Stairs",
+      "aliases": [],
+      "article": "Dark Prismarine Stairs",
+      "sprite": 256
+    },
+    {
+      "id": "daylight-detector",
+      "name": "Daylight Detector",
+      "aliases": [],
+      "article": "Daylight Detector",
+      "sprite": 257
+    },
+    {
+      "id": "dead-brain-coral",
+      "name": "Dead Brain Coral",
+      "aliases": [],
+      "article": "Dead Brain Coral",
+      "sprite": 258
+    },
+    {
+      "id": "dead-brain-coral-block",
+      "name": "Dead Brain Coral Block",
+      "aliases": [],
+      "article": "Dead Brain Coral Block",
+      "sprite": 259
+    },
+    {
+      "id": "dead-brain-coral-fan",
+      "name": "Dead Brain Coral Fan",
+      "aliases": [],
+      "article": "Dead Brain Coral Fan",
+      "sprite": 260
+    },
+    {
+      "id": "dead-bubble-coral",
+      "name": "Dead Bubble Coral",
+      "aliases": [],
+      "article": "Dead Bubble Coral",
+      "sprite": 261
+    },
+    {
+      "id": "dead-bubble-coral-block",
+      "name": "Dead Bubble Coral Block",
+      "aliases": [],
+      "article": "Dead Bubble Coral Block",
+      "sprite": 262
+    },
+    {
+      "id": "dead-bubble-coral-fan",
+      "name": "Dead Bubble Coral Fan",
+      "aliases": [],
+      "article": "Dead Bubble Coral Fan",
+      "sprite": 263
+    },
+    {
+      "id": "dead-bush",
+      "name": "Dead Bush",
+      "aliases": [],
+      "article": "Dead Bush",
+      "sprite": 264
+    },
+    {
+      "id": "dead-fire-coral",
+      "name": "Dead Fire Coral",
+      "aliases": [],
+      "article": "Dead Fire Coral",
+      "sprite": 265
+    },
+    {
+      "id": "dead-fire-coral-block",
+      "name": "Dead Fire Coral Block",
+      "aliases": [],
+      "article": "Dead Fire Coral Block",
+      "sprite": 266
+    },
+    {
+      "id": "dead-fire-coral-fan",
+      "name": "Dead Fire Coral Fan",
+      "aliases": [],
+      "article": "Dead Fire Coral Fan",
+      "sprite": 267
+    },
+    {
+      "id": "dead-horn-coral",
+      "name": "Dead Horn Coral",
+      "aliases": [],
+      "article": "Dead Horn Coral",
+      "sprite": 268
+    },
+    {
+      "id": "dead-horn-coral-block",
+      "name": "Dead Horn Coral Block",
+      "aliases": [],
+      "article": "Dead Horn Coral Block",
+      "sprite": 269
+    },
+    {
+      "id": "dead-horn-coral-fan",
+      "name": "Dead Horn Coral Fan",
+      "aliases": [],
+      "article": "Dead Horn Coral Fan",
+      "sprite": 270
+    },
+    {
+      "id": "dead-tube-coral",
+      "name": "Dead Tube Coral",
+      "aliases": [],
+      "article": "Dead Tube Coral",
+      "sprite": 271
+    },
+    {
+      "id": "dead-tube-coral-block",
+      "name": "Dead Tube Coral Block",
+      "aliases": [],
+      "article": "Dead Tube Coral Block",
+      "sprite": 272
+    },
+    {
+      "id": "dead-tube-coral-fan",
+      "name": "Dead Tube Coral Fan",
+      "aliases": [],
+      "article": "Dead Tube Coral Fan",
+      "sprite": 273
+    },
+    {
+      "id": "decorated-pot",
+      "name": "Decorated Pot",
+      "aliases": [],
+      "article": "Decorated Pot",
+      "sprite": 274
+    },
+    {
+      "id": "deepslate",
+      "name": "Deepslate",
+      "aliases": [],
+      "article": "Deepslate",
+      "sprite": 275
+    },
+    {
+      "id": "deepslate-brick-slab",
+      "name": "Deepslate Brick Slab",
+      "aliases": [],
+      "article": "Deepslate Brick Slab",
+      "sprite": 276
+    },
+    {
+      "id": "deepslate-brick-stairs",
+      "name": "Deepslate Brick Stairs",
+      "aliases": [],
+      "article": "Deepslate Brick Stairs",
+      "sprite": 277
+    },
+    {
+      "id": "deepslate-brick-wall",
+      "name": "Deepslate Brick Wall",
+      "aliases": [],
+      "article": "Deepslate Brick Wall",
+      "sprite": 278
+    },
+    {
+      "id": "deepslate-bricks",
+      "name": "Deepslate Bricks",
+      "aliases": [],
+      "article": "Deepslate Bricks",
+      "sprite": 279
+    },
+    {
+      "id": "deepslate-coal-ore",
+      "name": "Deepslate Coal Ore",
+      "aliases": [],
+      "article": "Deepslate Coal Ore",
+      "sprite": 280
+    },
+    {
+      "id": "deepslate-copper-ore",
+      "name": "Deepslate Copper Ore",
+      "aliases": [],
+      "article": "Deepslate Copper Ore",
+      "sprite": 281
+    },
+    {
+      "id": "deepslate-diamond-ore",
+      "name": "Deepslate Diamond Ore",
+      "aliases": [],
+      "article": "Deepslate Diamond Ore",
+      "sprite": 282
+    },
+    {
+      "id": "deepslate-emerald-ore",
+      "name": "Deepslate Emerald Ore",
+      "aliases": [],
+      "article": "Deepslate Emerald Ore",
+      "sprite": 283
+    },
+    {
+      "id": "deepslate-gold-ore",
+      "name": "Deepslate Gold Ore",
+      "aliases": [],
+      "article": "Deepslate Gold Ore",
+      "sprite": 284
+    },
+    {
+      "id": "deepslate-iron-ore",
+      "name": "Deepslate Iron Ore",
+      "aliases": [],
+      "article": "Deepslate Iron Ore",
+      "sprite": 285
+    },
+    {
+      "id": "deepslate-lapis-lazuli-ore",
+      "name": "Deepslate Lapis Lazuli Ore",
+      "aliases": [],
+      "article": "Deepslate Lapis Lazuli Ore",
+      "sprite": 286
+    },
+    {
+      "id": "deepslate-redstone-ore",
+      "name": "Deepslate Redstone Ore",
+      "aliases": [],
+      "article": "Deepslate Redstone Ore",
+      "sprite": 287
+    },
+    {
+      "id": "deepslate-tile-slab",
+      "name": "Deepslate Tile Slab",
+      "aliases": [],
+      "article": "Deepslate Tile Slab",
+      "sprite": 288
+    },
+    {
+      "id": "deepslate-tile-stairs",
+      "name": "Deepslate Tile Stairs",
+      "aliases": [],
+      "article": "Deepslate Tile Stairs",
+      "sprite": 289
+    },
+    {
+      "id": "deepslate-tile-wall",
+      "name": "Deepslate Tile Wall",
+      "aliases": [],
+      "article": "Deepslate Tile Wall",
+      "sprite": 290
+    },
+    {
+      "id": "deepslate-tiles",
+      "name": "Deepslate Tiles",
+      "aliases": [],
+      "article": "Deepslate Tiles",
+      "sprite": 291
+    },
+    {
+      "id": "detector-rail",
+      "name": "Detector Rail",
+      "aliases": [],
+      "article": "Detector Rail",
+      "sprite": 292
+    },
+    {
+      "id": "diamond-ore",
+      "name": "Diamond Ore",
+      "aliases": [],
+      "article": "Diamond Ore",
+      "sprite": 293
+    },
+    {
+      "id": "diorite",
+      "name": "Diorite",
+      "aliases": [],
+      "article": "Diorite",
+      "sprite": 294
+    },
+    {
+      "id": "diorite-slab",
+      "name": "Diorite Slab",
+      "aliases": [],
+      "article": "Diorite Slab",
+      "sprite": 295
+    },
+    {
+      "id": "diorite-stairs",
+      "name": "Diorite Stairs",
+      "aliases": [],
+      "article": "Diorite Stairs",
+      "sprite": 296
+    },
+    {
+      "id": "diorite-wall",
+      "name": "Diorite Wall",
+      "aliases": [],
+      "article": "Diorite Wall",
+      "sprite": 297
+    },
+    {
+      "id": "dirt",
+      "name": "Dirt",
+      "aliases": [],
+      "article": "Dirt",
+      "sprite": 298
+    },
+    {
+      "id": "dirt-path",
+      "name": "Dirt Path",
+      "aliases": [],
+      "article": "Dirt Path",
+      "sprite": 299
+    },
+    {
+      "id": "dispenser",
+      "name": "Dispenser",
+      "aliases": [],
+      "article": "Dispenser",
+      "sprite": 300
+    },
+    {
+      "id": "dragon-egg",
+      "name": "Dragon Egg",
+      "aliases": [],
+      "article": "Dragon Egg",
+      "sprite": 301
+    },
+    {
+      "id": "dragon-head",
+      "name": "Dragon Head",
+      "aliases": [],
+      "article": "Dragon Head",
+      "sprite": 302
+    },
+    {
+      "id": "dried-ghast",
+      "name": "Dried Ghast",
+      "aliases": [],
+      "article": "Dried Ghast",
+      "sprite": 303
+    },
+    {
+      "id": "dried-kelp-block",
+      "name": "Dried Kelp Block",
+      "aliases": [],
+      "article": "Dried Kelp Block",
+      "sprite": 304
+    },
+    {
+      "id": "dripstone-block",
+      "name": "Dripstone Block",
+      "aliases": [],
+      "article": "Dripstone Block",
+      "sprite": 305
+    },
+    {
+      "id": "dropper",
+      "name": "Dropper",
+      "aliases": [],
+      "article": "Dropper",
+      "sprite": 306
+    },
+    {
+      "id": "emerald-ore",
+      "name": "Emerald Ore",
+      "aliases": [],
+      "article": "Emerald Ore",
+      "sprite": 307
+    },
+    {
+      "id": "enchanting-table",
+      "name": "Enchanting Table",
+      "aliases": [],
+      "article": "Enchanting Table",
+      "sprite": 308
+    },
+    {
+      "id": "end-gateway",
+      "name": "End Gateway",
+      "aliases": [],
+      "article": "End Gateway (block)",
+      "sprite": 309
+    },
+    {
+      "id": "end-portal",
+      "name": "End Portal",
+      "aliases": [],
+      "article": "End Portal (block)",
+      "sprite": 310
+    },
+    {
+      "id": "end-portal-frame",
+      "name": "End Portal Frame",
+      "aliases": [],
+      "article": "End Portal Frame",
+      "sprite": 311
+    },
+    {
+      "id": "end-rod",
+      "name": "End Rod",
+      "aliases": [],
+      "article": "End Rod",
+      "sprite": 312
+    },
+    {
+      "id": "end-stone",
+      "name": "End Stone",
+      "aliases": [],
+      "article": "End Stone",
+      "sprite": 313
+    },
+    {
+      "id": "end-stone-brick-slab",
+      "name": "End Stone Brick Slab",
+      "aliases": [],
+      "article": "End Stone Brick Slab",
+      "sprite": 314
+    },
+    {
+      "id": "end-stone-brick-stairs",
+      "name": "End Stone Brick Stairs",
+      "aliases": [],
+      "article": "End Stone Brick Stairs",
+      "sprite": 315
+    },
+    {
+      "id": "end-stone-brick-wall",
+      "name": "End Stone Brick Wall",
+      "aliases": [],
+      "article": "End Stone Brick Wall",
+      "sprite": 316
+    },
+    {
+      "id": "end-stone-bricks",
+      "name": "End Stone Bricks",
+      "aliases": [],
+      "article": "End Stone Bricks",
+      "sprite": 317
+    },
+    {
+      "id": "ender-chest",
+      "name": "Ender Chest",
+      "aliases": [],
+      "article": "Ender Chest",
+      "sprite": 318
+    },
+    {
+      "id": "exposed-chiseled-copper",
+      "name": "Exposed Chiseled Copper",
+      "aliases": [],
+      "article": "Exposed Chiseled Copper",
+      "sprite": 319
+    },
+    {
+      "id": "exposed-copper",
+      "name": "Exposed Copper",
+      "aliases": [],
+      "article": "Exposed Copper",
+      "sprite": 320
+    },
+    {
+      "id": "exposed-copper-bars",
+      "name": "Exposed Copper Bars",
+      "aliases": [],
+      "article": "Exposed Copper Bars",
+      "sprite": 321
+    },
+    {
+      "id": "exposed-copper-bulb",
+      "name": "Exposed Copper Bulb",
+      "aliases": [],
+      "article": "Exposed Copper Bulb",
+      "sprite": 322
+    },
+    {
+      "id": "exposed-copper-chain",
+      "name": "Exposed Copper Chain",
+      "aliases": [],
+      "article": "Exposed Copper Chain",
+      "sprite": 323
+    },
+    {
+      "id": "exposed-copper-chest",
+      "name": "Exposed Copper Chest",
+      "aliases": [],
+      "article": "Exposed Copper Chest",
+      "sprite": 324
+    },
+    {
+      "id": "exposed-copper-door",
+      "name": "Exposed Copper Door",
+      "aliases": [],
+      "article": "Exposed Copper Door",
+      "sprite": 325
+    },
+    {
+      "id": "exposed-copper-golem-statue",
+      "name": "Exposed Copper Golem Statue",
+      "aliases": [],
+      "article": "Exposed Copper Golem Statue",
+      "sprite": 326
+    },
+    {
+      "id": "exposed-copper-grate",
+      "name": "Exposed Copper Grate",
+      "aliases": [],
+      "article": "Exposed Copper Grate",
+      "sprite": 327
+    },
+    {
+      "id": "exposed-copper-lantern",
+      "name": "Exposed Copper Lantern",
+      "aliases": [],
+      "article": "Exposed Copper Lantern",
+      "sprite": 328
+    },
+    {
+      "id": "exposed-copper-trapdoor",
+      "name": "Exposed Copper Trapdoor",
+      "aliases": [],
+      "article": "Exposed Copper Trapdoor",
+      "sprite": 329
+    },
+    {
+      "id": "exposed-cut-copper",
+      "name": "Exposed Cut Copper",
+      "aliases": [],
+      "article": "Exposed Cut Copper",
+      "sprite": 330
+    },
+    {
+      "id": "exposed-cut-copper-slab",
+      "name": "Exposed Cut Copper Slab",
+      "aliases": [],
+      "article": "Exposed Cut Copper Slab",
+      "sprite": 331
+    },
+    {
+      "id": "exposed-cut-copper-stairs",
+      "name": "Exposed Cut Copper Stairs",
+      "aliases": [],
+      "article": "Exposed Cut Copper Stairs",
+      "sprite": 332
+    },
+    {
+      "id": "exposed-lightning-rod",
+      "name": "Exposed Lightning Rod",
+      "aliases": [],
+      "article": "Exposed Lightning Rod",
+      "sprite": 333
+    },
+    {
+      "id": "farmland",
+      "name": "Farmland",
+      "aliases": [],
+      "article": "Farmland",
+      "sprite": 334
+    },
+    {
+      "id": "fern",
+      "name": "Fern",
+      "aliases": [],
+      "article": "Fern",
+      "sprite": 335
+    },
+    {
+      "id": "fire",
+      "name": "Fire",
+      "aliases": [],
+      "article": "Fire",
+      "sprite": 336
+    },
+    {
+      "id": "fire-coral",
+      "name": "Fire Coral",
+      "aliases": [],
+      "article": "Fire Coral",
+      "sprite": 337
+    },
+    {
+      "id": "fire-coral-block",
+      "name": "Fire Coral Block",
+      "aliases": [],
+      "article": "Fire Coral Block",
+      "sprite": 338
+    },
+    {
+      "id": "fire-coral-fan",
+      "name": "Fire Coral Fan",
+      "aliases": [],
+      "article": "Fire Coral Fan",
+      "sprite": 339
+    },
+    {
+      "id": "firefly-bush",
+      "name": "Firefly Bush",
+      "aliases": [],
+      "article": "Firefly Bush",
+      "sprite": 340
+    },
+    {
+      "id": "fletching-table",
+      "name": "Fletching Table",
+      "aliases": [],
+      "article": "Fletching Table",
+      "sprite": 341
+    },
+    {
+      "id": "flower-pot",
+      "name": "Flower Pot",
+      "aliases": [],
+      "article": "Flower Pot",
+      "sprite": 342
+    },
+    {
+      "id": "flowering-azalea",
+      "name": "Flowering Azalea",
+      "aliases": [],
+      "article": "Flowering Azalea",
+      "sprite": 343
+    },
+    {
+      "id": "flowering-azalea-leaves",
+      "name": "Flowering Azalea Leaves",
+      "aliases": [],
+      "article": "Flowering Azalea Leaves",
+      "sprite": 344
+    },
+    {
+      "id": "frogspawn",
+      "name": "Frogspawn",
+      "aliases": [],
+      "article": "Frogspawn",
+      "sprite": 345
+    },
+    {
+      "id": "frosted-ice",
+      "name": "Frosted Ice",
+      "aliases": [],
+      "article": "Frosted Ice",
+      "sprite": 346
+    },
+    {
+      "id": "furnace",
+      "name": "Furnace",
+      "aliases": [],
+      "article": "Furnace",
+      "sprite": 347
+    },
+    {
+      "id": "gilded-blackstone",
+      "name": "Gilded Blackstone",
+      "aliases": [],
+      "article": "Gilded Blackstone",
+      "sprite": 348
+    },
+    {
+      "id": "glass",
+      "name": "Glass",
+      "aliases": [
+        "Black Stained Glass",
+        "Blue Stained Glass",
+        "Brown Stained Glass",
+        "Cyan Stained Glass",
+        "Gray Stained Glass",
+        "Green Stained Glass",
+        "Light Blue Stained Glass",
+        "Light Gray Stained Glass",
+        "Lime Stained Glass",
+        "Magenta Stained Glass",
+        "Orange Stained Glass",
+        "Pink Stained Glass",
+        "Purple Stained Glass",
+        "Red Stained Glass",
+        "White Stained Glass",
+        "Yellow Stained Glass"
+      ],
+      "article": "Glass",
+      "sprite": 349
+    },
+    {
+      "id": "glass-pane",
+      "name": "Glass Pane",
+      "aliases": [
+        "Black Stained Glass Pane",
+        "Blue Stained Glass Pane",
+        "Brown Stained Glass Pane",
+        "Cyan Stained Glass Pane",
+        "Gray Stained Glass Pane",
+        "Green Stained Glass Pane",
+        "Light Blue Stained Glass Pane",
+        "Light Gray Stained Glass Pane",
+        "Lime Stained Glass Pane",
+        "Magenta Stained Glass Pane",
+        "Orange Stained Glass Pane",
+        "Pink Stained Glass Pane",
+        "Purple Stained Glass Pane",
+        "Red Stained Glass Pane",
+        "White Stained Glass Pane",
+        "Yellow Stained Glass Pane"
+      ],
+      "article": "Glass Pane",
+      "sprite": 350
+    },
+    {
+      "id": "glazed-terracotta",
+      "name": "Glazed Terracotta",
+      "aliases": [
+        "Black Glazed Terracotta",
+        "Blue Glazed Terracotta",
+        "Brown Glazed Terracotta",
+        "Cyan Glazed Terracotta",
+        "Gray Glazed Terracotta",
+        "Green Glazed Terracotta",
+        "Light Blue Glazed Terracotta",
+        "Light Gray Glazed Terracotta",
+        "Lime Glazed Terracotta",
+        "Magenta Glazed Terracotta",
+        "Orange Glazed Terracotta",
+        "Pink Glazed Terracotta",
+        "Purple Glazed Terracotta",
+        "Red Glazed Terracotta",
+        "White Glazed Terracotta",
+        "Yellow Glazed Terracotta"
+      ],
+      "article": "White Glazed Terracotta",
+      "sprite": 351
+    },
+    {
+      "id": "glow-item-frame",
+      "name": "Glow Item Frame",
+      "aliases": [],
+      "article": "Glow Item Frame",
+      "sprite": 352
+    },
+    {
+      "id": "glow-lichen",
+      "name": "Glow Lichen",
+      "aliases": [],
+      "article": "Glow Lichen",
+      "sprite": 353
+    },
+    {
+      "id": "glowstone",
+      "name": "Glowstone",
+      "aliases": [],
+      "article": "Glowstone",
+      "sprite": 354
+    },
+    {
+      "id": "gold-ore",
+      "name": "Gold Ore",
+      "aliases": [],
+      "article": "Gold Ore",
+      "sprite": 355
+    },
+    {
+      "id": "golden-dandelion",
+      "name": "Golden Dandelion",
+      "aliases": [],
+      "article": "Golden Dandelion",
+      "sprite": 356
+    },
+    {
+      "id": "granite",
+      "name": "Granite",
+      "aliases": [],
+      "article": "Granite",
+      "sprite": 357
+    },
+    {
+      "id": "granite-slab",
+      "name": "Granite Slab",
+      "aliases": [],
+      "article": "Granite Slab",
+      "sprite": 358
+    },
+    {
+      "id": "granite-stairs",
+      "name": "Granite Stairs",
+      "aliases": [],
+      "article": "Granite Stairs",
+      "sprite": 359
+    },
+    {
+      "id": "granite-wall",
+      "name": "Granite Wall",
+      "aliases": [],
+      "article": "Granite Wall",
+      "sprite": 360
+    },
+    {
+      "id": "grass-block",
+      "name": "Grass Block",
+      "aliases": [],
+      "article": "Grass Block",
+      "sprite": 361
+    },
+    {
+      "id": "gravel",
+      "name": "Gravel",
+      "aliases": [],
+      "article": "Gravel",
+      "sprite": 362
+    },
+    {
+      "id": "grindstone",
+      "name": "Grindstone",
+      "aliases": [],
+      "article": "Grindstone",
+      "sprite": 363
+    },
+    {
+      "id": "hanging-roots",
+      "name": "Hanging Roots",
+      "aliases": [],
+      "article": "Hanging Roots",
+      "sprite": 364
+    },
+    {
+      "id": "hay-bale",
+      "name": "Hay Bale",
+      "aliases": [
+        "Hay Block"
+      ],
+      "article": "Hay Bale",
+      "sprite": 365
+    },
+    {
+      "id": "heavy-core",
+      "name": "Heavy Core",
+      "aliases": [],
+      "article": "Heavy Core",
+      "sprite": 366
+    },
+    {
+      "id": "heavy-weighted-pressure-plate",
+      "name": "Heavy Weighted Pressure Plate",
+      "aliases": [],
+      "article": "Heavy Weighted Pressure Plate",
+      "sprite": 367
+    },
+    {
+      "id": "honey-block",
+      "name": "Honey Block",
+      "aliases": [],
+      "article": "Honey Block",
+      "sprite": 368
+    },
+    {
+      "id": "honeycomb-block",
+      "name": "Honeycomb Block",
+      "aliases": [],
+      "article": "Honeycomb Block",
+      "sprite": 369
+    },
+    {
+      "id": "hopper",
+      "name": "Hopper",
+      "aliases": [],
+      "article": "Hopper",
+      "sprite": 370
+    },
+    {
+      "id": "horn-coral",
+      "name": "Horn Coral",
+      "aliases": [],
+      "article": "Horn Coral",
+      "sprite": 371
+    },
+    {
+      "id": "horn-coral-block",
+      "name": "Horn Coral Block",
+      "aliases": [],
+      "article": "Horn Coral Block",
+      "sprite": 372
+    },
+    {
+      "id": "horn-coral-fan",
+      "name": "Horn Coral Fan",
+      "aliases": [],
+      "article": "Horn Coral Fan",
+      "sprite": 373
+    },
+    {
+      "id": "ice",
+      "name": "Ice",
+      "aliases": [],
+      "article": "Ice",
+      "sprite": 374
+    },
+    {
+      "id": "infested-chiseled-stone-bricks",
+      "name": "Infested Chiseled Stone Bricks",
+      "aliases": [],
+      "article": "Infested Chiseled Stone Bricks",
+      "sprite": 375
+    },
+    {
+      "id": "infested-cobblestone",
+      "name": "Infested Cobblestone",
+      "aliases": [],
+      "article": "Infested Cobblestone",
+      "sprite": 376
+    },
+    {
+      "id": "infested-cracked-stone-bricks",
+      "name": "Infested Cracked Stone Bricks",
+      "aliases": [],
+      "article": "Infested Cracked Stone Bricks",
+      "sprite": 377
+    },
+    {
+      "id": "infested-deepslate",
+      "name": "Infested Deepslate",
+      "aliases": [],
+      "article": "Infested Deepslate",
+      "sprite": 378
+    },
+    {
+      "id": "infested-mossy-stone-bricks",
+      "name": "Infested Mossy Stone Bricks",
+      "aliases": [],
+      "article": "Infested Mossy Stone Bricks",
+      "sprite": 379
+    },
+    {
+      "id": "infested-stone",
+      "name": "Infested Stone",
+      "aliases": [],
+      "article": "Infested Stone",
+      "sprite": 380
+    },
+    {
+      "id": "infested-stone-bricks",
+      "name": "Infested Stone Bricks",
+      "aliases": [],
+      "article": "Infested Stone Bricks",
+      "sprite": 381
+    },
+    {
+      "id": "iron-bars",
+      "name": "Iron Bars",
+      "aliases": [],
+      "article": "Iron Bars",
+      "sprite": 382
+    },
+    {
+      "id": "iron-chain",
+      "name": "Iron Chain",
+      "aliases": [],
+      "article": "Iron Chain",
+      "sprite": 383
+    },
+    {
+      "id": "iron-door",
+      "name": "Iron Door",
+      "aliases": [],
+      "article": "Iron Door",
+      "sprite": 384
+    },
+    {
+      "id": "iron-ore",
+      "name": "Iron Ore",
+      "aliases": [],
+      "article": "Iron Ore",
+      "sprite": 385
+    },
+    {
+      "id": "iron-trapdoor",
+      "name": "Iron Trapdoor",
+      "aliases": [],
+      "article": "Iron Trapdoor",
+      "sprite": 386
+    },
+    {
+      "id": "item-frame",
+      "name": "Item Frame",
+      "aliases": [],
+      "article": "Item Frame",
+      "sprite": 387
+    },
+    {
+      "id": "jack-o-lantern",
+      "name": "Jack o'Lantern",
+      "aliases": [],
+      "article": "Jack o'Lantern",
+      "sprite": 388
+    },
+    {
+      "id": "jigsaw-block",
+      "name": "Jigsaw Block",
+      "aliases": [],
+      "article": "Jigsaw Block",
+      "sprite": 389
+    },
+    {
+      "id": "jukebox",
+      "name": "Jukebox",
+      "aliases": [],
+      "article": "Jukebox",
+      "sprite": 390
+    },
+    {
+      "id": "jungle-button",
+      "name": "Jungle Button",
+      "aliases": [],
+      "article": "Jungle Button",
+      "sprite": 391
+    },
+    {
+      "id": "jungle-door",
+      "name": "Jungle Door",
+      "aliases": [],
+      "article": "Jungle Door",
+      "sprite": 392
+    },
+    {
+      "id": "jungle-fence",
+      "name": "Jungle Fence",
+      "aliases": [],
+      "article": "Jungle Fence",
+      "sprite": 393
+    },
+    {
+      "id": "jungle-fence-gate",
+      "name": "Jungle Fence Gate",
+      "aliases": [],
+      "article": "Jungle Fence Gate",
+      "sprite": 394
+    },
+    {
+      "id": "jungle-hanging-sign",
+      "name": "Jungle Hanging Sign",
+      "aliases": [],
+      "article": "Jungle Hanging Sign",
+      "sprite": 395
+    },
+    {
+      "id": "jungle-leaves",
+      "name": "Jungle Leaves",
+      "aliases": [],
+      "article": "Jungle Leaves",
+      "sprite": 396
+    },
+    {
+      "id": "jungle-log",
+      "name": "Jungle Log",
+      "aliases": [],
+      "article": "Jungle Log",
+      "sprite": 397
+    },
+    {
+      "id": "jungle-planks",
+      "name": "Jungle Planks",
+      "aliases": [],
+      "article": "Jungle Planks",
+      "sprite": 398
+    },
+    {
+      "id": "jungle-pressure-plate",
+      "name": "Jungle Pressure Plate",
+      "aliases": [],
+      "article": "Jungle Pressure Plate",
+      "sprite": 399
+    },
+    {
+      "id": "jungle-sapling",
+      "name": "Jungle Sapling",
+      "aliases": [],
+      "article": "Jungle Sapling",
+      "sprite": 400
+    },
+    {
+      "id": "jungle-shelf",
+      "name": "Jungle Shelf",
+      "aliases": [],
+      "article": "Jungle Shelf",
+      "sprite": 401
+    },
+    {
+      "id": "jungle-sign",
+      "name": "Jungle Sign",
+      "aliases": [],
+      "article": "Jungle Sign",
+      "sprite": 402
+    },
+    {
+      "id": "jungle-slab",
+      "name": "Jungle Slab",
+      "aliases": [],
+      "article": "Jungle Slab",
+      "sprite": 403
+    },
+    {
+      "id": "jungle-stairs",
+      "name": "Jungle Stairs",
+      "aliases": [],
+      "article": "Jungle Stairs",
+      "sprite": 404
+    },
+    {
+      "id": "jungle-trapdoor",
+      "name": "Jungle Trapdoor",
+      "aliases": [],
+      "article": "Jungle Trapdoor",
+      "sprite": 405
+    },
+    {
+      "id": "jungle-wood",
+      "name": "Jungle Wood",
+      "aliases": [],
+      "article": "Jungle Wood",
+      "sprite": 406
+    },
+    {
+      "id": "kelp",
+      "name": "Kelp",
+      "aliases": [],
+      "article": "Kelp",
+      "sprite": 407
+    },
+    {
+      "id": "ladder",
+      "name": "Ladder",
+      "aliases": [],
+      "article": "Ladder",
+      "sprite": 408
+    },
+    {
+      "id": "lantern",
+      "name": "Lantern",
+      "aliases": [],
+      "article": "Lantern",
+      "sprite": 409
+    },
+    {
+      "id": "lapis-lazuli-ore",
+      "name": "Lapis Lazuli Ore",
+      "aliases": [
+        "Lapis Ore"
+      ],
+      "article": "Lapis Lazuli Ore",
+      "sprite": 410
+    },
+    {
+      "id": "large-amethyst-bud",
+      "name": "Large Amethyst Bud",
+      "aliases": [],
+      "article": "Large Amethyst Bud",
+      "sprite": 411
+    },
+    {
+      "id": "large-fern",
+      "name": "Large Fern",
+      "aliases": [],
+      "article": "Large Fern",
+      "sprite": 412
+    },
+    {
+      "id": "lava",
+      "name": "Lava",
+      "aliases": [],
+      "article": "Lava",
+      "sprite": 413
+    },
+    {
+      "id": "leaf-litter",
+      "name": "Leaf Litter",
+      "aliases": [],
+      "article": "Leaf Litter",
+      "sprite": 414
+    },
+    {
+      "id": "lectern",
+      "name": "Lectern",
+      "aliases": [],
+      "article": "Lectern",
+      "sprite": 415
+    },
+    {
+      "id": "lever",
+      "name": "Lever",
+      "aliases": [],
+      "article": "Lever",
+      "sprite": 416
+    },
+    {
+      "id": "light",
+      "name": "Light",
+      "aliases": [],
+      "article": "Light (block)",
+      "sprite": 417
+    },
+    {
+      "id": "light-weighted-pressure-plate",
+      "name": "Light Weighted Pressure Plate",
+      "aliases": [],
+      "article": "Light Weighted Pressure Plate",
+      "sprite": 418
+    },
+    {
+      "id": "lightning-rod",
+      "name": "Lightning Rod",
+      "aliases": [],
+      "article": "Lightning Rod",
+      "sprite": 419
+    },
+    {
+      "id": "lilac",
+      "name": "Lilac",
+      "aliases": [],
+      "article": "Lilac",
+      "sprite": 420
+    },
+    {
+      "id": "lily-of-the-valley",
+      "name": "Lily of the Valley",
+      "aliases": [],
+      "article": "Lily of the Valley",
+      "sprite": 421
+    },
+    {
+      "id": "lily-pad",
+      "name": "Lily Pad",
+      "aliases": [],
+      "article": "Lily Pad",
+      "sprite": 422
+    },
+    {
+      "id": "lodestone",
+      "name": "Lodestone",
+      "aliases": [],
+      "article": "Lodestone",
+      "sprite": 423
+    },
+    {
+      "id": "loom",
+      "name": "Loom",
+      "aliases": [],
+      "article": "Loom",
+      "sprite": 424
+    },
+    {
+      "id": "magma-block",
+      "name": "Magma Block",
+      "aliases": [],
+      "article": "Magma Block",
+      "sprite": 425
+    },
+    {
+      "id": "mangrove-button",
+      "name": "Mangrove Button",
+      "aliases": [],
+      "article": "Mangrove Button",
+      "sprite": 426
+    },
+    {
+      "id": "mangrove-door",
+      "name": "Mangrove Door",
+      "aliases": [],
+      "article": "Mangrove Door",
+      "sprite": 427
+    },
+    {
+      "id": "mangrove-fence",
+      "name": "Mangrove Fence",
+      "aliases": [],
+      "article": "Mangrove Fence",
+      "sprite": 428
+    },
+    {
+      "id": "mangrove-fence-gate",
+      "name": "Mangrove Fence Gate",
+      "aliases": [],
+      "article": "Mangrove Fence Gate",
+      "sprite": 429
+    },
+    {
+      "id": "mangrove-hanging-sign",
+      "name": "Mangrove Hanging Sign",
+      "aliases": [],
+      "article": "Mangrove Hanging Sign",
+      "sprite": 430
+    },
+    {
+      "id": "mangrove-leaves",
+      "name": "Mangrove Leaves",
+      "aliases": [],
+      "article": "Mangrove Leaves",
+      "sprite": 431
+    },
+    {
+      "id": "mangrove-log",
+      "name": "Mangrove Log",
+      "aliases": [],
+      "article": "Mangrove Log",
+      "sprite": 432
+    },
+    {
+      "id": "mangrove-planks",
+      "name": "Mangrove Planks",
+      "aliases": [],
+      "article": "Mangrove Planks",
+      "sprite": 433
+    },
+    {
+      "id": "mangrove-pressure-plate",
+      "name": "Mangrove Pressure Plate",
+      "aliases": [],
+      "article": "Mangrove Pressure Plate",
+      "sprite": 434
+    },
+    {
+      "id": "mangrove-propagule",
+      "name": "Mangrove Propagule",
+      "aliases": [],
+      "article": "Mangrove Propagule",
+      "sprite": 435
+    },
+    {
+      "id": "mangrove-roots",
+      "name": "Mangrove Roots",
+      "aliases": [],
+      "article": "Mangrove Roots",
+      "sprite": 436
+    },
+    {
+      "id": "mangrove-shelf",
+      "name": "Mangrove Shelf",
+      "aliases": [],
+      "article": "Mangrove Shelf",
+      "sprite": 437
+    },
+    {
+      "id": "mangrove-sign",
+      "name": "Mangrove Sign",
+      "aliases": [],
+      "article": "Mangrove Sign",
+      "sprite": 438
+    },
+    {
+      "id": "mangrove-slab",
+      "name": "Mangrove Slab",
+      "aliases": [],
+      "article": "Mangrove Slab",
+      "sprite": 439
+    },
+    {
+      "id": "mangrove-stairs",
+      "name": "Mangrove Stairs",
+      "aliases": [],
+      "article": "Mangrove Stairs",
+      "sprite": 440
+    },
+    {
+      "id": "mangrove-trapdoor",
+      "name": "Mangrove Trapdoor",
+      "aliases": [],
+      "article": "Mangrove Trapdoor",
+      "sprite": 441
+    },
+    {
+      "id": "mangrove-wood",
+      "name": "Mangrove Wood",
+      "aliases": [],
+      "article": "Mangrove Wood",
+      "sprite": 442
+    },
+    {
+      "id": "medium-amethyst-bud",
+      "name": "Medium Amethyst Bud",
+      "aliases": [],
+      "article": "Medium Amethyst Bud",
+      "sprite": 443
+    },
+    {
+      "id": "melon",
+      "name": "Melon",
+      "aliases": [],
+      "article": "Melon",
+      "sprite": 444
+    },
+    {
+      "id": "melon-stem",
+      "name": "Melon Stem",
+      "aliases": [],
+      "article": "Melon Stem",
+      "sprite": 445
+    },
+    {
+      "id": "monster-spawner",
+      "name": "Monster Spawner",
+      "aliases": [],
+      "article": "Monster Spawner",
+      "sprite": 446
+    },
+    {
+      "id": "moss-block",
+      "name": "Moss Block",
+      "aliases": [],
+      "article": "Moss Block",
+      "sprite": 447
+    },
+    {
+      "id": "moss-carpet",
+      "name": "Moss Carpet",
+      "aliases": [],
+      "article": "Moss Carpet",
+      "sprite": 448
+    },
+    {
+      "id": "mossy-cobblestone",
+      "name": "Mossy Cobblestone",
+      "aliases": [],
+      "article": "Mossy Cobblestone",
+      "sprite": 449
+    },
+    {
+      "id": "mossy-cobblestone-slab",
+      "name": "Mossy Cobblestone Slab",
+      "aliases": [],
+      "article": "Mossy Cobblestone Slab",
+      "sprite": 450
+    },
+    {
+      "id": "mossy-cobblestone-stairs",
+      "name": "Mossy Cobblestone Stairs",
+      "aliases": [],
+      "article": "Mossy Cobblestone Stairs",
+      "sprite": 451
+    },
+    {
+      "id": "mossy-cobblestone-wall",
+      "name": "Mossy Cobblestone Wall",
+      "aliases": [],
+      "article": "Mossy Cobblestone Wall",
+      "sprite": 452
+    },
+    {
+      "id": "mossy-stone-brick-slab",
+      "name": "Mossy Stone Brick Slab",
+      "aliases": [],
+      "article": "Mossy Stone Brick Slab",
+      "sprite": 453
+    },
+    {
+      "id": "mossy-stone-brick-stairs",
+      "name": "Mossy Stone Brick Stairs",
+      "aliases": [],
+      "article": "Mossy Stone Brick Stairs",
+      "sprite": 454
+    },
+    {
+      "id": "mossy-stone-brick-wall",
+      "name": "Mossy Stone Brick Wall",
+      "aliases": [],
+      "article": "Mossy Stone Brick Wall",
+      "sprite": 455
+    },
+    {
+      "id": "mossy-stone-bricks",
+      "name": "Mossy Stone Bricks",
+      "aliases": [],
+      "article": "Mossy Stone Bricks",
+      "sprite": 456
+    },
+    {
+      "id": "mud",
+      "name": "Mud",
+      "aliases": [],
+      "article": "Mud",
+      "sprite": 457
+    },
+    {
+      "id": "mud-brick-slab",
+      "name": "Mud Brick Slab",
+      "aliases": [],
+      "article": "Mud Brick Slab",
+      "sprite": 458
+    },
+    {
+      "id": "mud-brick-stairs",
+      "name": "Mud Brick Stairs",
+      "aliases": [],
+      "article": "Mud Brick Stairs",
+      "sprite": 459
+    },
+    {
+      "id": "mud-brick-wall",
+      "name": "Mud Brick Wall",
+      "aliases": [],
+      "article": "Mud Brick Wall",
+      "sprite": 460
+    },
+    {
+      "id": "mud-bricks",
+      "name": "Mud Bricks",
+      "aliases": [],
+      "article": "Mud Bricks",
+      "sprite": 461
+    },
+    {
+      "id": "muddy-mangrove-roots",
+      "name": "Muddy Mangrove Roots",
+      "aliases": [],
+      "article": "Muddy Mangrove Roots",
+      "sprite": 462
+    },
+    {
+      "id": "mushroom-stem",
+      "name": "Mushroom Stem",
+      "aliases": [],
+      "article": "Mushroom Stem",
+      "sprite": 463
+    },
+    {
+      "id": "mycelium",
+      "name": "Mycelium",
+      "aliases": [],
+      "article": "Mycelium",
+      "sprite": 464
+    },
+    {
+      "id": "nether-brick-fence",
+      "name": "Nether Brick Fence",
+      "aliases": [],
+      "article": "Nether Brick Fence",
+      "sprite": 465
+    },
+    {
+      "id": "nether-brick-slab",
+      "name": "Nether Brick Slab",
+      "aliases": [],
+      "article": "Nether Brick Slab",
+      "sprite": 466
+    },
+    {
+      "id": "nether-brick-stairs",
+      "name": "Nether Brick Stairs",
+      "aliases": [],
+      "article": "Nether Brick Stairs",
+      "sprite": 467
+    },
+    {
+      "id": "nether-brick-wall",
+      "name": "Nether Brick Wall",
+      "aliases": [],
+      "article": "Nether Brick Wall",
+      "sprite": 468
+    },
+    {
+      "id": "nether-bricks",
+      "name": "Nether Bricks",
+      "aliases": [],
+      "article": "Nether Bricks",
+      "sprite": 469
+    },
+    {
+      "id": "nether-gold-ore",
+      "name": "Nether Gold Ore",
+      "aliases": [],
+      "article": "Nether Gold Ore",
+      "sprite": 470
+    },
+    {
+      "id": "nether-portal",
+      "name": "Nether Portal",
+      "aliases": [],
+      "article": "Nether Portal (block)",
+      "sprite": 471
+    },
+    {
+      "id": "nether-quartz-ore",
+      "name": "Nether Quartz Ore",
+      "aliases": [],
+      "article": "Nether Quartz Ore",
+      "sprite": 472
+    },
+    {
+      "id": "nether-sprouts",
+      "name": "Nether Sprouts",
+      "aliases": [],
+      "article": "Nether Sprouts",
+      "sprite": 473
+    },
+    {
+      "id": "nether-wart",
+      "name": "Nether Wart",
+      "aliases": [],
+      "article": "Nether Wart",
+      "sprite": 474
+    },
+    {
+      "id": "nether-wart-block",
+      "name": "Nether Wart Block",
+      "aliases": [],
+      "article": "Nether Wart Block",
+      "sprite": 475
+    },
+    {
+      "id": "netherrack",
+      "name": "Netherrack",
+      "aliases": [],
+      "article": "Netherrack",
+      "sprite": 476
+    },
+    {
+      "id": "note-block",
+      "name": "Note Block",
+      "aliases": [],
+      "article": "Note Block",
+      "sprite": 477
+    },
+    {
+      "id": "oak-button",
+      "name": "Oak Button",
+      "aliases": [],
+      "article": "Oak Button",
+      "sprite": 478
+    },
+    {
+      "id": "oak-door",
+      "name": "Oak Door",
+      "aliases": [],
+      "article": "Oak Door",
+      "sprite": 479
+    },
+    {
+      "id": "oak-fence",
+      "name": "Oak Fence",
+      "aliases": [],
+      "article": "Oak Fence",
+      "sprite": 480
+    },
+    {
+      "id": "oak-fence-gate",
+      "name": "Oak Fence Gate",
+      "aliases": [],
+      "article": "Oak Fence Gate",
+      "sprite": 481
+    },
+    {
+      "id": "oak-hanging-sign",
+      "name": "Oak Hanging Sign",
+      "aliases": [],
+      "article": "Oak Hanging Sign",
+      "sprite": 482
+    },
+    {
+      "id": "oak-leaves",
+      "name": "Oak Leaves",
+      "aliases": [],
+      "article": "Oak Leaves",
+      "sprite": 483
+    },
+    {
+      "id": "oak-log",
+      "name": "Oak Log",
+      "aliases": [],
+      "article": "Oak Log",
+      "sprite": 484
+    },
+    {
+      "id": "oak-planks",
+      "name": "Oak Planks",
+      "aliases": [],
+      "article": "Oak Planks",
+      "sprite": 485
+    },
+    {
+      "id": "oak-pressure-plate",
+      "name": "Oak Pressure Plate",
+      "aliases": [],
+      "article": "Oak Pressure Plate",
+      "sprite": 486
+    },
+    {
+      "id": "oak-sapling",
+      "name": "Oak Sapling",
+      "aliases": [],
+      "article": "Oak Sapling",
+      "sprite": 487
+    },
+    {
+      "id": "oak-shelf",
+      "name": "Oak Shelf",
+      "aliases": [],
+      "article": "Oak Shelf",
+      "sprite": 488
+    },
+    {
+      "id": "oak-sign",
+      "name": "Oak Sign",
+      "aliases": [],
+      "article": "Oak Sign",
+      "sprite": 489
+    },
+    {
+      "id": "oak-slab",
+      "name": "Oak Slab",
+      "aliases": [],
+      "article": "Oak Slab",
+      "sprite": 490
+    },
+    {
+      "id": "oak-stairs",
+      "name": "Oak Stairs",
+      "aliases": [],
+      "article": "Oak Stairs",
+      "sprite": 491
+    },
+    {
+      "id": "oak-trapdoor",
+      "name": "Oak Trapdoor",
+      "aliases": [],
+      "article": "Oak Trapdoor",
+      "sprite": 492
+    },
+    {
+      "id": "oak-wood",
+      "name": "Oak Wood",
+      "aliases": [],
+      "article": "Oak Wood",
+      "sprite": 493
+    },
+    {
+      "id": "observer",
+      "name": "Observer",
+      "aliases": [],
+      "article": "Observer",
+      "sprite": 494
+    },
+    {
+      "id": "obsidian",
+      "name": "Obsidian",
+      "aliases": [],
+      "article": "Obsidian",
+      "sprite": 495
+    },
+    {
+      "id": "ochre-froglight",
+      "name": "Ochre Froglight",
+      "aliases": [],
+      "article": "Ochre Froglight",
+      "sprite": 496
+    },
+    {
+      "id": "ominous-banner",
+      "name": "Ominous Banner",
+      "aliases": [],
+      "article": "Ominous Banner",
+      "sprite": 497
+    },
+    {
+      "id": "open-eyeblossom",
+      "name": "Open Eyeblossom",
+      "aliases": [],
+      "article": "Open Eyeblossom",
+      "sprite": 498
+    },
+    {
+      "id": "orange-tulip",
+      "name": "Orange Tulip",
+      "aliases": [],
+      "article": "Orange Tulip",
+      "sprite": 499
+    },
+    {
+      "id": "oxeye-daisy",
+      "name": "Oxeye Daisy",
+      "aliases": [],
+      "article": "Oxeye Daisy",
+      "sprite": 500
+    },
+    {
+      "id": "oxidized-chiseled-copper",
+      "name": "Oxidized Chiseled Copper",
+      "aliases": [],
+      "article": "Oxidized Chiseled Copper",
+      "sprite": 501
+    },
+    {
+      "id": "oxidized-copper",
+      "name": "Oxidized Copper",
+      "aliases": [],
+      "article": "Oxidized Copper",
+      "sprite": 502
+    },
+    {
+      "id": "oxidized-copper-bars",
+      "name": "Oxidized Copper Bars",
+      "aliases": [],
+      "article": "Oxidized Copper Bars",
+      "sprite": 503
+    },
+    {
+      "id": "oxidized-copper-bulb",
+      "name": "Oxidized Copper Bulb",
+      "aliases": [],
+      "article": "Oxidized Copper Bulb",
+      "sprite": 504
+    },
+    {
+      "id": "oxidized-copper-chain",
+      "name": "Oxidized Copper Chain",
+      "aliases": [],
+      "article": "Oxidized Copper Chain",
+      "sprite": 505
+    },
+    {
+      "id": "oxidized-copper-chest",
+      "name": "Oxidized Copper Chest",
+      "aliases": [],
+      "article": "Oxidized Copper Chest",
+      "sprite": 506
+    },
+    {
+      "id": "oxidized-copper-door",
+      "name": "Oxidized Copper Door",
+      "aliases": [],
+      "article": "Oxidized Copper Door",
+      "sprite": 507
+    },
+    {
+      "id": "oxidized-copper-golem-statue",
+      "name": "Oxidized Copper Golem Statue",
+      "aliases": [],
+      "article": "Oxidized Copper Golem Statue",
+      "sprite": 508
+    },
+    {
+      "id": "oxidized-copper-grate",
+      "name": "Oxidized Copper Grate",
+      "aliases": [],
+      "article": "Oxidized Copper Grate",
+      "sprite": 509
+    },
+    {
+      "id": "oxidized-copper-lantern",
+      "name": "Oxidized Copper Lantern",
+      "aliases": [],
+      "article": "Oxidized Copper Lantern",
+      "sprite": 510
+    },
+    {
+      "id": "oxidized-copper-trapdoor",
+      "name": "Oxidized Copper Trapdoor",
+      "aliases": [],
+      "article": "Oxidized Copper Trapdoor",
+      "sprite": 511
+    },
+    {
+      "id": "oxidized-cut-copper",
+      "name": "Oxidized Cut Copper",
+      "aliases": [],
+      "article": "Oxidized Cut Copper",
+      "sprite": 512
+    },
+    {
+      "id": "oxidized-cut-copper-slab",
+      "name": "Oxidized Cut Copper Slab",
+      "aliases": [],
+      "article": "Oxidized Cut Copper Slab",
+      "sprite": 513
+    },
+    {
+      "id": "oxidized-cut-copper-stairs",
+      "name": "Oxidized Cut Copper Stairs",
+      "aliases": [],
+      "article": "Oxidized Cut Copper Stairs",
+      "sprite": 514
+    },
+    {
+      "id": "oxidized-lightning-rod",
+      "name": "Oxidized Lightning Rod",
+      "aliases": [],
+      "article": "Oxidized Lightning Rod",
+      "sprite": 515
+    },
+    {
+      "id": "packed-ice",
+      "name": "Packed Ice",
+      "aliases": [],
+      "article": "Packed Ice",
+      "sprite": 516
+    },
+    {
+      "id": "packed-mud",
+      "name": "Packed Mud",
+      "aliases": [],
+      "article": "Packed Mud",
+      "sprite": 517
+    },
+    {
+      "id": "pale-hanging-moss",
+      "name": "Pale Hanging Moss",
+      "aliases": [],
+      "article": "Pale Hanging Moss",
+      "sprite": 518
+    },
+    {
+      "id": "pale-moss-block",
+      "name": "Pale Moss Block",
+      "aliases": [],
+      "article": "Pale Moss Block",
+      "sprite": 519
+    },
+    {
+      "id": "pale-moss-carpet",
+      "name": "Pale Moss Carpet",
+      "aliases": [],
+      "article": "Pale Moss Carpet",
+      "sprite": 520
+    },
+    {
+      "id": "pale-oak-button",
+      "name": "Pale Oak Button",
+      "aliases": [],
+      "article": "Pale Oak Button",
+      "sprite": 521
+    },
+    {
+      "id": "pale-oak-door",
+      "name": "Pale Oak Door",
+      "aliases": [],
+      "article": "Pale Oak Door",
+      "sprite": 522
+    },
+    {
+      "id": "pale-oak-fence",
+      "name": "Pale Oak Fence",
+      "aliases": [],
+      "article": "Pale Oak Fence",
+      "sprite": 523
+    },
+    {
+      "id": "pale-oak-fence-gate",
+      "name": "Pale Oak Fence Gate",
+      "aliases": [],
+      "article": "Pale Oak Fence Gate",
+      "sprite": 524
+    },
+    {
+      "id": "pale-oak-hanging-sign",
+      "name": "Pale Oak Hanging Sign",
+      "aliases": [],
+      "article": "Pale Oak Hanging Sign",
+      "sprite": 525
+    },
+    {
+      "id": "pale-oak-leaves",
+      "name": "Pale Oak Leaves",
+      "aliases": [],
+      "article": "Pale Oak Leaves",
+      "sprite": 526
+    },
+    {
+      "id": "pale-oak-log",
+      "name": "Pale Oak Log",
+      "aliases": [],
+      "article": "Pale Oak Log",
+      "sprite": 527
+    },
+    {
+      "id": "pale-oak-planks",
+      "name": "Pale Oak Planks",
+      "aliases": [],
+      "article": "Pale Oak Planks",
+      "sprite": 528
+    },
+    {
+      "id": "pale-oak-pressure-plate",
+      "name": "Pale Oak Pressure Plate",
+      "aliases": [],
+      "article": "Pale Oak Pressure Plate",
+      "sprite": 529
+    },
+    {
+      "id": "pale-oak-sapling",
+      "name": "Pale Oak Sapling",
+      "aliases": [],
+      "article": "Pale Oak Sapling",
+      "sprite": 530
+    },
+    {
+      "id": "pale-oak-shelf",
+      "name": "Pale Oak Shelf",
+      "aliases": [],
+      "article": "Pale Oak Shelf",
+      "sprite": 531
+    },
+    {
+      "id": "pale-oak-sign",
+      "name": "Pale Oak Sign",
+      "aliases": [],
+      "article": "Pale Oak Sign",
+      "sprite": 532
+    },
+    {
+      "id": "pale-oak-slab",
+      "name": "Pale Oak Slab",
+      "aliases": [],
+      "article": "Pale Oak Slab",
+      "sprite": 533
+    },
+    {
+      "id": "pale-oak-stairs",
+      "name": "Pale Oak Stairs",
+      "aliases": [],
+      "article": "Pale Oak Stairs",
+      "sprite": 534
+    },
+    {
+      "id": "pale-oak-trapdoor",
+      "name": "Pale Oak Trapdoor",
+      "aliases": [],
+      "article": "Pale Oak Trapdoor",
+      "sprite": 535
+    },
+    {
+      "id": "pale-oak-wood",
+      "name": "Pale Oak Wood",
+      "aliases": [],
+      "article": "Pale Oak Wood",
+      "sprite": 536
+    },
+    {
+      "id": "pearlescent-froglight",
+      "name": "Pearlescent Froglight",
+      "aliases": [],
+      "article": "Pearlescent Froglight",
+      "sprite": 537
+    },
+    {
+      "id": "peony",
+      "name": "Peony",
+      "aliases": [],
+      "article": "Peony",
+      "sprite": 538
+    },
+    {
+      "id": "petrified-oak-slab",
+      "name": "Petrified Oak Slab",
+      "aliases": [],
+      "article": "Petrified Oak Slab",
+      "sprite": 539
+    },
+    {
+      "id": "piglin-head",
+      "name": "Piglin Head",
+      "aliases": [],
+      "article": "Piglin Head",
+      "sprite": 540
+    },
+    {
+      "id": "pink-petals",
+      "name": "Pink Petals",
+      "aliases": [],
+      "article": "Pink Petals",
+      "sprite": 541
+    },
+    {
+      "id": "pink-tulip",
+      "name": "Pink Tulip",
+      "aliases": [],
+      "article": "Pink Tulip",
+      "sprite": 542
+    },
+    {
+      "id": "piston",
+      "name": "Piston",
+      "aliases": [],
+      "article": "Piston",
+      "sprite": 543
+    },
+    {
+      "id": "pitcher-crop",
+      "name": "Pitcher Crop",
+      "aliases": [],
+      "article": "Pitcher Crop",
+      "sprite": 544
+    },
+    {
+      "id": "pitcher-plant",
+      "name": "Pitcher Plant",
+      "aliases": [],
+      "article": "Pitcher Plant",
+      "sprite": 545
+    },
+    {
+      "id": "player-head",
+      "name": "Player Head",
+      "aliases": [],
+      "article": "Player Head",
+      "sprite": 546
+    },
+    {
+      "id": "podzol",
+      "name": "Podzol",
+      "aliases": [],
+      "article": "Podzol",
+      "sprite": 547
+    },
+    {
+      "id": "pointed-dripstone",
+      "name": "Pointed Dripstone",
+      "aliases": [],
+      "article": "Pointed Dripstone",
+      "sprite": 548
+    },
+    {
+      "id": "polished-andesite",
+      "name": "Polished Andesite",
+      "aliases": [],
+      "article": "Polished Andesite",
+      "sprite": 549
+    },
+    {
+      "id": "polished-andesite-slab",
+      "name": "Polished Andesite Slab",
+      "aliases": [],
+      "article": "Polished Andesite Slab",
+      "sprite": 550
+    },
+    {
+      "id": "polished-andesite-stairs",
+      "name": "Polished Andesite Stairs",
+      "aliases": [],
+      "article": "Polished Andesite Stairs",
+      "sprite": 551
+    },
+    {
+      "id": "polished-basalt",
+      "name": "Polished Basalt",
+      "aliases": [],
+      "article": "Polished Basalt",
+      "sprite": 552
+    },
+    {
+      "id": "polished-blackstone",
+      "name": "Polished Blackstone",
+      "aliases": [],
+      "article": "Polished Blackstone",
+      "sprite": 553
+    },
+    {
+      "id": "polished-blackstone-brick-slab",
+      "name": "Polished Blackstone Brick Slab",
+      "aliases": [],
+      "article": "Polished Blackstone Brick Slab",
+      "sprite": 554
+    },
+    {
+      "id": "polished-blackstone-brick-stairs",
+      "name": "Polished Blackstone Brick Stairs",
+      "aliases": [],
+      "article": "Polished Blackstone Brick Stairs",
+      "sprite": 555
+    },
+    {
+      "id": "polished-blackstone-brick-wall",
+      "name": "Polished Blackstone Brick Wall",
+      "aliases": [],
+      "article": "Polished Blackstone Brick Wall",
+      "sprite": 556
+    },
+    {
+      "id": "polished-blackstone-bricks",
+      "name": "Polished Blackstone Bricks",
+      "aliases": [],
+      "article": "Polished Blackstone Bricks",
+      "sprite": 557
+    },
+    {
+      "id": "polished-blackstone-button",
+      "name": "Polished Blackstone Button",
+      "aliases": [],
+      "article": "Polished Blackstone Button",
+      "sprite": 558
+    },
+    {
+      "id": "polished-blackstone-pressure-plate",
+      "name": "Polished Blackstone Pressure Plate",
+      "aliases": [],
+      "article": "Polished Blackstone Pressure Plate",
+      "sprite": 559
+    },
+    {
+      "id": "polished-blackstone-slab",
+      "name": "Polished Blackstone Slab",
+      "aliases": [],
+      "article": "Polished Blackstone Slab",
+      "sprite": 560
+    },
+    {
+      "id": "polished-blackstone-stairs",
+      "name": "Polished Blackstone Stairs",
+      "aliases": [],
+      "article": "Polished Blackstone Stairs",
+      "sprite": 561
+    },
+    {
+      "id": "polished-blackstone-wall",
+      "name": "Polished Blackstone Wall",
+      "aliases": [],
+      "article": "Polished Blackstone Wall",
+      "sprite": 562
+    },
+    {
+      "id": "polished-cinnabar",
+      "name": "Polished Cinnabar",
+      "aliases": [],
+      "article": "Polished Cinnabar",
+      "sprite": 563
+    },
+    {
+      "id": "polished-cinnabar-slab",
+      "name": "Polished Cinnabar Slab",
+      "aliases": [],
+      "article": "Polished Cinnabar Slab",
+      "sprite": 564
+    },
+    {
+      "id": "polished-cinnabar-stairs",
+      "name": "Polished Cinnabar Stairs",
+      "aliases": [],
+      "article": "Polished Cinnabar Stairs",
+      "sprite": 565
+    },
+    {
+      "id": "polished-cinnabar-wall",
+      "name": "Polished Cinnabar Wall",
+      "aliases": [],
+      "article": "Polished Cinnabar Wall",
+      "sprite": 566
+    },
+    {
+      "id": "polished-deepslate",
+      "name": "Polished Deepslate",
+      "aliases": [],
+      "article": "Polished Deepslate",
+      "sprite": 567
+    },
+    {
+      "id": "polished-deepslate-slab",
+      "name": "Polished Deepslate Slab",
+      "aliases": [],
+      "article": "Polished Deepslate Slab",
+      "sprite": 568
+    },
+    {
+      "id": "polished-deepslate-stairs",
+      "name": "Polished Deepslate Stairs",
+      "aliases": [],
+      "article": "Polished Deepslate Stairs",
+      "sprite": 569
+    },
+    {
+      "id": "polished-deepslate-wall",
+      "name": "Polished Deepslate Wall",
+      "aliases": [],
+      "article": "Polished Deepslate Wall",
+      "sprite": 570
+    },
+    {
+      "id": "polished-diorite",
+      "name": "Polished Diorite",
+      "aliases": [],
+      "article": "Polished Diorite",
+      "sprite": 571
+    },
+    {
+      "id": "polished-diorite-slab",
+      "name": "Polished Diorite Slab",
+      "aliases": [],
+      "article": "Polished Diorite Slab",
+      "sprite": 572
+    },
+    {
+      "id": "polished-diorite-stairs",
+      "name": "Polished Diorite Stairs",
+      "aliases": [],
+      "article": "Polished Diorite Stairs",
+      "sprite": 573
+    },
+    {
+      "id": "polished-granite",
+      "name": "Polished Granite",
+      "aliases": [],
+      "article": "Polished Granite",
+      "sprite": 574
+    },
+    {
+      "id": "polished-granite-slab",
+      "name": "Polished Granite Slab",
+      "aliases": [],
+      "article": "Polished Granite Slab",
+      "sprite": 575
+    },
+    {
+      "id": "polished-granite-stairs",
+      "name": "Polished Granite Stairs",
+      "aliases": [],
+      "article": "Polished Granite Stairs",
+      "sprite": 576
+    },
+    {
+      "id": "polished-sulfur",
+      "name": "Polished Sulfur",
+      "aliases": [],
+      "article": "Polished Sulfur",
+      "sprite": 577
+    },
+    {
+      "id": "polished-sulfur-slab",
+      "name": "Polished Sulfur Slab",
+      "aliases": [],
+      "article": "Polished Sulfur Slab",
+      "sprite": 578
+    },
+    {
+      "id": "polished-sulfur-stairs",
+      "name": "Polished Sulfur Stairs",
+      "aliases": [],
+      "article": "Polished Sulfur Stairs",
+      "sprite": 579
+    },
+    {
+      "id": "polished-sulfur-wall",
+      "name": "Polished Sulfur Wall",
+      "aliases": [],
+      "article": "Polished Sulfur Wall",
+      "sprite": 580
+    },
+    {
+      "id": "polished-tuff",
+      "name": "Polished Tuff",
+      "aliases": [],
+      "article": "Polished Tuff",
+      "sprite": 581
+    },
+    {
+      "id": "polished-tuff-slab",
+      "name": "Polished Tuff Slab",
+      "aliases": [],
+      "article": "Polished Tuff Slab",
+      "sprite": 582
+    },
+    {
+      "id": "polished-tuff-stairs",
+      "name": "Polished Tuff Stairs",
+      "aliases": [],
+      "article": "Polished Tuff Stairs",
+      "sprite": 583
+    },
+    {
+      "id": "polished-tuff-wall",
+      "name": "Polished Tuff Wall",
+      "aliases": [],
+      "article": "Polished Tuff Wall",
+      "sprite": 584
+    },
+    {
+      "id": "poppy",
+      "name": "Poppy",
+      "aliases": [],
+      "article": "Poppy",
+      "sprite": 585
+    },
+    {
+      "id": "potato",
+      "name": "Potato",
+      "aliases": [],
+      "article": "Potato",
+      "sprite": 586
+    },
+    {
+      "id": "potent-sulfur",
+      "name": "Potent Sulfur",
+      "aliases": [],
+      "article": "Potent Sulfur",
+      "sprite": 587
+    },
+    {
+      "id": "powder-snow",
+      "name": "Powder Snow",
+      "aliases": [],
+      "article": "Powder Snow",
+      "sprite": 588
+    },
+    {
+      "id": "powered-rail",
+      "name": "Powered Rail",
+      "aliases": [],
+      "article": "Powered Rail",
+      "sprite": 589
+    },
+    {
+      "id": "prismarine",
+      "name": "Prismarine",
+      "aliases": [],
+      "article": "Prismarine",
+      "sprite": 590
+    },
+    {
+      "id": "prismarine-brick-slab",
+      "name": "Prismarine Brick Slab",
+      "aliases": [],
+      "article": "Prismarine Brick Slab",
+      "sprite": 591
+    },
+    {
+      "id": "prismarine-brick-stairs",
+      "name": "Prismarine Brick Stairs",
+      "aliases": [],
+      "article": "Prismarine Brick Stairs",
+      "sprite": 592
+    },
+    {
+      "id": "prismarine-bricks",
+      "name": "Prismarine Bricks",
+      "aliases": [],
+      "article": "Prismarine Bricks",
+      "sprite": 593
+    },
+    {
+      "id": "prismarine-slab",
+      "name": "Prismarine Slab",
+      "aliases": [],
+      "article": "Prismarine Slab",
+      "sprite": 594
+    },
+    {
+      "id": "prismarine-stairs",
+      "name": "Prismarine Stairs",
+      "aliases": [],
+      "article": "Prismarine Stairs",
+      "sprite": 595
+    },
+    {
+      "id": "prismarine-wall",
+      "name": "Prismarine Wall",
+      "aliases": [],
+      "article": "Prismarine Wall",
+      "sprite": 596
+    },
+    {
+      "id": "pumpkin",
+      "name": "Pumpkin",
+      "aliases": [],
+      "article": "Pumpkin",
+      "sprite": 597
+    },
+    {
+      "id": "pumpkin-stem",
+      "name": "Pumpkin Stem",
+      "aliases": [],
+      "article": "Pumpkin Stem",
+      "sprite": 598
+    },
+    {
+      "id": "purpur-block",
+      "name": "Purpur Block",
+      "aliases": [],
+      "article": "Purpur Block",
+      "sprite": 599
+    },
+    {
+      "id": "purpur-pillar",
+      "name": "Purpur Pillar",
+      "aliases": [],
+      "article": "Purpur Pillar",
+      "sprite": 600
+    },
+    {
+      "id": "purpur-slab",
+      "name": "Purpur Slab",
+      "aliases": [],
+      "article": "Purpur Slab",
+      "sprite": 601
+    },
+    {
+      "id": "purpur-stairs",
+      "name": "Purpur Stairs",
+      "aliases": [],
+      "article": "Purpur Stairs",
+      "sprite": 602
+    },
+    {
+      "id": "quartz-bricks",
+      "name": "Quartz Bricks",
+      "aliases": [],
+      "article": "Quartz Bricks",
+      "sprite": 603
+    },
+    {
+      "id": "quartz-pillar",
+      "name": "Quartz Pillar",
+      "aliases": [],
+      "article": "Quartz Pillar",
+      "sprite": 604
+    },
+    {
+      "id": "quartz-slab",
+      "name": "Quartz Slab",
+      "aliases": [],
+      "article": "Quartz Slab",
+      "sprite": 605
+    },
+    {
+      "id": "quartz-stairs",
+      "name": "Quartz Stairs",
+      "aliases": [],
+      "article": "Quartz Stairs",
+      "sprite": 606
+    },
+    {
+      "id": "rail",
+      "name": "Rail",
+      "aliases": [],
+      "article": "Rail",
+      "sprite": 607
+    },
+    {
+      "id": "red-mushroom",
+      "name": "Red Mushroom",
+      "aliases": [],
+      "article": "Red Mushroom",
+      "sprite": 608
+    },
+    {
+      "id": "red-mushroom-block",
+      "name": "Red Mushroom Block",
+      "aliases": [],
+      "article": "Red Mushroom Block",
+      "sprite": 609
+    },
+    {
+      "id": "red-nether-brick-slab",
+      "name": "Red Nether Brick Slab",
+      "aliases": [],
+      "article": "Red Nether Brick Slab",
+      "sprite": 610
+    },
+    {
+      "id": "red-nether-brick-stairs",
+      "name": "Red Nether Brick Stairs",
+      "aliases": [],
+      "article": "Red Nether Brick Stairs",
+      "sprite": 611
+    },
+    {
+      "id": "red-nether-brick-wall",
+      "name": "Red Nether Brick Wall",
+      "aliases": [],
+      "article": "Red Nether Brick Wall",
+      "sprite": 612
+    },
+    {
+      "id": "red-nether-bricks",
+      "name": "Red Nether Bricks",
+      "aliases": [],
+      "article": "Red Nether Bricks",
+      "sprite": 613
+    },
+    {
+      "id": "red-sand",
+      "name": "Red Sand",
+      "aliases": [],
+      "article": "Red Sand",
+      "sprite": 614
+    },
+    {
+      "id": "red-sandstone",
+      "name": "Red Sandstone",
+      "aliases": [],
+      "article": "Red Sandstone",
+      "sprite": 615
+    },
+    {
+      "id": "red-sandstone-slab",
+      "name": "Red Sandstone Slab",
+      "aliases": [],
+      "article": "Red Sandstone Slab",
+      "sprite": 616
+    },
+    {
+      "id": "red-sandstone-stairs",
+      "name": "Red Sandstone Stairs",
+      "aliases": [],
+      "article": "Red Sandstone Stairs",
+      "sprite": 617
+    },
+    {
+      "id": "red-sandstone-wall",
+      "name": "Red Sandstone Wall",
+      "aliases": [],
+      "article": "Red Sandstone Wall",
+      "sprite": 618
+    },
+    {
+      "id": "red-tulip",
+      "name": "Red Tulip",
+      "aliases": [],
+      "article": "Red Tulip",
+      "sprite": 619
+    },
+    {
+      "id": "redstone-comparator",
+      "name": "Redstone Comparator",
+      "aliases": [],
+      "article": "Redstone Comparator",
+      "sprite": 620
+    },
+    {
+      "id": "redstone-lamp",
+      "name": "Redstone Lamp",
+      "aliases": [],
+      "article": "Redstone Lamp",
+      "sprite": 621
+    },
+    {
+      "id": "redstone-ore",
+      "name": "Redstone Ore",
+      "aliases": [],
+      "article": "Redstone Ore",
+      "sprite": 622
+    },
+    {
+      "id": "redstone-repeater",
+      "name": "Redstone Repeater",
+      "aliases": [],
+      "article": "Redstone Repeater",
+      "sprite": 623
+    },
+    {
+      "id": "redstone-torch",
+      "name": "Redstone Torch",
+      "aliases": [],
+      "article": "Redstone Torch",
+      "sprite": 624
+    },
+    {
+      "id": "redstone-wire",
+      "name": "Redstone Wire",
+      "aliases": [],
+      "article": "Redstone Wire",
+      "sprite": 625
+    },
+    {
+      "id": "reinforced-deepslate",
+      "name": "Reinforced Deepslate",
+      "aliases": [],
+      "article": "Reinforced Deepslate",
+      "sprite": 626
+    },
+    {
+      "id": "repeating-command-block",
+      "name": "Repeating Command Block",
+      "aliases": [],
+      "article": "Repeating Command Block",
+      "sprite": 627
+    },
+    {
+      "id": "resin-brick-slab",
+      "name": "Resin Brick Slab",
+      "aliases": [],
+      "article": "Resin Brick Slab",
+      "sprite": 628
+    },
+    {
+      "id": "resin-brick-stairs",
+      "name": "Resin Brick Stairs",
+      "aliases": [],
+      "article": "Resin Brick Stairs",
+      "sprite": 629
+    },
+    {
+      "id": "resin-brick-wall",
+      "name": "Resin Brick Wall",
+      "aliases": [],
+      "article": "Resin Brick Wall",
+      "sprite": 630
+    },
+    {
+      "id": "resin-bricks",
+      "name": "Resin Bricks",
+      "aliases": [],
+      "article": "Resin Bricks",
+      "sprite": 631
+    },
+    {
+      "id": "resin-clump",
+      "name": "Resin Clump",
+      "aliases": [],
+      "article": "Resin Clump",
+      "sprite": 632
+    },
+    {
+      "id": "respawn-anchor",
+      "name": "Respawn Anchor",
+      "aliases": [],
+      "article": "Respawn Anchor",
+      "sprite": 633
+    },
+    {
+      "id": "rooted-dirt",
+      "name": "Rooted Dirt",
+      "aliases": [],
+      "article": "Rooted Dirt",
+      "sprite": 634
+    },
+    {
+      "id": "rose-bush",
+      "name": "Rose Bush",
+      "aliases": [],
+      "article": "Rose Bush",
+      "sprite": 635
+    },
+    {
+      "id": "sand",
+      "name": "Sand",
+      "aliases": [],
+      "article": "Sand",
+      "sprite": 636
+    },
+    {
+      "id": "sandstone",
+      "name": "Sandstone",
+      "aliases": [],
+      "article": "Sandstone",
+      "sprite": 637
+    },
+    {
+      "id": "sandstone-slab",
+      "name": "Sandstone Slab",
+      "aliases": [],
+      "article": "Sandstone Slab",
+      "sprite": 638
+    },
+    {
+      "id": "sandstone-stairs",
+      "name": "Sandstone Stairs",
+      "aliases": [],
+      "article": "Sandstone Stairs",
+      "sprite": 639
+    },
+    {
+      "id": "sandstone-wall",
+      "name": "Sandstone Wall",
+      "aliases": [],
+      "article": "Sandstone Wall",
+      "sprite": 640
+    },
+    {
+      "id": "scaffolding",
+      "name": "Scaffolding",
+      "aliases": [],
+      "article": "Scaffolding",
+      "sprite": 641
+    },
+    {
+      "id": "sculk",
+      "name": "Sculk",
+      "aliases": [],
+      "article": "Sculk",
+      "sprite": 642
+    },
+    {
+      "id": "sculk-catalyst",
+      "name": "Sculk Catalyst",
+      "aliases": [],
+      "article": "Sculk Catalyst",
+      "sprite": 643
+    },
+    {
+      "id": "sculk-sensor",
+      "name": "Sculk Sensor",
+      "aliases": [],
+      "article": "Sculk Sensor",
+      "sprite": 644
+    },
+    {
+      "id": "sculk-shrieker",
+      "name": "Sculk Shrieker",
+      "aliases": [],
+      "article": "Sculk Shrieker",
+      "sprite": 645
+    },
+    {
+      "id": "sculk-vein",
+      "name": "Sculk Vein",
+      "aliases": [],
+      "article": "Sculk Vein",
+      "sprite": 646
+    },
+    {
+      "id": "sea-lantern",
+      "name": "Sea Lantern",
+      "aliases": [],
+      "article": "Sea Lantern",
+      "sprite": 647
+    },
+    {
+      "id": "sea-pickle",
+      "name": "Sea Pickle",
+      "aliases": [],
+      "article": "Sea Pickle",
+      "sprite": 648
+    },
+    {
+      "id": "seagrass",
+      "name": "Seagrass",
+      "aliases": [],
+      "article": "Seagrass",
+      "sprite": 649
+    },
+    {
+      "id": "short-dry-grass",
+      "name": "Short Dry Grass",
+      "aliases": [],
+      "article": "Short Dry Grass",
+      "sprite": 650
+    },
+    {
+      "id": "short-grass",
+      "name": "Short Grass",
+      "aliases": [],
+      "article": "Short Grass",
+      "sprite": 651
+    },
+    {
+      "id": "shroomlight",
+      "name": "Shroomlight",
+      "aliases": [],
+      "article": "Shroomlight",
+      "sprite": 652
+    },
+    {
+      "id": "shulker-box",
+      "name": "Shulker Box",
+      "aliases": [
+        "Black Shulker Box",
+        "Blue Shulker Box",
+        "Brown Shulker Box",
+        "Cyan Shulker Box",
+        "Gray Shulker Box",
+        "Green Shulker Box",
+        "Light Blue Shulker Box",
+        "Light Gray Shulker Box",
+        "Lime Shulker Box",
+        "Magenta Shulker Box",
+        "Orange Shulker Box",
+        "Pink Shulker Box",
+        "Purple Shulker Box",
+        "Red Shulker Box",
+        "White Shulker Box",
+        "Yellow Shulker Box"
+      ],
+      "article": "Shulker Box",
+      "sprite": 653
+    },
+    {
+      "id": "skeleton-skull",
+      "name": "Skeleton Skull",
+      "aliases": [],
+      "article": "Skeleton Skull",
+      "sprite": 654
+    },
+    {
+      "id": "slime-block",
+      "name": "Slime Block",
+      "aliases": [],
+      "article": "Slime Block",
+      "sprite": 655
+    },
+    {
+      "id": "small-amethyst-bud",
+      "name": "Small Amethyst Bud",
+      "aliases": [],
+      "article": "Small Amethyst Bud",
+      "sprite": 656
+    },
+    {
+      "id": "small-dripleaf",
+      "name": "Small Dripleaf",
+      "aliases": [],
+      "article": "Small Dripleaf",
+      "sprite": 657
+    },
+    {
+      "id": "smithing-table",
+      "name": "Smithing Table",
+      "aliases": [],
+      "article": "Smithing Table",
+      "sprite": 658
+    },
+    {
+      "id": "smoker",
+      "name": "Smoker",
+      "aliases": [],
+      "article": "Smoker",
+      "sprite": 659
+    },
+    {
+      "id": "smooth-basalt",
+      "name": "Smooth Basalt",
+      "aliases": [],
+      "article": "Smooth Basalt",
+      "sprite": 660
+    },
+    {
+      "id": "smooth-quartz-block",
+      "name": "Smooth Quartz Block",
+      "aliases": [],
+      "article": "Smooth Quartz Block",
+      "sprite": 661
+    },
+    {
+      "id": "smooth-quartz-slab",
+      "name": "Smooth Quartz Slab",
+      "aliases": [],
+      "article": "Smooth Quartz Slab",
+      "sprite": 662
+    },
+    {
+      "id": "smooth-quartz-stairs",
+      "name": "Smooth Quartz Stairs",
+      "aliases": [],
+      "article": "Smooth Quartz Stairs",
+      "sprite": 663
+    },
+    {
+      "id": "smooth-red-sandstone",
+      "name": "Smooth Red Sandstone",
+      "aliases": [],
+      "article": "Smooth Red Sandstone",
+      "sprite": 664
+    },
+    {
+      "id": "smooth-red-sandstone-slab",
+      "name": "Smooth Red Sandstone Slab",
+      "aliases": [],
+      "article": "Smooth Red Sandstone Slab",
+      "sprite": 665
+    },
+    {
+      "id": "smooth-red-sandstone-stairs",
+      "name": "Smooth Red Sandstone Stairs",
+      "aliases": [],
+      "article": "Smooth Red Sandstone Stairs",
+      "sprite": 666
+    },
+    {
+      "id": "smooth-sandstone",
+      "name": "Smooth Sandstone",
+      "aliases": [],
+      "article": "Smooth Sandstone",
+      "sprite": 667
+    },
+    {
+      "id": "smooth-sandstone-slab",
+      "name": "Smooth Sandstone Slab",
+      "aliases": [],
+      "article": "Smooth Sandstone Slab",
+      "sprite": 668
+    },
+    {
+      "id": "smooth-sandstone-stairs",
+      "name": "Smooth Sandstone Stairs",
+      "aliases": [],
+      "article": "Smooth Sandstone Stairs",
+      "sprite": 669
+    },
+    {
+      "id": "smooth-stone",
+      "name": "Smooth Stone",
+      "aliases": [],
+      "article": "Smooth Stone",
+      "sprite": 670
+    },
+    {
+      "id": "smooth-stone-slab",
+      "name": "Smooth Stone Slab",
+      "aliases": [],
+      "article": "Smooth Stone Slab",
+      "sprite": 671
+    },
+    {
+      "id": "sniffer-egg",
+      "name": "Sniffer Egg",
+      "aliases": [],
+      "article": "Sniffer Egg",
+      "sprite": 672
+    },
+    {
+      "id": "snow",
+      "name": "Snow",
+      "aliases": [],
+      "article": "Snow",
+      "sprite": 673
+    },
+    {
+      "id": "snow-block",
+      "name": "Snow Block",
+      "aliases": [],
+      "article": "Snow Block",
+      "sprite": 674
+    },
+    {
+      "id": "soul-campfire",
+      "name": "Soul Campfire",
+      "aliases": [],
+      "article": "Soul Campfire",
+      "sprite": 675
+    },
+    {
+      "id": "soul-fire",
+      "name": "Soul Fire",
+      "aliases": [],
+      "article": "Soul Fire",
+      "sprite": 676
+    },
+    {
+      "id": "soul-lantern",
+      "name": "Soul Lantern",
+      "aliases": [],
+      "article": "Soul Lantern",
+      "sprite": 677
+    },
+    {
+      "id": "soul-sand",
+      "name": "Soul Sand",
+      "aliases": [],
+      "article": "Soul Sand",
+      "sprite": 678
+    },
+    {
+      "id": "soul-soil",
+      "name": "Soul Soil",
+      "aliases": [],
+      "article": "Soul Soil",
+      "sprite": 679
+    },
+    {
+      "id": "soul-torch",
+      "name": "Soul Torch",
+      "aliases": [],
+      "article": "Soul Torch",
+      "sprite": 680
+    },
+    {
+      "id": "sponge",
+      "name": "Sponge",
+      "aliases": [],
+      "article": "Sponge",
+      "sprite": 681
+    },
+    {
+      "id": "spore-blossom",
+      "name": "Spore Blossom",
+      "aliases": [],
+      "article": "Spore Blossom",
+      "sprite": 682
+    },
+    {
+      "id": "spruce-button",
+      "name": "Spruce Button",
+      "aliases": [],
+      "article": "Spruce Button",
+      "sprite": 683
+    },
+    {
+      "id": "spruce-door",
+      "name": "Spruce Door",
+      "aliases": [],
+      "article": "Spruce Door",
+      "sprite": 684
+    },
+    {
+      "id": "spruce-fence",
+      "name": "Spruce Fence",
+      "aliases": [],
+      "article": "Spruce Fence",
+      "sprite": 685
+    },
+    {
+      "id": "spruce-fence-gate",
+      "name": "Spruce Fence Gate",
+      "aliases": [],
+      "article": "Spruce Fence Gate",
+      "sprite": 686
+    },
+    {
+      "id": "spruce-hanging-sign",
+      "name": "Spruce Hanging Sign",
+      "aliases": [],
+      "article": "Spruce Hanging Sign",
+      "sprite": 687
+    },
+    {
+      "id": "spruce-leaves",
+      "name": "Spruce Leaves",
+      "aliases": [],
+      "article": "Spruce Leaves",
+      "sprite": 688
+    },
+    {
+      "id": "spruce-log",
+      "name": "Spruce Log",
+      "aliases": [],
+      "article": "Spruce Log",
+      "sprite": 689
+    },
+    {
+      "id": "spruce-planks",
+      "name": "Spruce Planks",
+      "aliases": [],
+      "article": "Spruce Planks",
+      "sprite": 690
+    },
+    {
+      "id": "spruce-pressure-plate",
+      "name": "Spruce Pressure Plate",
+      "aliases": [],
+      "article": "Spruce Pressure Plate",
+      "sprite": 691
+    },
+    {
+      "id": "spruce-sapling",
+      "name": "Spruce Sapling",
+      "aliases": [],
+      "article": "Spruce Sapling",
+      "sprite": 692
+    },
+    {
+      "id": "spruce-shelf",
+      "name": "Spruce Shelf",
+      "aliases": [],
+      "article": "Spruce Shelf",
+      "sprite": 693
+    },
+    {
+      "id": "spruce-sign",
+      "name": "Spruce Sign",
+      "aliases": [],
+      "article": "Spruce Sign",
+      "sprite": 694
+    },
+    {
+      "id": "spruce-slab",
+      "name": "Spruce Slab",
+      "aliases": [],
+      "article": "Spruce Slab",
+      "sprite": 695
+    },
+    {
+      "id": "spruce-stairs",
+      "name": "Spruce Stairs",
+      "aliases": [],
+      "article": "Spruce Stairs",
+      "sprite": 696
+    },
+    {
+      "id": "spruce-trapdoor",
+      "name": "Spruce Trapdoor",
+      "aliases": [],
+      "article": "Spruce Trapdoor",
+      "sprite": 697
+    },
+    {
+      "id": "spruce-wood",
+      "name": "Spruce Wood",
+      "aliases": [],
+      "article": "Spruce Wood",
+      "sprite": 698
+    },
+    {
+      "id": "sticky-piston",
+      "name": "Sticky Piston",
+      "aliases": [],
+      "article": "Sticky Piston",
+      "sprite": 699
+    },
+    {
+      "id": "stone",
+      "name": "Stone",
+      "aliases": [],
+      "article": "Stone",
+      "sprite": 700
+    },
+    {
+      "id": "stone-brick-slab",
+      "name": "Stone Brick Slab",
+      "aliases": [],
+      "article": "Stone Brick Slab",
+      "sprite": 701
+    },
+    {
+      "id": "stone-brick-stairs",
+      "name": "Stone Brick Stairs",
+      "aliases": [],
+      "article": "Stone Brick Stairs",
+      "sprite": 702
+    },
+    {
+      "id": "stone-brick-wall",
+      "name": "Stone Brick Wall",
+      "aliases": [],
+      "article": "Stone Brick Wall",
+      "sprite": 703
+    },
+    {
+      "id": "stone-bricks",
+      "name": "Stone Bricks",
+      "aliases": [],
+      "article": "Stone Bricks",
+      "sprite": 704
+    },
+    {
+      "id": "stone-button",
+      "name": "Stone Button",
+      "aliases": [],
+      "article": "Stone Button",
+      "sprite": 705
+    },
+    {
+      "id": "stone-pressure-plate",
+      "name": "Stone Pressure Plate",
+      "aliases": [],
+      "article": "Stone Pressure Plate",
+      "sprite": 706
+    },
+    {
+      "id": "stone-slab",
+      "name": "Stone Slab",
+      "aliases": [],
+      "article": "Stone Slab",
+      "sprite": 707
+    },
+    {
+      "id": "stone-stairs",
+      "name": "Stone Stairs",
+      "aliases": [],
+      "article": "Stone Stairs",
+      "sprite": 708
+    },
+    {
+      "id": "stonecutter",
+      "name": "Stonecutter",
+      "aliases": [],
+      "article": "Stonecutter",
+      "sprite": 709
+    },
+    {
+      "id": "stripped-acacia-log",
+      "name": "Stripped Acacia Log",
+      "aliases": [],
+      "article": "Stripped Acacia Log",
+      "sprite": 710
+    },
+    {
+      "id": "stripped-acacia-wood",
+      "name": "Stripped Acacia Wood",
+      "aliases": [],
+      "article": "Stripped Acacia Wood",
+      "sprite": 711
+    },
+    {
+      "id": "stripped-birch-log",
+      "name": "Stripped Birch Log",
+      "aliases": [],
+      "article": "Stripped Birch Log",
+      "sprite": 712
+    },
+    {
+      "id": "stripped-birch-wood",
+      "name": "Stripped Birch Wood",
+      "aliases": [],
+      "article": "Stripped Birch Wood",
+      "sprite": 713
+    },
+    {
+      "id": "stripped-cherry-log",
+      "name": "Stripped Cherry Log",
+      "aliases": [],
+      "article": "Stripped Cherry Log",
+      "sprite": 714
+    },
+    {
+      "id": "stripped-cherry-wood",
+      "name": "Stripped Cherry Wood",
+      "aliases": [],
+      "article": "Stripped Cherry Wood",
+      "sprite": 715
+    },
+    {
+      "id": "stripped-crimson-hyphae",
+      "name": "Stripped Crimson Hyphae",
+      "aliases": [],
+      "article": "Stripped Crimson Hyphae",
+      "sprite": 716
+    },
+    {
+      "id": "stripped-crimson-stem",
+      "name": "Stripped Crimson Stem",
+      "aliases": [],
+      "article": "Stripped Crimson Stem",
+      "sprite": 717
+    },
+    {
+      "id": "stripped-dark-oak-log",
+      "name": "Stripped Dark Oak Log",
+      "aliases": [],
+      "article": "Stripped Dark Oak Log",
+      "sprite": 718
+    },
+    {
+      "id": "stripped-dark-oak-wood",
+      "name": "Stripped Dark Oak Wood",
+      "aliases": [],
+      "article": "Stripped Dark Oak Wood",
+      "sprite": 719
+    },
+    {
+      "id": "stripped-jungle-log",
+      "name": "Stripped Jungle Log",
+      "aliases": [],
+      "article": "Stripped Jungle Log",
+      "sprite": 720
+    },
+    {
+      "id": "stripped-jungle-wood",
+      "name": "Stripped Jungle Wood",
+      "aliases": [],
+      "article": "Stripped Jungle Wood",
+      "sprite": 721
+    },
+    {
+      "id": "stripped-mangrove-log",
+      "name": "Stripped Mangrove Log",
+      "aliases": [],
+      "article": "Stripped Mangrove Log",
+      "sprite": 722
+    },
+    {
+      "id": "stripped-mangrove-wood",
+      "name": "Stripped Mangrove Wood",
+      "aliases": [],
+      "article": "Stripped Mangrove Wood",
+      "sprite": 723
+    },
+    {
+      "id": "stripped-oak-log",
+      "name": "Stripped Oak Log",
+      "aliases": [],
+      "article": "Stripped Oak Log",
+      "sprite": 724
+    },
+    {
+      "id": "stripped-oak-wood",
+      "name": "Stripped Oak Wood",
+      "aliases": [],
+      "article": "Stripped Oak Wood",
+      "sprite": 725
+    },
+    {
+      "id": "stripped-pale-oak-log",
+      "name": "Stripped Pale Oak Log",
+      "aliases": [],
+      "article": "Stripped Pale Oak Log",
+      "sprite": 726
+    },
+    {
+      "id": "stripped-pale-oak-wood",
+      "name": "Stripped Pale Oak Wood",
+      "aliases": [],
+      "article": "Stripped Pale Oak Wood",
+      "sprite": 727
+    },
+    {
+      "id": "stripped-spruce-log",
+      "name": "Stripped Spruce Log",
+      "aliases": [],
+      "article": "Stripped Spruce Log",
+      "sprite": 728
+    },
+    {
+      "id": "stripped-spruce-wood",
+      "name": "Stripped Spruce Wood",
+      "aliases": [],
+      "article": "Stripped Spruce Wood",
+      "sprite": 729
+    },
+    {
+      "id": "stripped-warped-hyphae",
+      "name": "Stripped Warped Hyphae",
+      "aliases": [],
+      "article": "Stripped Warped Hyphae",
+      "sprite": 730
+    },
+    {
+      "id": "stripped-warped-stem",
+      "name": "Stripped Warped Stem",
+      "aliases": [],
+      "article": "Stripped Warped Stem",
+      "sprite": 731
+    },
+    {
+      "id": "structure-block",
+      "name": "Structure Block",
+      "aliases": [],
+      "article": "Structure Block",
+      "sprite": 732
+    },
+    {
+      "id": "structure-void",
+      "name": "Structure Void",
+      "aliases": [],
+      "article": "Structure Void",
+      "sprite": 733
+    },
+    {
+      "id": "sugar-cane",
+      "name": "Sugar Cane",
+      "aliases": [],
+      "article": "Sugar Cane",
+      "sprite": 734
+    },
+    {
+      "id": "sulfur",
+      "name": "Sulfur",
+      "aliases": [],
+      "article": "Sulfur",
+      "sprite": 735
+    },
+    {
+      "id": "sulfur-brick-slab",
+      "name": "Sulfur Brick Slab",
+      "aliases": [],
+      "article": "Sulfur Brick Slab",
+      "sprite": 736
+    },
+    {
+      "id": "sulfur-brick-stairs",
+      "name": "Sulfur Brick Stairs",
+      "aliases": [],
+      "article": "Sulfur Brick Stairs",
+      "sprite": 737
+    },
+    {
+      "id": "sulfur-brick-wall",
+      "name": "Sulfur Brick Wall",
+      "aliases": [],
+      "article": "Sulfur Brick Wall",
+      "sprite": 738
+    },
+    {
+      "id": "sulfur-bricks",
+      "name": "Sulfur Bricks",
+      "aliases": [],
+      "article": "Sulfur Bricks",
+      "sprite": 739
+    },
+    {
+      "id": "sulfur-slab",
+      "name": "Sulfur Slab",
+      "aliases": [],
+      "article": "Sulfur Slab",
+      "sprite": 740
+    },
+    {
+      "id": "sulfur-spike",
+      "name": "Sulfur Spike",
+      "aliases": [],
+      "article": "Sulfur Spike",
+      "sprite": 741
+    },
+    {
+      "id": "sulfur-stairs",
+      "name": "Sulfur Stairs",
+      "aliases": [],
+      "article": "Sulfur Stairs",
+      "sprite": 742
+    },
+    {
+      "id": "sulfur-wall",
+      "name": "Sulfur Wall",
+      "aliases": [],
+      "article": "Sulfur Wall",
+      "sprite": 743
+    },
+    {
+      "id": "sunflower",
+      "name": "Sunflower",
+      "aliases": [],
+      "article": "Sunflower",
+      "sprite": 744
+    },
+    {
+      "id": "suspicious-gravel",
+      "name": "Suspicious Gravel",
+      "aliases": [],
+      "article": "Suspicious Gravel",
+      "sprite": 745
+    },
+    {
+      "id": "suspicious-sand",
+      "name": "Suspicious Sand",
+      "aliases": [],
+      "article": "Suspicious Sand",
+      "sprite": 746
+    },
+    {
+      "id": "sweet-berry-bush",
+      "name": "Sweet Berry Bush",
+      "aliases": [],
+      "article": "Sweet Berry Bush",
+      "sprite": 747
+    },
+    {
+      "id": "tall-dry-grass",
+      "name": "Tall Dry Grass",
+      "aliases": [],
+      "article": "Tall Dry Grass",
+      "sprite": 748
+    },
+    {
+      "id": "tall-grass",
+      "name": "Tall Grass",
+      "aliases": [],
+      "article": "Tall Grass",
+      "sprite": 749
+    },
+    {
+      "id": "tall-seagrass",
+      "name": "Tall Seagrass",
+      "aliases": [],
+      "article": "Tall Seagrass",
+      "sprite": 750
+    },
+    {
+      "id": "target",
+      "name": "Target",
+      "aliases": [],
+      "article": "Target",
+      "sprite": 751
+    },
+    {
+      "id": "terracotta",
+      "name": "Terracotta",
+      "aliases": [
+        "Black Terracotta",
+        "Blue Terracotta",
+        "Brown Terracotta",
+        "Cyan Terracotta",
+        "Gray Terracotta",
+        "Green Terracotta",
+        "Light Blue Terracotta",
+        "Light Gray Terracotta",
+        "Lime Terracotta",
+        "Magenta Terracotta",
+        "Orange Terracotta",
+        "Pink Terracotta",
+        "Purple Terracotta",
+        "Red Terracotta",
+        "White Terracotta",
+        "Yellow Terracotta"
+      ],
+      "article": "Terracotta",
+      "sprite": 752
+    },
+    {
+      "id": "test-block",
+      "name": "Test Block",
+      "aliases": [],
+      "article": "Test Block",
+      "sprite": 753
+    },
+    {
+      "id": "test-instance-block",
+      "name": "Test Instance Block",
+      "aliases": [],
+      "article": "Test Instance Block",
+      "sprite": 754
+    },
+    {
+      "id": "tinted-glass",
+      "name": "Tinted Glass",
+      "aliases": [],
+      "article": "Tinted Glass",
+      "sprite": 755
+    },
+    {
+      "id": "tnt",
+      "name": "TNT",
+      "aliases": [],
+      "article": "TNT",
+      "sprite": 756
+    },
+    {
+      "id": "torch",
+      "name": "Torch",
+      "aliases": [],
+      "article": "Torch",
+      "sprite": 757
+    },
+    {
+      "id": "torchflower",
+      "name": "Torchflower",
+      "aliases": [],
+      "article": "Torchflower",
+      "sprite": 758
+    },
+    {
+      "id": "torchflower-crop",
+      "name": "Torchflower Crop",
+      "aliases": [],
+      "article": "Torchflower Crop",
+      "sprite": 759
+    },
+    {
+      "id": "trapped-chest",
+      "name": "Trapped Chest",
+      "aliases": [],
+      "article": "Trapped Chest",
+      "sprite": 760
+    },
+    {
+      "id": "trial-spawner",
+      "name": "Trial Spawner",
+      "aliases": [],
+      "article": "Trial Spawner",
+      "sprite": 761
+    },
+    {
+      "id": "tripwire",
+      "name": "Tripwire",
+      "aliases": [],
+      "article": "Tripwire",
+      "sprite": 762
+    },
+    {
+      "id": "tripwire-hook",
+      "name": "Tripwire Hook",
+      "aliases": [],
+      "article": "Tripwire Hook",
+      "sprite": 763
+    },
+    {
+      "id": "tube-coral",
+      "name": "Tube Coral",
+      "aliases": [],
+      "article": "Tube Coral",
+      "sprite": 764
+    },
+    {
+      "id": "tube-coral-block",
+      "name": "Tube Coral Block",
+      "aliases": [],
+      "article": "Tube Coral Block",
+      "sprite": 765
+    },
+    {
+      "id": "tube-coral-fan",
+      "name": "Tube Coral Fan",
+      "aliases": [],
+      "article": "Tube Coral Fan",
+      "sprite": 766
+    },
+    {
+      "id": "tuff",
+      "name": "Tuff",
+      "aliases": [],
+      "article": "Tuff",
+      "sprite": 767
+    },
+    {
+      "id": "tuff-brick-slab",
+      "name": "Tuff Brick Slab",
+      "aliases": [],
+      "article": "Tuff Brick Slab",
+      "sprite": 768
+    },
+    {
+      "id": "tuff-brick-stairs",
+      "name": "Tuff Brick Stairs",
+      "aliases": [],
+      "article": "Tuff Brick Stairs",
+      "sprite": 769
+    },
+    {
+      "id": "tuff-brick-wall",
+      "name": "Tuff Brick Wall",
+      "aliases": [],
+      "article": "Tuff Brick Wall",
+      "sprite": 770
+    },
+    {
+      "id": "tuff-bricks",
+      "name": "Tuff Bricks",
+      "aliases": [],
+      "article": "Tuff Bricks",
+      "sprite": 771
+    },
+    {
+      "id": "tuff-slab",
+      "name": "Tuff Slab",
+      "aliases": [],
+      "article": "Tuff Slab",
+      "sprite": 772
+    },
+    {
+      "id": "tuff-stairs",
+      "name": "Tuff Stairs",
+      "aliases": [],
+      "article": "Tuff Stairs",
+      "sprite": 773
+    },
+    {
+      "id": "tuff-wall",
+      "name": "Tuff Wall",
+      "aliases": [],
+      "article": "Tuff Wall",
+      "sprite": 774
+    },
+    {
+      "id": "turtle-egg",
+      "name": "Turtle Egg",
+      "aliases": [],
+      "article": "Turtle Egg",
+      "sprite": 775
+    },
+    {
+      "id": "twisting-vines",
+      "name": "Twisting Vines",
+      "aliases": [],
+      "article": "Twisting Vines",
+      "sprite": 776
+    },
+    {
+      "id": "vault",
+      "name": "Vault",
+      "aliases": [],
+      "article": "Vault",
+      "sprite": 777
+    },
+    {
+      "id": "verdant-froglight",
+      "name": "Verdant Froglight",
+      "aliases": [],
+      "article": "Verdant Froglight",
+      "sprite": 778
+    },
+    {
+      "id": "vines",
+      "name": "Vines",
+      "aliases": [],
+      "article": "Vines",
+      "sprite": 779
+    },
+    {
+      "id": "warped-button",
+      "name": "Warped Button",
+      "aliases": [],
+      "article": "Warped Button",
+      "sprite": 780
+    },
+    {
+      "id": "warped-door",
+      "name": "Warped Door",
+      "aliases": [],
+      "article": "Warped Door",
+      "sprite": 781
+    },
+    {
+      "id": "warped-fence",
+      "name": "Warped Fence",
+      "aliases": [],
+      "article": "Warped Fence",
+      "sprite": 782
+    },
+    {
+      "id": "warped-fence-gate",
+      "name": "Warped Fence Gate",
+      "aliases": [],
+      "article": "Warped Fence Gate",
+      "sprite": 783
+    },
+    {
+      "id": "warped-fungus",
+      "name": "Warped Fungus",
+      "aliases": [],
+      "article": "Warped Fungus",
+      "sprite": 784
+    },
+    {
+      "id": "warped-hanging-sign",
+      "name": "Warped Hanging Sign",
+      "aliases": [],
+      "article": "Warped Hanging Sign",
+      "sprite": 785
+    },
+    {
+      "id": "warped-hyphae",
+      "name": "Warped Hyphae",
+      "aliases": [],
+      "article": "Warped Hyphae",
+      "sprite": 786
+    },
+    {
+      "id": "warped-nylium",
+      "name": "Warped Nylium",
+      "aliases": [],
+      "article": "Warped Nylium",
+      "sprite": 787
+    },
+    {
+      "id": "warped-planks",
+      "name": "Warped Planks",
+      "aliases": [],
+      "article": "Warped Planks",
+      "sprite": 788
+    },
+    {
+      "id": "warped-pressure-plate",
+      "name": "Warped Pressure Plate",
+      "aliases": [],
+      "article": "Warped Pressure Plate",
+      "sprite": 789
+    },
+    {
+      "id": "warped-roots",
+      "name": "Warped Roots",
+      "aliases": [],
+      "article": "Warped Roots",
+      "sprite": 790
+    },
+    {
+      "id": "warped-shelf",
+      "name": "Warped Shelf",
+      "aliases": [],
+      "article": "Warped Shelf",
+      "sprite": 791
+    },
+    {
+      "id": "warped-sign",
+      "name": "Warped Sign",
+      "aliases": [],
+      "article": "Warped Sign",
+      "sprite": 792
+    },
+    {
+      "id": "warped-slab",
+      "name": "Warped Slab",
+      "aliases": [],
+      "article": "Warped Slab",
+      "sprite": 793
+    },
+    {
+      "id": "warped-stairs",
+      "name": "Warped Stairs",
+      "aliases": [],
+      "article": "Warped Stairs",
+      "sprite": 794
+    },
+    {
+      "id": "warped-stem",
+      "name": "Warped Stem",
+      "aliases": [],
+      "article": "Warped Stem",
+      "sprite": 795
+    },
+    {
+      "id": "warped-trapdoor",
+      "name": "Warped Trapdoor",
+      "aliases": [],
+      "article": "Warped Trapdoor",
+      "sprite": 796
+    },
+    {
+      "id": "warped-wart-block",
+      "name": "Warped Wart Block",
+      "aliases": [],
+      "article": "Warped Wart Block",
+      "sprite": 797
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "aliases": [],
+      "article": "Water",
+      "sprite": 798
+    },
+    {
+      "id": "waxed-block-of-copper",
+      "name": "Waxed Block of Copper",
+      "aliases": [],
+      "article": "Waxed Block of Copper",
+      "sprite": 799
+    },
+    {
+      "id": "waxed-chiseled-copper",
+      "name": "Waxed Chiseled Copper",
+      "aliases": [],
+      "article": "Waxed Chiseled Copper",
+      "sprite": 800
+    },
+    {
+      "id": "waxed-copper-bars",
+      "name": "Waxed Copper Bars",
+      "aliases": [],
+      "article": "Waxed Copper Bars",
+      "sprite": 801
+    },
+    {
+      "id": "waxed-copper-bulb",
+      "name": "Waxed Copper Bulb",
+      "aliases": [],
+      "article": "Waxed Copper Bulb",
+      "sprite": 802
+    },
+    {
+      "id": "waxed-copper-chain",
+      "name": "Waxed Copper Chain",
+      "aliases": [],
+      "article": "Waxed Copper Chain",
+      "sprite": 803
+    },
+    {
+      "id": "waxed-copper-chest",
+      "name": "Waxed Copper Chest",
+      "aliases": [],
+      "article": "Waxed Copper Chest",
+      "sprite": 804
+    },
+    {
+      "id": "waxed-copper-door",
+      "name": "Waxed Copper Door",
+      "aliases": [],
+      "article": "Waxed Copper Door",
+      "sprite": 805
+    },
+    {
+      "id": "waxed-copper-golem-statue",
+      "name": "Waxed Copper Golem Statue",
+      "aliases": [],
+      "article": "Waxed Copper Golem Statue",
+      "sprite": 806
+    },
+    {
+      "id": "waxed-copper-grate",
+      "name": "Waxed Copper Grate",
+      "aliases": [],
+      "article": "Waxed Copper Grate",
+      "sprite": 807
+    },
+    {
+      "id": "waxed-copper-lantern",
+      "name": "Waxed Copper Lantern",
+      "aliases": [],
+      "article": "Waxed Copper Lantern",
+      "sprite": 808
+    },
+    {
+      "id": "waxed-copper-trapdoor",
+      "name": "Waxed Copper Trapdoor",
+      "aliases": [],
+      "article": "Waxed Copper Trapdoor",
+      "sprite": 809
+    },
+    {
+      "id": "waxed-cut-copper",
+      "name": "Waxed Cut Copper",
+      "aliases": [],
+      "article": "Waxed Cut Copper",
+      "sprite": 810
+    },
+    {
+      "id": "waxed-cut-copper-slab",
+      "name": "Waxed Cut Copper Slab",
+      "aliases": [],
+      "article": "Waxed Cut Copper Slab",
+      "sprite": 811
+    },
+    {
+      "id": "waxed-cut-copper-stairs",
+      "name": "Waxed Cut Copper Stairs",
+      "aliases": [],
+      "article": "Waxed Cut Copper Stairs",
+      "sprite": 812
+    },
+    {
+      "id": "waxed-exposed-chiseled-copper",
+      "name": "Waxed Exposed Chiseled Copper",
+      "aliases": [],
+      "article": "Waxed Exposed Chiseled Copper",
+      "sprite": 813
+    },
+    {
+      "id": "waxed-exposed-copper",
+      "name": "Waxed Exposed Copper",
+      "aliases": [],
+      "article": "Waxed Exposed Copper",
+      "sprite": 814
+    },
+    {
+      "id": "waxed-exposed-copper-bars",
+      "name": "Waxed Exposed Copper Bars",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Bars",
+      "sprite": 815
+    },
+    {
+      "id": "waxed-exposed-copper-bulb",
+      "name": "Waxed Exposed Copper Bulb",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Bulb",
+      "sprite": 816
+    },
+    {
+      "id": "waxed-exposed-copper-chain",
+      "name": "Waxed Exposed Copper Chain",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Chain",
+      "sprite": 817
+    },
+    {
+      "id": "waxed-exposed-copper-chest",
+      "name": "Waxed Exposed Copper Chest",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Chest",
+      "sprite": 818
+    },
+    {
+      "id": "waxed-exposed-copper-door",
+      "name": "Waxed Exposed Copper Door",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Door",
+      "sprite": 819
+    },
+    {
+      "id": "waxed-exposed-copper-golem-statue",
+      "name": "Waxed Exposed Copper Golem Statue",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Golem Statue",
+      "sprite": 820
+    },
+    {
+      "id": "waxed-exposed-copper-grate",
+      "name": "Waxed Exposed Copper Grate",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Grate",
+      "sprite": 821
+    },
+    {
+      "id": "waxed-exposed-copper-lantern",
+      "name": "Waxed Exposed Copper Lantern",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Lantern",
+      "sprite": 822
+    },
+    {
+      "id": "waxed-exposed-copper-trapdoor",
+      "name": "Waxed Exposed Copper Trapdoor",
+      "aliases": [],
+      "article": "Waxed Exposed Copper Trapdoor",
+      "sprite": 823
+    },
+    {
+      "id": "waxed-exposed-cut-copper",
+      "name": "Waxed Exposed Cut Copper",
+      "aliases": [],
+      "article": "Waxed Exposed Cut Copper",
+      "sprite": 824
+    },
+    {
+      "id": "waxed-exposed-cut-copper-slab",
+      "name": "Waxed Exposed Cut Copper Slab",
+      "aliases": [],
+      "article": "Waxed Exposed Cut Copper Slab",
+      "sprite": 825
+    },
+    {
+      "id": "waxed-exposed-cut-copper-stairs",
+      "name": "Waxed Exposed Cut Copper Stairs",
+      "aliases": [],
+      "article": "Waxed Exposed Cut Copper Stairs",
+      "sprite": 826
+    },
+    {
+      "id": "waxed-exposed-lightning-rod",
+      "name": "Waxed Exposed Lightning Rod",
+      "aliases": [],
+      "article": "Waxed Exposed Lightning Rod",
+      "sprite": 827
+    },
+    {
+      "id": "waxed-lightning-rod",
+      "name": "Waxed Lightning Rod",
+      "aliases": [],
+      "article": "Waxed Lightning Rod",
+      "sprite": 828
+    },
+    {
+      "id": "waxed-oxidized-chiseled-copper",
+      "name": "Waxed Oxidized Chiseled Copper",
+      "aliases": [],
+      "article": "Waxed Oxidized Chiseled Copper",
+      "sprite": 829
+    },
+    {
+      "id": "waxed-oxidized-copper",
+      "name": "Waxed Oxidized Copper",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper",
+      "sprite": 830
+    },
+    {
+      "id": "waxed-oxidized-copper-bars",
+      "name": "Waxed Oxidized Copper Bars",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Bars",
+      "sprite": 831
+    },
+    {
+      "id": "waxed-oxidized-copper-bulb",
+      "name": "Waxed Oxidized Copper Bulb",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Bulb",
+      "sprite": 832
+    },
+    {
+      "id": "waxed-oxidized-copper-chain",
+      "name": "Waxed Oxidized Copper Chain",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Chain",
+      "sprite": 833
+    },
+    {
+      "id": "waxed-oxidized-copper-chest",
+      "name": "Waxed Oxidized Copper Chest",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Chest",
+      "sprite": 834
+    },
+    {
+      "id": "waxed-oxidized-copper-door",
+      "name": "Waxed Oxidized Copper Door",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Door",
+      "sprite": 835
+    },
+    {
+      "id": "waxed-oxidized-copper-golem-statue",
+      "name": "Waxed Oxidized Copper Golem Statue",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Golem Statue",
+      "sprite": 836
+    },
+    {
+      "id": "waxed-oxidized-copper-grate",
+      "name": "Waxed Oxidized Copper Grate",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Grate",
+      "sprite": 837
+    },
+    {
+      "id": "waxed-oxidized-copper-lantern",
+      "name": "Waxed Oxidized Copper Lantern",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Lantern",
+      "sprite": 838
+    },
+    {
+      "id": "waxed-oxidized-copper-trapdoor",
+      "name": "Waxed Oxidized Copper Trapdoor",
+      "aliases": [],
+      "article": "Waxed Oxidized Copper Trapdoor",
+      "sprite": 839
+    },
+    {
+      "id": "waxed-oxidized-cut-copper",
+      "name": "Waxed Oxidized Cut Copper",
+      "aliases": [],
+      "article": "Waxed Oxidized Cut Copper",
+      "sprite": 840
+    },
+    {
+      "id": "waxed-oxidized-cut-copper-slab",
+      "name": "Waxed Oxidized Cut Copper Slab",
+      "aliases": [],
+      "article": "Waxed Oxidized Cut Copper Slab",
+      "sprite": 841
+    },
+    {
+      "id": "waxed-oxidized-cut-copper-stairs",
+      "name": "Waxed Oxidized Cut Copper Stairs",
+      "aliases": [],
+      "article": "Waxed Oxidized Cut Copper Stairs",
+      "sprite": 842
+    },
+    {
+      "id": "waxed-oxidized-lightning-rod",
+      "name": "Waxed Oxidized Lightning Rod",
+      "aliases": [],
+      "article": "Waxed Oxidized Lightning Rod",
+      "sprite": 843
+    },
+    {
+      "id": "waxed-weathered-chiseled-copper",
+      "name": "Waxed Weathered Chiseled Copper",
+      "aliases": [],
+      "article": "Waxed Weathered Chiseled Copper",
+      "sprite": 844
+    },
+    {
+      "id": "waxed-weathered-copper",
+      "name": "Waxed Weathered Copper",
+      "aliases": [],
+      "article": "Waxed Weathered Copper",
+      "sprite": 845
+    },
+    {
+      "id": "waxed-weathered-copper-bars",
+      "name": "Waxed Weathered Copper Bars",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Bars",
+      "sprite": 846
+    },
+    {
+      "id": "waxed-weathered-copper-bulb",
+      "name": "Waxed Weathered Copper Bulb",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Bulb",
+      "sprite": 847
+    },
+    {
+      "id": "waxed-weathered-copper-chain",
+      "name": "Waxed Weathered Copper Chain",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Chain",
+      "sprite": 848
+    },
+    {
+      "id": "waxed-weathered-copper-chest",
+      "name": "Waxed Weathered Copper Chest",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Chest",
+      "sprite": 849
+    },
+    {
+      "id": "waxed-weathered-copper-door",
+      "name": "Waxed Weathered Copper Door",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Door",
+      "sprite": 850
+    },
+    {
+      "id": "waxed-weathered-copper-golem-statue",
+      "name": "Waxed Weathered Copper Golem Statue",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Golem Statue",
+      "sprite": 851
+    },
+    {
+      "id": "waxed-weathered-copper-grate",
+      "name": "Waxed Weathered Copper Grate",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Grate",
+      "sprite": 852
+    },
+    {
+      "id": "waxed-weathered-copper-lantern",
+      "name": "Waxed Weathered Copper Lantern",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Lantern",
+      "sprite": 853
+    },
+    {
+      "id": "waxed-weathered-copper-trapdoor",
+      "name": "Waxed Weathered Copper Trapdoor",
+      "aliases": [],
+      "article": "Waxed Weathered Copper Trapdoor",
+      "sprite": 854
+    },
+    {
+      "id": "waxed-weathered-cut-copper",
+      "name": "Waxed Weathered Cut Copper",
+      "aliases": [],
+      "article": "Waxed Weathered Cut Copper",
+      "sprite": 855
+    },
+    {
+      "id": "waxed-weathered-cut-copper-slab",
+      "name": "Waxed Weathered Cut Copper Slab",
+      "aliases": [],
+      "article": "Waxed Weathered Cut Copper Slab",
+      "sprite": 856
+    },
+    {
+      "id": "waxed-weathered-cut-copper-stairs",
+      "name": "Waxed Weathered Cut Copper Stairs",
+      "aliases": [],
+      "article": "Waxed Weathered Cut Copper Stairs",
+      "sprite": 857
+    },
+    {
+      "id": "waxed-weathered-lightning-rod",
+      "name": "Waxed Weathered Lightning Rod",
+      "aliases": [],
+      "article": "Waxed Weathered Lightning Rod",
+      "sprite": 858
+    },
+    {
+      "id": "weathered-chiseled-copper",
+      "name": "Weathered Chiseled Copper",
+      "aliases": [],
+      "article": "Weathered Chiseled Copper",
+      "sprite": 859
+    },
+    {
+      "id": "weathered-copper",
+      "name": "Weathered Copper",
+      "aliases": [],
+      "article": "Weathered Copper",
+      "sprite": 860
+    },
+    {
+      "id": "weathered-copper-bars",
+      "name": "Weathered Copper Bars",
+      "aliases": [],
+      "article": "Weathered Copper Bars",
+      "sprite": 861
+    },
+    {
+      "id": "weathered-copper-bulb",
+      "name": "Weathered Copper Bulb",
+      "aliases": [],
+      "article": "Weathered Copper Bulb",
+      "sprite": 862
+    },
+    {
+      "id": "weathered-copper-chain",
+      "name": "Weathered Copper Chain",
+      "aliases": [],
+      "article": "Weathered Copper Chain",
+      "sprite": 863
+    },
+    {
+      "id": "weathered-copper-chest",
+      "name": "Weathered Copper Chest",
+      "aliases": [],
+      "article": "Weathered Copper Chest",
+      "sprite": 864
+    },
+    {
+      "id": "weathered-copper-door",
+      "name": "Weathered Copper Door",
+      "aliases": [],
+      "article": "Weathered Copper Door",
+      "sprite": 865
+    },
+    {
+      "id": "weathered-copper-golem-statue",
+      "name": "Weathered Copper Golem Statue",
+      "aliases": [],
+      "article": "Weathered Copper Golem Statue",
+      "sprite": 866
+    },
+    {
+      "id": "weathered-copper-grate",
+      "name": "Weathered Copper Grate",
+      "aliases": [],
+      "article": "Weathered Copper Grate",
+      "sprite": 867
+    },
+    {
+      "id": "weathered-copper-lantern",
+      "name": "Weathered Copper Lantern",
+      "aliases": [],
+      "article": "Weathered Copper Lantern",
+      "sprite": 868
+    },
+    {
+      "id": "weathered-copper-trapdoor",
+      "name": "Weathered Copper Trapdoor",
+      "aliases": [],
+      "article": "Weathered Copper Trapdoor",
+      "sprite": 869
+    },
+    {
+      "id": "weathered-cut-copper",
+      "name": "Weathered Cut Copper",
+      "aliases": [],
+      "article": "Weathered Cut Copper",
+      "sprite": 870
+    },
+    {
+      "id": "weathered-cut-copper-slab",
+      "name": "Weathered Cut Copper Slab",
+      "aliases": [],
+      "article": "Weathered Cut Copper Slab",
+      "sprite": 871
+    },
+    {
+      "id": "weathered-cut-copper-stairs",
+      "name": "Weathered Cut Copper Stairs",
+      "aliases": [],
+      "article": "Weathered Cut Copper Stairs",
+      "sprite": 872
+    },
+    {
+      "id": "weathered-lightning-rod",
+      "name": "Weathered Lightning Rod",
+      "aliases": [],
+      "article": "Weathered Lightning Rod",
+      "sprite": 873
+    },
+    {
+      "id": "weeping-vines",
+      "name": "Weeping Vines",
+      "aliases": [],
+      "article": "Weeping Vines",
+      "sprite": 874
+    },
+    {
+      "id": "wet-sponge",
+      "name": "Wet Sponge",
+      "aliases": [],
+      "article": "Wet Sponge",
+      "sprite": 875
+    },
+    {
+      "id": "wheat-crops",
+      "name": "Wheat Crops",
+      "aliases": [],
+      "article": "Wheat Crops",
+      "sprite": 876
+    },
+    {
+      "id": "white-tulip",
+      "name": "White Tulip",
+      "aliases": [],
+      "article": "White Tulip",
+      "sprite": 877
+    },
+    {
+      "id": "wildflowers",
+      "name": "Wildflowers",
+      "aliases": [],
+      "article": "Wildflowers",
+      "sprite": 878
+    },
+    {
+      "id": "wither-rose",
+      "name": "Wither Rose",
+      "aliases": [],
+      "article": "Wither Rose",
+      "sprite": 879
+    },
+    {
+      "id": "wither-skeleton-skull",
+      "name": "Wither Skeleton Skull",
+      "aliases": [],
+      "article": "Wither Skeleton Skull",
+      "sprite": 880
+    },
+    {
+      "id": "wool",
+      "name": "Wool",
+      "aliases": [
+        "Black Wool",
+        "Blue Wool",
+        "Brown Wool",
+        "Cyan Wool",
+        "Gray Wool",
+        "Green Wool",
+        "Light Blue Wool",
+        "Light Gray Wool",
+        "Lime Wool",
+        "Magenta Wool",
+        "Orange Wool",
+        "Pink Wool",
+        "Purple Wool",
+        "Red Wool",
+        "White Wool",
+        "Yellow Wool"
+      ],
+      "article": "White Wool",
+      "sprite": 881
+    },
+    {
+      "id": "zombie-head",
+      "name": "Zombie Head",
+      "aliases": [],
+      "article": "Zombie Head",
+      "sprite": 882
+    }
+  ]
+}
