@@ -213,14 +213,25 @@ describe("block hunt", () => {
       new Date("2026-09-02T23:00:00Z"),
     );
 
-    expect(puzzle.answer).toBe("Guardian");
+    expect(puzzle.answer).toBe("Shulker");
     expect(puzzle.clues[0]?.text).toBe("This mob is classified as hostile.");
     expect(puzzle.clues[1]?.text).toBe(
       "Its combat includes a ranged attack.",
     );
+    expect(puzzle.clues[2]?.text).toBe(
+      "Its hitbox is at least one block tall but under two blocks.",
+    );
+    expect(puzzle.clues.map((clue) => clue.label)).toEqual([
+      "Disposition",
+      "General behaviour",
+      "Physical profile",
+      "Technical trait",
+      "Distinctive behaviour",
+      "Identity",
+    ]);
     expect(
       puzzle.clues
-        .slice(0, 2)
+        .slice(0, 3)
         .some((clue) =>
           clue.text.toLowerCase().includes(puzzle.answer.toLowerCase()),
         ),
@@ -228,7 +239,7 @@ describe("block hunt", () => {
   });
 
   test("every early Mob Hunt clue applies to several prepared answers", () => {
-    for (const clueIndex of [0, 1]) {
+    for (const clueIndex of [0, 1, 2]) {
       const clueCounts = new Map<string, number>();
 
       for (const puzzle of MOB_HUNT_PUZZLES) {
