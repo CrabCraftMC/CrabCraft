@@ -37,7 +37,7 @@ function mobPuzzle(
 // Facts are curated from the corresponding current Java Edition pages on Minecraft Wiki.
 export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
   mobPuzzle("Allay", [
-    "This passive flying mob has 20 health and naturally regenerates 2 health each second.",
+    "This mob naturally regenerates 2 health each second.",
     "Its hitbox is only 0.6 blocks high and 0.35 blocks wide.",
     "It appears in cages beside pillager outposts and in jail cells inside woodland mansions.",
     "After receiving an item, it collects matching dropped items within its search range.",
@@ -45,7 +45,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This small blue helper delivers collected items to a player or note block.",
   ]),
   mobPuzzle("Armadillo", [
-    "This passive animal has 12 health and can be bred with spider eyes.",
+    "This animal has 12 health.",
     "When curled up, it reduces most incoming damage and exposes a hard shell.",
     "It spawns in savanna and badlands biomes, including several warmer variants.",
     "Nearby sprinting players, undead mobs, or hostile riders can make it roll into a defensive ball.",
@@ -53,7 +53,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This small savanna animal supplies the material used to craft wolf armour.",
   ]),
   mobPuzzle("Axolotl", [
-    "This passive aquatic mob has 14 health and five possible colour variants.",
+    "This aquatic mob has 14 health.",
     "It can survive on land for only five minutes before taking damage unless rain or water is available.",
     "It spawns underwater in lush caves when clay is below the spawning position.",
     "It attacks many aquatic mobs but normally ignores players, turtles, dolphins, and frogs.",
@@ -61,7 +61,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This bucketable cave amphibian sometimes plays dead when injured.",
   ]),
   mobPuzzle("Bee", [
-    "This neutral flying arthropod has 10 health and becomes unable to sting again after one successful sting.",
+    "After one successful attack, this mob cannot attack again.",
     "Its body is 0.6 blocks high and 0.7 blocks wide, small enough to enter its nest opening.",
     "Natural nests generate with these occupants near certain oak, birch, and cherry trees.",
     "It gathers pollen from flowers, fertilises crops, and increases the honey level when it returns home.",
@@ -69,7 +69,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This striped pollinator lives in nests and produces honey.",
   ]),
   mobPuzzle("Blaze", [
-    "This hostile monster has 20 health and is damaged by water, rain, and powder snow.",
+    "Powder snow damages this Nether mob.",
     "It floats above the ground and is surrounded by twelve rotating rods.",
     "Nether fortresses contain both natural spawning areas and dedicated spawners for it.",
     "It rises before firing a burst of three flaming projectiles, then pauses before attacking again.",
@@ -77,7 +77,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This yellow Nether fortress mob attacks with fireballs.",
   ]),
   mobPuzzle("Bogged", [
-    "This hostile undead mob has 16 health, less than most other skeleton variants.",
+    "This undead mob has 16 health.",
     "Mushrooms grow from its moss-covered body, and shearing removes two of them.",
     "It spawns in swamps and mangrove swamps and can appear from certain trial spawners.",
     "Its bow attack is slower than a skeleton's but applies Poison for four seconds.",
@@ -85,7 +85,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This green skeleton variant fires poisoned arrows from swampy habitats.",
   ]),
   mobPuzzle("Breeze", [
-    "This hostile mob has 30 health and is immune to fall damage and most projectile damage.",
+    "Most projectile attacks cannot damage this mob.",
     "It is 1.77 blocks tall but can compress its hitbox while making long jumps.",
     "Specific trial spawners in trial chambers summon it during combat challenges.",
     "It circles targets by leaping, then fires projectiles whose bursts cause powerful knockback.",
@@ -93,7 +93,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This purple trial chamber mob drops breeze rods and controls the wind.",
   ]),
   mobPuzzle("Creaking", [
-    "This hostile construct has a single health point, yet normal attacks do not kill it while its heart is linked.",
+    "This construct has only one health point.",
     "It is 2.7 blocks tall and has distinctive three-eyed orange markings.",
     "An active creaking heart between aligned pale oak logs creates one at night.",
     "It moves only when no survival or adventure player is looking directly at it.",
@@ -101,7 +101,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This wooden Pale Garden creature freezes under a player's gaze.",
   ]),
   mobPuzzle("Creeper", [
-    "This hostile mob has 20 health, no arms, and an explosion whose damage changes with distance and difficulty.",
+    "Its fuse duration and explosion radius are stored separately.",
     "Its Java Edition hitbox is 1.7 blocks high and only 0.6 blocks wide.",
     "It spawns in the Overworld at light level zero, except in mushroom fields and the deep dark.",
     "It approaches silently, begins a short fuse near a player, and abandons the explosion if the target escapes.",
@@ -109,7 +109,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This iconic green monster hisses immediately before exploding.",
   ]),
   mobPuzzle("Enderman", [
-    "This neutral mob has 40 health and takes damage from water, rain, and ordinary splash water bottles.",
+    "This neutral mob can spawn naturally in all three dimensions.",
     "At 2.9 blocks tall, it cannot enter a two-block-high space without teleporting or crouching unusually.",
     "It spawns in all three dimensions, but is especially common in warped forests and the End.",
     "Direct eye contact provokes it, while wearing a carved pumpkin prevents that visual trigger.",
@@ -117,7 +117,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This tall dark mob teleports and commonly drops ender pearls.",
   ]),
   mobPuzzle("Evoker", [
-    "This hostile illager has 24 health and uses spell attacks rather than carrying a conventional weapon.",
+    "This mob attacks through spell warmups rather than a held weapon.",
     "It raises its arms and displays coloured particles while preparing each spell.",
     "It naturally appears in woodland mansions and in later waves of village raids.",
     "One spell raises a line of damaging fangs, while another summons flying attackers.",
@@ -125,7 +125,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This robed illager summons vexes and always drops a totem of undying.",
   ]),
   mobPuzzle("Frog", [
-    "This passive animal has 10 health and comes in temperate, cold, and warm variants.",
+    "Its adult variant is selected when it matures rather than when its egg is laid.",
     "Its jump can clear roughly eight blocks horizontally and five blocks vertically.",
     "Tadpoles mature into a variant chosen by the temperature of the biome where they grow up.",
     "It attacks small slimes and magma cubes by extending its tongue.",
@@ -133,7 +133,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This amphibian grows from a tadpole and is bred using slimeballs.",
   ]),
   mobPuzzle("Happy Ghast", [
-    "This passive flying mob has 20 health and naturally regenerates faster while near cloud height.",
+    "This mob regenerates faster while near cloud height.",
     "It has a large cubic body and can carry up to four players when equipped appropriately.",
     "A dried form must first be hydrated into a ghastling, then fed or allowed to mature.",
     "It follows tempting snowballs and can be tethered to blocks using leads.",
@@ -141,7 +141,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This smiling Overworld-friendly ghast variant begins life as a dried block from the Nether.",
   ]),
   mobPuzzle("Iron Golem", [
-    "This neutral utility mob has 100 health and very high knockback resistance.",
+    "This utility mob has full knockback resistance.",
     "Its tall hitbox is 2.7 blocks high and 1.4 blocks wide.",
     "Villages can summon it when villagers meet social and population conditions, or players can build one from blocks.",
     "It patrols villages and launches many hostile mobs into the air with heavy upward swings.",
@@ -149,7 +149,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This large village defender can be built from four iron blocks and a carved pumpkin.",
   ]),
   mobPuzzle("Phantom", [
-    "This hostile undead flying mob has 20 health and burns in daylight.",
+    "Its size data supports larger bodies, although natural examples use the smallest value.",
     "Its wingspan changes with its internal size value, though natural examples use the smallest size.",
     "It can spawn at night above players who have avoided sleep for at least three in-game days.",
     "It circles high overhead before swooping down to strike its target.",
@@ -157,7 +157,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This nocturnal blue flyer punishes players who have not slept.",
   ]),
   mobPuzzle("Shulker", [
-    "This hostile golem-like mob has 30 health and 20 armour points while its shell is closed.",
+    "Closing its shell raises this mob's armour to 20 points.",
     "It occupies a one-block cube but can open its shell and extend its head outward.",
     "It naturally generates attached to solid surfaces throughout End cities.",
     "Its homing projectile follows grid-aligned paths and applies Levitation on impact.",
@@ -165,7 +165,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This purple box-shaped End mob drops shells used for portable storage.",
   ]),
   mobPuzzle("Sniffer", [
-    "This passive animal has 14 health and cannot be tamed or tempted to follow food.",
+    "This mob has 14 health.",
     "Its adult body is almost two blocks tall and more than two blocks long.",
     "It does not spawn naturally; two eggs found through archaeology are needed to establish a renewable population.",
     "Adults periodically smell the ground, search for a valid spot, and dig up ancient seeds.",
@@ -173,7 +173,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This huge ancient mob hatches from an egg and uncovers torchflower seeds and pitcher pods.",
   ]),
   mobPuzzle("Strider", [
-    "This passive Nether animal has 20 health and shivers when it is not warm.",
+    "This mob's movement speed changes when its body is cold.",
     "Its two-block-tall body stands on long legs and can support another mob as a rider.",
     "It spawns on lava, with some appearing beneath a riding zombified piglin.",
     "It walks freely across lava but moves much more slowly on land and takes damage from water and rain.",
@@ -181,7 +181,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This red Nether mount is the survival transport designed for lava.",
   ]),
   mobPuzzle("Warden", [
-    "This hostile mob has 500 health, full knockback resistance, and a ranged attack that bypasses defensive equipment.",
+    "This mob has full knockback resistance.",
     "Its standing hitbox is 2.9 blocks high, but it compresses while emerging from or digging into the ground.",
     "Repeated activation of naturally generated sculk shriekers can summon it from the deep dark floor.",
     "It is blind, building anger by detecting vibrations, smelling nearby entities, or being touched.",
@@ -189,7 +189,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This ancient city threat is meant to be avoided rather than fought.",
   ]),
   mobPuzzle("Wither", [
-    "This undead boss has 300 health in Java Edition and becomes armoured below half health.",
+    "Its armoured state is controlled by whether it is below half health.",
     "Its three heads can target independently, with the side heads firing at secondary targets.",
     "Players summon it by arranging soul sand or soul soil with three wither skeleton skulls.",
     "After charging its health, it creates a large initial explosion and begins firing explosive skulls.",
@@ -197,7 +197,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This player-built three-headed boss inflicts the Wither effect.",
   ]),
   mobPuzzle("Piglin", [
-    "This neutral Nether mob has 16 health and can use swords or crossbows.",
+    "This mob can spawn with either a melee or ranged weapon.",
     "Adults are about 1.95 blocks tall, while baby variants are much smaller and never become armed fighters.",
     "It spawns in Nether wastes, crimson forests, and bastion remnants.",
     "Wearing at least one piece of gold armour prevents its normal hostility, but opening guarded containers still provokes it.",
@@ -205,7 +205,7 @@ export const MOB_HUNT_PUZZLES: readonly MobHuntPuzzle[] = [
     "This gold-loving Nether humanoid becomes zombified outside its home dimension.",
   ]),
   mobPuzzle("Guardian", [
-    "This hostile aquatic mob has 30 health and damages melee attackers while its spikes are extended.",
+    "Melee attackers take damage only while this mob's spikes are extended.",
     "Its body is an irregular one-block shape with an animated eye and retractable orange spikes.",
     "It spawns in and around ocean monuments when water and local conditions are suitable.",
     "It locks onto a target before releasing a beam whose damage cannot be avoided by simply moving sideways.",

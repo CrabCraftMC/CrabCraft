@@ -64,6 +64,8 @@ const INITIAL_GAME: SavedGame = {
   timerEnabled: true,
 };
 
+const HUNT_STORAGE_VERSION = 3;
+
 function readSavedGame(key: string): SavedGame {
   try {
     const saved = JSON.parse(localStorage.getItem(key) ?? "null");
@@ -235,7 +237,7 @@ export default function BlockHunt({ kind = "block" }: { kind?: HuntKind }) {
   const catalogue = getHuntCatalogue(kind);
   const dailyNumber = getHuntDailyNumber();
   const puzzle = getHuntDailyPuzzle(kind);
-  const puzzleKey = `crabcraft-${kind}-hunt-timed:daily:${dailyNumber}`;
+  const puzzleKey = `crabcraft-${kind}-hunt-v${HUNT_STORAGE_VERSION}:daily:${dailyNumber}`;
 
   const [game, setGame] = useState<SavedGame>(INITIAL_GAME);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
@@ -255,6 +257,7 @@ export default function BlockHunt({ kind = "block" }: { kind?: HuntKind }) {
   const huntMenuRef = useRef<HTMLSpanElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
+  const gameReady = loadedKey === puzzleKey;
   const finished = game.phase !== "playing";
   const started = game.startedAt !== null;
   const availableClues = finished ? HUNT_CLUES : game.cluesRevealed;
@@ -582,24 +585,28 @@ export default function BlockHunt({ kind = "block" }: { kind?: HuntKind }) {
         <div className="mx-auto max-w-2xl">
           <div className="mb-4 flex items-center justify-between text-xs font-bold text-gray-400">
             <span>Daily #{dailyNumber}</span>
-            <span className="flex items-center gap-2">
-              <span>{formatGuessCount(attemptCount)}</span>
-              {game.timerEnabled && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <time className="tabular-nums">
-                    {formatDuration(elapsedMs)}
-                  </time>
-                </>
-              )}
-            </span>
+            {gameReady && (
+              <span className="flex items-center gap-2">
+                <span>{formatGuessCount(attemptCount)}</span>
+                {game.timerEnabled && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <time className="tabular-nums">
+                      {formatDuration(elapsedMs)}
+                    </time>
+                  </>
+                )}
+              </span>
+            )}
           </div>
 
           <Squircle
             cornerRadius={24}
             className="bg-paper-2 px-6 py-8 shadow-sm sm:px-10 sm:py-10"
           >
-            {!started ? (
+            {!gameReady ? (
+              <div aria-hidden="true" className="min-h-48" />
+            ) : !started ? (
               <motion.div
                 initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -641,10 +648,10 @@ export default function BlockHunt({ kind = "block" }: { kind?: HuntKind }) {
                     }`}
                   >
                     <span
-                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                      className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
                         game.timerEnabled
-                          ? "translate-x-[18px]"
-                          : "translate-x-0.5"
+                          ? "translate-x-4"
+                          : "translate-x-0"
                       }`}
                     />
                   </span>
@@ -702,7 +709,7 @@ export default function BlockHunt({ kind = "block" }: { kind?: HuntKind }) {
             )}
           </Squircle>
 
-          {started && (!finished ? (
+          {gameReady && started && (!finished ? (
             <form onSubmit={submitGuess} className="mt-8">
               <label
                 htmlFor={`${kind}-hunt-guess`}
