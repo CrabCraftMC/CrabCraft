@@ -19,14 +19,6 @@ function formatGuessCount(count: number): string {
   return `${count} ${count === 1 ? "guess" : "guesses"}`;
 }
 
-function formatProgress(phase: "won" | "lost", attemptCount: number): string {
-  const used = Math.min(BLOCK_HUNT_CLUES, Math.max(0, attemptCount));
-  const incorrect = phase === "won" ? Math.max(0, used - 1) : used;
-  const correct = phase === "won" ? 1 : 0;
-  const unused = BLOCK_HUNT_CLUES - incorrect - correct;
-  return `${"⬛".repeat(incorrect)}${"🟧".repeat(correct)}${"⬜".repeat(unused)}`;
-}
-
 export function formatBlockHuntShare({
   dailyNumber,
   phase,
@@ -34,15 +26,15 @@ export function formatBlockHuntShare({
   cluesRevealed,
   elapsedMs,
 }: BlockHuntShareInput): string {
-  const outcome =
+  const result =
     phase === "won"
-      ? `Solved in ${formatGuessCount(attemptCount)}`
-      : `Not solved after ${formatGuessCount(attemptCount)}`;
+      ? `Solved on clue ${cluesRevealed} of ${BLOCK_HUNT_CLUES}`
+      : `Not solved after clue ${cluesRevealed} of ${BLOCK_HUNT_CLUES}`;
 
   return [
-    `Block Hunt #${dailyNumber}`,
-    formatProgress(phase, attemptCount),
-    `${outcome} · ${cluesRevealed} of ${BLOCK_HUNT_CLUES} clues · ${formatDuration(elapsedMs)}`,
+    `Block Hunt #${dailyNumber} ${phase === "won" ? "✅" : "❌"}`,
+    result,
+    `${formatGuessCount(attemptCount)} · ${formatDuration(elapsedMs)}`,
     "https://crabcraft.net/games/block-hunt",
   ].join("\n");
 }

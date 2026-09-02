@@ -60,7 +60,7 @@ describe("block hunt", () => {
         elapsedMs: 83_000,
       }),
     ).toBe(
-      "Block Hunt #8\n⬛⬛🟧⬜⬜⬜\nSolved in 3 guesses · 4 of 6 clues · 01:23\nhttps://crabcraft.net/games/block-hunt",
+      "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses · 01:23\nhttps://crabcraft.net/games/block-hunt",
     );
   });
 
