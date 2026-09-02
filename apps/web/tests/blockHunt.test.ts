@@ -225,7 +225,7 @@ describe("block hunt", () => {
       "Disposition",
       "General behaviour",
       "Physical profile",
-      "Technical trait",
+      "Distinctive trait",
       "Distinctive behaviour",
       "Identity",
     ]);
