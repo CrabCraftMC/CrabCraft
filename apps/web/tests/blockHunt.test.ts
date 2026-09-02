@@ -114,7 +114,7 @@ describe("block hunt", () => {
   test("uses complete stable Java catalogues from Minecraft Wiki", () => {
     const minimumEntries: Record<HuntKind, number> = {
       block: 850,
-      item: 450,
+      item: 350,
       mob: 80,
     };
 
@@ -129,9 +129,27 @@ describe("block hunt", () => {
     }
 
     expect(getHuntEntry("item", "Diamond")?.name).toBe("Diamond");
+    expect(getHuntEntry("item", "Bolt Armor Trim")?.name).toBe("Armor Trim");
+    expect(getHuntEntry("item", "Red Bundle")?.name).toBe("Bundle");
+    expect(getHuntEntry("item", "Blue Dye")?.name).toBe("Dye");
+    expect(getHuntEntry("item", "Black Harness")?.name).toBe("Harness");
+    expect(getHuntEntry("item", "Skull Pottery Sherd")?.name).toBe(
+      "Pottery Sherd",
+    );
+    expect(getHuntEntry("item", "Thing Banner Pattern")?.name).toBe(
+      "Banner Pattern",
+    );
     expect(getHuntEntry("mob", "Warden")?.name).toBe("Warden");
     expect(getHuntEntry("mob", "Sulfur Cube")?.name).toBe("Sulfur Cube");
     expect(searchHuntEntries("item", "elytra")[0]?.name).toBe("Elytra");
+    expect(
+      searchHuntEntries("item", "wayfinder armor trim").map(
+        (entry) => entry.name,
+      ),
+    ).toEqual(["Armor Trim"]);
+    expect(
+      searchHuntEntries("item", "red bundle").map((entry) => entry.name),
+    ).toEqual(["Bundle"]);
   });
 
   test("has six guessable clues for every item and mob puzzle", () => {

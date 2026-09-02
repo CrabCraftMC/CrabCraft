@@ -70,6 +70,9 @@ const COLOURS = [
 const colourMembers = (suffix: string) =>
   new Set(COLOURS.map((colour) => `${colour} ${suffix}`));
 
+const suffixedMembers = (prefixes: readonly string[], suffix: string) =>
+  new Set(prefixes.map((prefix) => `${prefix} ${suffix}`));
+
 const BLOCK_GROUPS: FunctionalGroup[] = [
   { id: "banner", name: "Banner", representative: "White Banner", members: colourMembers("Banner") },
   { id: "bed", name: "Bed", representative: "White Bed", members: colourMembers("Bed") },
@@ -122,6 +125,54 @@ const BLOCK_GROUPS: FunctionalGroup[] = [
 
 const ITEM_GROUPS: FunctionalGroup[] = [
   {
+    id: "armor-trim",
+    name: "Armor Trim",
+    representative: "Bolt Armor Trim",
+    members: suffixedMembers(
+      [
+        "Bolt",
+        "Coast",
+        "Dune",
+        "Eye",
+        "Flow",
+        "Host",
+        "Raiser",
+        "Rib",
+        "Sentry",
+        "Shaper",
+        "Silence",
+        "Snout",
+        "Spire",
+        "Tide",
+        "Vex",
+        "Ward",
+        "Wayfinder",
+        "Wild",
+      ],
+      "Armor Trim",
+    ),
+  },
+  {
+    id: "banner-pattern",
+    name: "Banner Pattern",
+    representative: "Creeper Charge Banner Pattern",
+    members: suffixedMembers(
+      [
+        "Bordure Indented",
+        "Creeper Charge",
+        "Field Masoned",
+        "Flow",
+        "Flower Charge",
+        "Globe",
+        "Guster",
+        "Skull Charge",
+        "Snout",
+        "Thing",
+      ],
+      "Banner Pattern",
+    ),
+  },
+  {
     id: "boat",
     name: "Boat",
     representative: "Oak Boat",
@@ -154,6 +205,57 @@ const ITEM_GROUPS: FunctionalGroup[] = [
       "Pale Oak Boat with Chest",
       "Spruce Boat with Chest",
     ]),
+  },
+  {
+    id: "bundle",
+    name: "Bundle",
+    representative: "Bundle",
+    members: new Set(["Bundle", ...colourMembers("Bundle")]),
+  },
+  {
+    id: "dye",
+    name: "Dye",
+    representative: "White Dye",
+    members: colourMembers("Dye"),
+  },
+  {
+    id: "harness",
+    name: "Harness",
+    representative: "White Harness",
+    members: colourMembers("Harness"),
+  },
+  {
+    id: "pottery-sherd",
+    name: "Pottery Sherd",
+    representative: "Angler Pottery Sherd",
+    members: suffixedMembers(
+      [
+        "Angler",
+        "Archer",
+        "Arms Up",
+        "Blade",
+        "Brewer",
+        "Burn",
+        "Danger",
+        "Explorer",
+        "Flow",
+        "Friend",
+        "Guster",
+        "Heart",
+        "Heartbreak",
+        "Howl",
+        "Miner",
+        "Mourner",
+        "Plenty",
+        "Prize",
+        "Scrape",
+        "Sheaf",
+        "Shelter",
+        "Skull",
+        "Snort",
+      ],
+      "Pottery Sherd",
+    ),
   },
 ];
 
