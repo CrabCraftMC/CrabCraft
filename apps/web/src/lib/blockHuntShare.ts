@@ -5,7 +5,7 @@ type BlockHuntShareInput = {
   phase: "won" | "lost";
   attemptCount: number;
   cluesRevealed: number;
-  elapsedMs: number;
+  elapsedMs: number | null;
 };
 
 function formatDuration(milliseconds: number): string {
@@ -34,7 +34,9 @@ export function formatBlockHuntShare({
   return [
     `Block Hunt #${dailyNumber} ${phase === "won" ? "✅" : "❌"}`,
     result,
-    `${formatGuessCount(attemptCount)} · ${formatDuration(elapsedMs)}`,
+    elapsedMs === null
+      ? formatGuessCount(attemptCount)
+      : `${formatGuessCount(attemptCount)} · ${formatDuration(elapsedMs)}`,
     "https://crabcraft.net/games/block-hunt",
   ].join("\n");
 }
