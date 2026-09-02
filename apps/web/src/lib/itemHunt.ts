@@ -1,0 +1,215 @@
+import type { BlockHuntClue, BlockHuntPuzzle } from "@/lib/blockHunt";
+
+type ItemHuntPuzzle = Omit<BlockHuntPuzzle, "texture">;
+
+const clueKinds: readonly BlockHuntClue["kind"][] = [
+  "data",
+  "data",
+  "world",
+  "behaviour",
+  "behaviour",
+  "world",
+];
+
+const clueLabels = [
+  "Inventory profile",
+  "Technical detail",
+  "Obtaining",
+  "Use",
+  "Distinctive rule",
+  "Identity",
+] as const;
+
+function itemPuzzle(
+  answer: string,
+  clues: readonly [string, string, string, string, string, string],
+): ItemHuntPuzzle {
+  return {
+    answer,
+    clues: clues.map((text, index) => ({
+      kind: clueKinds[index],
+      label: clueLabels[index],
+      text,
+    })),
+  };
+}
+
+// Facts are curated from the corresponding current Java Edition pages on Minecraft Wiki.
+export const ITEM_HUNT_PUZZLES: readonly ItemHuntPuzzle[] = [
+  itemPuzzle("Elytra", [
+    "This epic item is unstackable, non-renewable, and has 432 durability in Java Edition.",
+    "It occupies the chest slot but supplies no armour points or armour toughness.",
+    "Only end ships in the outer End islands naturally contain it, displayed in an item frame.",
+    "Pressing jump while falling changes normal movement into a controllable glide.",
+    "Firework rockets provide propulsion, while phantom membranes repair its durability.",
+    "These wearable wings let a survival player glide through the air.",
+  ]),
+  itemPuzzle("Mace", [
+    "This epic, unstackable weapon has 500 durability, 6 base damage, and an attack speed of 0.6.",
+    "Its special attack can accumulate uncapped damage from the height fallen before impact.",
+    "Crafting it requires one heavy core above one breeze rod.",
+    "A successful smash attack cancels the fall damage accumulated before the hit.",
+    "Density increases falling damage, Breach reduces effective armour, and Wind Burst launches the attacker.",
+    "This heavy weapon rewards dropping onto a target from high above.",
+  ]),
+  itemPuzzle("Recovery Compass", [
+    "This uncommon item stacks to 64 and is not renewable.",
+    "Its target is stored in the player's LastDeathLocation data rather than in the item itself.",
+    "Eight echo shards surrounding a compass form its crafting recipe.",
+    "It points correctly only when its holder is in the same dimension as their most recent death.",
+    "Without a valid target, its needle spins randomly just like a normal compass outside its supported dimension.",
+    "This compass leads a returning player towards the place where they last died.",
+  ]),
+  itemPuzzle("Totem of Undying", [
+    "This uncommon item is renewable but cannot be stacked.",
+    "It must be in either hand when fatal damage arrives, and it is consumed when activated.",
+    "Evokers always drop one when killed, making raids its main renewable source.",
+    "Activation restores a small amount of health, clears existing effects, and grants protective effects.",
+    "It cannot save a player from the void or from the kill command.",
+    "Holding this small golden figure can prevent a fatal hit once.",
+  ]),
+  itemPuzzle("Trident", [
+    "This unstackable weapon has 250 durability in Java Edition and works in melee or at range.",
+    "Unlike arrows, a thrown one remains an entity that can be collected after landing.",
+    "It is obtained from certain naturally equipped drowned rather than through crafting.",
+    "Loyalty returns it after a throw, while Channeling can call lightning during a thunderstorm.",
+    "Riptide propels the user through water or rain but prevents normal throwing.",
+    "This three-pronged drowned weapon can be thrown like a spear.",
+  ]),
+  itemPuzzle("Crossbow", [
+    "This unstackable ranged weapon has 465 durability and can remain loaded in an inventory.",
+    "Its projectile is stored as item data, so charging and firing are separate actions.",
+    "Pillagers and piglins can carry it, and it can also be crafted from sticks, string, iron, and a tripwire hook.",
+    "It fires arrows or firework rockets after a longer loading action than a bow uses.",
+    "Multishot produces three projectiles for one piece of ammunition, while Quick Charge shortens loading.",
+    "This horizontal bow-like weapon is the signature armament of pillagers.",
+  ]),
+  itemPuzzle("Wind Charge", [
+    "This stackable projectile has a short reuse delay after it is thrown.",
+    "Its burst deals little direct damage but applies strong knockback and can interact with several redstone components.",
+    "Breezes drop it, and breeze rods can also be crafted into it.",
+    "Players can fire it to launch themselves, with fall damage beginning from the height of the burst.",
+    "Its explosion can toggle doors, trapdoors, fence gates, levers, and certain buttons without destroying blocks.",
+    "This throwable breeze projectile creates a compact blast of air.",
+  ]),
+  itemPuzzle("Goat Horn", [
+    "This unstackable instrument has eight possible sound variants in Java Edition.",
+    "The four screaming-goat variants cannot be obtained from ordinary goats.",
+    "A goat drops one of its horns when it rams a naturally generated hard block.",
+    "Using it plays a loud signal that can be heard from far away before a cooldown begins.",
+    "Its variant is stored in an instrument data component rather than as eight separate item identifiers.",
+    "This musical item is collected by encouraging a goat to ram a block.",
+  ]),
+  itemPuzzle("Brush", [
+    "This unstackable tool has 64 durability and loses durability only after completing its main action.",
+    "Its use animation advances through several visual stages before an object emerges.",
+    "A feather, copper ingot, and stick arranged vertically craft it.",
+    "It slowly uncovers loot from suspicious sand or suspicious gravel without breaking the hidden item.",
+    "Using it on an armadillo can release scutes, and dispensers can perform the same action.",
+    "Archaeology relies on this copper-tipped cleaning tool.",
+  ]),
+  itemPuzzle("Spyglass", [
+    "This unstackable item has no durability and is renewable.",
+    "Using it changes the field of view to one tenth of the configured value.",
+    "Two copper ingots beneath an amethyst shard form its recipe.",
+    "It magnifies a distant view while restricting the screen to a square vignette.",
+    "The Spyglass Damping setting controls how smoothly its view follows mouse movement.",
+    "This handheld telescope combines copper with amethyst.",
+  ]),
+  itemPuzzle("Bundle", [
+    "This unstackable storage item can hold a total weight equivalent to one normal stack.",
+    "Items that stack to only 16 consume four times as much of its capacity per item.",
+    "Leather and string form its crafting recipe.",
+    "It stores mixed item types inside one inventory slot and lets the player cycle which one will be removed.",
+    "Another empty copy can be nested inside it, but a filled copy consumes capacity according to its contents.",
+    "This small portable bag helps consolidate partial stacks.",
+  ]),
+  itemPuzzle("Firework Rocket", [
+    "This item stacks to 64 and can have flight duration values from one to three.",
+    "Its explosions are described by data containing colours, fades, shape, trail, and twinkle properties.",
+    "Paper and gunpowder craft a basic one, while a firework star adds a visual explosion.",
+    "It launches from the ground, a dispenser, or a crossbow and can propel a gliding player.",
+    "When fired from a crossbow, explosion damage rises with the number of firework stars used.",
+    "This paper projectile produces decorative bursts and powers elytra flight.",
+  ]),
+  itemPuzzle("Ender Pearl", [
+    "This item stacks to 16 and creates a projectile entity when used.",
+    "Its user receives teleportation damage after the projectile collides, with several damage-reduction exceptions.",
+    "Endermen drop it, piglins may barter it, and expert cleric villagers sell it.",
+    "Throwing it teleports the player to the landing point if the projectile reaches a valid destination.",
+    "It can load chunks while in flight and is also an ingredient for an eye that locates strongholds.",
+    "This teal sphere is the Enderman drop used for short-range teleportation.",
+  ]),
+  itemPuzzle("Eye of Ender", [
+    "This stackable item survives each throw with an 80 percent chance.",
+    "When used for navigation, its entity travels towards the nearest stronghold's starting chunk.",
+    "An ender pearl and blaze powder craft it.",
+    "Throwing it in the Overworld reveals the direction of a stronghold, but it does not work that way in other dimensions.",
+    "Twelve frame blocks require one each to activate the portal they surround.",
+    "This green eye both locates strongholds and completes an End portal.",
+  ]),
+  itemPuzzle("Enchanted Golden Apple", [
+    "This epic food stacks to 64 but has no survival crafting recipe.",
+    "Eating one supplies absorption, regeneration, fire resistance, and resistance with unusually long durations.",
+    "It appears only as rare generated loot in structures such as ancient cities and bastion remnants.",
+    "It can be eaten even when the player's hunger bar is full.",
+    "Its glint is permanent rather than the result of applying an enchantment at a table or anvil.",
+    "This rare glowing fruit is the stronger, uncraftable form of a golden apple.",
+  ]),
+  itemPuzzle("Suspicious Stew", [
+    "This unstackable food carries an effect and duration inside its data.",
+    "The bowl is returned after eating, while the hidden effect is not shown in the normal tooltip.",
+    "A bowl, two mushrooms, and a small flower craft it, with the flower choosing the effect.",
+    "Eating it restores hunger and briefly applies one status effect, which can be helpful or harmful.",
+    "Brown mooshrooms produce it when milked with a bowl after being fed a flower.",
+    "This mushroom meal conceals a flower-dependent status effect.",
+  ]),
+  itemPuzzle("Ominous Bottle", [
+    "This uncommon item stacks to 64 and comes in five amplifier levels.",
+    "Drinking it converts its stored amplifier into a long-lasting omen effect.",
+    "Raid captains and vaults can provide it, with higher levels depending on the source.",
+    "Its effect changes into Raid Omen near a village or Trial Omen inside a trial chamber.",
+    "Unlike an ordinary potion, it is consumed through a bottle-specific drinking animation and leaves a glass bottle.",
+    "This dark bottle lets players deliberately begin ominous events.",
+  ]),
+  itemPuzzle("Trial Key", [
+    "This uncommon item stacks to 64 and has no crafting recipe.",
+    "It is consumed by a compatible container only if that player has not opened that same container before.",
+    "A normal trial spawner can eject it after its combat challenge is completed.",
+    "It opens a vault in a trial chamber and causes that vault to dispense personalised loot.",
+    "Its orange colouring distinguishes it from the rarer blue-green version used on ominous vaults.",
+    "This chamber reward unlocks an ordinary vault.",
+  ]),
+  itemPuzzle("Breeze Rod", [
+    "This renewable material stacks to 64 and has no durability of its own.",
+    "It serves as both a crafting and brewing ingredient, and one copy converts into four projectiles.",
+    "Breezes drop it only when killed by a player or a tamed wolf.",
+    "Placing one beneath a heavy core creates a weapon with a falling smash attack.",
+    "It can also repair that weapon in an anvil while preserving its enchantments.",
+    "This spinning trial chamber drop is the handle in the mace recipe.",
+  ]),
+  itemPuzzle("Heart of the Sea", [
+    "This uncommon item stacks to 64 and is non-renewable.",
+    "It has one crafting use and no direct use action of its own.",
+    "Buried treasure chests contain exactly one.",
+    "Eight nautilus shells surrounding it create an underwater power source.",
+    "The resulting block grants Conduit Power and attacks nearby hostile aquatic mobs when fully activated.",
+    "This blue treasure item is the centre of a conduit recipe.",
+  ]),
+  itemPuzzle("Echo Shard", [
+    "This uncommon material stacks to 64 and is non-renewable.",
+    "Its only crafting recipe consumes eight copies around another navigation item.",
+    "Ancient city chests are its exclusive natural source.",
+    "It creates an item that points towards the holder's most recent death location.",
+    "Neither sculk mining nor killing the warden produces it.",
+    "This dark cyan ancient-city fragment surrounds a compass in its only recipe.",
+  ]),
+  itemPuzzle("Dragon's Breath", [
+    "This brewing ingredient stacks to 64 and is renewable while its boss can be resummoned.",
+    "It is collected into an empty glass bottle from a lingering purple cloud.",
+    "The Ender Dragon's breath attack and impact fireballs create its source clouds.",
+    "Brewing it with a splash potion converts that potion into a lingering potion.",
+    "Trying to bottle the central dragon perch cloud does not provide it in the same way.",
+    "This bottled purple vapour comes directly from the Ender Dragon's breath.",
+  ]),
+];

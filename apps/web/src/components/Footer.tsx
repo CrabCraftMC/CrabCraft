@@ -40,7 +40,7 @@ export default function Footer() {
     <footer className="pt-16 pb-8 text-gray-900 dark:text-gray-100 relative overflow-hidden transition-colors">
       <div className="container mx-auto px-4">
         <div className="border-t border-gray-300 pt-8 dark:border-[#3d3028]">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[0.9fr_1.6fr_0.8fr] lg:gap-12">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[0.8fr_0.8fr_1.5fr_0.8fr] lg:gap-10">
             <nav aria-label="Explore">
               <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">
                 Explore
@@ -53,6 +53,24 @@ export default function Footer() {
                       className="text-sm text-gray-600 transition-colors hover:text-orange-500 dark:text-gray-400"
                     >
                       {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <nav aria-label="Games">
+              <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">
+                Games
+              </h2>
+              <ul className="mt-4 space-y-2.5">
+                {config.navbar.games.map((game) => (
+                  <li key={game.url}>
+                    <Link
+                      href={game.url}
+                      className="text-sm text-gray-600 transition-colors hover:text-orange-500 dark:text-gray-400"
+                    >
+                      {game.name}
                     </Link>
                   </li>
                 ))}
