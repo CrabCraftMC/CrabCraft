@@ -571,7 +571,7 @@ export default function BlockHunt({ kind = "block" }: { kind?: HuntKind }) {
                           alt=""
                           className="h-7 w-7 object-contain [image-rendering:pixelated]"
                         />
-                        {option.name}
+                        {option.name.replace(" Hunt", "")}
                       </Link>
                     );
                   })}
