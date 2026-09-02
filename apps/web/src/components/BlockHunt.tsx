@@ -21,27 +21,26 @@ import {
   X,
 } from "lucide-react";
 import Squircle from "@/components/Squircle";
-import blocks from "@/data/blocks.json";
 import {
   BLOCK_HUNT_CLUES,
   getBlockHuntDailyNumber,
   getBlockHuntDailyPuzzle,
   normaliseBlockGuess,
 } from "@/lib/blockHunt";
+import {
+  BLOCK_HUNT_ATLAS_CELL_SIZE,
+  BLOCK_HUNT_ATLAS_COLUMNS,
+  getBlockHuntBlock,
+  searchBlockHuntBlocks,
+  type BlockHuntBlock,
+} from "@/lib/blockHuntCatalogue";
 import { parseBlockHuntGlossary } from "@/lib/blockHuntGlossary";
 import { formatBlockHuntShare } from "@/lib/blockHuntShare";
 import { trackUmamiEvent } from "@/lib/umami";
 
 const STORAGE_PREFIX = "crabcraft-block-hunt-timed";
 const TEXTURE_BASE = "/textures/blocks";
-
-const BLOCK_OPTIONS = [
-  ...new Map(blocks.map((block) => [block.name, block])).values(),
-].sort((a, b) => a.name.localeCompare(b.name, "en-GB"));
-
-const BLOCK_NAME_LOOKUP = new Map(
-  BLOCK_OPTIONS.map((block) => [normaliseBlockGuess(block.name), block]),
-);
+const BLOCK_HUNT_ATLAS = "/textures/block-hunt/blocks.webp";
 
 type GamePhase = "playing" | "won" | "lost";
 
@@ -98,6 +97,26 @@ function formatDuration(milliseconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function BlockPreview({ block }: { block: BlockHuntBlock }) {
+  const column = block.sprite % BLOCK_HUNT_ATLAS_COLUMNS;
+  const row = Math.floor(block.sprite / BLOCK_HUNT_ATLAS_COLUMNS);
+
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block shrink-0"
+      style={{
+        width: BLOCK_HUNT_ATLAS_CELL_SIZE,
+        height: BLOCK_HUNT_ATLAS_CELL_SIZE,
+        backgroundImage: `url(${BLOCK_HUNT_ATLAS})`,
+        backgroundPosition: `${-column * BLOCK_HUNT_ATLAS_CELL_SIZE}px ${-row * BLOCK_HUNT_ATLAS_CELL_SIZE}px`,
+        backgroundRepeat: "no-repeat",
+        imageRendering: "pixelated",
+      }}
+    />
+  );
 }
 
 type TooltipPosition = {
@@ -223,21 +242,12 @@ export default function BlockHunt() {
     game.elapsedMs ??
     (game.startedAt === null ? 0 : Math.max(0, clockNow - game.startedAt));
   const currentClue = puzzle.clues[clueIndex];
-  const selectedBlock = BLOCK_NAME_LOOKUP.get(normaliseBlockGuess(guess));
+  const selectedBlock = getBlockHuntBlock(guess);
 
-  const filteredBlocks = useMemo(() => {
-    const query = normaliseBlockGuess(guess);
-    if (!query) return [];
-
-    const startsWith = [];
-    const includes = [];
-    for (const block of BLOCK_OPTIONS) {
-      const name = normaliseBlockGuess(block.name);
-      if (name.startsWith(query)) startsWith.push(block);
-      else if (name.includes(query)) includes.push(block);
-    }
-    return [...startsWith, ...includes].slice(0, 8);
-  }, [guess]);
+  const filteredBlocks = useMemo(
+    () => searchBlockHuntBlocks(guess),
+    [guess],
+  );
 
   useEffect(() => {
     const saved = readSavedGame(puzzleKey);
@@ -292,7 +302,7 @@ export default function BlockHunt() {
     focusGuess();
   };
 
-  const selectBlock = (block: (typeof BLOCK_OPTIONS)[number]) => {
+  const selectBlock = (block: BlockHuntBlock) => {
     setGuess(block.name);
     setSearchOpen(false);
     setActiveOption(0);
@@ -331,7 +341,7 @@ export default function BlockHunt() {
     if (game.phase !== "playing") return;
 
     const normalisedGuess = normaliseBlockGuess(guess);
-    const canonicalGuess = BLOCK_NAME_LOOKUP.get(normalisedGuess);
+    const canonicalGuess = getBlockHuntBlock(normalisedGuess);
 
     if (!canonicalGuess) {
       setMessage("Choose a Minecraft block from the list.");
@@ -342,7 +352,7 @@ export default function BlockHunt() {
 
     if (
       game.guesses.some(
-        (previous) => normaliseBlockGuess(previous) === normalisedGuess,
+        (previous) => getBlockHuntBlock(previous)?.id === canonicalGuess.id,
       )
     ) {
       setMessage("You already tried that block. Choose another one.");
@@ -350,7 +360,12 @@ export default function BlockHunt() {
       return;
     }
 
-    if (normalisedGuess === normaliseBlockGuess(puzzle.answer)) {
+    const answerBlock = getBlockHuntBlock(puzzle.answer);
+    if (
+      answerBlock
+        ? canonicalGuess.id === answerBlock.id
+        : normalisedGuess === normaliseBlockGuess(puzzle.answer)
+    ) {
       const finalElapsedMs =
         game.startedAt === null ? 0 : Math.max(0, Date.now() - game.startedAt);
       setGame((current) => ({
@@ -400,6 +415,14 @@ export default function BlockHunt() {
       guess: nextGuesses.length,
       clue: nextCluesRevealed,
     });
+    if (lost) {
+      trackUmamiEvent("block-hunt-failed", {
+        mode: "daily",
+        guesses: nextGuesses.length,
+        clues: nextCluesRevealed,
+        seconds: Math.floor((finalElapsedMs ?? 0) / 1000),
+      });
+    }
     if (!lost) focusGuess();
   };
 
@@ -555,11 +578,9 @@ export default function BlockHunt() {
                 <div ref={searchRef} className="relative min-w-0 flex-1">
                   <div className="relative">
                     {selectedBlock ? (
-                      <img
-                        src={`${TEXTURE_BASE}/${selectedBlock.texture}.png`}
-                        alt=""
-                        className="pointer-events-none absolute left-2.5 top-1/2 h-8 w-8 -translate-y-1/2 rounded-md block-texture"
-                      />
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center overflow-hidden rounded-md">
+                        <BlockPreview block={selectedBlock} />
+                      </span>
                     ) : (
                       <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     )}
@@ -611,11 +632,9 @@ export default function BlockHunt() {
                             index === activeOption ? "bg-paper" : "hover:bg-paper"
                           }`}
                         >
-                          <img
-                            src={`${TEXTURE_BASE}/${block.texture}.png`}
-                            alt=""
-                            className="h-9 w-9 shrink-0 rounded-md block-texture"
-                          />
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md">
+                            <BlockPreview block={block} />
+                          </span>
                           <span className="min-w-0 truncate text-sm font-bold text-gray-700 dark:text-gray-200">
                             {block.name}
                           </span>
