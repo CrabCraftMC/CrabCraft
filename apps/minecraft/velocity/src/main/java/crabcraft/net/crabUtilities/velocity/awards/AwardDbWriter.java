@@ -5,7 +5,10 @@ import org.slf4j.Logger;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /** Persists award scores and medal rankings to Postgres. */
@@ -43,6 +46,8 @@ public final class AwardDbWriter {
                   SELECT 1 FROM players eligible_player
                   WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                     AND eligible_player.is_discord_member = true
+                    AND eligible_player.last_mc_login_at >=
+                        EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
               )
         )
         UPDATE player_award_scores scores
@@ -96,6 +101,32 @@ public final class AwardDbWriter {
             }
         } catch (SQLException e) {
             logger.error("Failed to recompute award medals for season={}", season, e);
+        }
+    }
+
+    /** Reassign every season after a previously inactive player logs in. */
+    public void recomputeAllMedals() {
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                List<String> seasons = new ArrayList<>();
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "SELECT DISTINCT season FROM player_award_scores");
+                     ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) seasons.add(rs.getString("season"));
+                }
+                for (String season : seasons) {
+                    recomputeMedalsInTransaction(conn, season);
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to recompute award medals for all seasons", e);
         }
     }
 

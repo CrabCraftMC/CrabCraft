@@ -43,6 +43,10 @@ final class AwardAltExclusionRegressionTest {
                 "a public award query does not exclude alt accounts");
         check(rankingQueries.stream().allMatch(sql -> sql.contains("is_discord_member")),
                 "a public award query does not exclude departed Discord members");
+        check(rankingQueries.stream().allMatch(sql -> sql.contains("last_mc_login_at")),
+                "a public award query does not exclude inactive players");
+        check(rankingQueries.stream().allMatch(sql -> sql.contains("2592000")),
+                "a public award query does not use the 30-day window");
         check(rankingQueries.stream().filter(sql -> sql.contains("rank() over")).count() == 5,
                 "medal-bearing award queries do not derive ranks after filtering alts");
 
@@ -56,6 +60,16 @@ final class AwardAltExclusionRegressionTest {
                 "alt accounts can still consume medal positions");
         check(dataSource.sql.get(1).contains("is_discord_member"),
                 "departed Discord members can still consume medal positions");
+        check(dataSource.sql.get(1).contains("last_mc_login_at"),
+                "inactive players can still consume medal positions");
+
+        dataSource.sql.clear();
+        new AwardDbWriter(dataSource, logger).recomputeAllMedals();
+
+        check(dataSource.sql.size() == 3,
+                "all-season medal recomputation must load, reset and rank each season");
+        check(dataSource.sql.get(2).contains("last_mc_login_at"),
+                "reactivating a player does not apply the inactivity cutoff");
     }
 
     private static final class CapturingDataSource extends HikariDataSource {
@@ -81,7 +95,9 @@ final class AwardAltExclusionRegressionTest {
 
         private ResultSet resultSet(String sql) {
             List<Map<String, Object>> rows;
-            if (sql.contains("from awards where id = ?")) {
+            if (sql.contains("select distinct season from player_award_scores")) {
+                rows = List.of(Map.of("season", "7"));
+            } else if (sql.contains("from awards where id = ?")) {
                 rows = List.of(Map.of(
                         "id", "test-award",
                         "title", "Test Award",

@@ -1865,6 +1865,8 @@ const RECOMPUTE_ELIGIBLE_AWARD_MEDALS = sql`
         SELECT 1 FROM players eligible_player
         WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
           AND eligible_player.is_discord_member = true
+          AND eligible_player.last_mc_login_at >=
+            EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
       )
   )
   UPDATE player_award_scores scores

@@ -66,6 +66,8 @@ public final class AwardQueryService {
                           SELECT 1 FROM players eligible_player
                           WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                             AND eligible_player.is_discord_member = true
+                            AND eligible_player.last_mc_login_at >=
+                                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                       )
                     ORDER BY scores.award_id, scores.score DESC, scores.minecraft_uuid
                     """)) {
@@ -158,6 +160,8 @@ public final class AwardQueryService {
                           SELECT 1 FROM players eligible_player
                           WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                             AND eligible_player.is_discord_member = true
+                            AND eligible_player.last_mc_login_at >=
+                                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                       )
                     """)) {
                 stmt.setString(1, awardId);
@@ -191,6 +195,8 @@ public final class AwardQueryService {
                               SELECT 1 FROM players eligible_player
                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                 AND eligible_player.is_discord_member = true
+                                AND eligible_player.last_mc_login_at >=
+                                    EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                           )
                     ) ranked
                     LEFT JOIN players u ON u.minecraft_uuid = ranked.minecraft_uuid
@@ -254,6 +260,8 @@ public final class AwardQueryService {
                               SELECT 1 FROM players eligible_player
                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                 AND eligible_player.is_discord_member = true
+                                AND eligible_player.last_mc_login_at >=
+                                    EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                           )
                     )
                     SELECT COUNT(DISTINCT minecraft_uuid)::int
@@ -283,6 +291,8 @@ public final class AwardQueryService {
                                SELECT 1 FROM players eligible_player
                                WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                  AND eligible_player.is_discord_member = true
+                                 AND eligible_player.last_mc_login_at >=
+                                     EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                            )
                      ),
                      crowns AS (
@@ -377,6 +387,8 @@ public final class AwardQueryService {
                               SELECT 1 FROM players eligible_player
                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                 AND eligible_player.is_discord_member = true
+                                AND eligible_player.last_mc_login_at >=
+                                    EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                           )
                     ) ranked
                     WHERE minecraft_uuid = ?
@@ -417,6 +429,8 @@ public final class AwardQueryService {
                               SELECT 1 FROM players eligible_player
                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                 AND eligible_player.is_discord_member = true
+                                AND eligible_player.last_mc_login_at >=
+                                    EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                           )
                     ),
                     crown AS (

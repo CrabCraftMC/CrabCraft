@@ -433,7 +433,13 @@ public class ConnectionListener {
             // first login as a prior visit.
             String plain = plugin.getNicknameCache().getPlainNickname(playerId);
             String raw = plugin.getNicknameCache().getRawNickname(playerId);
-            plugin.getPgWriter().upsertPlayer(playerUuid, playerName, plain, raw);
+            boolean leaderboardReactivated = plugin.getPgWriter()
+                    .upsertPlayer(playerUuid, playerName, plain, raw);
+            if (leaderboardReactivated && plugin.getAwardDbWriter() != null) {
+                plugin.getAwardDbWriter().recomputeAllMedals();
+                plugin.getLogger().info(
+                        "Restored leaderboard eligibility after login for {}", playerName);
+            }
             plugin.getPgWriter().upsertAltUsername(playerUuid, playerName);
             plugin.getPgWriter().recordMcLogin(playerUuid);
         });

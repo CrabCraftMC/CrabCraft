@@ -1249,6 +1249,7 @@ export async function getAwardLeaderboard(
         eq(playerAwardScores.award_id, awardId),
         eq(playerAwardScores.season, season),
         eq(players.is_discord_member, true),
+        sql`${players.last_mc_login_at} >= EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000`,
       ),
     )
     .orderBy(desc(playerAwardScores.score))
@@ -1285,6 +1286,8 @@ export async function getAwardsSummary(
           SELECT 1 FROM players eligible_player
           WHERE eligible_player.minecraft_uuid = p.minecraft_uuid
             AND eligible_player.is_discord_member = true
+            AND eligible_player.last_mc_login_at >=
+              EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
         )
       ORDER BY p.award_id, p.score DESC
     `,
@@ -1340,6 +1343,8 @@ export async function getCrownLeaderboard(
             SELECT 1 FROM players eligible_player
             WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
               AND eligible_player.is_discord_member = true
+              AND eligible_player.last_mc_login_at >=
+                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
           )
         GROUP BY minecraft_uuid
       ) c
@@ -1393,6 +1398,8 @@ export async function getPlayerAwardHoldings(
             SELECT 1 FROM players eligible_player
             WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
               AND eligible_player.is_discord_member = true
+              AND eligible_player.last_mc_login_at >=
+                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
           )
       ) ranked
       WHERE minecraft_uuid = ${uuid} AND medal > 0
@@ -1442,6 +1449,8 @@ export async function getPlayerCrownScore(
             SELECT 1 FROM players eligible_player
             WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
               AND eligible_player.is_discord_member = true
+              AND eligible_player.last_mc_login_at >=
+                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
           )
         GROUP BY minecraft_uuid
       ),
@@ -1507,6 +1516,8 @@ export async function getPlayerAwardScores(
             SELECT 1 FROM players eligible_player
             WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
               AND eligible_player.is_discord_member = true
+              AND eligible_player.last_mc_login_at >=
+                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
           )
       ) ranked
       WHERE minecraft_uuid = ${uuid}
