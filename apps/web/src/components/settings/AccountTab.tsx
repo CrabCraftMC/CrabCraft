@@ -153,23 +153,24 @@ export default function AccountTab({
                       <p className="text-sm">{app.join_reason}</p>
                     </div>
 
+                    {app.about_you && (
+                      <div>
+                        <p className="text-xs uppercase tracking-wider opacity-50 mb-0.5">About you and how you play</p>
+                        <p className="text-sm">{app.about_you}</p>
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-4 text-sm">
-                      {app.favourite_wood && (
+                      {app.referral_source && (
                         <div>
-                          <span className="opacity-50">Favourite wood: </span>
-                          <span className="capitalize">{app.favourite_wood}</span>
+                          <span className="opacity-50">Found the server through: </span>
+                          <span>{app.referral_source}</span>
                         </div>
                       )}
                       <div>
-                        <span className="opacity-50">Age requirement: </span>
+                        <span className="opacity-50">Age: </span>
                         <span className={app.age_met ? "text-green-500" : "text-red-500"}>
-                          {app.age_met ? "Yes" : "No"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="opacity-50">Voice chat: </span>
-                        <span className={app.voice_chat ? "text-green-500" : "text-red-500"}>
-                          {app.voice_chat ? "Yes" : "No"}
+                          {app.age ?? (app.age_met ? "17+" : "Under 17")}
                         </span>
                       </div>
                     </div>

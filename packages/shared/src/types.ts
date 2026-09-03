@@ -71,12 +71,13 @@ export interface Application {
   discord_username: string;
   minecraft_username: string;
   minecraft_uuid: string;
+  age: number | null;
   age_met: boolean;
-  voice_chat: boolean;
   policy_agreed: boolean;
   status: "pending" | "accepted" | "denied";
   join_reason: string;
-  favourite_wood: string;
+  about_you: string;
+  referral_source: string;
   denial_reason: string | null;
   season: string;
   applied_at: number;

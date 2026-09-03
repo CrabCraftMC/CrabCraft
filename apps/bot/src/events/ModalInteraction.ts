@@ -49,34 +49,10 @@ import {
   DENY_REASON_PRESET_SELECT_ID,
   resolveDenyReason,
 } from "../utils/denyReasons.js";
-
-const ACCEPTED_VALUES = [
-  "y",
-  "yes",
-  "yeah",
-  "yep",
-  "sure",
-  "ok",
-  "okay",
-  "accept",
-  "accepted",
-  "true",
-  "1",
-  "positive",
-];
-
-// Explicitly negative answers to "Are you 17 or older?". These — together with
-// any number below 17 — are the only answers that trigger an automatic denial.
-// Anything else (e.g. "Yerp" or junk like "sdfjhgsdf") is left for a human to
-// review rather than auto-rejected.
-const DENIED_VALUES = [
-  "n",
-  "no",
-  "nope",
-  "nah",
-  "false",
-  "negative",
-];
+import {
+  APPLICATION_QUESTIONS,
+  parseApplicantAge,
+} from "../utils/applicationForm.js";
 
 /** Build a retry button row for invalid usernames. */
 function retryButtonRow(customId: string) {
@@ -123,17 +99,13 @@ export default class ModalInteractionEvent extends Event {
 
     // ── Full Application ──────────────────────────────────────────────
     if (interaction.customId === "application") {
-      const age = interaction.fields
-        .getTextInputValue("age")
-        .toLocaleLowerCase();
+      const ageInput = interaction.fields.getTextInputValue("age");
       const minecraftUsername =
         interaction.fields.getTextInputValue("minecraft-username");
-      const ingameVoice = interaction.fields
-        .getTextInputValue("ingame-voice")
-        .toLocaleLowerCase();
       const joinReason = interaction.fields.getTextInputValue("join-reason");
-      const favouriteWood =
-        interaction.fields.getTextInputValue("favourite-wood");
+      const aboutYou = interaction.fields.getTextInputValue("about-you");
+      const referralSource =
+        interaction.fields.getStringSelectValues("referral-source")[0] ?? "";
 
       if (!interaction.member) {
         await interaction.reply({
@@ -147,21 +119,24 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
+      const age = parseApplicantAge(ageInput);
+      if (age === null) {
+        await interaction.reply({
+          components: [
+            errorContainer("Please enter your age as a whole number."),
+          ],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
       const logChannel = await (
         interaction.member as GuildMember
       ).guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null) as TextChannel | null;
 
       interaction.message?.delete().catch(() => null);
 
-      // Age gate: only auto-deny when the applicant explicitly says no (a
-      // negative answer) or gives a number below 17. Anything else — including
-      // ambiguous or junk answers like "Yerp" or "sdfjhgsdf" — passes the gate
-      // and is left for a human to review.
-      const ageNumber = parseInt(age, 10);
-      const isUnderage =
-        DENIED_VALUES.includes(age) ||
-        (Number.isFinite(ageNumber) && ageNumber < 17);
-      if (isUnderage) {
+      if (age < 17) {
         await interaction.reply({
           components: [
             errorContainer(
@@ -187,9 +162,9 @@ export default class ModalInteractionEvent extends Event {
         storeRetry(interaction.user.id, {
           type: "full",
           age,
-          ingameVoice,
           joinReason,
-          favouriteWood,
+          aboutYou,
+          referralSource,
         });
         await interaction.reply({
           components: [
@@ -209,9 +184,9 @@ export default class ModalInteractionEvent extends Event {
         minecraftUsername,
         resolved.uuid,
         age,
-        ingameVoice,
         joinReason,
-        favouriteWood,
+        aboutYou,
+        referralSource,
       );
       return;
     }
@@ -262,9 +237,9 @@ export default class ModalInteractionEvent extends Event {
         minecraftUsername,
         resolved.uuid,
         stored.age,
-        stored.ingameVoice,
         stored.joinReason,
-        stored.favouriteWood,
+        stored.aboutYou,
+        stored.referralSource,
       );
       return;
     }
@@ -272,16 +247,33 @@ export default class ModalInteractionEvent extends Event {
     // ── Edit Application ──────────────────────────────────────────────
     if (interaction.customId === "edit-application") {
       const minecraftUsername = interaction.fields.getTextInputValue("minecraft-username");
-      const age = interaction.fields.getTextInputValue("age").toLocaleLowerCase();
-      const ingameVoice = interaction.fields.getTextInputValue("ingame-voice").toLocaleLowerCase();
+      const ageInput = interaction.fields.getTextInputValue("age");
       const joinReason = interaction.fields.getTextInputValue("join-reason");
-      const favouriteWood = interaction.fields.getTextInputValue("favourite-wood");
+      const aboutYou = interaction.fields.getTextInputValue("about-you");
+      const referralSource =
+        interaction.fields.getStringSelectValues("referral-source")[0] ?? "";
 
       // Verify application is still pending
       const application = await appDb.getLatestApplication(interaction.user.id);
       if (!application || application.status !== "pending") {
         await interaction.reply({
           components: [errorContainer("Your application can no longer be edited.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const age = parseApplicantAge(ageInput);
+      if (age === null) {
+        await interaction.reply({
+          components: [errorContainer("Please enter your age as a whole number.")],
+          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (age < 17) {
+        await interaction.reply({
+          components: [errorContainer("You must be 17 or older to join CrabCraft.")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         });
         return;
@@ -308,10 +300,11 @@ export default class ModalInteractionEvent extends Event {
         await appDb.updateApplication(interaction.user.id, {
           minecraftUsername: minecraftUsername,
           minecraftUuid: resolved.uuid,
-          ageMet: ACCEPTED_VALUES.includes(age) || parseInt(age, 10) >= 17,
-          voiceChat: ACCEPTED_VALUES.includes(ingameVoice),
+          age,
+          ageMet: true,
           joinReason: joinReason,
-          favouriteWood: favouriteWood || undefined,
+          aboutYou,
+          referralSource: referralSource || undefined,
         });
         await appDb.upsertUser({
           discordId: interaction.user.id,
@@ -324,12 +317,12 @@ export default class ModalInteractionEvent extends Event {
       // Re-render the application-submitted message (the one this modal was
       // opened from) with the updated details. Editing it is the ack.
       const fields = [
-        `**Are you 17 or older?**\n${age}`,
-        `**Are you willing to speak in game?**\n${ingameVoice}`,
-        `**Why do you want to join CrabCraft?**\n${joinReason}`,
+        `**${APPLICATION_QUESTIONS.age}**\n${age}`,
+        `**${APPLICATION_QUESTIONS.joinReason}**\n${joinReason}`,
+        `**${APPLICATION_QUESTIONS.aboutYou}**\n${aboutYou}`,
       ];
-      if (favouriteWood)
-        fields.push(`**What is your favourite type of wood?**\n${favouriteWood}`);
+      if (referralSource)
+        fields.push(`**${APPLICATION_QUESTIONS.referralSource}**\n${referralSource}`);
 
       const updatedContainer = new ContainerBuilder()
         .addSectionComponents(
@@ -631,10 +624,10 @@ export default class ModalInteractionEvent extends Event {
     logChannel: TextChannel | null,
     minecraftUsername: string,
     UUID: string,
-    age: string,
-    ingameVoice: string,
+    age: number,
     joinReason: string,
-    favouriteWood: string,
+    aboutYou: string,
+    referralSource: string,
   ) {
     // Acknowledge the modal up-front (ephemeral). The submitted + policy
     // messages are posted as fresh channel messages, then this ack is cleared.
@@ -681,12 +674,12 @@ export default class ModalInteractionEvent extends Event {
     }
 
     const fields = [
-      `**Are you 17 or older?**\n${age}`,
-      `**Are you willing to speak in game?**\n${ingameVoice}`,
-      `**Why do you want to join CrabCraft?**\n${joinReason}`,
+      `**${APPLICATION_QUESTIONS.age}**\n${age}`,
+      `**${APPLICATION_QUESTIONS.joinReason}**\n${joinReason}`,
+      `**${APPLICATION_QUESTIONS.aboutYou}**\n${aboutYou}`,
     ];
-    if (favouriteWood)
-      fields.push(`**What is your favourite type of wood?**\n${favouriteWood}`);
+    if (referralSource)
+      fields.push(`**${APPLICATION_QUESTIONS.referralSource}**\n${referralSource}`);
 
     const submittedContainer = new ContainerBuilder()
       .addSectionComponents(
@@ -718,10 +711,11 @@ export default class ModalInteractionEvent extends Event {
         discordUsername: interaction.user.username,
         minecraftUsername: minecraftUsername,
         minecraftUuid: UUID,
-        ageMet: ACCEPTED_VALUES.includes(age) || parseInt(age, 10) >= 17,
-        voiceChat: ACCEPTED_VALUES.includes(ingameVoice),
+        age,
+        ageMet: true,
         joinReason: joinReason,
-        favouriteWood: favouriteWood || undefined,
+        aboutYou,
+        referralSource: referralSource || undefined,
         season: currentSeason?.id ?? null,
       });
       persisted = true;

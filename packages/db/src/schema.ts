@@ -59,12 +59,16 @@ export const applications = pgTable(
     discord_username: text("discord_username").notNull(),
     minecraft_username: text("minecraft_username").notNull(),
     minecraft_uuid: text("minecraft_uuid"),
+    age: integer("age"),
     age_met: boolean("age_met").notNull(),
+    // Legacy fields retained so existing application history is not dropped.
     voice_chat: boolean("voice_chat").notNull(),
     policy_agreed: boolean("policy_agreed").notNull().default(false),
     status: text("status").notNull().default("pending"),
     join_reason: text("join_reason"),
     favourite_wood: text("favourite_wood"),
+    about_you: text("about_you"),
+    referral_source: text("referral_source"),
     denial_reason: text("denial_reason"),
     season: text("season"),
     applied_at: integer("applied_at")
