@@ -49,10 +49,11 @@ export interface CreateApplicationData {
   discordUsername: string;
   minecraftUsername: string;
   minecraftUuid: string | null;
+  age: number;
   ageMet: boolean;
-  voiceChat: boolean;
-  joinReason?: string;
-  favouriteWood?: string;
+  joinReason: string;
+  aboutYou: string;
+  referralSource?: string;
   season?: string | null;
 }
 
@@ -1113,10 +1114,12 @@ export async function createApplication(
       discord_username: data.discordUsername,
       minecraft_username: data.minecraftUsername,
       minecraft_uuid: data.minecraftUuid ?? null,
+      age: data.age,
       age_met: data.ageMet,
-      voice_chat: data.voiceChat,
-      join_reason: data.joinReason ?? null,
-      favourite_wood: data.favouriteWood ?? null,
+      voice_chat: false,
+      join_reason: data.joinReason,
+      about_you: data.aboutYou,
+      referral_source: data.referralSource ?? null,
       season: data.season ?? null,
     })
     .onConflictDoUpdate({
@@ -1125,10 +1128,12 @@ export async function createApplication(
         discord_username: sql`excluded.discord_username`,
         minecraft_username: sql`excluded.minecraft_username`,
         minecraft_uuid: sql`excluded.minecraft_uuid`,
+        age: sql`excluded.age`,
         age_met: sql`excluded.age_met`,
-        voice_chat: sql`excluded.voice_chat`,
+        voice_chat: false,
         join_reason: sql`excluded.join_reason`,
-        favourite_wood: sql`excluded.favourite_wood`,
+        about_you: sql`excluded.about_you`,
+        referral_source: sql`excluded.referral_source`,
         status: "pending",
         policy_agreed: false,
         denial_reason: null,
@@ -1285,10 +1290,11 @@ export async function updateApplication(
   data: {
     minecraftUsername: string;
     minecraftUuid: string;
+    age: number;
     ageMet: boolean;
-    voiceChat: boolean;
-    joinReason?: string;
-    favouriteWood?: string;
+    joinReason: string;
+    aboutYou: string;
+    referralSource?: string;
   },
 ): Promise<void> {
   await db
@@ -1296,10 +1302,12 @@ export async function updateApplication(
     .set({
       minecraft_username: data.minecraftUsername,
       minecraft_uuid: data.minecraftUuid,
+      age: data.age,
       age_met: data.ageMet,
-      voice_chat: data.voiceChat,
-      join_reason: data.joinReason ?? null,
-      favourite_wood: data.favouriteWood ?? null,
+      voice_chat: false,
+      join_reason: data.joinReason,
+      about_you: data.aboutYou,
+      referral_source: data.referralSource ?? null,
     })
     .where(
       and(

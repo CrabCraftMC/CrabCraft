@@ -151,41 +151,38 @@ export default async function ApplicationsPage() {
                         </p>
                       </div>
 
+                      {app.about_you && (
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                            About you and how you play
+                          </p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">
+                            {app.about_you}
+                          </p>
+                        </div>
+                      )}
+
                       <div className="flex flex-wrap gap-4 text-sm">
-                        {app.favourite_wood && (
+                        {app.referral_source && (
                           <div>
                             <span className="text-gray-500 dark:text-gray-400">
-                              Favourite wood:{" "}
+                              Found the server through:{" "}
                             </span>
-                            <span className="text-gray-700 dark:text-gray-300 capitalize">
-                              {app.favourite_wood}
+                            <span className="text-gray-700 dark:text-gray-300">
+                              {app.referral_source}
                             </span>
                           </div>
                         )}
                         <div>
                           <span className="text-gray-500 dark:text-gray-400">
-                            Age requirement:{" "}
+                            Age:{" "}
                           </span>
                           <span
                             className={
                               app.age_met ? "text-green-500" : "text-red-500"
                             }
                           >
-                            {app.age_met ? "Yes" : "No"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">
-                            Voice chat:{" "}
-                          </span>
-                          <span
-                            className={
-                              app.voice_chat
-                                ? "text-green-500"
-                                : "text-red-500"
-                            }
-                          >
-                            {app.voice_chat ? "Yes" : "No"}
+                            {app.age ?? (app.age_met ? "17+" : "Under 17")}
                           </span>
                         </div>
                       </div>

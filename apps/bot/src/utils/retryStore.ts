@@ -3,10 +3,10 @@ import { RETRY_EXPIRY_MS } from "./constants.js";
 
 export interface FullAppData {
   type: "full";
-  age: string;
-  ingameVoice: string;
+  age: number;
   joinReason: string;
-  favouriteWood: string;
+  aboutYou: string;
+  referralSource: string;
 }
 
 type RetryEntry = {

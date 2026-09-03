@@ -42,6 +42,7 @@ import {
   SEASON_PLAY_BUTTON_ID,
   buildOpenTicketButton,
 } from "../utils/seasonAccess.js";
+import { buildApplicationModal } from "../utils/applicationForm.js";
 
 function intakeString(intake: unknown, key: string): string | null {
   if (typeof intake !== "object" || intake === null) return null;
@@ -709,65 +710,10 @@ export default class ButtonInteractionEvent extends Event {
       }
 
       const currentSeason = await appDb.getCurrentSeason().catch(() => null);
-      const applicationModal = new ModalBuilder()
-        .setCustomId("application")
-        .setTitle(`${currentSeason?.name ?? "Server"} Application`.slice(0, 45));
-
-      const minecraftUsername = new TextInputBuilder()
-        .setCustomId("minecraft-username")
-        .setLabel("Minecraft Username")
-        .setPlaceholder("Steve")
-        .setRequired(true)
-        .setStyle(TextInputStyle.Short);
-
-      const age = new TextInputBuilder()
-        .setCustomId("age")
-        .setLabel("Are you 17 or older?")
-        .setPlaceholder("Answer must be: Y/N")
-        .setRequired(true)
-        .setStyle(TextInputStyle.Short);
-
-      const ingameVoice = new TextInputBuilder()
-        .setCustomId("ingame-voice")
-        .setLabel("Are you willing to speak in game?")
-        .setPlaceholder("Answer must be: Y/N")
-        .setRequired(true)
-        .setStyle(TextInputStyle.Short);
-
-      const joinReason = new TextInputBuilder()
-        .setCustomId("join-reason")
-        .setLabel("Why do you want to join CrabCraft?")
-        .setPlaceholder(
-          "In a sentence or two, tell us why you want to join and what you'd like to do on the server.",
-        )
-        .setMinLength(50)
-        .setRequired(true)
-        .setStyle(TextInputStyle.Paragraph);
-
-      const favouriteWood = new TextInputBuilder()
-        .setCustomId("favourite-wood")
-        .setLabel("What is your favourite type of wood?")
-        .setRequired(false)
-        .setStyle(TextInputStyle.Short);
-
-      const firstActionRow =
-        new ActionRowBuilder<TextInputBuilder>().addComponents(age);
-      const secondActionRow =
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          minecraftUsername,
-        );
-      const thirdActionRow =
-        new ActionRowBuilder<TextInputBuilder>().addComponents(ingameVoice);
-      const fourthActionRow =
-        new ActionRowBuilder<TextInputBuilder>().addComponents(joinReason);
-      const fifthActionRow =
-        new ActionRowBuilder<TextInputBuilder>().addComponents(favouriteWood);
-
-      applicationModal.addComponents(firstActionRow);
-      applicationModal.addComponents(secondActionRow);
-      applicationModal.addComponents(thirdActionRow);
-      applicationModal.addComponents(fourthActionRow);
-      applicationModal.addComponents(fifthActionRow);
+      const applicationModal = buildApplicationModal(
+        "application",
+        `${currentSeason?.name ?? "Server"} Application`.slice(0, 45),
+      );
 
       await interaction.showModal(applicationModal);
     }
@@ -1321,58 +1267,16 @@ export default class ButtonInteractionEvent extends Event {
         return;
       }
 
-      const editModal = new ModalBuilder()
-        .setCustomId("edit-application")
-        .setTitle("Edit Application");
-
-      const minecraftUsername = new TextInputBuilder()
-        .setCustomId("minecraft-username")
-        .setLabel("Minecraft Username")
-        .setPlaceholder("Steve")
-        .setRequired(true)
-        .setValue((application.minecraft_username as string) ?? "")
-        .setStyle(TextInputStyle.Short);
-
-      const age = new TextInputBuilder()
-        .setCustomId("age")
-        .setLabel("Are you 17 or older?")
-        .setPlaceholder("Answer must be: Y/N")
-        .setRequired(true)
-        .setValue(application.age_met ? "Yes" : "No")
-        .setStyle(TextInputStyle.Short);
-
-      const ingameVoice = new TextInputBuilder()
-        .setCustomId("ingame-voice")
-        .setLabel("Are you willing to speak in game?")
-        .setPlaceholder("Answer must be: Y/N")
-        .setRequired(true)
-        .setValue(application.voice_chat ? "Yes" : "No")
-        .setStyle(TextInputStyle.Short);
-
-      const joinReason = new TextInputBuilder()
-        .setCustomId("join-reason")
-        .setLabel("Why do you want to join CrabCraft?")
-        .setPlaceholder(
-          "In a sentence or two, tell us why you want to join and what you'd like to do on the server.",
-        )
-        .setMinLength(50)
-        .setRequired(true)
-        .setValue((application.join_reason as string) ?? "")
-        .setStyle(TextInputStyle.Paragraph);
-
-      const favouriteWood = new TextInputBuilder()
-        .setCustomId("favourite-wood")
-        .setLabel("What is your favourite type of wood?")
-        .setRequired(false)
-        .setValue((application.favourite_wood as string) ?? "")
-        .setStyle(TextInputStyle.Short);
-
-      editModal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(age),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(minecraftUsername),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(ingameVoice),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(joinReason),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(favouriteWood),
+      const editModal = buildApplicationModal(
+        "edit-application",
+        "Edit Application",
+        {
+          minecraftUsername: application.minecraft_username,
+          age: application.age?.toString() ?? (application.age_met ? "17" : ""),
+          joinReason: application.join_reason ?? "",
+          aboutYou: application.about_you ?? "",
+          referralSource: application.referral_source ?? "",
+        },
       );
 
       await interaction.showModal(editModal);
