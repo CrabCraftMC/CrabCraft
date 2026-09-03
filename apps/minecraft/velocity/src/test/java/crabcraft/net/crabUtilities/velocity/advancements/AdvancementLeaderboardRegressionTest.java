@@ -29,6 +29,10 @@ final class AdvancementLeaderboardRegressionTest {
                 "a leaderboard query does not filter against the advancement registry");
         check(dataSource.sql.stream().allMatch(sql -> sql.contains("is_discord_member")),
                 "a leaderboard query does not exclude departed Discord members");
+        check(dataSource.sql.stream().allMatch(sql -> sql.contains("last_mc_login_at")),
+                "a leaderboard query does not exclude inactive players");
+        check(dataSource.sql.stream().allMatch(sql -> sql.contains("2592000")),
+                "a leaderboard query does not use the 30-day window");
         check(dataSource.boundAdvancementIds.size() == 2,
                 "the registry IDs were not bound to both leaderboard queries");
         check(dataSource.boundAdvancementIds.stream().allMatch(ids -> ids.size() == 126),

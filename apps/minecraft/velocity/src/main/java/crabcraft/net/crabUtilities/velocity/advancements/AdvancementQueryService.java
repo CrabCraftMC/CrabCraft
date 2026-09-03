@@ -137,7 +137,9 @@ public final class AdvancementQueryService {
                         + " AND p.advancement_id = ANY (?)"
                         + " AND EXISTS (SELECT 1 FROM players eligible_player"
                         + " WHERE eligible_player.minecraft_uuid = p.minecraft_uuid"
-                        + " AND eligible_player.is_discord_member = true)")) {
+                        + " AND eligible_player.is_discord_member = true"
+                        + " AND eligible_player.last_mc_login_at >="
+                        + " EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000)")) {
                     stmt.setString(1, season);
                     stmt.setArray(2, registeredIds);
                     try (ResultSet rs = stmt.executeQuery()) {
@@ -157,7 +159,9 @@ public final class AdvancementQueryService {
                         + " AND p.advancement_id = ANY (?)"
                         + " AND EXISTS (SELECT 1 FROM players eligible_player"
                         + " WHERE eligible_player.minecraft_uuid = p.minecraft_uuid"
-                        + " AND eligible_player.is_discord_member = true)"
+                        + " AND eligible_player.is_discord_member = true"
+                        + " AND eligible_player.last_mc_login_at >="
+                        + " EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000)"
                         + " GROUP BY p.minecraft_uuid, u.minecraft_username, u.nickname"
                         + " HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0"
                         + " ORDER BY completed DESC, p.minecraft_uuid"

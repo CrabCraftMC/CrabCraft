@@ -6,9 +6,12 @@ import org.slf4j.Logger;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class PostgresStatsWriter {
+
+    private static final long LEADERBOARD_ACTIVITY_WINDOW_SECONDS = 30L * 24L * 60L * 60L;
 
     public enum NicknameLoadStatus {
         FOUND,
@@ -32,6 +35,11 @@ public class PostgresStatsWriter {
 
     private final HikariDataSource dataSource;
     private final Logger logger;
+
+    static boolean isInactiveForLeaderboard(Long lastLoginAt, long now) {
+        return lastLoginAt == null
+                || lastLoginAt < now - LEADERBOARD_ACTIVITY_WINDOW_SECONDS;
+    }
 
     private static final String UPSERT_SQL = """
         INSERT INTO player_season_stats (
@@ -155,20 +163,46 @@ public class PostgresStatsWriter {
      * Updates player info (username + nickname) by minecraft_uuid.
      * Only updates existing players — no-op if UUID not in DB.
      */
-    public void upsertPlayer(String uuid, String username, String nickname, String nicknameRaw) {
-        String sql = "UPDATE players SET minecraft_username = ?, nickname = ?, nickname_raw = ?, " +
+    public boolean upsertPlayer(String uuid, String username, String nickname, String nicknameRaw) {
+        String selectSql = "SELECT last_mc_login_at FROM players WHERE minecraft_uuid = ? FOR UPDATE";
+        String updateSql = "UPDATE players SET minecraft_username = ?, nickname = ?, nickname_raw = ?, " +
                 "updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER, " +
                 "last_mc_login_at = EXTRACT(EPOCH FROM NOW())::INTEGER " +
                 "WHERE minecraft_uuid = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, username);
-            stmt.setString(2, nickname);
-            stmt.setString(3, nicknameRaw);
-            stmt.setString(4, uuid);
-            stmt.executeUpdate();
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                boolean wasInactive = false;
+                try (PreparedStatement stmt = conn.prepareStatement(selectSql)) {
+                    stmt.setString(1, uuid);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            long storedLastLoginAt = rs.getLong("last_mc_login_at");
+                            Long lastLoginAt = rs.wasNull() ? null : storedLastLoginAt;
+                            wasInactive = isInactiveForLeaderboard(
+                                    lastLoginAt, System.currentTimeMillis() / 1000L);
+                        }
+                    }
+                }
+
+                try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
+                    stmt.setString(1, username);
+                    stmt.setString(2, nickname);
+                    stmt.setString(3, nicknameRaw);
+                    stmt.setString(4, uuid);
+                    stmt.executeUpdate();
+                }
+                conn.commit();
+                return wasInactive;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         } catch (SQLException e) {
             logger.error("Failed to upsert player {}", uuid, e);
+            return false;
         }
     }
 
