@@ -1,3 +1,5 @@
+![Badge](https://forthebadge.com/api/badges/generate?primaryLabel=BUILT+WITH&secondaryLabel=RESENTMENT&primaryBGColor=%23F97316&secondaryBGColor=%23FB923C)
+
 <div align="center">
   <a href="https://www.crabcraft.net">
     <img src="apps/web/public/logo.png" width="180" alt="CrabCraft pixel-art crab logo">
