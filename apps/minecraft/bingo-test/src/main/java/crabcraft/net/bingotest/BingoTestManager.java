@@ -14,16 +14,22 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 final class BingoTestManager {
     private final JavaPlugin plugin;
+    private final int cardNumber;
     private final List<BingoTask> tasks;
     private final Set<BingoTask> taskSet;
     private final Map<UUID, PlayerProgress> progressByPlayer = new HashMap<>();
 
-    BingoTestManager(JavaPlugin plugin, List<BingoTask> tasks) {
+    BingoTestManager(JavaPlugin plugin, int cardNumber, List<BingoTask> tasks) {
         this.plugin = plugin;
+        if (cardNumber < 1) {
+            throw new IllegalArgumentException("The test card number must be positive");
+        }
+        this.cardNumber = cardNumber;
         this.tasks = List.copyOf(tasks);
         this.taskSet = Set.copyOf(tasks);
         if (this.tasks.size() != 16 || this.taskSet.size() != 16) {
-            throw new IllegalArgumentException("The Bingo #5 test card must contain 16 unique tasks");
+            throw new IllegalArgumentException(
+                    "The Bingo #" + cardNumber + " test card must contain 16 unique tasks");
         }
     }
 
@@ -33,7 +39,8 @@ final class BingoTestManager {
 
     void complete(Player player, BingoTask task) {
         if (!taskSet.contains(task)) {
-            plugin.getLogger().warning("Ignored non-Card #5 detector completion: " + task.id());
+            plugin.getLogger().warning(
+                    "Ignored non-Card #" + cardNumber + " detector completion: " + task.id());
             return;
         }
 
@@ -46,7 +53,7 @@ final class BingoTestManager {
     void sendChecklist(Player player) {
         PlayerProgress progress = progressFor(player);
         player.sendMessage(Component.empty());
-        player.sendMessage(CrabMessages.text("Bingo #5 detector checklist")
+        player.sendMessage(CrabMessages.text("Bingo #" + cardNumber + " detector checklist")
                 .append(Component.space())
                 .append(CrabMessages.highlight(progress.completedCount() + "/" + tasks.size())));
 
@@ -108,11 +115,12 @@ final class BingoTestManager {
         player.sendMessage(CrabMessages.muted("Completed")
                 .append(Component.space())
                 .append(CrabMessages.highlight(task.description())));
-        plugin.getLogger().info(player.getName() + " completed Card #5 detector " + task.id());
+        plugin.getLogger().info(
+                player.getName() + " completed Card #" + cardNumber + " detector " + task.id());
 
         if (progress.isChecklistComplete()) {
             player.sendMessage(CrabMessages.success(
-                            "All 16 Bingo #5 detectors have passed!")
+                            "All 16 Bingo #" + cardNumber + " detectors have passed!")
                     .decorate(TextDecoration.BOLD));
         }
     }

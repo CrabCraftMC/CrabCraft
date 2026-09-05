@@ -327,7 +327,71 @@ public enum BingoTask {
     WEAR_FOUR_ARMOUR_MATERIALS(
             "wear_four_armour_materials",
             "Wear four different armour materials at once.",
-            "Simultaneously equip a helmet, chestplate, leggings and boots whose four base material families are all different.");
+            "Simultaneously equip a helmet, chestplate, leggings and boots whose four base material families are all different."),
+    HANG_FOUR_BY_FOUR_PAINTING(
+            "hang_four_by_four_painting",
+            "Hang up a 4×4 Painting.",
+            "Place a Painting yourself and make it resolve to artwork that is four blocks wide and four blocks high."),
+    OUTLINE_HANGING_SIGN(
+            "outline_hanging_sign",
+            "Outline text on a Hanging Sign.",
+            "Use a Glow Ink Sac yourself on a Hanging Sign that contains text so its letters become outlined."),
+    FILL_CAMPFIRE_FOUR_SLOTS(
+            "fill_campfire_four_slots",
+            "Fill all four slots of a Campfire.",
+            "Insert the fourth cooking item yourself so all four slots of one Campfire are occupied."),
+    SHOOT_BUTTON_WITH_ARROW(
+            "shoot_button_with_arrow",
+            "Shoot a Button with an Arrow.",
+            "Fire an Arrow yourself and make that exact Arrow hit and power a wooden Button."),
+    FISH_TREASURE_AND_JUNK(
+            "fish_treasure_and_junk",
+            "Fish both a Treasure and Junk item.",
+            "Personally catch at least one item from Minecraft's fishing treasure category and one from its junk category after the card starts."),
+    CARPET_LLAMA(
+            "carpet_llama",
+            "Put a Carpet on a Llama.",
+            "Equip a Carpet onto a living Llama yourself, either directly or through its inventory."),
+    ENCHANT_FIVE_ITEMS(
+            "enchant_five_items",
+            "Enchant five different items using an Enchanting Table.",
+            "Successfully enchant five distinct base item types at an Enchanting Table after the card starts."),
+    THROW_MENDING_BOOK_IN_LAVA(
+            "throw_mending_book_in_lava",
+            "Throw a Mending Book into Lava.",
+            "Drop an Enchanted Book containing Mending yourself and let that exact dropped item be destroyed by Lava."),
+    STUN_RAVAGER(
+            "stun_ravager",
+            "Stun a Ravager with a Shield.",
+            "Block a Ravager's attack with a Shield and make that Ravager enter its stunned state."),
+    FULLY_POWER_CONDUIT(
+            "fully_power_conduit",
+            "Fully power a Conduit.",
+            "Place the final prismarine-family frame block yourself so an active Conduit reaches its maximum 42-frame-block power."),
+    POISON_BEE(
+            "poison_bee",
+            "Poison a Bee with a potion you threw.",
+            "Throw a Splash or Lingering Potion yourself and successfully apply Poison to a Bee."),
+    PLACE_FISH_IN_NETHER(
+            "place_fish_in_nether",
+            "Place a Fish in the Nether.",
+            "Empty a Cod, Salmon, Pufferfish or Tropical Fish Bucket yourself while in the Nether."),
+    NAMED_GHAST_OVERWORLD(
+            "named_ghast_overworld",
+            "Name a Ghast, then send it into the Overworld.",
+            "Name a regular Ghast yourself, then make that exact Ghast travel through a Nether Portal into the Overworld."),
+    FILL_ENDER_CHEST(
+            "fill_ender_chest",
+            "Fill every slot of your Ender Chest.",
+            "Insert the final item stack yourself so all 27 slots of your Ender Chest are occupied."),
+    APPLY_ARMOUR_TRIM(
+            "apply_armour_trim",
+            "Apply an Armour Trim.",
+            "Take a Smithing Table result that applies a new Armour Trim to a piece of armour."),
+    FOUR_SHERD_DECORATED_POT(
+            "four_sherd_decorated_pot",
+            "Craft a Decorated Pot with four different Pottery Sherds.",
+            "Personally craft a Decorated Pot whose four input faces use four distinct Pottery Sherd types.");
 
     private static final List<BingoTask> CARD_ONE = List.of(
             GROW_TREE_IN_NETHER,
@@ -414,6 +478,23 @@ public enum BingoTask {
             POWER_FURNACE_MINECART,
             PLAYER_END_CRYSTAL_HOSTILE_KILL,
             WEAR_FOUR_ARMOUR_MATERIALS);
+    private static final List<BingoTask> CARD_SIX = List.of(
+            HANG_FOUR_BY_FOUR_PAINTING,
+            OUTLINE_HANGING_SIGN,
+            FILL_CAMPFIRE_FOUR_SLOTS,
+            SHOOT_BUTTON_WITH_ARROW,
+            FISH_TREASURE_AND_JUNK,
+            CARPET_LLAMA,
+            ENCHANT_FIVE_ITEMS,
+            THROW_MENDING_BOOK_IN_LAVA,
+            STUN_RAVAGER,
+            FULLY_POWER_CONDUIT,
+            POISON_BEE,
+            PLACE_FISH_IN_NETHER,
+            NAMED_GHAST_OVERWORLD,
+            FILL_ENDER_CHEST,
+            APPLY_ARMOUR_TRIM,
+            FOUR_SHERD_DECORATED_POT);
     private static final List<BingoTask> ALL_DEPLOYED = List.of(values());
     private static final Map<String, BingoTask> BY_ID;
 
@@ -468,6 +549,10 @@ public enum BingoTask {
 
     public static List<BingoTask> cardFive() {
         return CARD_FIVE;
+    }
+
+    public static List<BingoTask> cardSix() {
+        return CARD_SIX;
     }
 
     public static List<BingoTask> allDeployed() {

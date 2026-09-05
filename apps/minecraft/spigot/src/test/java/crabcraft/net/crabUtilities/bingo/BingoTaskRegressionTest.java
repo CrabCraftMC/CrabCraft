@@ -14,6 +14,7 @@ public final class BingoTaskRegressionTest {
         cardThreeOrderIsStable();
         cardFourOrderIsStable();
         cardFiveOrderIsStable();
+        cardSixOrderIsStable();
         deployedCatalogueIsCompleteAndResolvable();
         cardCataloguesAreDisjointAndImmutable();
         retiredTasksRemainUnsupported();
@@ -219,11 +220,51 @@ public final class BingoTaskRegressionTest {
                 "Bingo #5 detector IDs changed");
     }
 
+    private static void cardSixOrderIsStable() {
+        List<BingoTask> expected = List.of(
+                BingoTask.HANG_FOUR_BY_FOUR_PAINTING,
+                BingoTask.OUTLINE_HANGING_SIGN,
+                BingoTask.FILL_CAMPFIRE_FOUR_SLOTS,
+                BingoTask.SHOOT_BUTTON_WITH_ARROW,
+                BingoTask.FISH_TREASURE_AND_JUNK,
+                BingoTask.CARPET_LLAMA,
+                BingoTask.ENCHANT_FIVE_ITEMS,
+                BingoTask.THROW_MENDING_BOOK_IN_LAVA,
+                BingoTask.STUN_RAVAGER,
+                BingoTask.FULLY_POWER_CONDUIT,
+                BingoTask.POISON_BEE,
+                BingoTask.PLACE_FISH_IN_NETHER,
+                BingoTask.NAMED_GHAST_OVERWORLD,
+                BingoTask.FILL_ENDER_CHEST,
+                BingoTask.APPLY_ARMOUR_TRIM,
+                BingoTask.FOUR_SHERD_DECORATED_POT);
+        check(BingoTask.cardSix().equals(expected), "Bingo #6 order changed");
+        check(BingoTask.cardSix().size() == 16, "Bingo #6 must contain 16 tasks");
+        check(idsOf(BingoTask.cardSix()).equals(List.of(
+                        "hang_four_by_four_painting",
+                        "outline_hanging_sign",
+                        "fill_campfire_four_slots",
+                        "shoot_button_with_arrow",
+                        "fish_treasure_and_junk",
+                        "carpet_llama",
+                        "enchant_five_items",
+                        "throw_mending_book_in_lava",
+                        "stun_ravager",
+                        "fully_power_conduit",
+                        "poison_bee",
+                        "place_fish_in_nether",
+                        "named_ghast_overworld",
+                        "fill_ender_chest",
+                        "apply_armour_trim",
+                        "four_sherd_decorated_pot")),
+                "Bingo #6 detector IDs changed");
+    }
+
     private static void deployedCatalogueIsCompleteAndResolvable() {
         List<BingoTask> deployed = BingoTask.allDeployed();
         check(deployed.equals(List.of(BingoTask.values())),
                 "Deployed catalogue does not contain every BingoTask enum value in declaration order");
-        check(deployed.size() == 80, "Expected 80 deployed bingo tasks");
+        check(deployed.size() == 96, "Expected 96 deployed bingo tasks");
 
         Set<String> ids = new HashSet<>();
         for (BingoTask task : deployed) {
@@ -242,11 +283,13 @@ public final class BingoTaskRegressionTest {
         Set<BingoTask> cardThree = new HashSet<>(BingoTask.cardThree());
         Set<BingoTask> cardFour = new HashSet<>(BingoTask.cardFour());
         Set<BingoTask> cardFive = new HashSet<>(BingoTask.cardFive());
+        Set<BingoTask> cardSix = new HashSet<>(BingoTask.cardSix());
         check(cardOne.size() == 16, "Bingo #1 contains a duplicate task");
         check(cardTwo.size() == 16, "Bingo #2 contains a duplicate task");
         check(cardThree.size() == 16, "Bingo #3 contains a duplicate task");
         check(cardFour.size() == 16, "Bingo #4 contains a duplicate task");
         check(cardFive.size() == 16, "Bingo #5 contains a duplicate task");
+        check(cardSix.size() == 16, "Bingo #6 contains a duplicate task");
         check(cardOne.stream().noneMatch(cardTwo::contains), "A task appears on both deployed cards");
         check(cardOne.stream().noneMatch(cardThree::contains), "A task appears on Cards #1 and #3");
         check(cardOne.stream().noneMatch(cardFour::contains), "A task appears on Cards #1 and #4");
@@ -257,12 +300,17 @@ public final class BingoTaskRegressionTest {
         check(cardTwo.stream().noneMatch(cardFive::contains), "A task appears on Cards #2 and #5");
         check(cardThree.stream().noneMatch(cardFive::contains), "A task appears on Cards #3 and #5");
         check(cardFour.stream().noneMatch(cardFive::contains), "A task appears on Cards #4 and #5");
+        for (Set<BingoTask> earlier : List.of(cardOne, cardTwo, cardThree, cardFour, cardFive)) {
+            check(earlier.stream().noneMatch(cardSix::contains),
+                    "A task appears on Bingo #6 and an earlier card");
+        }
 
         Set<BingoTask> combined = new HashSet<>(cardOne);
         combined.addAll(cardTwo);
         combined.addAll(cardThree);
         combined.addAll(cardFour);
         combined.addAll(cardFive);
+        combined.addAll(cardSix);
         check(combined.equals(new HashSet<>(BingoTask.allDeployed())),
                 "Card catalogues do not cover every deployed task exactly once");
 
@@ -271,6 +319,7 @@ public final class BingoTaskRegressionTest {
         checkUnmodifiable(BingoTask.cardThree(), "Bingo #3 catalogue is mutable");
         checkUnmodifiable(BingoTask.cardFour(), "Bingo #4 catalogue is mutable");
         checkUnmodifiable(BingoTask.cardFive(), "Bingo #5 catalogue is mutable");
+        checkUnmodifiable(BingoTask.cardSix(), "Bingo #6 catalogue is mutable");
         checkUnmodifiable(BingoTask.allDeployed(), "Deployed catalogue is mutable");
     }
 

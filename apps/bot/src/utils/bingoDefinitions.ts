@@ -164,12 +164,42 @@ export const FIFTH_BINGO_CARD = {
   ] satisfies BingoTaskDefinition[],
 } as const;
 
+// Goal ideas adapted from Joshimuz/mcbingo's v5 pool; detector wording is
+// CrabCraft-specific so every square has an explicit player attribution rule.
+export const SIXTH_BINGO_CARD = {
+  number: 6,
+  startsAt: 1_788_768_000,
+  endsAt: 1_789_340_400,
+  tasks: [
+    { id: "hang_four_by_four_painting", label: "Hang up a 4×4 Painting" },
+    { id: "outline_hanging_sign", label: "Outline text on a Hanging Sign" },
+    { id: "fill_campfire_four_slots", label: "Fill all four slots of a Campfire" },
+    { id: "shoot_button_with_arrow", label: "Shoot a Button with an Arrow" },
+    { id: "fish_treasure_and_junk", label: "Fish both a Treasure and Junk item" },
+    { id: "carpet_llama", label: "Put a Carpet on a Llama" },
+    { id: "enchant_five_items", label: "Enchant five different items using an Enchanting Table" },
+    { id: "throw_mending_book_in_lava", label: "Throw a Mending Book into Lava" },
+    { id: "stun_ravager", label: "Stun a Ravager with a Shield" },
+    { id: "fully_power_conduit", label: "Fully power a Conduit" },
+    { id: "poison_bee", label: "Poison a Bee with a potion you threw" },
+    { id: "place_fish_in_nether", label: "Place a Fish in the Nether" },
+    { id: "named_ghast_overworld", label: "Name a Ghast, then send it into the Overworld" },
+    { id: "fill_ender_chest", label: "Fill every slot of your Ender Chest" },
+    { id: "apply_armour_trim", label: "Apply an Armour Trim" },
+    {
+      id: "four_sherd_decorated_pot",
+      label: "Craft a Decorated Pot with four different Pottery Sherds",
+    },
+  ] satisfies BingoTaskDefinition[],
+} as const;
+
 export const PREPARED_BINGO_CARDS = [
   FIRST_BINGO_CARD,
   SECOND_BINGO_CARD,
   THIRD_BINGO_CARD,
   FOURTH_BINGO_CARD,
   FIFTH_BINGO_CARD,
+  SIXTH_BINGO_CARD,
 ];
 
 /** Task IDs that have a deployed Paper detector, not merely a planned card entry. */
