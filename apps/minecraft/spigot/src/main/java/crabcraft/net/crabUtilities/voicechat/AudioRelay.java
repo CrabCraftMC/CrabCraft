@@ -241,11 +241,24 @@ class AudioRelay {
     }
 
     /**
+     * Stop a remote roster entry without restarting its packet sequence.
+     * Listeners who already left its targets will miss the flush; retaining the
+     * channel lets them accept audio immediately if they hear this speaker again.
+     * The normal idle eviction still releases channels after 60 seconds.
+     */
+    void stopRemoteSpeaker(UUID speakerId) {
+        resetRelayChannel(speakerId, channels.get(speakerId));
+    }
+
+    /**
      * Flush and discard a cached relay channel at a route handoff or eviction.
      * Flushing first gives current targets an accepted next-sequence stop marker.
      */
     void invalidateSpeaker(UUID speakerId) {
-        ChannelEntry entry = channels.remove(speakerId);
+        resetRelayChannel(speakerId, channels.remove(speakerId));
+    }
+
+    private void resetRelayChannel(UUID speakerId, ChannelEntry entry) {
         if (entry != null) {
             synchronized (entry) {
                 try { entry.channel.flush(); } catch (Exception ignored) {}

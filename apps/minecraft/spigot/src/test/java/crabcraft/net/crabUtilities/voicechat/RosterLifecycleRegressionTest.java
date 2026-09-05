@@ -1,5 +1,9 @@
 package crabcraft.net.crabUtilities.voicechat;
 
+import de.maxhenkel.voicechat.api.ServerPlayer;
+import de.maxhenkel.voicechat.api.VoicechatConnection;
+import de.maxhenkel.voicechat.api.VoicechatServerApi;
+import de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -9,8 +13,10 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -46,6 +52,9 @@ final class RosterLifecycleRegressionTest {
         groupMoveStopsOldAudio();
         shutdownCancelsQueuedRoster();
         legacyRosterStillDecodes();
+        audioSequenceSurvivesRosterChange(UUID.randomUUID(), FIRST_ROUTE, false);
+        audioSequenceSurvivesRosterChange(GROUP, FIRST_ROUTE, true);
+        audioSequenceSurvivesRosterChange(GROUP, RETURN_ROUTE, false);
     }
 
     private static void delayedLeaveCannotRemoveReturnToSameBackend() {
@@ -123,6 +132,118 @@ final class RosterLifecycleRegressionTest {
         fixture.roster.shutdown();
         drain();
         check(fixture.packets.states.isEmpty(), "queued roster join survived shutdown");
+    }
+
+    /** A listener leaves first, misses the reset, then hears the same speaker again. */
+    private static void audioSequenceSurvivesRosterChange(
+            UUID nextGroup, String nextRoute, boolean leaveFirst) throws ReflectiveOperationException {
+        UUID listenerId = listener.getUniqueId();
+        UUID remainingId = UUID.randomUUID();
+        MembershipTracker membership = new MembershipTracker();
+        membership.setLocalGroup(listenerId, GROUP);
+        membership.setLocalGroup(remainingId, GROUP);
+        SequenceClient movedListener = new SequenceClient();
+        SequenceClient remainingListener = new SequenceClient();
+        Map<UUID, SequenceClient> clients = Map.of(
+                listenerId, movedListener, remainingId, remainingListener);
+        List<Set<UUID>> channelTargets = new ArrayList<>();
+        VoicechatServerApi api = proxy(VoicechatServerApi.class, (method, arguments) -> switch (method) {
+            case "getConnectionOf" -> SPEAKER.equals(arguments[0]) ? null : connection((UUID) arguments[0]);
+            case "createStaticAudioChannel" -> sequenceChannel(clients, channelTargets);
+            default -> null;
+        });
+        AudioRelay relay = new AudioRelay(null, null, membership, "lobby",
+                Logger.getAnonymousLogger(), id -> null, null, 1D);
+        relay.setApi(api);
+        RosterTracker roster = new RosterTracker(null, new Packets(), "lobby",
+                Logger.getAnonymousLogger(), relay::stopRemoteSpeaker);
+        try {
+            roster.onLifecycleMessage(VoiceMessages.encodeRosterJoin(GROUP, SPEAKER, "Crab", FIRST_ROUTE));
+            drain();
+            seedRouteCache(relay, FIRST_ROUTE);
+            for (int i = 0; i < 501; i++) sendAudio(relay, GROUP, FIRST_ROUTE);
+            check(movedListener.accepted == 501, "initial audio did not reach the listener");
+
+            membership.setLocalGroup(listenerId, UUID.randomUUID());
+            sendAudio(relay, GROUP, FIRST_ROUTE); // Removes this listener from audio targets.
+            if (leaveFirst) {
+                roster.onLifecycleMessage(VoiceMessages.encodeRosterLeave(GROUP, SPEAKER, FIRST_ROUTE));
+            }
+            roster.onLifecycleMessage(VoiceMessages.encodeRosterJoin(nextGroup, SPEAKER, "Crab", nextRoute));
+            drain();
+            check(remainingListener.stops == 1, "roster change did not stop the old listeners' audio");
+            check(movedListener.stops == 0, "test listener unexpectedly received the reset");
+            check(channelTargets.stream().allMatch(Set::isEmpty), "roster change retained old audio targets");
+
+            membership.setLocalGroup(listenerId, nextGroup);
+            seedRouteCache(relay, nextRoute);
+            int before = movedListener.accepted;
+            for (int i = 0; i < 10; i++) sendAudio(relay, nextGroup, nextRoute);
+            check(movedListener.accepted - before == 10,
+                    "listener rejected audio after missing the old group's reset (leave=" + leaveFirst
+                            + ", route=" + VoiceMessages.routeBackend(nextRoute) + ")");
+        } finally {
+            relay.shutdown();
+        }
+    }
+
+    private static void sendAudio(AudioRelay relay, UUID group, String route) {
+        relay.onAudioFrame(group, VoiceMessages.encodeAudioFrame(route, SPEAKER, false, new byte[]{1}));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void seedRouteCache(AudioRelay relay, String route) throws ReflectiveOperationException {
+        // Keep Redis I/O out of this test while exercising the real relay and roster handlers.
+        Class<?> cacheType = Class.forName(AudioRelay.class.getName() + "$PlayerRouteCache");
+        var constructor = cacheType.getDeclaredConstructor(String.class, long.class);
+        constructor.setAccessible(true);
+        var cache = AudioRelay.class.getDeclaredField("playerHomeCache");
+        cache.setAccessible(true);
+        ((Map<UUID, Object>) cache.get(relay)).put(SPEAKER,
+                constructor.newInstance(route, System.currentTimeMillis()));
+    }
+
+    private static VoicechatConnection connection(UUID id) {
+        ServerPlayer player = proxy(ServerPlayer.class, (method, arguments) -> method.equals("getUuid") ? id : null);
+        return proxy(VoicechatConnection.class, (method, arguments) -> method.equals("getPlayer") ? player : null);
+    }
+
+    private static StaticAudioChannel sequenceChannel(
+            Map<UUID, SequenceClient> clients, List<Set<UUID>> channelTargets) {
+        Set<UUID> targets = new HashSet<>();
+        channelTargets.add(targets);
+        long[] sequence = {0L};
+        return proxy(StaticAudioChannel.class, (method, arguments) -> {
+            switch (method) {
+                case "addTarget" -> targets.add(((VoicechatConnection) arguments[0]).getPlayer().getUuid());
+                case "clearTargets" -> targets.clear();
+                case "send", "flush" -> {
+                    byte[] data = method.equals("flush") ? new byte[0] : (byte[]) arguments[0];
+                    long current = sequence[0]++;
+                    for (UUID target : targets) clients.get(target).receive(current, data);
+                }
+                default -> {}
+            }
+            return null;
+        });
+    }
+
+    /** SVC checks packet sequence before handling an empty stop/reset packet. */
+    private static final class SequenceClient {
+        long lastSequence = -1L;
+        int accepted;
+        int stops;
+
+        void receive(long sequence, byte[] data) {
+            if (lastSequence >= 0L && sequence <= lastSequence) return;
+            if (data.length == 0) {
+                lastSequence = -1L;
+                stops++;
+            } else {
+                lastSequence = sequence;
+                accepted++;
+            }
+        }
     }
 
     private static void drain() {

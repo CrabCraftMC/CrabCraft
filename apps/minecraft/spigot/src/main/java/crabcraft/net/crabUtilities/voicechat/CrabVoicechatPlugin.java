@@ -197,7 +197,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         audioRelay.setApi(api);
         this.svcPackets = new SvcPacketSender(plugin);
         this.roster = new RosterTracker(plugin, svcPackets, thisBackend, logger,
-                audioRelay::invalidateSpeaker);
+                audioRelay::stopRemoteSpeaker);
         this.groupSynchronizer = new GroupSynchronizer(
                 plugin, api, bus, logger, this::reconcileMembership);
         this.callTargets = new CallTargetSynchronizer(
