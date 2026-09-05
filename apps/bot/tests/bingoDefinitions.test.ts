@@ -3,6 +3,7 @@ import {
   FIFTH_BINGO_CARD,
   FOURTH_BINGO_CARD,
   PREPARED_BINGO_CARDS,
+  SIXTH_BINGO_CARD,
   SUPPORTED_BINGO_TASK_IDS,
 } from "../src/utils/bingoDefinitions.js";
 
@@ -59,12 +60,38 @@ describe("prepared bingo cards", () => {
     ]);
   });
 
+  test("prepares Bingo #6 for the next weekly window", () => {
+    expect(SIXTH_BINGO_CARD.number).toBe(6);
+    expect(SIXTH_BINGO_CARD.startsAt).toBe(1_788_768_000);
+    expect(SIXTH_BINGO_CARD.endsAt).toBe(1_789_340_400);
+    expect(SIXTH_BINGO_CARD.tasks).toHaveLength(16);
+    expect(new Set(SIXTH_BINGO_CARD.tasks.map((task) => task.id)).size).toBe(16);
+    expect(SIXTH_BINGO_CARD.tasks.map((task) => task.id)).toEqual([
+      "hang_four_by_four_painting",
+      "outline_hanging_sign",
+      "fill_campfire_four_slots",
+      "shoot_button_with_arrow",
+      "fish_treasure_and_junk",
+      "carpet_llama",
+      "enchant_five_items",
+      "throw_mending_book_in_lava",
+      "stun_ravager",
+      "fully_power_conduit",
+      "poison_bee",
+      "place_fish_in_nether",
+      "named_ghast_overworld",
+      "fill_ender_chest",
+      "apply_armour_trim",
+      "four_sherd_decorated_pot",
+    ]);
+  });
+
   test("advertises every prepared task as supported", () => {
     const preparedTaskIds = PREPARED_BINGO_CARDS.flatMap((card) =>
       card.tasks.map((task) => task.id),
     );
 
-    expect(PREPARED_BINGO_CARDS.map((card) => card.number)).toEqual([1, 2, 3, 4, 5]);
+    expect(PREPARED_BINGO_CARDS.map((card) => card.number)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(SUPPORTED_BINGO_TASK_IDS).toEqual(new Set(preparedTaskIds));
   });
 });

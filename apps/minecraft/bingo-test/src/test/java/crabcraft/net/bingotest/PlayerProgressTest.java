@@ -9,41 +9,47 @@ import java.util.Set;
 /** Small dependency-free regression test; run this class with assertions enabled. */
 public final class PlayerProgressTest {
     private static final List<String> EXPECTED_IDS = List.of(
-            "build_ten_tall_dripleaf",
-            "mob_equips_dropped_helmet",
-            "clean_banner_pattern",
-            "feed_panda_cake",
-            "remove_enchantment_grindstone",
-            "name_hoglin_zoglin",
-            "lodestone_compass",
-            "enderman_killed_by_endermites_only",
-            "fill_chiseled_bookshelf_enchanted",
-            "disarm_pillager",
-            "hatch_thrown_chicken",
-            "snow_every_height",
-            "repair_iron_golem",
-            "power_furnace_minecart",
-            "player_end_crystal_hostile_kill",
-            "wear_four_armour_materials");
+            "hang_four_by_four_painting",
+            "outline_hanging_sign",
+            "fill_campfire_four_slots",
+            "shoot_button_with_arrow",
+            "fish_treasure_and_junk",
+            "carpet_llama",
+            "enchant_five_items",
+            "throw_mending_book_in_lava",
+            "stun_ravager",
+            "fully_power_conduit",
+            "poison_bee",
+            "place_fish_in_nether",
+            "named_ghast_overworld",
+            "fill_ender_chest",
+            "apply_armour_trim",
+            "four_sherd_decorated_pot");
 
     private PlayerProgressTest() {}
 
     public static void main(String[] args) {
-        cardFiveIdsAreUniqueAndInOrder();
+        cardSixIdsAreUniqueAndInOrder();
         constructorRequiresExactlySixteenUniqueTasks();
         constructorDefensivelyCopiesAllowedTasks();
         directCompletionIsIdempotent();
         earlierCardCompletionIsRejected();
-        checklistCompletesOnlyAfterAllCardFiveTasks();
+        checklistCompletesOnlyAfterAllCardSixTasks();
         completedTasksViewIsImmutable();
         resetClearsAllProgress();
     }
 
-    private static void cardFiveIdsAreUniqueAndInOrder() {
-        List<BingoTask> tasks = BingoTask.cardFive();
-        check(tasks.stream().map(BingoTask::id).toList().equals(EXPECTED_IDS),
-                "Bingo #5 task order changed");
-        check(new HashSet<>(tasks).size() == 16, "Bingo #5 tasks must be unique");
+    private static void cardSixIdsAreUniqueAndInOrder() {
+        List<BingoTask> tasks = BingoTask.cardSix();
+        List<String> actualIds = tasks.stream().map(BingoTask::id).toList();
+        check(actualIds.size() == EXPECTED_IDS.size(),
+                "Bingo #6 task count changed: " + actualIds.size());
+        for (int index = 0; index < EXPECTED_IDS.size(); index++) {
+            check(actualIds.get(index).equals(EXPECTED_IDS.get(index)),
+                    "Bingo #6 task " + (index + 1) + " changed: actual="
+                            + actualIds.get(index) + ", expected=" + EXPECTED_IDS.get(index));
+        }
+        check(new HashSet<>(tasks).size() == 16, "Bingo #6 tasks must be unique");
 
         Set<String> ids = new HashSet<>();
         for (BingoTask task : tasks) {
@@ -54,21 +60,21 @@ public final class PlayerProgressTest {
 
     private static void constructorRequiresExactlySixteenUniqueTasks() {
         expectIllegalArgument(
-                () -> new PlayerProgress(BingoTask.cardFive().subList(0, 15)),
+                () -> new PlayerProgress(BingoTask.cardSix().subList(0, 15)),
                 "A 15-task test card was accepted");
         expectIllegalArgument(
                 () -> new PlayerProgress(BingoTask.allDeployed()),
                 "The deployed catalogue was accepted as one test card");
 
-        List<BingoTask> duplicated = new ArrayList<>(BingoTask.cardFive());
+        List<BingoTask> duplicated = new ArrayList<>(BingoTask.cardSix());
         duplicated.set(duplicated.size() - 1, duplicated.get(0));
         expectIllegalArgument(
                 () -> new PlayerProgress(duplicated),
-                "A Card #5 task list containing a duplicate was accepted");
+                "A Card #6 task list containing a duplicate was accepted");
     }
 
     private static void constructorDefensivelyCopiesAllowedTasks() {
-        List<BingoTask> mutableTasks = new ArrayList<>(BingoTask.cardFive());
+        List<BingoTask> mutableTasks = new ArrayList<>(BingoTask.cardSix());
         PlayerProgress progress = new PlayerProgress(mutableTasks);
         BingoTask first = mutableTasks.get(0);
         mutableTasks.clear();
@@ -78,44 +84,45 @@ public final class PlayerProgressTest {
     }
 
     private static void directCompletionIsIdempotent() {
-        BingoTask task = BingoTask.cardFive().get(0);
-        PlayerProgress progress = new PlayerProgress(BingoTask.cardFive());
+        BingoTask task = BingoTask.cardSix().get(0);
+        PlayerProgress progress = new PlayerProgress(BingoTask.cardSix());
         check(progress.complete(task), "First completion should be new");
         check(!progress.complete(task), "Repeated completion should be ignored");
         check(progress.completedCount() == 1, "Repeated completion changed the total");
     }
 
     private static void earlierCardCompletionIsRejected() {
-        PlayerProgress progress = new PlayerProgress(BingoTask.cardFive());
+        PlayerProgress progress = new PlayerProgress(BingoTask.cardSix());
         for (BingoTask earlierTask : List.of(
                 BingoTask.cardOne().get(0),
                 BingoTask.cardTwo().get(0),
                 BingoTask.cardThree().get(0),
-                BingoTask.cardFour().get(0))) {
+                BingoTask.cardFour().get(0),
+                BingoTask.cardFive().get(0))) {
             check(!progress.complete(earlierTask), "An earlier-card task was accepted");
             check(!progress.isComplete(earlierTask), "An earlier-card task appears complete");
         }
         check(progress.completedCount() == 0, "An earlier-card task changed the total");
     }
 
-    private static void checklistCompletesOnlyAfterAllCardFiveTasks() {
-        PlayerProgress progress = new PlayerProgress(BingoTask.cardFive());
-        List<BingoTask> tasks = BingoTask.cardFive();
+    private static void checklistCompletesOnlyAfterAllCardSixTasks() {
+        PlayerProgress progress = new PlayerProgress(BingoTask.cardSix());
+        List<BingoTask> tasks = BingoTask.cardSix();
         check(!progress.isChecklistComplete(), "A fresh checklist started complete");
         for (int index = 0; index < tasks.size() - 1; index++) {
-            check(progress.complete(tasks.get(index)), "Card #5 task was rejected");
+            check(progress.complete(tasks.get(index)), "Card #6 task was rejected");
         }
         check(!progress.isChecklistComplete(), "Checklist completed with one task missing");
         check(progress.complete(tasks.get(tasks.size() - 1)), "Final task was rejected");
-        check(progress.isChecklistComplete(), "All Card #5 tasks did not complete checklist");
+        check(progress.isChecklistComplete(), "All Card #6 tasks did not complete checklist");
     }
 
     private static void completedTasksViewIsImmutable() {
-        PlayerProgress progress = new PlayerProgress(BingoTask.cardFive());
-        progress.complete(BingoTask.cardFive().get(0));
+        PlayerProgress progress = new PlayerProgress(BingoTask.cardSix());
+        progress.complete(BingoTask.cardSix().get(0));
         Set<BingoTask> completed = progress.completedTasks();
         try {
-            completed.add(BingoTask.cardFive().get(1));
+            completed.add(BingoTask.cardSix().get(1));
             throw new AssertionError("Completed-task view is mutable");
         } catch (UnsupportedOperationException expected) {
             // Expected: callers cannot mutate progress without complete/reset.
@@ -124,8 +131,8 @@ public final class PlayerProgressTest {
     }
 
     private static void resetClearsAllProgress() {
-        PlayerProgress progress = new PlayerProgress(BingoTask.cardFive());
-        for (BingoTask task : BingoTask.cardFive()) {
+        PlayerProgress progress = new PlayerProgress(BingoTask.cardSix());
+        for (BingoTask task : BingoTask.cardSix()) {
             progress.complete(task);
         }
         progress.reset();

@@ -95,6 +95,12 @@ public final class BingoManager {
                         plugin, this::isTracking, this::complete, this::activeCardId),
                 new BingoCardFiveMechanicsListener(plugin, this::isTracking, this::complete),
                 new BingoCardFiveChallengeListener(
+                        plugin, this::isTracking, this::complete, this::activeCardId),
+                new BingoCardSixWorldListener(
+                        plugin, this::isTracking, this::complete, this::activeCardId),
+                new BingoCardSixMobListener(
+                        plugin, this::isTracking, this::complete, this::activeCardId),
+                new BingoCardSixMechanicsListener(
                         plugin, this::isTracking, this::complete, this::activeCardId));
         detectors.forEach(detector ->
                 plugin.getServer().getPluginManager().registerEvents(detector, plugin));

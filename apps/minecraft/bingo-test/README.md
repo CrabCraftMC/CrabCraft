@@ -1,12 +1,12 @@
-# CrabBingoCard5Test
+# CrabBingoCard6Test
 
-This is a standalone Paper 26.2 test harness for Bingo #5. It has no Redis, database, Discord or
+This is a standalone Paper 26.2 test harness for Bingo #6. It has no Redis, database, Discord or
 production CrabUtilities dependency. Creative and Survival players are both tracked. The bundled
 local server binds to `127.0.0.1`; joining players are made Creative operators for manual testing.
 
 ## Install
 
-1. Put `CrabBingoCard5Test.jar` in the server's `plugins` directory.
+1. Put `CrabBingoCard6Test.jar` in the server's `plugins` directory.
 2. Remove any older Crab bingo test JAR.
 3. Restart Paper and join the server.
 
@@ -14,38 +14,37 @@ The plugin sends the 16-task checklist when you join. `/bingotest` or `/bingotes
 again, `/bingotest details <1-16>` explains an exact detector, and `/bingotest reset` clears your
 memory-only progress and all detector attribution state.
 
-The test harness registers only the four Bingo #5 detector groups. It does not announce to
+The test harness registers only the three Bingo #6 detector groups. It does not announce to
 Discord, store checklist progress or activate any detector from an earlier card. Card-scoped
-block and entity attribution survives a server restart so the production restart behavior can be
-tested; `/bingotest reset` starts a fresh detector window for the issuing player.
+intermediate progress and entity attribution survive a server restart so production restart
+behaviour can be tested; `/bingotest reset` starts a fresh detector window for the issuing player.
 
 ## Important test setup
 
-- **Big Dripleaf:** place or grow every block in one vertical column at least ten blocks tall.
-- **Mob hat:** ordinary Zombies are not guaranteed to pick up loot. For a deterministic test, run
-  `/gamerule mobGriefing true`, then
-  `/summon minecraft:zombie ~ ~ ~ {CanPickUpLoot:1b,PersistenceRequired:1b}` and drop the headgear
-  yourself at that Zombie's feet.
-- **Banner:** clean a patterned Banner in a water-filled Cauldron.
-- **Panda:** drop a Cake close enough for a Panda to pick up that exact dropped item.
-- **Grindstone:** take a result that actually removes a non-curse enchantment.
-- **Zoglin:** name-tag a Hoglin yourself before moving it out of the Nether and waiting for its
-  conversion.
-- **Lodestone:** bind a Compass by using it on the Lodestone.
-- **Enderman:** name-tag it first. From that point onwards, any non-Endermite damage invalidates
-  that attempt; an Endermite must deal the final blow.
-- **Bookshelf:** personally insert the sixth Enchanted Book into one Chiseled Bookshelf.
-- **Pillager:** in this loopback harness, stand within 32 blocks in Creative while the Pillager
-  shoots another valid target such as an Iron Golem. Give it a nearly broken Crossbow for a quick
-  test. Production only awards this square when the Pillager is targeting the player.
-- **Chicken:** one of the Eggs you throw must hatch a Chicken.
-- **Snow:** build one connected arrangement containing Snow layers of every thickness, 1–8.
-- **Iron Golem:** use an Iron Ingot on a genuinely damaged Iron Golem.
-- **Furnace Minecart:** add Coal or Charcoal to it yourself.
-- **End Crystal:** place the exact Crystal whose explosion kills a hostile mob.
-- **Armour:** equip four armour slots using four distinct base material families.
+- **Painting:** place a Painting whose selected art occupies exactly 4×4 blocks.
+- **Hanging Sign:** write text on a Hanging Sign, then use a Glow Ink Sac to outline that text.
+- **Campfire:** personally insert the fourth cookable item so all four cooking slots are occupied.
+- **Button:** fire an Arrow that hits and activates a wooden Button.
+- **Fishing:** catch at least one vanilla Treasure item and one vanilla Junk item yourself. The two
+  categories can be caught in either order and the partial result is card-scoped across restarts.
+- **Llama:** equip a Carpet on a living Llama, directly or through its inventory.
+- **Enchanting:** successfully enchant five distinct base item materials at an Enchanting Table.
+  Re-enchanting the same material does not add another one.
+- **Mending Book:** drop the exact Enchanted Book containing Mending as an item and let it enter
+  Lava. Placing or dispensing somebody else's book does not count.
+- **Ravager:** temporarily switch to Survival with `/gamemode survival`, block a Ravager's attack
+  with your raised Shield, and repeat until the Ravager actually becomes stunned.
+- **Conduit:** complete a 42-block valid frame by personally placing the final frame block, leaving
+  the Conduit at full power.
+- **Bee:** hit a Bee with a thrown Splash or Lingering Potion that actually applies Poison.
+- **Nether Fish:** empty a Cod, Salmon, Pufferfish or Tropical Fish Bucket in the Nether.
+- **Ghast:** name-tag a Ghast yourself, then send that same Ghast through a Nether Portal into the
+  Overworld. Its card-scoped ownership marker survives a restart.
+- **Ender Chest:** personally fill the final empty slot so all 27 slots contain an item.
+- **Armour Trim:** take a successful Smithing Table result that applies an Armour Trim.
+- **Decorated Pot:** craft one using four different Pottery Sherds in its four ingredient slots.
 
-Use `/bingotest details <number>` for the detector-specific rules for every other square.
+Use `/bingotest details <number>` for the exact detector rule for each square.
 
 Build from `apps/minecraft` with:
 
@@ -53,7 +52,7 @@ Build from `apps/minecraft` with:
 ./gradlew :bingo-test:clean :bingo-test:check :bingo-test:build
 ```
 
-The JAR is written to `bingo-test/build/libs/CrabBingoCard5Test.jar`.
+The JAR is written to `bingo-test/build/libs/CrabBingoCard6Test.jar`.
 
 ## Launch the isolated test server
 
