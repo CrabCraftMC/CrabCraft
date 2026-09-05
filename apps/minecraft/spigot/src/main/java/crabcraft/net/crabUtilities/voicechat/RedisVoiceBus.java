@@ -109,7 +109,7 @@ class RedisVoiceBus {
             """;
 
     private static final String PUBLISH_ROSTER_SCRIPT = """
-            if redis.call('GET', KEYS[1]) == ARGV[1] then
+            if ARGV[3] == '1' or redis.call('GET', KEYS[1]) == ARGV[1] then
                 return redis.call('PUBLISH', KEYS[2], ARGV[2])
             end
             return 0
@@ -306,6 +306,11 @@ class RedisVoiceBus {
 
     void publishRoster(String message, UUID playerId, String expectedRoute) {
         if (expectedRoute == null) return;
+        VoiceMessages.RosterLeave leave = VoiceMessages.decodeRosterLeave(message);
+        // A departed route must still be able to retract its own roster entry.
+        // Receivers match the complete hop token so this cannot remove a newer hop.
+        boolean leaving = leave != null && playerId.equals(leave.playerId())
+                && expectedRoute.equals(leave.route());
         submitControl("roster:" + playerId, () -> {
             JedisPool pool = jedisPool;
             if (pool == null || pool.isClosed()) return;
@@ -313,7 +318,7 @@ class RedisVoiceBus {
                 jedis.eval(PUBLISH_ROSTER_SCRIPT,
                         List.of(VoiceMessages.playerHomeKey(playerId),
                                 VoiceMessages.ROSTER_CHANNEL),
-                        List.of(expectedRoute, message));
+                        List.of(expectedRoute, message, leaving ? "1" : "0"));
             } catch (Exception e) {
                 plugin.getLogger().warning("Voice roster publish failed: " + e.getMessage());
             }
