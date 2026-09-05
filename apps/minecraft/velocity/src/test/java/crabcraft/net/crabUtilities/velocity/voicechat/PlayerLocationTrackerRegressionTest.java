@@ -1,5 +1,25 @@
 package crabcraft.net.crabUtilities.velocity.voicechat;
 
+import com.velocitypowered.api.event.Continuation;
+import com.velocitypowered.api.event.EventTask;
+import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.player.ServerPostConnectEvent;
+import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.proxy.ServerConnection;
+import com.velocitypowered.api.proxy.server.ServerInfo;
+import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
+import crabcraft.net.crabUtilities.velocity.VelocityConfig;
+import org.slf4j.LoggerFactory;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.params.SetParams;
+
+import java.lang.reflect.Proxy;
+import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -7,11 +27,81 @@ import java.util.concurrent.atomic.AtomicReference;
 
 final class PlayerLocationTrackerRegressionTest {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        committedHopPublishesWithoutHeartbeat();
         routeTokensAreHopSpecific();
         delayedHopUsesCurrentBackend();
         refreshCannotRegressNewRoute();
         oldDisconnectCannotDeleteNewSession();
+    }
+
+    private static void committedHopPublishesWithoutHeartbeat() throws Exception {
+        var listener = PlayerLocationTracker.class.getMethod("onServerConnected", ServerPostConnectEvent.class);
+        check(listener.isAnnotationPresent(Subscribe.class), "committed server event is not registered");
+        UUID playerId = UUID.randomUUID();
+        AtomicReference<String> backend = new AtomicReference<>("survival");
+        ServerConnection connection = proxy(ServerConnection.class, (object, method, arguments) -> {
+            if (method.getName().equals("getServerInfo")) {
+                return new ServerInfo(backend.get(), new InetSocketAddress("127.0.0.1", 25565));
+            }
+            return null;
+        });
+        Player player = proxy(Player.class, (object, method, arguments) -> switch (method.getName()) {
+            case "getUniqueId" -> playerId;
+            case "getCurrentServer" -> Optional.of(connection);
+            default -> null;
+        });
+        ProxyServer server = proxy(ProxyServer.class, (object, method, arguments) ->
+                method.getName().equals("getPlayer") ? Optional.of(player) : null);
+        var logger = LoggerFactory.getLogger(PlayerLocationTrackerRegressionTest.class);
+        var directory = Files.createTempDirectory("voice-location-regression");
+        var plugin = new CrabUtilitiesVelocity(server, logger, directory);
+        var tracker = new PlayerLocationTracker(plugin, VelocityConfig.load(directory, logger));
+        AtomicReference<String> written = new AtomicReference<>();
+        Jedis jedis = new Jedis() {
+            @Override public String set(String key, String value, SetParams params) {
+                written.set(value);
+                return "OK";
+            }
+            @Override public void close() {}
+        };
+        try (JedisPool pool = new JedisPool() {
+            @Override public Jedis getResource() { return jedis; }
+        }) {
+            var poolField = PlayerLocationTracker.class.getDeclaredField("jedisPool");
+            poolField.setAccessible(true);
+            poolField.set(tracker, pool);
+            run(tracker.onServerConnected(new ServerPostConnectEvent(player, null)));
+            String first = written.get();
+            check(first != null && first.startsWith("survival\0"), "initial route waited for the refresh");
+
+            backend.set("creative");
+            EventTask delayed = tracker.onServerConnected(new ServerPostConnectEvent(player, null));
+            backend.set("lobby");
+            run(tracker.onServerConnected(new ServerPostConnectEvent(player, null)));
+            String latest = written.get();
+            run(delayed);
+            check(latest.startsWith("lobby\0"), "server hop waited for the 30-second heartbeat");
+            check(latest.equals(written.get()), "delayed event regressed the newer route");
+            check(!first.equals(latest), "server hop reused the old route token");
+        } finally {
+            try (var files = Files.walk(directory)) {
+                for (var path : files.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(path);
+            }
+        }
+    }
+
+    private static void run(EventTask task) {
+        task.execute(new Continuation() {
+            @Override public void resume() {}
+            @Override public void resumeWithException(Throwable throwable) {
+                throw new AssertionError("voice location event failed", throwable);
+            }
+        });
+    }
+
+    private static <T> T proxy(Class<T> type, java.lang.reflect.InvocationHandler handler) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, handler));
     }
 
     private static void routeTokensAreHopSpecific() {

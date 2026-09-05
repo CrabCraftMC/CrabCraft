@@ -196,7 +196,8 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                 lofiEnabled ? lofiGroupId : null, lofiPlayerVolume);
         audioRelay.setApi(api);
         this.svcPackets = new SvcPacketSender(plugin);
-        this.roster = new RosterTracker(plugin, svcPackets, thisBackend, logger);
+        this.roster = new RosterTracker(plugin, svcPackets, thisBackend, logger,
+                audioRelay::stopRemoteSpeaker);
         this.groupSynchronizer = new GroupSynchronizer(
                 plugin, api, bus, logger, this::reconcileMembership);
         this.callTargets = new CallTargetSynchronizer(
@@ -222,7 +223,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                 this::rebroadcastLocalRoster,
                 20L * 30L, 20L * 30L);
 
-        sweepTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin,
+        sweepTask = Bukkit.getScheduler().runTaskTimer(plugin,
                 () -> roster.sweepStaleEntries(),
                 20L * 60L, 20L * 30L);
 
@@ -269,7 +270,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                         groupSynchronizer::onRegistryWrite);
                 if (callTargets != null) callTargets.onMembershipReconciled(playerId, groupId);
                 bus.publishRoster(VoiceMessages.encodeRosterJoin(
-                        groupId, playerId, voicechatName(player), thisBackend),
+                        groupId, playerId, voicechatName(player), route),
                         playerId, route);
             }
         }
@@ -367,6 +368,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         Bukkit.getScheduler().runTask(plugin, () -> {
             Player p = Bukkit.getPlayer(playerId);
             if (p != null && p.isOnline()) {
+                roster.onLocalConnect(playerId);
                 roster.catchUpNewLocalConnection(p);
             }
         });
@@ -383,7 +385,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             if (!Objects.equals(voiceSessions.get(playerId), session)) return;
             String velocityRoute = bus.fetchPlayerHome(playerId);
             String velocityName = VoiceMessages.routeBackend(velocityRoute);
-            if (velocityName != null && !velocityName.equals(thisBackend)
+            // A previous backend is normal while a hop is being committed.
+            if (attempt >= FAST_RESTORE_ATTEMPTS
+                    && velocityName != null && !velocityName.equals(thisBackend)
                     && homeMismatchWarned.add(velocityName)) {
                 logger.severe("voicechat.cross-server.this-backend is '" + thisBackend
                         + "' but Velocity calls this backend '" + velocityName
@@ -543,7 +547,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
             if (changed && previousGroupId != null) {
                 bus.publishRoster(VoiceMessages.encodeRosterLeave(
-                        previousGroupId, playerId, thisBackend), playerId, route);
+                        previousGroupId, playerId, route), playerId, route);
             }
             if (groupId == null) {
                 if (restoreSessions.containsKey(playerId)) return;
@@ -562,7 +566,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                     groupSynchronizer::onRegistryWrite);
             if (callTargets != null) callTargets.onMembershipReconciled(playerId, groupId);
             bus.publishRoster(VoiceMessages.encodeRosterJoin(
-                    groupId, playerId, name, thisBackend), playerId, route);
+                    groupId, playerId, name, route), playerId, route);
             if (changed) {
                 logger.info("Roster published: " + name + " (" + playerId
                         + ") joined " + groupId);
@@ -618,7 +622,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                     UUID groupId = membership.getLocalGroupOf(playerId);
                     if (groupId != null && route != null) {
                         bus.publishRoster(VoiceMessages.encodeRosterLeave(
-                                groupId, playerId, thisBackend), playerId, route);
+                                groupId, playerId, route), playerId, route);
                     }
                     // Leave the player-group key in place — disconnects from a
                     // server hop or short relog should auto-rejoin. Its 90 s lease
@@ -654,7 +658,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
                     String route = voiceRoutes.get(playerId);
                     if (groupId == null || route == null) continue;
                     bus.publishRoster(VoiceMessages.encodeRosterLeave(
-                            groupId, playerId, thisBackend), playerId, route);
+                            groupId, playerId, route), playerId, route);
                 }
             }
         }

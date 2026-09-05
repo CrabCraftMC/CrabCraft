@@ -181,16 +181,16 @@ final class VoiceMessages {
     /* ----------------------- Roster lifecycle ----------------------- */
 
     /**
-     * {@code ROSTER_JOIN<NUL>group<NUL>player<NUL>name<NUL>backend}
+     * {@code ROSTER_JOIN<NUL>group<NUL>player<NUL>name<NUL>backend<NUL>hop}
      */
-    static String encodeRosterJoin(UUID groupId, UUID playerId, String name, String backend) {
+    static String encodeRosterJoin(UUID groupId, UUID playerId, String name, String route) {
         return String.join(SEP, OP_ROSTER_JOIN, groupId.toString(),
-                playerId.toString(), name == null ? "" : name, backend);
+                playerId.toString(), name == null ? "" : name, route);
     }
 
     static RosterJoin decodeRosterJoin(String message) {
-        String[] parts = message.split(SEP, -1);
-        if (parts.length < 5) return null;
+        String[] parts = message.split(SEP, 5);
+        if (parts.length != 5 || !OP_ROSTER_JOIN.equals(parts[0])) return null;
         try {
             return new RosterJoin(UUID.fromString(parts[1]),
                     UUID.fromString(parts[2]), parts[3], parts[4]);
@@ -199,16 +199,18 @@ final class VoiceMessages {
         }
     }
 
-    record RosterJoin(UUID groupId, UUID playerId, String name, String backend) {}
+    record RosterJoin(UUID groupId, UUID playerId, String name, String route) {
+        String backend() { return routeBackend(route); }
+    }
 
-    static String encodeRosterLeave(UUID groupId, UUID playerId, String backend) {
+    static String encodeRosterLeave(UUID groupId, UUID playerId, String route) {
         return String.join(SEP, OP_ROSTER_LEAVE, groupId.toString(),
-                playerId.toString(), backend);
+                playerId.toString(), route);
     }
 
     static RosterLeave decodeRosterLeave(String message) {
-        String[] parts = message.split(SEP, -1);
-        if (parts.length < 4) return null;
+        String[] parts = message.split(SEP, 4);
+        if (parts.length != 4 || !OP_ROSTER_LEAVE.equals(parts[0])) return null;
         try {
             return new RosterLeave(UUID.fromString(parts[1]),
                     UUID.fromString(parts[2]), parts[3]);
@@ -217,7 +219,9 @@ final class VoiceMessages {
         }
     }
 
-    record RosterLeave(UUID groupId, UUID playerId, String backend) {}
+    record RosterLeave(UUID groupId, UUID playerId, String route) {
+        String backend() { return routeBackend(route); }
+    }
 
     /* ----------------------- Private calls ----------------------- */
 

@@ -91,6 +91,7 @@ tasks {
 
 def regressionTests = [
     voiceRelayRegressionTest: 'crabcraft.net.crabUtilities.voicechat.VoiceRelayRegressionTest',
+    rosterLifecycleRegressionTest: 'crabcraft.net.crabUtilities.voicechat.RosterLifecycleRegressionTest',
     loginStreakCacheRegressionTest: 'crabcraft.net.crabUtilities.LoginStreakCacheRegressionTest',
     statsPushPathRegressionTest: 'crabcraft.net.crabUtilities.StatsPushPathRegressionTest',
     statsPushXpLevelRegressionTest: 'crabcraft.net.crabUtilities.StatsPushXpLevelRegressionTest',

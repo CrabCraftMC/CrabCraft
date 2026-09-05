@@ -4,7 +4,7 @@ import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.EventTask;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
-import com.velocitypowered.api.event.player.ServerConnectedEvent;
+import com.velocitypowered.api.event.player.ServerPostConnectEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.scheduler.ScheduledTask;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
@@ -100,11 +100,12 @@ public class PlayerLocationTracker {
     }
 
     @Subscribe(order = PostOrder.LATE)
-    public EventTask onServerConnected(ServerConnectedEvent event) {
+    public EventTask onServerConnected(ServerPostConnectEvent event) {
         Player player = event.getPlayer();
-        String backend = event.getServer().getServerInfo().getName();
+        // ServerConnectedEvent runs before getCurrentServer() is committed.
+        // Reading it there skips the hop and leaves recovery to the 30s refresh.
         return EventTask.async(() -> {
-            if (jedisPool != null) updateConnectedHome(player, backend);
+            if (jedisPool != null) updateConnectedHome(player);
         });
     }
 
@@ -128,13 +129,12 @@ public class PlayerLocationTracker {
         });
     }
 
-    private void updateConnectedHome(Player player, String expectedBackend) {
+    private void updateConnectedHome(Player player) {
         UUID playerId = player.getUniqueId();
         updateCurrentSession(lockFor(playerId), player,
                 () -> plugin.getServer().getPlayer(playerId).orElse(null),
                 current -> current.getCurrentServer().ifPresent(server ->
-                        writeCurrentRoute(current, expectedBackend,
-                                server.getServerInfo().getName(), 3)));
+                        writeCurrentRoute(current, server.getServerInfo().getName(), 3)));
     }
 
     private void refreshHome(Player player) {
@@ -143,13 +143,11 @@ public class PlayerLocationTracker {
                 () -> plugin.getServer().getPlayer(playerId).orElse(null),
                 current -> current.getCurrentServer().ifPresent(server -> {
                     String backend = server.getServerInfo().getName();
-                    writeCurrentRoute(current, backend, backend, 1);
+                    writeCurrentRoute(current, backend, 1);
                 }));
     }
 
-    private void writeCurrentRoute(Player player, String expectedBackend,
-                                   String currentBackend, int attempts) {
-        if (!expectedBackend.equals(currentBackend)) return;
+    private void writeCurrentRoute(Player player, String currentBackend, int attempts) {
         UUID playerId = player.getUniqueId();
         RouteState route = routes.get(playerId);
         if (route == null || route.session() != player || !route.backend().equals(currentBackend)) {

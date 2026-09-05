@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
@@ -36,22 +37,32 @@ class RosterTracker {
     private final SvcPacketSender svcPackets;
     private final String thisBackend;
     private final Logger logger;
+    private final Consumer<UUID> invalidateSpeaker;
+    private volatile boolean closed;
 
     /** groupId -> playerId -> remote member metadata. */
     private final Map<UUID, Map<UUID, RemoteMember>> remoteByGroup = new ConcurrentHashMap<>();
 
     RosterTracker(CrabUtilities plugin, SvcPacketSender svcPackets,
-                  String thisBackend, Logger logger) {
+                  String thisBackend, Logger logger, Consumer<UUID> invalidateSpeaker) {
         this.plugin = plugin;
         this.svcPackets = svcPackets;
         this.thisBackend = thisBackend;
         this.logger = logger;
+        this.invalidateSpeaker = invalidateSpeaker;
     }
 
     /* ----------------------- Inbound from Redis ----------------------- */
 
     void onLifecycleMessage(String message) {
-        if (message == null || message.isEmpty()) return;
+        if (closed || message == null || message.isEmpty()) return;
+        // Mutate the roster and send its client packets in the same ordered
+        // task. Otherwise a queued removal can erase a newer join or catch-up.
+        Bukkit.getScheduler().runTask(plugin, () -> applyLifecycleMessage(message));
+    }
+
+    private void applyLifecycleMessage(String message) {
+        if (closed) return;
         int sep = message.indexOf(VoiceMessages.SEP);
         String op = sep < 0 ? message : message.substring(0, sep);
         switch (op) {
@@ -65,13 +76,20 @@ class RosterTracker {
         VoiceMessages.RosterJoin join = VoiceMessages.decodeRosterJoin(message);
         if (join == null) return;
         if (thisBackend.equals(join.backend())) return;
+        if (Bukkit.getPlayer(join.playerId()) != null) {
+            onLocalConnect(join.playerId());
+            return;
+        }
 
         long now = System.currentTimeMillis();
         // A player can move directly between groups. Treat each accepted join
         // as their single authoritative roster location.
         for (Map.Entry<UUID, Map<UUID, RemoteMember>> entry : remoteByGroup.entrySet()) {
             if (!entry.getKey().equals(join.groupId())) {
-                entry.getValue().remove(join.playerId());
+                if (entry.getValue().remove(join.playerId()) != null) {
+                    invalidateSpeaker.accept(join.playerId());
+                }
+                if (entry.getValue().isEmpty()) remoteByGroup.remove(entry.getKey());
             }
         }
         Map<UUID, RemoteMember> groupMap = remoteByGroup
@@ -79,7 +97,7 @@ class RosterTracker {
         RemoteMember existing = groupMap.get(join.playerId());
 
         if (existing != null
-                && existing.backend().equals(join.backend())
+                && existing.route().equals(join.route())
                 && Objects.equals(existing.name(), join.name())) {
             // Routine 30 s re-broadcast for an entry we already track —
             // just refresh the timestamp, no client packet needed.
@@ -88,13 +106,15 @@ class RosterTracker {
         }
 
         RemoteMember member = new RemoteMember(join.playerId(), join.name(),
-                join.backend(), now);
+                join.route(), now);
         groupMap.put(join.playerId(), member);
+        if (existing != null && !existing.route().equals(member.route())) {
+            invalidateSpeaker.accept(join.playerId());
+        }
         logger.info("Roster join: " + join.name() + " (" + join.playerId()
                 + ") in group " + join.groupId() + " from backend '" + join.backend() + "'");
 
-        Bukkit.getScheduler().runTask(plugin,
-                () -> pushMemberToLocalListeners(join.groupId(), member));
+        pushMemberToLocalListeners(join.groupId(), member);
     }
 
     private void handleLeave(String message) {
@@ -104,16 +124,16 @@ class RosterTracker {
 
         Map<UUID, RemoteMember> members = remoteByGroup.get(leave.groupId());
         if (members == null) return;
-        // Only the backend that owns the tracked entry may remove it. On a
+        // Only the exact route that owns the tracked entry may remove it. On a
         // server hop the origin's ROSTER_LEAVE can be delayed (async publish
         // under tick lag) and arrive after the destination's ROSTER_JOIN;
         // honoring it here would evict a member who is still in the group.
         RemoteMember removed = members.get(leave.playerId());
-        if (removed == null || !removed.backend().equals(leave.backend())
+        if (removed == null || !removed.route().equals(leave.route())
                 || !members.remove(leave.playerId(), removed)) return;
-
-        Bukkit.getScheduler().runTask(plugin,
-                () -> removeMemberFromLocalListeners(removed));
+        if (members.isEmpty()) remoteByGroup.remove(leave.groupId());
+        invalidateSpeaker.accept(leave.playerId());
+        removeMemberFromLocalListeners(removed);
     }
 
     /**
@@ -136,9 +156,18 @@ class RosterTracker {
                         + " (" + removed.uuid() + ") from group " + groupId
                         + " — no re-broadcast from backend '" + removed.backend()
                         + "' in " + (ENTRY_TIMEOUT_MS / 1000) + "s");
-                Bukkit.getScheduler().runTask(plugin,
-                        () -> removeMemberFromLocalListeners(removed));
+                invalidateSpeaker.accept(removed.uuid());
+                removeMemberFromLocalListeners(removed);
             }
+            if (g.getValue().isEmpty()) remoteByGroup.remove(g.getKey());
+        }
+    }
+
+    /** Native SVC now owns this player; discard their previous remote entry. */
+    void onLocalConnect(UUID playerId) {
+        for (Map.Entry<UUID, Map<UUID, RemoteMember>> entry : remoteByGroup.entrySet()) {
+            entry.getValue().remove(playerId);
+            if (entry.getValue().isEmpty()) remoteByGroup.remove(entry.getKey());
         }
     }
 
@@ -188,6 +217,7 @@ class RosterTracker {
 
     /** Tear down everything we've sent to local clients (called on plugin shutdown). */
     void shutdown() {
+        closed = true;
         for (Map.Entry<UUID, Map<UUID, RemoteMember>> entry : remoteByGroup.entrySet()) {
             for (RemoteMember m : entry.getValue().values()) {
                 removeMemberFromLocalListeners(m);
@@ -196,14 +226,16 @@ class RosterTracker {
         remoteByGroup.clear();
     }
 
-    record RemoteMember(UUID uuid, String name, String backend, long lastSeenAt) {
+    record RemoteMember(UUID uuid, String name, String route, long lastSeenAt) {
         public RemoteMember {
             Objects.requireNonNull(uuid);
-            Objects.requireNonNull(backend);
+            Objects.requireNonNull(route);
         }
 
+        String backend() { return VoiceMessages.routeBackend(route); }
+
         RemoteMember withTimestamp(long seenTimestamp) {
-            return new RemoteMember(uuid, name, backend, seenTimestamp);
+            return new RemoteMember(uuid, name, route, seenTimestamp);
         }
     }
 }
