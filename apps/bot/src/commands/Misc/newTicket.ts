@@ -45,14 +45,18 @@ export default class NewTicketCommand extends SlashCommand {
       return;
     }
 
-    // Opening for someone else is staff-only.
+    // Council members can open council tickets for someone else.
     const executor = await interaction.guild.members
       .fetch(interaction.user.id)
       .catch(() => null);
-    if (!executor?.roles.cache.has(config.MOD_ROLE_ID)) {
+    const canOpenForOthers =
+      executor?.roles.cache.has(config.MOD_ROLE_ID) ||
+      (meta.category === "council" &&
+        executor?.roles.cache.has(config.COUNCIL_ROLE_ID));
+    if (!canOpenForOthers) {
       await this.replyError(
         interaction,
-        "**Missing permissions:** only staff can open tickets for other users.",
+        "**Missing permissions:** only moderators can open tickets for other users, or council members for Council Inquiry tickets.",
       );
       return;
     }
@@ -146,13 +150,17 @@ export default class NewTicketCommand extends SlashCommand {
       .addUserOption((opt) =>
         opt
           .setName("user")
-          .setDescription("Staff only: open a ticket for this Discord user")
+          .setDescription(
+            "Open for this Discord user (moderators, or council members for council tickets)",
+          )
           .setRequired(false),
       )
       .addStringOption((opt) =>
         opt
           .setName("username")
-          .setDescription("Staff only: open a ticket for this Minecraft username")
+          .setDescription(
+            "Open for this Minecraft username (moderators, or council members for council tickets)",
+          )
           .setRequired(false),
       )
       .setDMPermission(false)

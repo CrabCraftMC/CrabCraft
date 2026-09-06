@@ -687,11 +687,16 @@ describe("ticket lifecycle controls", () => {
 });
 
 describe("ticket opening controls", () => {
-  test("allows moderators to open council inquiries for another user", async () => {
+  test.each([
+    ["moderator", ["mod"], "general"],
+    ["moderator", ["mod"], "council"],
+    ["council member", ["council"], "council"],
+    ["moderator with council role", ["mod", "council"], "general"],
+  ])("allows %s (%j) to open %s tickets for another user", async (_, roles, category) => {
     const { interaction, ticketChannel } = openingInteraction();
-    interaction.user = { id: "moderator", username: "Moderator" };
+    interaction.user = { id: "creator", username: "Creator" };
     interaction.options = {
-      getString: (name: string) => (name === "category" ? "council" : null),
+      getString: (name: string) => (name === "category" ? category : null),
       getUser: () => ({ id: "target" }),
     };
     interaction.client = {
@@ -700,17 +705,51 @@ describe("ticket opening controls", () => {
     interaction.deferReply = mock(async () => {});
     interaction.guild.members = {
       fetch: mock(async (id: string) =>
-        id === "moderator"
-          ? { roles: { cache: { has: () => true } } }
+        id === "creator"
+          ? { roles: { cache: { has: (role: string) => roles.includes(role) } } }
           : { user: { tag: "Target", username: "Target" } },
       ),
     };
+    listOpenTicketsForUser.mockResolvedValueOnce([]);
 
     await new NewTicketCommand().execute(interaction as any);
 
     expect(interaction.deferReply).toHaveBeenCalledTimes(1);
     expect(interaction.guild.channels.create).toHaveBeenCalledTimes(1);
-    expect(ticketChannel.setName).toHaveBeenCalledWith("target-council-0002");
+    expect(ticketChannel.setName).toHaveBeenCalledWith(`target-${category}-0002`);
+    expect(listOpenTicketsForUser).toHaveBeenCalledWith("target");
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({
+      openerDiscordId: "target",
+      category,
+    }));
+  });
+
+  test.each([
+    ["council member", ["council"], "general"],
+    ["council member", ["council"], "grief"],
+    ["council member", ["council"], "appeal"],
+    ["ordinary member", [], "council"],
+    ["ordinary member", [], "general"],
+  ])("denies %s (%j) opening %s tickets for another user", async (_, roles, category) => {
+    const { interaction } = openingInteraction();
+    interaction.options = {
+      getString: (name: string) => (name === "category" ? category : null),
+      getUser: () => ({ id: "target" }),
+    };
+    interaction.reply = mock(async () => {});
+    interaction.guild.members = {
+      fetch: mock(async () => ({
+        roles: { cache: { has: (role: string) => roles.includes(role) } },
+      })),
+    };
+
+    await new NewTicketCommand().execute(interaction as any);
+
+    expect(interaction.guild.channels.create).not.toHaveBeenCalled();
+    expect(createTicket).not.toHaveBeenCalled();
+    expect(JSON.stringify(interaction.reply.mock.calls[0]?.[0])).toContain(
+      "Missing permissions",
+    );
   });
 
   test("uses the requested labels for the ticket button row", () => {
