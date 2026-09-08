@@ -96,6 +96,8 @@ def regressionTests = [
     statsPushPathRegressionTest: 'crabcraft.net.crabUtilities.StatsPushPathRegressionTest',
     statsPushXpLevelRegressionTest: 'crabcraft.net.crabUtilities.StatsPushXpLevelRegressionTest',
     xpLevelReaderRegressionTest: 'crabcraft.net.crabUtilities.awards.XpLevelReaderRegressionTest',
+    eatingAwardTrackerRegressionTest: 'crabcraft.net.crabUtilities.awards.EatingAwardTrackerRegressionTest',
+    eatingHistoryImportRegressionTest: 'crabcraft.net.crabUtilities.awards.EatingHistoryImportRegressionTest',
     globalChatLinkRegressionTest: 'crabcraft.net.crabUtilities.chat.GlobalChatLinkRegressionTest',
     chatMiniMessageRegressionTest: 'crabcraft.net.crabUtilities.chat.ChatMiniMessageRegressionTest',
     publicChatPublisherRegressionTest: 'crabcraft.net.crabUtilities.chat.PublicChatPublisherRegressionTest',
@@ -220,5 +222,17 @@ processResources {
     }
     filesMatching('plugin.yml') {
         expand props
+    }
+}
+
+// One-off verified-history import. Preview by default; run against a stopped server.
+tasks.register('eatingHistory', JavaExec) {
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.awards.EatingHistoryImport')
+    doFirst {
+        args(project.property('world'), project.property('history'))
+        if (project.hasProperty('applyHistory')) args('--apply')
+        else if (project.hasProperty('exportHistory')) args('--export')
     }
 }

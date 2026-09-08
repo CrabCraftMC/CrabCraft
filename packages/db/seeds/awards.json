@@ -828,10 +828,9 @@
     "bucket": "food",
     "icon": "/awards/icons/eat_bread.png",
     "reader": {
-      "type": "int",
+      "type": "custom-int",
       "path": [
-        "minecraft:used",
-        "minecraft:bread"
+        "eat_bread"
       ]
     }
   },
@@ -843,10 +842,9 @@
     "bucket": "food",
     "icon": "/awards/icons/eat_cookie.png",
     "reader": {
-      "type": "int",
+      "type": "custom-int",
       "path": [
-        "minecraft:used",
-        "minecraft:cookie"
+        "eat_cookie"
       ]
     }
   },
@@ -858,17 +856,9 @@
     "bucket": "food",
     "icon": "/awards/icons/eat_fish.png",
     "reader": {
-      "type": "match-sum",
+      "type": "custom-int",
       "path": [
-        "minecraft:used"
-      ],
-      "patterns": [
-        "minecraft:clownfish",
-        "minecraft:cod",
-        "minecraft:cooked_cod",
-        "minecraft:cooked_salmon",
-        "minecraft:salmon",
-        "minecraft:tropical_fish"
+        "eat_fish"
       ]
     }
   },
@@ -880,14 +870,9 @@
     "bucket": "food",
     "icon": "/awards/icons/eat_junkfood.png",
     "reader": {
-      "type": "match-sum",
+      "type": "custom-int",
       "path": [
-        "minecraft:used"
-      ],
-      "patterns": [
-        "minecraft:poisonous_potato",
-        "minecraft:rotten_flesh",
-        "minecraft:spider_eye"
+        "eat_junkfood"
       ]
     }
   },
@@ -899,22 +884,9 @@
     "bucket": "food",
     "icon": "/awards/icons/eat_meat.png",
     "reader": {
-      "type": "match-sum",
+      "type": "custom-int",
       "path": [
-        "minecraft:used"
-      ],
-      "patterns": [
-        "minecraft:beef",
-        "minecraft:chicken",
-        "minecraft:cooked_beef",
-        "minecraft:cooked_chicken",
-        "minecraft:cooked_mutton",
-        "minecraft:cooked_porkchop",
-        "minecraft:cooked_rabbit",
-        "minecraft:mutton",
-        "minecraft:porkchop",
-        "minecraft:rabbit",
-        "minecraft:rabbit_stew"
+        "eat_meat"
       ]
     }
   },
@@ -926,16 +898,9 @@
     "bucket": "food",
     "icon": "/awards/icons/eat_rawmeat.png",
     "reader": {
-      "type": "match-sum",
+      "type": "custom-int",
       "path": [
-        "minecraft:used"
-      ],
-      "patterns": [
-        "minecraft:beef",
-        "minecraft:chicken",
-        "minecraft:mutton",
-        "minecraft:porkchop",
-        "minecraft:rabbit"
+        "eat_rawmeat"
       ]
     }
   },
@@ -947,49 +912,23 @@
     "bucket": "food",
     "icon": "/awards/icons/eat_soup.png",
     "reader": {
-      "type": "match-sum",
+      "type": "custom-int",
       "path": [
-        "minecraft:used"
-      ],
-      "patterns": [
-        "minecraft:mushroom_stew",
-        "minecraft:beetroot_soup",
-        "minecraft:rabbit_stew",
-        "minecraft:suspicious_stew"
+        "eat_soup"
       ]
     }
   },
   {
     "id": "eat_veggie",
     "title": "Green Diet",
-    "description": "Vegetable items eaten",
+    "description": "Vegetarian foods eaten, including cake slices",
     "unit": "int",
     "bucket": "food",
     "icon": "/awards/icons/eat_veggie.png",
     "reader": {
-      "type": "match-sum",
+      "type": "custom-int",
       "path": [
-        "minecraft:used"
-      ],
-      "patterns": [
-        "minecraft:apple",
-        "minecraft:baked_potato",
-        "minecraft:beetroot",
-        "minecraft:beetroot_soup",
-        "minecraft:bread",
-        "minecraft:cake",
-        "minecraft:carrot",
-        "minecraft:chorus_fruit",
-        "minecraft:cookie",
-        "minecraft:dried_kelp",
-        "minecraft:glow_berries",
-        "minecraft:golden_apple",
-        "minecraft:golden_carrot",
-        "minecraft:melon_slice",
-        "minecraft:mushroom_stew",
-        "minecraft:potato",
-        "minecraft:pumpkin_pie",
-        "minecraft:sweet_berries"
+        "eat_veggie"
       ]
     }
   },
@@ -4483,10 +4422,9 @@
     "icon": "/awards/icons/eat_sweet_berries.png",
     "sort_order": 0,
     "reader": {
-      "type": "int",
+      "type": "custom-int",
       "path": [
-        "minecraft:used",
-        "minecraft:sweet_berries"
+        "eat_sweet_berries"
       ]
     }
   },

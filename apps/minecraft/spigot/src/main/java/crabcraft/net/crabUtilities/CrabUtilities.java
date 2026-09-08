@@ -2,6 +2,7 @@ package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.accurateplacement.AccurateBlockPlacementManager;
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
+import crabcraft.net.crabUtilities.awards.EatingAwardTracker;
 import crabcraft.net.crabUtilities.awards.SuspiciousBrushTracker;
 import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
 import crabcraft.net.crabUtilities.bingo.BingoManager;
@@ -160,6 +161,7 @@ public final class CrabUtilities extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ExperienceClumpListener(this), this);
         Bukkit.getPluginManager().registerEvents(new SharedVillagerDiscountListener(this), this);
         Bukkit.getPluginManager().registerEvents(new SuspiciousBrushTracker(), this);
+        Bukkit.getPluginManager().registerEvents(new EatingAwardTracker(), this);
         Bukkit.getPluginManager().registerEvents(new SlimeMapListener(), this);
 
         startAccurateBlockPlacement();
