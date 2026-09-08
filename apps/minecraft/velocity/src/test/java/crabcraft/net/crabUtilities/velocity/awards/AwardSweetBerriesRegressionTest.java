@@ -16,18 +16,20 @@ final class AwardSweetBerriesRegressionTest {
                 "unexpected sweet-berries award title");
 
         AwardDefinition definition = definitionFrom(row);
-        double score = new AwardEvaluator(Map.of(definition.id, definition)).evaluate(
-                JsonParser.parseString("""
-                        {"stats":{
-                          "minecraft:used":{
-                            "minecraft:sweet_berries":13,
-                            "minecraft:glow_berries":99
-                          }
-                        }}
-                        """).getAsJsonObject()).get(definition.id);
-
-        check(score == 13d,
-                "Jam Buds did not read only sweet berries eaten");
+        var evaluator = new AwardEvaluator(Map.of(definition.id, definition));
+        var stats = new JsonObject();
+        var used = new JsonObject();
+        java.util.Random random = new java.util.Random(671_254L);
+        used.addProperty("minecraft:sweet_berries", 100 + random.nextInt(900));
+        used.addProperty("minecraft:glow_berries", 100 + random.nextInt(900));
+        stats.add("minecraft:used", used);
+        check(!evaluator.evaluate(stats).containsKey(definition.id),
+                "missing confirmed berry totals must preserve existing scores");
+        var custom = new JsonObject();
+        long eaten = 1 + random.nextInt(90);
+        custom.addProperty("eat_sweet_berries", eaten);
+        check(evaluator.evaluate(stats, custom).get(definition.id) == eaten,
+                "Jam Buds must read confirmed sweet berries eaten");
     }
 
     private static JsonObject loadSeedRow() throws Exception {

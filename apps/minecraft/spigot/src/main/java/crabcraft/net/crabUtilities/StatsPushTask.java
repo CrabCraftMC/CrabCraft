@@ -2,6 +2,7 @@ package crabcraft.net.crabUtilities;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import crabcraft.net.crabUtilities.awards.EatingAwardTracker;
 import crabcraft.net.crabUtilities.awards.XpLevelReader;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -34,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   "season":"6",
  *   "uuid":"&lt;uuid&gt;",
  *   "stats":&lt;raw contents&gt;,
- *   "custom":{"xp_level":42}
+ *   "custom":{"xp_level":42,"eat_veggie":0}
  * }</pre>
  * The {@code custom} object is optional. XP level comes from Paper for online
  * players and falls back to the latest complete player-data save for offline
@@ -60,6 +61,7 @@ public class StatsPushTask {
     private final Map<String, Long> lastSeenMtime = new HashMap<>();
     private final Map<String, Long> lastSeenPlayerDataMtime = new HashMap<>();
     private final Map<String, Integer> lastSeenXpLevel = new HashMap<>();
+    private final Map<String, Map<String, Long>> lastSeenEatingScores = new HashMap<>();
     private final AtomicBoolean scanRunning = new AtomicBoolean();
     private volatile boolean redisFailureLogged;
 
@@ -106,13 +108,20 @@ public class StatsPushTask {
         if (!scanRunning.compareAndSet(false, true)) return;
 
         Map<String, Integer> onlineXpLevels = new HashMap<>();
+        Map<String, Map<String, Long>> onlineEatingScores = new HashMap<>();
         for (Player player : Bukkit.getOnlinePlayers()) {
             onlineXpLevels.put(player.getUniqueId().toString(), player.getLevel());
+            try {
+                onlineEatingScores.put(player.getUniqueId().toString(), EatingAwardTracker.scores(player));
+            } catch (RuntimeException e) {
+                onlineEatingScores.put(player.getUniqueId().toString(), Map.of());
+                plugin.getLogger().warning("Could not read eating progress for " + player.getUniqueId() + ": " + e.getMessage());
+            }
         }
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                scan(Map.copyOf(onlineXpLevels));
+                scan(Map.copyOf(onlineXpLevels), Map.copyOf(onlineEatingScores));
             } finally {
                 scanRunning.set(false);
             }
@@ -123,7 +132,7 @@ public class StatsPushTask {
      * Iterates the level's {@code players/stats/<uuid>.json} files and pushes
      * anything whose mtime has moved since the previous scan.
      */
-    private void scan(Map<String, Integer> onlineXpLevels) {
+    private void scan(Map<String, Integer> onlineXpLevels, Map<String, Map<String, Long>> onlineEatingScores) {
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
         if (!statsDir.isDirectory()) return;
@@ -145,10 +154,12 @@ public class StatsPushTask {
                 Long prev = lastSeenMtime.get(file.getName());
                 Long previousPlayerDataMtime = lastSeenPlayerDataMtime.get(uuid);
                 Integer liveXpLevel = onlineXpLevels.get(uuid);
+                Map<String, Long> liveEatingScores = onlineEatingScores.get(uuid);
                 if (prev != null && prev == mtime
                         && previousPlayerDataMtime != null
                         && previousPlayerDataMtime == playerDataMtime
-                        && !hasLiveXpLevelChanged(liveXpLevel, lastSeenXpLevel.get(uuid))) {
+                        && !hasLiveXpLevelChanged(liveXpLevel, lastSeenXpLevel.get(uuid))
+                        && !hasLiveEatingScoresChanged(liveEatingScores, lastSeenEatingScores.get(uuid))) {
                     continue;
                 }
 
@@ -174,13 +185,17 @@ public class StatsPushTask {
                 envelope.add("stats", JsonParser.parseString(raw));
 
                 OptionalInt xpLevel = resolveXpLevel(liveXpLevel, playerDataFile.toPath());
+                JsonObject custom = new JsonObject();
                 if (xpLevel.isPresent()) {
-                    JsonObject custom = new JsonObject();
                     custom.addProperty("xp_level", xpLevel.getAsInt());
-                    envelope.add("custom", custom);
                 } else if (playerDataFile.isFile()) {
                     plugin.getLogger().fine("Could not read XP level for " + uuid);
                 }
+                Map<String, Long> eatingScores = liveEatingScores != null
+                        ? liveEatingScores
+                        : EatingAwardTracker.scores(playerDataFile.toPath(), envelope.getAsJsonObject("stats"));
+                eatingScores.forEach(custom::addProperty);
+                if (!custom.isEmpty()) envelope.add("custom", custom);
 
                 // Include advancements if available for this player
                 File advFile = new File(advancementsDir, uuid + ".json");
@@ -202,6 +217,7 @@ public class StatsPushTask {
                 lastSeenMtime.put(file.getName(), mtime);
                 lastSeenPlayerDataMtime.put(uuid, playerDataMtime);
                 xpLevel.ifPresent(level -> lastSeenXpLevel.put(uuid, level));
+                lastSeenEatingScores.put(uuid, eatingScores);
                 pushed++;
             }
         } catch (Exception e) {
@@ -226,6 +242,10 @@ public class StatsPushTask {
 
     static boolean hasLiveXpLevelChanged(Integer liveXpLevel, Integer previousXpLevel) {
         return liveXpLevel != null && !liveXpLevel.equals(previousXpLevel);
+    }
+
+    static boolean hasLiveEatingScoresChanged(Map<String, Long> liveScore, Map<String, Long> previousScore) {
+        return liveScore != null && !liveScore.equals(previousScore);
     }
 
     public void shutdown() {

@@ -20,6 +20,18 @@ final class StatsPushXpLevelRegressionTest {
                 "unchanged live XP level would trigger a push");
         check(!StatsPushTask.hasLiveXpLevelChanged(null, 42),
                 "offline player was treated as a live XP change");
+
+        long meals = 1 + new java.util.Random(583_207L).nextInt(90);
+        var first = java.util.Map.of("eat_bread", meals);
+        var next = java.util.Map.of("eat_bread", meals + 1);
+        check(StatsPushTask.hasLiveEatingScoresChanged(java.util.Map.of(), null),
+                "a first snapshot must be pushed even while historical totals are pending");
+        check(StatsPushTask.hasLiveEatingScoresChanged(next, first),
+                "eating must trigger a push before vanilla stats are saved");
+        check(!StatsPushTask.hasLiveEatingScoresChanged(first, first),
+                "unchanged meals must not trigger repeated pushes");
+        check(!StatsPushTask.hasLiveEatingScoresChanged(null, first),
+                "an offline player was treated as a live meal change");
     }
 
     private static void check(boolean condition, String message) {
