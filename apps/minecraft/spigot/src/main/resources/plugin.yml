@@ -51,7 +51,7 @@ commands:
 permissions:
   crabutilities.restricted-area.bypass:
     description: Bypass the permission-gated holding area and action restrictions.
-    default: false
+    default: op
   crabutilities.reload:
     description: Reload CrabUtilities configuration.
     default: op

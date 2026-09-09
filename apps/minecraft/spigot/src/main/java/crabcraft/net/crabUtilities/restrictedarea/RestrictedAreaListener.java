@@ -81,6 +81,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRiptideEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
@@ -99,7 +100,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Confines players without the configured permission to one cuboid and blocks
+ * Confines non-operators without the configured permission to one cuboid and blocks
  * their non-combat actions. Permission checks are deliberately live so
  * LuckPerms changes take effect on the next attempted action without a cache
  * or reconnect.
@@ -107,6 +108,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class RestrictedAreaListener implements Listener {
 
     private final CrabUtilities plugin;
+    private final VerificationReminder reminder = new VerificationReminder();
     private final Set<UUID> correctiveTeleports = ConcurrentHashMap.newKeySet();
     private volatile RestrictedAreaSettings settings = RestrictedAreaSettings.disabled();
 
@@ -157,6 +159,7 @@ public final class RestrictedAreaListener implements Listener {
         if (decision == RestrictedAreaSettings.MovementDecision.ALLOW) {
             return;
         }
+        remind(player);
         if (decision == RestrictedAreaSettings.MovementDecision.BLOCK) {
             event.setTo(new Location(from.getWorld(), from.getX(), from.getY(), from.getZ(),
                     to.getYaw(), to.getPitch()));
@@ -170,6 +173,7 @@ public final class RestrictedAreaListener implements Listener {
         if (isRestricted(event.getPlayer())
                 && !correctiveTeleports.contains(event.getPlayer().getUniqueId())) {
             event.setCancelled(true);
+            remind(event.getPlayer());
         }
     }
 
@@ -181,6 +185,11 @@ public final class RestrictedAreaListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(final PlayerJoinEvent event) {
         Bukkit.getScheduler().runTask(plugin, () -> ensureInside(event.getPlayer()));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onQuit(final PlayerQuitEvent event) {
+        reminder.forget(event.getPlayer().getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -204,9 +213,13 @@ public final class RestrictedAreaListener implements Listener {
         if (isCombatItem(event.getMaterial())) {
             event.setUseInteractedBlock(Event.Result.DENY);
             event.setUseItemInHand(Event.Result.ALLOW);
+            if (event.getClickedBlock() != null && event.getClickedBlock().getType().isInteractable()) {
+                remind(event.getPlayer());
+            }
             return;
         }
         event.setCancelled(true);
+        remind(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -214,6 +227,9 @@ public final class RestrictedAreaListener implements Listener {
         if (isRestricted(event.getPlayer())
                 || event.getRightClicked() instanceof Player target && isRestricted(target)) {
             event.setCancelled(true);
+            if (isRestricted(event.getPlayer())) {
+                remind(event.getPlayer());
+            }
         }
     }
 
@@ -271,6 +287,7 @@ public final class RestrictedAreaListener implements Listener {
     public void onPreAttack(final PrePlayerAttackEntityEvent event) {
         if (isRestricted(event.getPlayer()) && !isPvpTarget(event.getAttacked())) {
             event.setCancelled(true);
+            remind(event.getPlayer());
         }
     }
 
@@ -279,6 +296,7 @@ public final class RestrictedAreaListener implements Listener {
         if (isRestricted(responsiblePlayer(event.getDamager()))
                 && !isPvpTarget(event.getEntity())) {
             event.setCancelled(true);
+            remind(responsiblePlayer(event.getDamager()));
         }
     }
 
@@ -294,6 +312,7 @@ public final class RestrictedAreaListener implements Listener {
         final Player shooter = responsiblePlayer(event.getEntity());
         if (isRestricted(shooter) && !isCombatProjectile(event.getEntity())) {
             event.setCancelled(true);
+            remind(shooter);
         }
     }
 
@@ -314,22 +333,22 @@ public final class RestrictedAreaListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onResurrect(final EntityResurrectEvent event) {
-        cancel(event, player(event.getEntity()));
+        cancelSilently(event, player(event.getEntity()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onArrowBodyCount(final ArrowBodyCountChangeEvent event) {
-        cancel(event, player(event.getEntity()));
+        cancelSilently(event, player(event.getEntity()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onFoodLevel(final FoodLevelChangeEvent event) {
-        cancel(event, player(event.getEntity()));
+        cancelSilently(event, player(event.getEntity()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onExhaustion(final EntityExhaustionEvent event) {
-        cancel(event, player(event.getEntity()));
+        cancelSilently(event, player(event.getEntity()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -394,17 +413,17 @@ public final class RestrictedAreaListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPickup(final EntityPickupItemEvent event) {
-        cancel(event, player(event.getEntity()));
+        cancelSilently(event, player(event.getEntity()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onAttemptPickup(final PlayerAttemptPickupItemEvent event) {
-        cancel(event, event.getPlayer());
+        cancelSilently(event, event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPickupArrow(final PlayerPickupArrowEvent event) {
-        cancel(event, event.getPlayer());
+        cancelSilently(event, event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -437,6 +456,9 @@ public final class RestrictedAreaListener implements Listener {
         if (isRestricted(event.getPlayer())
                 || event.getCaught() instanceof Player caught && isRestricted(caught)) {
             event.setCancelled(true);
+            if (isRestricted(event.getPlayer())) {
+                remind(event.getPlayer());
+            }
         }
     }
 
@@ -462,7 +484,7 @@ public final class RestrictedAreaListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onItemMend(final PlayerItemMendEvent event) {
-        cancel(event, event.getPlayer());
+        cancelSilently(event, event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -589,7 +611,8 @@ public final class RestrictedAreaListener implements Listener {
             final Player player,
             final RestrictedAreaSettings current
     ) {
-        return player != null && current.enabled() && !player.hasPermission(current.permission());
+        return player != null && current.enabled()
+                && !player.isOp() && !player.hasPermission(current.permission());
     }
 
     static boolean isCombatItem(final Material material) {
@@ -610,7 +633,26 @@ public final class RestrictedAreaListener implements Listener {
     private void cancel(final Cancellable event, final Player player) {
         if (isRestricted(player)) {
             event.setCancelled(true);
+            remind(player);
         }
+    }
+
+    private void cancelSilently(final Cancellable event, final Player player) {
+        if (isRestricted(player)) {
+            event.setCancelled(true);
+        }
+    }
+
+    private void remind(final Player player) {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (player.isOnline() && isRestricted(player)) {
+                    reminder.send(player.getUniqueId(), player);
+                }
+            });
+            return;
+        }
+        reminder.send(player.getUniqueId(), player);
     }
 
     private void ensureInside(final Player player) {

@@ -19,6 +19,7 @@ public final class RestrictedAreaRegressionTest {
         verifyBundledDefaults();
         verifyBoundsAndMovement();
         verifyPermissionChangesAreLive();
+        VerificationReminderRegressionTest.main(args);
         verifyCombatItemsRemainUsable();
         verifyCombatTargetsArePlayersOnly();
         verifyInvalidReturnLocationIsRejected();
@@ -93,11 +94,13 @@ public final class RestrictedAreaRegressionTest {
     private static void verifyPermissionChangesAreLive() {
         RestrictedAreaSettings settings = RestrictedAreaSettings.load(enabledConfig());
         AtomicBoolean hasPermission = new AtomicBoolean(false);
+        AtomicBoolean operator = new AtomicBoolean(false);
         Player player = (Player) Proxy.newProxyInstance(
                 Player.class.getClassLoader(),
                 new Class<?>[]{Player.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "hasPermission" -> hasPermission.get();
+                    case "isOp" -> operator.get();
                     case "equals" -> proxy == args[0];
                     case "hashCode" -> System.identityHashCode(proxy);
                     default -> defaultValue(method.getReturnType());
@@ -111,6 +114,12 @@ public final class RestrictedAreaRegressionTest {
         hasPermission.set(false);
         check(RestrictedAreaListener.isRestricted(player, settings),
                 "permission removal did not restore restrictions immediately");
+        operator.set(true);
+        check(!RestrictedAreaListener.isRestricted(player, settings),
+                "operator without the configured permission was restricted");
+        operator.set(false);
+        check(RestrictedAreaListener.isRestricted(player, settings),
+                "removing operator status did not restore restrictions immediately");
     }
 
     private static void verifyCombatItemsRemainUsable() {
