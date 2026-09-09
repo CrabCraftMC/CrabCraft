@@ -5,18 +5,9 @@
 phantoms:
   suppress-for-opted-out: true
 
-# Permission-gated holding area. Operators always bypass these restrictions.
-# Other players without bypass-permission can only
-# move within this cuboid; all standard non-combat gameplay actions are blocked.
-# Melee and ranged PvP, incoming damage, knockback, and death remain enabled.
-# Bounds are exact player coordinates and are inclusive on both corners.
+# Prevent unverified players from griefing blocks, containers, and entities in every world.
+# Operators and players with bypass-permission are exempt.
+# Legacy bounds, world, and return-location entries are ignored.
 restricted-area:
   enabled: false
   bypass-permission: "crabutilities.restricted-area.bypass"
-  world: "world"
-  bounds:
-    first: { x: -5.0, y: 60.0, z: -5.0 }
-    second: { x: 5.0, y: 70.0, z: 5.0 }
-  # Used when a restricted player joins, respawns, changes world, or is found
-  # outside the bounds. This point must be inside the cuboid.
-  return-location: { x: 0.0, y: 64.0, z: 0.0, yaw: 0.0, pitch: 0.0 }

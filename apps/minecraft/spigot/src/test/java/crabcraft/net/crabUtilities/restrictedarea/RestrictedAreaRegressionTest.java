@@ -1,194 +1,270 @@
 package crabcraft.net.crabUtilities.restrictedarea;
 
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Bootstrap;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.food.Foods;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.Consumables;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Arrow;
+import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Player;
-import org.bukkit.Material;
+import org.bukkit.event.Cancellable;
+import org.bukkit.event.Event;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.InventoryView;
 
 import java.io.InputStream;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class RestrictedAreaRegressionTest {
 
-    private RestrictedAreaRegressionTest() {
-    }
-
     public static void main(String[] args) throws Exception {
-        verifyBundledDefaults();
-        verifyBoundsAndMovement();
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        // Standalone tests do not load data packs; supply the vanilla components used by these item checks.
+        Items.COOKED_BEEF.builtInRegistryHolder().bindComponents(DataComponentMap.builder()
+                .set(DataComponents.FOOD, Foods.COOKED_BEEF)
+                .set(DataComponents.CONSUMABLE, Consumables.DEFAULT_FOOD).build());
+        Items.DIAMOND_HOE.builtInRegistryHolder().bindComponents(DataComponentMap.EMPTY);
+        verifyConfiguration();
         verifyPermissionChangesAreLive();
+        verifyGriefProtectionInEveryWorld();
+        verifyPersonalInventoryRemainsUsable();
+        verifyNormalMovementAndCommands();
+        verifyPassiveInteractionsStaySilent();
         VerificationReminderRegressionTest.main(args);
-        verifyCombatItemsRemainUsable();
-        verifyCombatTargetsArePlayersOnly();
-        verifyInvalidReturnLocationIsRejected();
-        verifyNonNumericCoordinatesAreRejected();
     }
 
-    private static void verifyBundledDefaults() throws Exception {
-        YamlConfiguration config = loadGameplayConfig();
-        check(!config.getBoolean("restricted-area.enabled", true),
-                "restricted area is not opt-in");
-        check(config.getString("restricted-area.bypass-permission", "")
-                        .equals(RestrictedAreaSettings.DEFAULT_PERMISSION),
-                "restricted area permission default changed unexpectedly");
-    }
-
-    private static void verifyBoundsAndMovement() {
-        YamlConfiguration config = enabledConfig();
-        // Deliberately reverse the configured corners to prove they normalise.
-        config.set("restricted-area.bounds.first.x", 10D);
-        config.set("restricted-area.bounds.second.x", -10D);
-
-        RestrictedAreaSettings settings = RestrictedAreaSettings.load(config);
-        RestrictedAreaSettings.Area area = settings.area();
-
-        check(area.contains("holding", -10D, 60D, -5D),
-                "inclusive minimum corner is outside the area");
-        check(area.contains("holding", 10D, 70D, 5D),
-                "inclusive maximum corner is outside the area");
-        check(!area.contains("world", 0D, 64D, 0D),
-                "same coordinates in another world are inside the area");
-        check(area.movementDecision(
-                        "holding", 0D, 64D, 0D,
-                        "holding", 1D, 64D, 1D)
-                        == RestrictedAreaSettings.MovementDecision.ALLOW,
-                "movement within the area was blocked");
-        check(area.movementDecision(
-                        "holding", 0D, 64D, 0D,
-                        "holding", 11D, 64D, 0D)
-                        == RestrictedAreaSettings.MovementDecision.BLOCK,
-                "movement leaving the area was not blocked");
-        check(area.movementDecision(
-                        "world", 0D, 64D, 0D,
-                        "world", 1D, 64D, 1D)
-                        == RestrictedAreaSettings.MovementDecision.RETURN,
-                "a restricted player outside the area was not returned");
-    }
-
-    private static void verifyInvalidReturnLocationIsRejected() {
-        YamlConfiguration config = enabledConfig();
-        config.set("restricted-area.return-location.x", 50D);
-        try {
-            RestrictedAreaSettings.load(config);
-            throw new AssertionError("return location outside the area was accepted");
-        } catch (IllegalArgumentException expected) {
-            check(expected.getMessage().contains("return-location"),
-                    "invalid return location produced an unclear error");
+    private static void verifyConfiguration() throws Exception {
+        try (InputStream input = RestrictedAreaRegressionTest.class.getClassLoader()
+                .getResourceAsStream("modules/gameplay.yml")) {
+            check(input != null, "bundled gameplay.yml is missing");
+            YamlConfiguration config = new YamlConfiguration();
+            config.loadFromString(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+            check(!config.getBoolean("restricted-area.enabled", true), "protection is not opt-in");
+            check(config.getString("restricted-area.bypass-permission", "")
+                    .equals(RestrictedAreaSettings.DEFAULT_PERMISSION), "default permission changed");
+            check(!config.contains("restricted-area.bounds") && !config.contains("restricted-area.world")
+                    && !config.contains("restricted-area.return-location"), "obsolete settings remain in defaults");
         }
-    }
-
-    private static void verifyNonNumericCoordinatesAreRejected() {
         YamlConfiguration config = enabledConfig();
-        config.set("restricted-area.bounds.first.x", "not-a-number");
-        try {
-            RestrictedAreaSettings.load(config);
-            throw new AssertionError("non-numeric coordinate was accepted");
-        } catch (IllegalArgumentException expected) {
-            check(expected.getMessage().contains("must be a number"),
-                    "non-numeric coordinate produced an unclear error");
-        }
+        check(RestrictedAreaSettings.load(config).enabled(), "protection still requires area settings");
+        config.set("restricted-area.world", "missing-world");
+        config.set("restricted-area.bounds", "obsolete");
+        config.set("restricted-area.return-location.y", 90D);
+        check(RestrictedAreaSettings.load(config).enabled(), "legacy settings disable grief protection");
     }
 
     private static void verifyPermissionChangesAreLive() {
         RestrictedAreaSettings settings = RestrictedAreaSettings.load(enabledConfig());
-        AtomicBoolean hasPermission = new AtomicBoolean(false);
-        AtomicBoolean operator = new AtomicBoolean(false);
-        Player player = (Player) Proxy.newProxyInstance(
-                Player.class.getClassLoader(),
-                new Class<?>[]{Player.class},
-                (proxy, method, args) -> switch (method.getName()) {
-                    case "hasPermission" -> hasPermission.get();
-                    case "isOp" -> operator.get();
-                    case "equals" -> proxy == args[0];
-                    case "hashCode" -> System.identityHashCode(proxy);
-                    default -> defaultValue(method.getReturnType());
-                });
-
-        check(RestrictedAreaListener.isRestricted(player, settings),
-                "player without the permission was not restricted");
-        hasPermission.set(true);
-        check(!RestrictedAreaListener.isRestricted(player, settings),
-                "permission grant did not remove restrictions immediately");
-        hasPermission.set(false);
-        check(RestrictedAreaListener.isRestricted(player, settings),
-                "permission removal did not restore restrictions immediately");
+        AtomicBoolean verified = new AtomicBoolean();
+        AtomicBoolean operator = new AtomicBoolean();
+        Player player = player(verified, operator, new AtomicInteger(), proxy(World.class, Map.of()));
+        check(RestrictedAreaListener.isRestricted(player, settings), "unverified player was not restricted");
+        verified.set(true);
+        check(!RestrictedAreaListener.isRestricted(player, settings), "verification did not immediately grant access");
+        verified.set(false);
         operator.set(true);
-        check(!RestrictedAreaListener.isRestricted(player, settings),
-                "operator without the configured permission was restricted");
+        check(!RestrictedAreaListener.isRestricted(player, settings), "operator was restricted");
         operator.set(false);
-        check(RestrictedAreaListener.isRestricted(player, settings),
-                "removing operator status did not restore restrictions immediately");
+        check(RestrictedAreaListener.isRestricted(player, settings), "removing bypass did not restore protection");
+        check(!RestrictedAreaListener.isRestricted(player, RestrictedAreaSettings.disabled()),
+                "disabled feature still restricts players");
     }
 
-    private static void verifyCombatItemsRemainUsable() {
-        check(RestrictedAreaListener.isCombatItem(Material.BOW),
-                "bows are not allowed for restricted PvP");
-        check(RestrictedAreaListener.isCombatItem(Material.CROSSBOW),
-                "crossbows are not allowed for restricted PvP");
-        check(RestrictedAreaListener.isCombatItem(Material.TRIDENT),
-                "tridents are not allowed for restricted PvP");
-        check(RestrictedAreaListener.isCombatItem(Material.SHIELD),
-                "shields are not allowed for restricted PvP");
-        check(!RestrictedAreaListener.isCombatItem(Material.ENDER_PEARL),
-                "ender pearls bypass the non-combat restriction");
-        check(!RestrictedAreaListener.isCombatItem(Material.CHEST),
-                "ordinary interaction items bypass the restriction");
+    private static void verifyGriefProtectionInEveryWorld() {
+        for (String name : new String[]{"world", "world_nether", "world_the_end", "custom_world"}) {
+            RestrictedAreaListener listener = listener();
+            AtomicBoolean verified = new AtomicBoolean();
+            Player player = player(verified, new AtomicBoolean(), new AtomicInteger(),
+                    proxy(World.class, Map.of("getName", name)));
+            Block block = proxy(Block.class, Map.of());
+            BlockBreakEvent breaking = new BlockBreakEvent(block, player);
+            listener.onBlockBreak(breaking);
+            check(breaking.isCancelled(), "block breaking was allowed in " + name);
+            BlockPlaceEvent placing = new BlockPlaceEvent(block, proxy(BlockState.class, Map.of()),
+                    block, null, player, true, EquipmentSlot.HAND);
+            listener.onBlockPlace(placing);
+            check(placing.isCancelled(), "block placement was allowed in " + name);
+            for (Entity target : new Entity[]{proxy(Entity.class, Map.of()),
+                    player(new AtomicBoolean(true), new AtomicBoolean(), new AtomicInteger(), player.getWorld())}) {
+                PrePlayerAttackEntityEvent attack = new PrePlayerAttackEntityEvent(player, target, true);
+                listener.onPreAttack(attack);
+                check(attack.isCancelled(), "unverified player could damage an entity");
+                PlayerInteractEntityEvent interaction = new PlayerInteractEntityEvent(player, target);
+                listener.onInteractEntity(interaction);
+                check(interaction.isCancelled(), "unverified player could alter an entity");
+            }
+            ProjectileLaunchEvent arrow = new ProjectileLaunchEvent(proxy(Arrow.class, Map.of("getShooter", player)));
+            listener.onProjectileLaunch(arrow);
+            check(arrow.isCancelled(), "unverified player could launch a damaging projectile");
+            ProjectileLaunchEvent pearl = new ProjectileLaunchEvent(proxy(EnderPearl.class, Map.of("getShooter", player)));
+            listener.onProjectileLaunch(pearl);
+            check(!pearl.isCancelled(), "ordinary pearl travel was blocked");
+            verified.set(true);
+            BlockBreakEvent permitted = new BlockBreakEvent(block, player);
+            listener.onBlockBreak(permitted);
+            check(!permitted.isCancelled(), "verified player still cannot build");
+        }
     }
 
-    private static void verifyCombatTargetsArePlayersOnly() {
-        check(RestrictedAreaListener.isPvpTarget(proxy(Player.class)),
-                "player target was not recognised as PvP");
-        check(!RestrictedAreaListener.isPvpTarget(proxy(Entity.class)),
-                "non-player entity target was recognised as PvP");
+    private static void verifyPersonalInventoryRemainsUsable() {
+        RestrictedAreaListener listener = listener();
+        Player player = player(new AtomicBoolean(), new AtomicBoolean(), new AtomicInteger(),
+                proxy(World.class, Map.of()));
+        for (InventoryType type : new InventoryType[]{InventoryType.CRAFTING, InventoryType.CREATIVE,
+                InventoryType.PLAYER, InventoryType.CHEST, InventoryType.HOPPER, InventoryType.SHULKER_BOX}) {
+            Inventory inventory = proxy(Inventory.class, Map.of("getType", type));
+            InventoryView view = proxy(InventoryView.class,
+                    Map.of("getType", type, "getPlayer", player, "getTopInventory", inventory));
+            InventoryOpenEvent open = new InventoryOpenEvent(view);
+            listener.onInventoryOpen(open);
+            InventoryClickEvent click = new InventoryClickEvent(view, InventoryType.SlotType.CONTAINER,
+                    0, ClickType.LEFT, InventoryAction.PICKUP_ALL);
+            listener.onInventoryClick(click);
+            boolean personal = type == InventoryType.CRAFTING || type == InventoryType.CREATIVE
+                    || type == InventoryType.PLAYER;
+            check(open.isCancelled() != personal, "incorrect inventory access for " + type);
+            check(click.isCancelled() != personal, "incorrect inventory manipulation for " + type);
+        }
+    }
+
+    private static void verifyNormalMovementAndCommands() throws Exception {
+        RestrictedAreaListener listener = listener();
+        AtomicInteger messages = new AtomicInteger();
+        World world = proxy(World.class, Map.of());
+        Player player = player(new AtomicBoolean(), new AtomicBoolean(), messages, world);
+        Location from = new Location(world, 0D, 64D, 0D);
+        Location outside = new Location(world, -100D, 90D, 0D);
+        Event[] events = {
+                new PlayerMoveEvent(player, from, outside),
+                new PlayerTeleportEvent(player, from, outside, PlayerTeleportEvent.TeleportCause.COMMAND),
+                new PlayerTeleportEvent(player, from, outside, PlayerTeleportEvent.TeleportCause.ENDER_PEARL),
+                new PlayerToggleFlightEvent(player, true),
+                new FoodLevelChangeEvent(player, 10, null),
+                new PlayerCommandPreprocessEvent(player, "/tp 0 90 0", Set.of()),
+                new PlayerCommandPreprocessEvent(player, "/msg friend hello", Set.of())
+        };
+        for (Event event : events) {
+            dispatch(listener, event);
+            check(!((Cancellable) event).isCancelled(), "unrelated behaviour was restricted: " + event.getEventName());
+        }
+        check(messages.get() == 0, "normal movement or commands sent verification reminders");
+        for (var method : RestrictedAreaListener.class.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(EventHandler.class)) {
+                check(!method.getParameterTypes()[0].getSimpleName().contains("Chat"), "chat is still restricted");
+            }
+        }
+    }
+
+    private static void verifyPassiveInteractionsStaySilent() {
+        RestrictedAreaListener listener = listener();
+        AtomicInteger messages = new AtomicInteger();
+        Player player = player(new AtomicBoolean(), new AtomicBoolean(), messages, proxy(World.class, Map.of()));
+        PlayerInteractEvent physical = new PlayerInteractEvent(player, Action.PHYSICAL, null,
+                proxy(Block.class, Map.of()), BlockFace.UP);
+        listener.onInteract(physical);
+        check(physical.useInteractedBlock() == Event.Result.DENY, "farmland/pressure plate protection was removed");
+        PlayerInteractEvent air = new PlayerInteractEvent(player, Action.RIGHT_CLICK_AIR, null, null, BlockFace.UP);
+        Event.Result originalItemUse = air.useItemInHand();
+        listener.onInteract(air);
+        check(air.useItemInHand() == originalItemUse, "personal item use in the air was blocked");
+        check(messages.get() == 0, "passive movement or air interaction sent a reminder");
+        PlayerInteractEvent breaking = new PlayerInteractEvent(player, Action.LEFT_CLICK_BLOCK, null,
+                proxy(Block.class, Map.of()), BlockFace.UP);
+        listener.onInteract(breaking);
+        check(messages.get() == 1, "obvious grief attempt did not send a reminder");
+        PlayerInteractEvent chest = new PlayerInteractEvent(player, Action.RIGHT_CLICK_BLOCK, null,
+                proxy(Block.class, Map.of("getType", Material.CHEST)), BlockFace.UP);
+        listener.onInteract(chest);
+        check(chest.useInteractedBlock() == Event.Result.DENY, "opening a chest with an empty hand was allowed");
+        check(RestrictedAreaListener.isPersonalItem(Material.COOKED_BEEF), "food use was classified as griefing");
+        check(!RestrictedAreaListener.isPersonalItem(Material.DIAMOND_HOE), "world-altering tool was allowed");
+        PlayerInteractEvent food = new PlayerInteractEvent(player, Action.RIGHT_CLICK_BLOCK, null,
+                proxy(Block.class, Map.of("getType", Material.STONE)), BlockFace.UP) {
+            @Override
+            public boolean hasItem() { return true; }
+            @Override
+            public Material getMaterial() { return Material.COOKED_BEEF; }
+        };
+        listener.onInteract(food);
+        check(food.useItemInHand() != Event.Result.DENY, "eating while looking at a block was prevented");
+    }
+
+    private static void dispatch(RestrictedAreaListener listener, Event event) throws Exception {
+        for (var method : RestrictedAreaListener.class.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(EventHandler.class)
+                    && method.getParameterTypes()[0].isInstance(event)) {
+                method.invoke(listener, event);
+            }
+        }
+    }
+
+    private static RestrictedAreaListener listener() {
+        return new RestrictedAreaListener(null, RestrictedAreaSettings.load(enabledConfig()));
     }
 
     private static YamlConfiguration enabledConfig() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("restricted-area.enabled", true);
         config.set("restricted-area.bypass-permission", "crabcraft.member");
-        config.set("restricted-area.world", "holding");
-        config.set("restricted-area.bounds.first.x", -5D);
-        config.set("restricted-area.bounds.first.y", 60D);
-        config.set("restricted-area.bounds.first.z", -5D);
-        config.set("restricted-area.bounds.second.x", 5D);
-        config.set("restricted-area.bounds.second.y", 70D);
-        config.set("restricted-area.bounds.second.z", 5D);
-        config.set("restricted-area.return-location.x", 0D);
-        config.set("restricted-area.return-location.y", 64D);
-        config.set("restricted-area.return-location.z", 0D);
-        config.set("restricted-area.return-location.yaw", 0D);
-        config.set("restricted-area.return-location.pitch", 0D);
         return config;
     }
 
-    @SuppressWarnings("unchecked")
-    private static <T> T proxy(Class<T> type) {
-        return (T) Proxy.newProxyInstance(
-                type.getClassLoader(),
-                new Class<?>[]{type},
+    private static Player player(AtomicBoolean verified, AtomicBoolean operator, AtomicInteger messages, World world) {
+        UUID id = UUID.randomUUID();
+        return (Player) Proxy.newProxyInstance(Player.class.getClassLoader(), new Class<?>[]{Player.class},
                 (proxy, method, args) -> switch (method.getName()) {
-                    case "equals" -> proxy == args[0];
-                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "getUniqueId" -> id;
+                    case "getWorld" -> world;
+                    case "hasPermission" -> verified.get();
+                    case "isOp" -> operator.get();
+                    case "sendMessage" -> { messages.incrementAndGet(); yield null; }
+                    case "teleport" -> throw new AssertionError("protection attempted a corrective teleport");
                     default -> defaultValue(method.getReturnType());
                 });
     }
 
-    private static YamlConfiguration loadGameplayConfig() throws Exception {
-        try (InputStream input = RestrictedAreaRegressionTest.class.getClassLoader()
-                .getResourceAsStream("modules/gameplay.yml")) {
-            check(input != null, "bundled gameplay.yml is missing");
-            YamlConfiguration config = new YamlConfiguration();
-            config.loadFromString(new String(input.readAllBytes(), StandardCharsets.UTF_8));
-            return config;
-        }
-    }
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new AssertionError(message);
-        }
+    @SuppressWarnings("unchecked")
+    private static <T> T proxy(Class<T> type, Map<String, Object> values) {
+        return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
+                (proxy, method, args) -> values.containsKey(method.getName())
+                        ? values.get(method.getName()) : defaultValue(method.getReturnType()));
     }
 
     private static Object defaultValue(Class<?> type) {
@@ -201,5 +277,9 @@ public final class RestrictedAreaRegressionTest {
         if (type == long.class) return 0L;
         if (type == float.class) return 0F;
         return 0D;
+    }
+
+    private static void check(boolean condition, String message) {
+        if (!condition) throw new AssertionError(message);
     }
 }

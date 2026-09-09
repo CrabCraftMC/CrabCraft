@@ -75,8 +75,6 @@ public class VelocityConfig {
     private final long voicechatPlayerHomeTtlSeconds;
     private final int loginStreakResetHourUtc;
     private final int loginStreakRequiredPlaySeconds;
-    private final boolean restrictedAreaEnabled;
-    private final String restrictedAreaBypassPermission;
 
     private VelocityConfig(String redisHost, int redisPort, String redisPassword,
                            String redisChannel, String redisPunishmentStream,
@@ -105,9 +103,7 @@ public class VelocityConfig {
                            boolean voicechatCrossServerEnabled,
                            long voicechatPlayerHomeTtlSeconds,
                            int loginStreakResetHourUtc,
-                           int loginStreakRequiredPlaySeconds,
-                           boolean restrictedAreaEnabled,
-                           String restrictedAreaBypassPermission) {
+                           int loginStreakRequiredPlaySeconds) {
         this.redisHost = redisHost;
         this.redisPort = redisPort;
         this.redisPassword = redisPassword;
@@ -153,8 +149,6 @@ public class VelocityConfig {
         this.voicechatPlayerHomeTtlSeconds = voicechatPlayerHomeTtlSeconds;
         this.loginStreakResetHourUtc = loginStreakResetHourUtc;
         this.loginStreakRequiredPlaySeconds = loginStreakRequiredPlaySeconds;
-        this.restrictedAreaEnabled = restrictedAreaEnabled;
-        this.restrictedAreaBypassPermission = restrictedAreaBypassPermission;
     }
 
     public static VelocityConfig load(Path dataDirectory, Logger logger) {
@@ -188,6 +182,7 @@ public class VelocityConfig {
                     // by reset-hour-utc); mergeFrom adds the new key but never prunes
                     // the old one, so drop it explicitly to avoid a dead setting.
                     root.node("login-streaks").removeChild("buffer-hours");
+                    root.removeChild("restricted-area");
                     loader.save(root);
                 }
             }
@@ -286,15 +281,6 @@ public class VelocityConfig {
             int streakRequiredMinutes = root.node("login-streaks", "required-play-minutes")
                     .getInt(LoginStreakService.DEFAULT_REQUIRED_PLAY_MINUTES);
 
-            ConfigurationNode restrictedArea = root.node("restricted-area");
-            boolean restrictedAreaEnabled = restrictedArea.node("enabled").getBoolean(false);
-            String restrictedAreaBypassPermission = restrictedArea.node("bypass-permission")
-                    .getString("crabutilities.restricted-area.bypass");
-            if (restrictedAreaBypassPermission == null
-                    || restrictedAreaBypassPermission.isBlank()) {
-                restrictedAreaBypassPermission = "crabutilities.restricted-area.bypass";
-            }
-
             return new VelocityConfig(host, port, password, channel,
                     punishmentStream, punishmentWatchIntervalSeconds, format,
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
@@ -308,8 +294,7 @@ public class VelocityConfig {
                     dbUrl, dbUsername, dbPassword,
                     updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken,
                     vcEnabled, vcHomeTtl, streakResetHour,
-                    LoginStreakService.minutesToSeconds(streakRequiredMinutes),
-                    restrictedAreaEnabled, restrictedAreaBypassPermission);
+                    LoginStreakService.minutesToSeconds(streakRequiredMinutes));
         } catch (IOException e) {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat",
@@ -326,8 +311,7 @@ public class VelocityConfig {
                     "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "",
                     true, 6L, false, "CrabCraftMC/CrabCraft", "",
                     true, 300L, LoginStreakService.DEFAULT_RESET_HOUR_UTC,
-                    LoginStreakService.minutesToSeconds(LoginStreakService.DEFAULT_REQUIRED_PLAY_MINUTES),
-                    false, "crabutilities.restricted-area.bypass");
+                    LoginStreakService.minutesToSeconds(LoginStreakService.DEFAULT_REQUIRED_PLAY_MINUTES));
         }
     }
 
@@ -376,6 +360,4 @@ public class VelocityConfig {
     public long getVoicechatPlayerHomeTtlSeconds() { return voicechatPlayerHomeTtlSeconds; }
     public int getLoginStreakResetHourUtc() { return loginStreakResetHourUtc; }
     public int getLoginStreakRequiredPlaySeconds() { return loginStreakRequiredPlaySeconds; }
-    public boolean isRestrictedAreaEnabled() { return restrictedAreaEnabled; }
-    public String getRestrictedAreaBypassPermission() { return restrictedAreaBypassPermission; }
 }
