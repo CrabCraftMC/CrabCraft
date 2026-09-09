@@ -19,7 +19,7 @@ const RANK_CATEGORIES = [
 
 export async function getWrappedData(season: string): Promise<WrappedDataResult> {
   const session = await auth();
-  if (!session) {
+  if (!session?.user) {
     redirect("/login");
   }
 
