@@ -112,8 +112,23 @@ public class PostgresStatsWriter {
         // classloader, which always succeeds.
         config.setDriverClassName("org.postgresql.Driver");
         this.dataSource = new HikariDataSource(config);
+        ensurePlayerAwardsSchema();
         GallerySchema.ensure(this.dataSource, logger);
         WebToolSchema.ensure(this.dataSource, logger);
+    }
+
+    private void ensurePlayerAwardsSchema() {
+        // Keep this column synchronised with packages/db/src/schema.ts.
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("""
+                     ALTER TABLE players ADD COLUMN IF NOT EXISTS
+                         awards_excluded BOOLEAN NOT NULL DEFAULT FALSE
+                     """)) {
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            dataSource.close();
+            throw new IllegalStateException("Failed to initialise player award exclusions", e);
+        }
     }
 
     public void writePlayerSeasonStats(String uuid, String season, ComputedStats stats) {

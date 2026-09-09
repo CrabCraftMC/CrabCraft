@@ -43,6 +43,8 @@ final class AwardAltExclusionRegressionTest {
                 "a public award query does not exclude alt accounts");
         check(rankingQueries.stream().allMatch(sql -> sql.contains("is_discord_member")),
                 "a public award query does not exclude departed Discord members");
+        check(rankingQueries.stream().allMatch(sql -> sql.contains("eligible_player.awards_excluded = false")),
+                "a public award query can expose a moderator-excluded player");
         check(rankingQueries.stream().allMatch(sql -> sql.contains("last_mc_login_at")),
                 "a public award query does not exclude inactive players");
         check(rankingQueries.stream().allMatch(sql -> sql.contains("2592000")),
@@ -60,6 +62,8 @@ final class AwardAltExclusionRegressionTest {
                 "alt accounts can still consume medal positions");
         check(dataSource.sql.get(1).contains("is_discord_member"),
                 "departed Discord members can still consume medal positions");
+        check(dataSource.sql.get(1).contains("eligible_player.awards_excluded = false"),
+                "moderator-excluded players can still consume medal positions");
         check(dataSource.sql.get(1).contains("last_mc_login_at"),
                 "inactive players can still consume medal positions");
 
@@ -70,6 +74,8 @@ final class AwardAltExclusionRegressionTest {
                 "all-season medal recomputation must load, reset and rank each season");
         check(dataSource.sql.get(2).contains("last_mc_login_at"),
                 "reactivating a player does not apply the inactivity cutoff");
+        check(dataSource.sql.get(2).contains("eligible_player.awards_excluded = false"),
+                "reactivating a player bypasses their moderator exclusion");
     }
 
     private static final class CapturingDataSource extends HikariDataSource {

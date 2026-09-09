@@ -1252,6 +1252,7 @@ export async function getAwardLeaderboard(
         eq(playerAwardScores.award_id, awardId),
         eq(playerAwardScores.season, season),
         eq(players.is_discord_member, true),
+        eq(players.awards_excluded, false),
         sql`${players.last_mc_login_at} >= EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000`,
       ),
     )
@@ -1289,6 +1290,7 @@ export async function getAwardsSummary(
           SELECT 1 FROM players eligible_player
           WHERE eligible_player.minecraft_uuid = p.minecraft_uuid
             AND eligible_player.is_discord_member = true
+            AND eligible_player.awards_excluded = false
             AND eligible_player.last_mc_login_at >=
               EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
         )
@@ -1346,6 +1348,7 @@ export async function getCrownLeaderboard(
             SELECT 1 FROM players eligible_player
             WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
               AND eligible_player.is_discord_member = true
+              AND eligible_player.awards_excluded = false
               AND eligible_player.last_mc_login_at >=
                 EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
           )
@@ -1401,6 +1404,7 @@ export async function getPlayerAwardHoldings(
             SELECT 1 FROM players eligible_player
             WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
               AND eligible_player.is_discord_member = true
+              AND eligible_player.awards_excluded = false
               AND eligible_player.last_mc_login_at >=
                 EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
           )
@@ -1452,6 +1456,7 @@ export async function getPlayerCrownScore(
             SELECT 1 FROM players eligible_player
             WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
               AND eligible_player.is_discord_member = true
+              AND eligible_player.awards_excluded = false
               AND eligible_player.last_mc_login_at >=
                 EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
           )
@@ -1519,6 +1524,7 @@ export async function getPlayerAwardScores(
             SELECT 1 FROM players eligible_player
             WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
               AND eligible_player.is_discord_member = true
+              AND eligible_player.awards_excluded = false
               AND eligible_player.last_mc_login_at >=
                 EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
           )
