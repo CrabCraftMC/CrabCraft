@@ -8,6 +8,8 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 
 import java.lang.reflect.Proxy;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class RestrictedAreaProxyRegressionTest {
@@ -21,15 +23,18 @@ public final class RestrictedAreaProxyRegressionTest {
         RestrictedAreaProxyListener listener = new RestrictedAreaProxyListener(
                 enabled::get,
                 () -> "crabutilities.restricted-area.bypass");
-        Player player = player(hasPermission);
+        AtomicInteger messages = new AtomicInteger();
+        Player player = player(hasPermission, messages);
 
         CommandExecuteEvent command = new CommandExecuteEvent(player, "msg somebody hello");
         listener.onCommand(command);
         check(!command.getResult().isAllowed(), "proxy command was not denied");
+        check(messages.get() == 1, "blocked proxy command did not send a verification reminder");
 
         PlayerChatEvent chat = new PlayerChatEvent(player, "hello");
         listener.onChat(chat);
         check(!chat.getResult().isAllowed(), "proxy chat was not denied");
+        check(messages.get() == 1, "repeated proxy actions flooded chat");
 
         RegisteredServer initial = proxy(RegisteredServer.class);
         ServerPreConnectEvent initialConnect = new ServerPreConnectEvent(player, initial);
@@ -41,6 +46,8 @@ public final class RestrictedAreaProxyRegressionTest {
         listener.onServerPreConnect(switchServer);
         check(!switchServer.getResult().isAllowed(), "backend switch was not denied");
 
+        listener = new RestrictedAreaProxyListener(enabled::get,
+                () -> "crabutilities.restricted-area.bypass");
         hasPermission.set(true);
         CommandExecuteEvent permittedCommand = new CommandExecuteEvent(player, "msg somebody hello");
         listener.onCommand(permittedCommand);
@@ -51,14 +58,21 @@ public final class RestrictedAreaProxyRegressionTest {
         CommandExecuteEvent disabledCommand = new CommandExecuteEvent(player, "msg somebody hello");
         listener.onCommand(disabledCommand);
         check(disabledCommand.getResult().isAllowed(), "disabled policy denied a command");
+        check(messages.get() == 1, "allowed actions sent a verification reminder");
     }
 
-    private static Player player(AtomicBoolean hasPermission) {
+    private static Player player(AtomicBoolean hasPermission, AtomicInteger messages) {
+        UUID playerId = UUID.randomUUID();
         return (Player) Proxy.newProxyInstance(
                 Player.class.getClassLoader(),
                 new Class<?>[]{Player.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "hasPermission" -> hasPermission.get();
+                    case "getUniqueId" -> playerId;
+                    case "sendMessage" -> {
+                        messages.incrementAndGet();
+                        yield null;
+                    }
                     case "getCurrentServer" -> Optional.empty();
                     case "equals" -> proxy == args[0];
                     case "hashCode" -> System.identityHashCode(proxy);
