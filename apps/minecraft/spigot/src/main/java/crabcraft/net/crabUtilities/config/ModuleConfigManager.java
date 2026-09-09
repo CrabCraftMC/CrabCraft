@@ -30,7 +30,10 @@ public final class ModuleConfigManager {
             new ModuleSpec("chat", "chat.yml", List.of("global-chat", "public-chat")),
             new ModuleSpec("voicechat", "voicechat.yml", List.of("voicechat")),
             new ModuleSpec("media", "media.yml", List.of("media")),
-            new ModuleSpec("gameplay", "gameplay.yml", List.of("phantoms")),
+            new ModuleSpec(
+                    "gameplay",
+                    "gameplay.yml",
+                    List.of("phantoms", "restricted-area")),
             new ModuleSpec("tweaks", "tweaks.yml", List.of("tweaks")));
 
     private static final String CORE = "core";

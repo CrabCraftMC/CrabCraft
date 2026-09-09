@@ -154,6 +154,7 @@ def regressionTests = [
     bingoCardSixWorldListenerRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoCardSixWorldListenerRegressionTest',
     spectatorBackRegressionTest: 'crabcraft.net.crabUtilities.spectator.SpectatorBackRegressionTest',
     endPortalBlockingRegressionTest: 'crabcraft.net.crabUtilities.endportals.EndPortalBlockerListenerRegressionTest',
+    restrictedAreaRegressionTest: 'crabcraft.net.crabUtilities.restrictedarea.RestrictedAreaRegressionTest',
 ]
 def runtimeOnlyRegressionTests = [
     'voiceRelayRegressionTest',

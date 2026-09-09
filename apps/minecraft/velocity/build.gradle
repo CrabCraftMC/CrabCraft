@@ -105,6 +105,8 @@ def regressionTests = [
                 'crabcraft.net.crabUtilities.velocity.db.LoginStreakLeaderboardEligibilityRegressionTest',
         updateDownloaderRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.update.UpdateDownloaderRegressionTest',
+        restrictedAreaProxyRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.restrictedarea.RestrictedAreaProxyRegressionTest',
 ]
 
 regressionTests.each { taskName, testClass ->

@@ -49,6 +49,9 @@ commands:
     usage: /sc <message>
     aliases: [staffchat]
 permissions:
+  crabutilities.restricted-area.bypass:
+    description: Bypass the permission-gated holding area and action restrictions.
+    default: false
   crabutilities.reload:
     description: Reload CrabUtilities configuration.
     default: op

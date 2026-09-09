@@ -6,6 +6,13 @@ redis:
   punishment-stream: "crabcraft:punishments"
   punishment-watch-interval-seconds: 10
 
+# Must match the Paper backend's restricted-area enabled state and permission.
+# Restricted players may join their initial backend, but cannot run proxy
+# commands, use proxy chat, or switch to another backend.
+restricted-area:
+  enabled: false
+  bypass-permission: "crabutilities.restricted-area.bypass"
+
 # Simple Voice Chat cross-server bridge - proxy side. Tracks which backend
 # each player is on so backends can validate inbound voice frames.
 voicechat:

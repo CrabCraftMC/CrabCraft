@@ -18,6 +18,7 @@ import crabcraft.net.crabUtilities.heads.PlayerHeadDropsListener;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
 import crabcraft.net.crabUtilities.netherportals.CustomNetherPortalListener;
 import crabcraft.net.crabUtilities.recipes.UnlockAllRecipesManager;
+import crabcraft.net.crabUtilities.restrictedarea.RestrictedAreaListener;
 import crabcraft.net.crabUtilities.settings.*;import crabcraft.net.crabUtilities.shulker.ShulkerShellListener;
 import crabcraft.net.crabUtilities.slime.SlimeCommand;
 import crabcraft.net.crabUtilities.slime.SlimeMapListener;
@@ -72,6 +73,7 @@ public final class CrabUtilities extends JavaPlugin {
     private SimpleVoiceAnimationsIntegration simpleVoiceAnimationsIntegration;
     private ModuleConfigManager moduleConfigManager;
     private BingoManager bingoManager;
+    private RestrictedAreaListener restrictedAreaListener;
 
     @Override
     public void onEnable() {
@@ -125,6 +127,9 @@ public final class CrabUtilities extends JavaPlugin {
                     new EssentialsMentionAutocompleteListener(this, mentionAutocompleteListener), this);
         }
         mentionAutocompleteListener.refreshAll();
+
+        this.restrictedAreaListener = new RestrictedAreaListener(this);
+        Bukkit.getPluginManager().registerEvents(restrictedAreaListener, this);
 
         // Sleep broadcast: announce who slept when the night is skipped. Opt-in
         // and disabled by default; the listener reads config live, so
@@ -362,9 +367,12 @@ public final class CrabUtilities extends JavaPlugin {
     }
 
     private void reloadGameplayRuntime(List<String> messages) {
+        if (restrictedAreaListener != null) {
+            restrictedAreaListener.refresh();
+        }
         stopPlayerSettings();
         startPlayerSettings();
-        messages.add("Player settings, phantom manager, and locator bar manager restarted.");
+        messages.add("Player settings and restricted-area policy reloaded.");
     }
 
     private void reloadIntegrationsRuntime(List<String> messages) {
