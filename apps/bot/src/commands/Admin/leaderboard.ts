@@ -24,6 +24,8 @@ import {
   loadLeaderboardState,
 } from "../../utils/leaderboardState.js";
 import { syncLeaderboardEmojis } from "../../utils/playerEmoji.js";
+import { setPlayerAwardsExcluded } from "../../utils/appDb.js";
+import logger from "../../utils/logger.js";
 
 export default class LeaderboardCommand extends SlashCommand {
   constructor() {
@@ -58,12 +60,48 @@ export default class LeaderboardCommand extends SlashCommand {
       case "refresh":
         await this.handleRefresh(interaction);
         break;
+      case "exclude":
+      case "include":
+        await this.handleExclusion(interaction, sub === "exclude");
+        break;
       default:
         await interaction.reply({
           components: [errorContainer("Unknown subcommand")],
           flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         });
     }
+  }
+
+  private async handleExclusion(interaction: ChatInputCommandInteraction, excluded: boolean) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const user = interaction.options.getUser("user", true);
+    let found: boolean;
+    try {
+      found = await setPlayerAwardsExcluded(user.id, excluded);
+    } catch (error) {
+      logger.error("Failed to update player award exclusion", error);
+      await interaction.editReply({
+        components: [errorContainer("Could not update award visibility. Please try again.")],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
+    }
+    if (!found) {
+      await interaction.editReply({
+        components: [errorContainer("That user has no registered player record.")],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
+    }
+
+    const message = excluded
+      ? `<@${user.id}> is excluded from public awards and the global awards leaderboard across all seasons. Their scores are preserved.`
+      : `<@${user.id}> can appear in public awards and the global awards leaderboard again, subject to the usual eligibility rules. Their scores are preserved.`;
+    await interaction.editReply({
+      components: [primaryContainer(`${message}\n\nPublic pages update shortly. The Discord leaderboard updates within five minutes; use \`/leaderboard refresh\` to update it now.`)],
+      flags: MessageFlags.IsComponentsV2,
+      allowedMentions: { parse: [] },
+    });
   }
 
   private async handleCreate(interaction: ChatInputCommandInteraction) {
@@ -283,6 +321,22 @@ export default class LeaderboardCommand extends SlashCommand {
       )
       .addSubcommand((sub) =>
         sub.setName("refresh").setDescription("Force refresh the leaderboard"),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("exclude")
+          .setDescription("Hide a player from public awards and the global awards leaderboard")
+          .addUserOption((opt) =>
+            opt.setName("user").setDescription("The player to exclude").setRequired(true),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("include")
+          .setDescription("Restore a player's eligibility for public awards and the global awards leaderboard")
+          .addUserOption((opt) =>
+            opt.setName("user").setDescription("The player to include again").setRequired(true),
+          ),
       )
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
       .setDMPermission(false);

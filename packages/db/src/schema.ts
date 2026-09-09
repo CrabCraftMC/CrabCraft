@@ -38,6 +38,9 @@ export const players = pgTable("players", {
   // updated immediately by guildMemberAdd/guildMemberRemove events. Historical
   // stats remain stored when a member leaves, but ranking queries exclude them.
   is_discord_member: boolean("is_discord_member").notNull().default(true),
+  // Moderator-controlled exclusion from public awards across all seasons.
+  // Scores remain stored so including the player again restores eligibility.
+  awards_excluded: boolean("awards_excluded").notNull().default(false),
   created_at: integer("created_at")
     .notNull()
     .$defaultFn(() => Math.floor(Date.now() / 1000)),

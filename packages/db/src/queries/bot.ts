@@ -1873,6 +1873,7 @@ const RECOMPUTE_ELIGIBLE_AWARD_MEDALS = sql`
         SELECT 1 FROM players eligible_player
         WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
           AND eligible_player.is_discord_member = true
+          AND eligible_player.awards_excluded = false
           AND eligible_player.last_mc_login_at >=
             EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
       )
@@ -1892,6 +1893,29 @@ export async function getSyncablePlayerIdentities(): Promise<SyncablePlayerIdent
       minecraft_username: players.minecraft_username,
     })
     .from(players);
+}
+
+/** Preserve scores and reassign every season's medals when moderation changes eligibility. */
+export async function setPlayerAwardsExcluded(
+  discordId: string,
+  excluded: boolean,
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const rows = await tx
+      .update(players)
+      .set({
+        awards_excluded: excluded,
+        updated_at: sql`EXTRACT(EPOCH FROM NOW())::INTEGER`,
+      })
+      .where(eq(players.discord_id, discordId))
+      .returning({ discord_id: players.discord_id });
+
+    if (rows.length === 0) return false;
+
+    await tx.execute(RESET_AWARD_MEDALS);
+    await tx.execute(RECOMPUTE_ELIGIBLE_AWARD_MEDALS);
+    return true;
+  });
 }
 
 /** Update one player's durable Discord-guild membership state. */
