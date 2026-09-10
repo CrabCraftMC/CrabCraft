@@ -28,9 +28,9 @@ public final class EatingHistoryImport {
         }
         Path world = Path.of(args[0]).toAbsolutePath();
         Path input = Path.of(args[1]).toAbsolutePath();
-        Path players = world.resolve("players/playerdata");
+        Path players = world.resolve("players/data");
         if (!Files.isDirectory(players) || !Files.isRegularFile(world.resolve("session.lock"))) {
-            throw new IllegalArgumentException("Expected a Minecraft 26.2 world with players/playerdata and session.lock");
+            throw new IllegalArgumentException("Expected a Minecraft 26.2 world with players/data and session.lock");
         }
         // Never edit player saves while Minecraft may have newer copies in memory.
         try (var channel = FileChannel.open(world.resolve("session.lock"), StandardOpenOption.WRITE);
