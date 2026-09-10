@@ -1,19 +1,28 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
-import { playerDisplayName } from "@/lib/playerName";
+import LeaderboardVisibilityToggle from "@/components/LeaderboardVisibilityToggle";
+import {
+  LeaderboardPlayerLink,
+  LeaderboardPlayerAvatar,
+  leaderboardPlayerName,
+} from "@/components/LeaderboardPlayer";
+import { leaderboardApiUrl } from "@/lib/leaderboardApi";
 
 export const metadata: Metadata = {
   title: "Leaderboard",
   description: "View all CrabCraft players ranked by award points.",
 };
 
-export default async function LeaderboardPage() {
+export default async function LeaderboardPage({ searchParams }: {
+  searchParams: Promise<{ show_hidden?: string }>;
+}) {
+  const showHidden = (await searchParams).show_hidden === "true";
   let players: Array<{
     rank: number;
-    uuid: string;
+    uuid: string | null;
+    hidden?: boolean;
     username: string | null;
     nickname: string | null;
     display_name: string;
@@ -21,12 +30,12 @@ export default async function LeaderboardPage() {
     silver: number;
     bronze: number;
     crown_score: number;
-    minecraft_uuid: string;
+    minecraft_uuid: string | null;
     minecraft_username: string | null;
   }> = [];
 
   try {
-    const res = await fetch("https://api.crabcraft.net/awards/crowns", {
+    const res = await fetch(leaderboardApiUrl(`/awards/crowns${showHidden ? "?show_hidden=true" : ""}`), {
       next: { revalidate: 30 },
     });
     if (res.ok) {
@@ -35,7 +44,7 @@ export default async function LeaderboardPage() {
         ...p,
         minecraft_uuid: p.uuid,
         minecraft_username: p.username,
-        display_name: playerDisplayName(p.nickname, p.username),
+        display_name: leaderboardPlayerName(p),
       }));
     }
   } catch {}
@@ -109,12 +118,12 @@ export default async function LeaderboardPage() {
               return (
                 <Squircle
                   cornerRadius={32}
-                  key={player.minecraft_uuid}
-                  className={`${style.mt} ${style.order} card-hover animate-in overflow-hidden bg-gradient-to-br ${style.gradient}`}
+                  key={player.minecraft_uuid ?? `hidden-${idx}`}
+                  className={`${style.mt} ${style.order} ${player.hidden ? "" : "card-hover"} animate-in overflow-hidden bg-gradient-to-br ${style.gradient}`}
                   style={{ animationDelay: `${0.1 + idx * 0.05}s` }}
                 >
-                  <Link
-                    href={`/stats/${player.minecraft_uuid}`}
+                  <LeaderboardPlayerLink
+                    player={player}
                     className={`block ${style.padding} relative cursor-pointer`}
                   >
                     <span
@@ -122,19 +131,20 @@ export default async function LeaderboardPage() {
                     >
                       {style.label}
                     </span>
-                    <div className="absolute bottom-0 right-0 pointer-events-none z-0 hidden sm:block opacity-30">
-                      <Image
-                        src={`https://mc-api.io/render/full/${player.minecraft_uuid}`}
-                        alt=""
-                        width={140}
-                        height={280}
-                        className={`${style.imgH} w-auto`}
-                      />
-                    </div>
+                    {!player.hidden && player.uuid && (
+                      <div className="absolute bottom-0 right-0 pointer-events-none z-0 hidden sm:block opacity-30">
+                        <Image
+                          src={`https://mc-api.io/render/full/${player.minecraft_uuid}`}
+                          alt=""
+                          width={140}
+                          height={280}
+                          className={`${style.imgH} w-auto`}
+                        />
+                      </div>
+                    )}
                     <div className="relative z-10 flex flex-col items-start text-left gap-3">
-                      <PixelIcon
-                        src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/100.png`}
-                        alt={player.display_name}
+                      <LeaderboardPlayerAvatar
+                        player={player}
                         size={style.avatarSize}
                         imgClassName="rounded-lg"
                         className="bg-white/20 rounded-lg"
@@ -155,7 +165,7 @@ export default async function LeaderboardPage() {
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </LeaderboardPlayerLink>
                 </Squircle>
               );
             })}
@@ -163,14 +173,13 @@ export default async function LeaderboardPage() {
         )}
 
         <div
-          className="flex justify-end mb-2 px-1 animate-in relative z-30 max-w-6xl mx-auto"
-          style={{ animationDelay: "0.25s" }}
+          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-2 px-1 relative z-30 max-w-6xl mx-auto"
         >
-          <div className="group relative" tabIndex={0}>
+          <div className="group relative animate-in" style={{ animationDelay: "0.25s" }} tabIndex={0}>
             <span className="text-xs text-gray-400 dark:text-gray-500 cursor-pointer hover:text-orange-500 transition-colors">
               How is this calculated?
             </span>
-            <div className="absolute right-0 top-full mt-2 w-72 p-3 bg-paper-2 dark:bg-[#2a221b] rounded-xl shadow-lg border border-gray-200 dark:border-[#3d3028] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 z-50">
+            <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-paper-2 dark:bg-[#2a221b] rounded-xl shadow-lg border border-gray-200 dark:border-[#3d3028] opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 z-50">
               <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                 Points are calculated by the amount of medals a player holds.
               </p>
@@ -190,7 +199,16 @@ export default async function LeaderboardPage() {
                 <span className="text-amber-600 font-bold">bronze</span> medal
                 is worth <span className="font-bold">1</span> point.
               </p>
+              {showHidden && (
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mt-2">
+                  Showing hidden players recalculates ranks, medals and points
+                  for this view. Awarded medals stay unchanged.
+                </p>
+              )}
             </div>
+          </div>
+          <div className="ml-auto">
+            <LeaderboardVisibilityToggle showHidden={showHidden} />
           </div>
         </div>
 
@@ -209,9 +227,9 @@ export default async function LeaderboardPage() {
           </div>
 
           {players.map((player, i) => (
-            <Link
-              key={player.minecraft_uuid}
-              href={`/stats/${player.minecraft_uuid}`}
+            <LeaderboardPlayerLink
+              key={player.minecraft_uuid ?? `hidden-${i}`}
+              player={player}
               className={`grid grid-cols-10 gap-2 px-6 py-3 items-center hover:bg-orange-50/60 dark:hover:bg-[#2a221b] transition-colors relative z-10 cursor-pointer ${
                 i % 2 === 0
                   ? "bg-paper-2/80"
@@ -240,16 +258,15 @@ export default async function LeaderboardPage() {
                         : "th"}
                 </span>
               </div>
-              <div className="col-span-5 flex items-center gap-3">
-                <PixelIcon
-                  src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/64.png`}
-                  alt={player.display_name}
+              <div className="col-span-5 flex items-center gap-3 min-w-0">
+                <LeaderboardPlayerAvatar
+                  player={player}
                   size={28}
                   imgClassName="rounded"
                   className="bg-gray-200 dark:bg-gray-700 rounded"
                 />
-                <span className="font-bold text-sm text-gray-700 dark:text-gray-300 truncate">
-                  {player.display_name}
+                <span className="min-w-0 font-bold text-sm text-gray-700 dark:text-gray-300">
+                  <span className={player.hidden ? "block" : "block truncate"}>{player.display_name}</span>
                 </span>
               </div>
               <div className="col-span-3 sm:col-span-1 text-center">
@@ -266,7 +283,7 @@ export default async function LeaderboardPage() {
               <div className="hidden sm:block col-span-1 text-center text-sm text-amber-700 font-bold">
                 {player.bronze}
               </div>
-            </Link>
+            </LeaderboardPlayerLink>
           ))}
 
           {players.length === 0 && (

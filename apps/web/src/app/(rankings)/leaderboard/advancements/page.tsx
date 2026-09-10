@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import AdvancementsCategoryTabs from "@/components/AdvancementsCategoryTabs";
 import CompletionFireworks from "@/components/CompletionFireworks";
-import { playerDisplayName } from "@/lib/playerName";
+import LeaderboardVisibilityToggle from "@/components/LeaderboardVisibilityToggle";
+import {
+  LeaderboardPlayerLink,
+  LeaderboardPlayerAvatar,
+  leaderboardPlayerName,
+} from "@/components/LeaderboardPlayer";
+import { leaderboardApiUrl } from "@/lib/leaderboardApi";
 import {
   CATEGORY_LABELS,
   isValidCategory,
@@ -15,12 +20,13 @@ import {
 const PAGE_SIZE = 25;
 
 interface Props {
-  searchParams: Promise<{ category?: string; page?: string }>;
+  searchParams: Promise<{ category?: string; page?: string; show_hidden?: string }>;
 }
 
 interface LeaderboardEntry {
   rank: number;
-  uuid: string;
+  uuid: string | null;
+  hidden?: boolean;
   username: string | null;
   nickname: string | null;
   completed: number;
@@ -39,12 +45,14 @@ async function fetchAdvancementLeaderboard(
   category: AdvancementCategory | null,
   offset: number,
   limit: number,
+  showHidden: boolean,
 ): Promise<AdvancementLeaderboardResponse | null> {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
+  if (showHidden) params.set("show_hidden", "true");
   params.set("limit", String(limit));
   params.set("offset", String(offset));
-  const url = `https://api.crabcraft.net/advancements/leaderboard?${params.toString()}`;
+  const url = leaderboardApiUrl(`/advancements/leaderboard?${params.toString()}`);
   try {
     const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) return null;
@@ -68,9 +76,11 @@ function parsePage(raw: string | undefined): number {
 function buildPageUrl(
   category: AdvancementCategory | null,
   page: number,
+  showHidden: boolean,
 ): string {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
+  if (showHidden) params.set("show_hidden", "true");
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
   return qs
@@ -142,9 +152,10 @@ export default async function AdvancementsLeaderboardPage({
 }: Props) {
   const sp = await searchParams;
   const category = parseCategory(sp.category);
+  const showHidden = sp.show_hidden === "true";
   const requestedPage = parsePage(sp.page);
   const offset = (requestedPage - 1) * PAGE_SIZE;
-  const data = await fetchAdvancementLeaderboard(category, offset, PAGE_SIZE);
+  const data = await fetchAdvancementLeaderboard(category, offset, PAGE_SIZE, showHidden);
 
   const entries = data?.leaderboard ?? [];
   const total = data?.total ?? 0;
@@ -168,7 +179,7 @@ export default async function AdvancementsLeaderboardPage({
           </p>
         </div>
 
-        <AdvancementsCategoryTabs active={category} />
+        <AdvancementsCategoryTabs active={category} showHidden={showHidden} />
 
         {/* Podium */}
         {top3.length === 3 && (
@@ -176,25 +187,22 @@ export default async function AdvancementsLeaderboardPage({
             {PODIUM_ORDER.map((idx) => {
               const player = top3[idx];
               const style = PODIUM[idx];
-              const displayName = playerDisplayName(
-                player.nickname,
-                player.username,
-              );
+              const displayName = leaderboardPlayerName(player);
               const playerPct = pct(player);
               const isFull = player.completed === totalAdvancements;
               return (
                 <div
-                  key={player.uuid}
+                  key={player.uuid ?? `hidden-${idx}`}
                   className={`${style.mt} ${style.order} relative animate-in`}
                   style={{ animationDelay: `${0.1 + idx * 0.05}s` }}
                 >
                   {isFull && <CompletionFireworks />}
                   <Squircle
                     cornerRadius={32}
-                    className={`card-hover overflow-hidden bg-gradient-to-br ${style.gradient}`}
+                    className={`${player.hidden ? "" : "card-hover"} overflow-hidden bg-gradient-to-br ${style.gradient}`}
                   >
-                  <Link
-                    href={`/stats/${player.uuid}`}
+                  <LeaderboardPlayerLink
+                    player={player}
                     className={`block ${style.padding} relative cursor-pointer`}
                   >
                     <span
@@ -202,19 +210,20 @@ export default async function AdvancementsLeaderboardPage({
                     >
                       {style.label}
                     </span>
-                    <div className="absolute bottom-0 right-0 pointer-events-none z-0 hidden sm:block opacity-30">
-                      <Image
-                        src={`https://mc-api.io/render/full/${player.uuid}`}
-                        alt=""
-                        width={140}
-                        height={280}
-                        className={`${style.imgH} w-auto`}
-                      />
-                    </div>
+                    {!player.hidden && player.uuid && (
+                      <div className="absolute bottom-0 right-0 pointer-events-none z-0 hidden sm:block opacity-30">
+                        <Image
+                          src={`https://mc-api.io/render/full/${player.uuid}`}
+                          alt=""
+                          width={140}
+                          height={280}
+                          className={`${style.imgH} w-auto`}
+                        />
+                      </div>
+                    )}
                     <div className="relative z-10 flex flex-col items-start text-left gap-3">
-                      <PixelIcon
-                        src={`https://mc-heads.net/avatar/${player.uuid}/100.png`}
-                        alt={displayName}
+                      <LeaderboardPlayerAvatar
+                        player={player}
                         size={style.avatarSize}
                         imgClassName="rounded-lg"
                         className="bg-white/20 rounded-lg"
@@ -244,13 +253,17 @@ export default async function AdvancementsLeaderboardPage({
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </LeaderboardPlayerLink>
                   </Squircle>
                 </div>
               );
             })}
           </div>
         )}
+
+        <div className="flex justify-end mb-2 px-1 max-w-6xl mx-auto">
+          <LeaderboardVisibilityToggle showHidden={showHidden} />
+        </div>
 
         {/* Standings table */}
         <Squircle
@@ -267,10 +280,7 @@ export default async function AdvancementsLeaderboardPage({
 
           {rest.map((player, i) => {
             const playerPct = pct(player);
-            const displayName = playerDisplayName(
-              player.nickname,
-              player.username,
-            );
+            const displayName = leaderboardPlayerName(player);
             const isFull = player.completed === totalAdvancements;
             const isHigh = playerPct >= 90;
             const medalColor =
@@ -290,9 +300,9 @@ export default async function AdvancementsLeaderboardPage({
                     ? "rd"
                     : "th";
             return (
-              <Link
-                key={player.uuid}
-                href={`/stats/${player.uuid}`}
+              <LeaderboardPlayerLink
+                key={player.uuid ?? `hidden-${i}`}
+                player={player}
                 className={`grid grid-cols-12 gap-2 px-6 py-3 items-center hover:bg-orange-50/60 dark:hover:bg-[#2a221b] transition-colors relative z-10 cursor-pointer ${
                   i % 2 === 0
                     ? "bg-paper-2/80"
@@ -306,15 +316,14 @@ export default async function AdvancementsLeaderboardPage({
                   </span>
                 </div>
                 <div className="col-span-7 sm:col-span-4 flex items-center gap-2 min-w-0">
-                  <PixelIcon
-                    src={`https://mc-heads.net/avatar/${player.uuid}/64.png`}
-                    alt={displayName}
+                  <LeaderboardPlayerAvatar
+                    player={player}
                     size={28}
                     imgClassName="rounded"
                     className="bg-gray-200 dark:bg-gray-700 rounded"
                   />
-                  <span className="font-bold text-sm text-gray-700 dark:text-gray-300 truncate">
-                    {displayName}
+                  <span className="min-w-0 font-bold text-sm text-gray-700 dark:text-gray-300">
+                    <span className={player.hidden ? "block" : "block truncate"}>{displayName}</span>
                   </span>
                 </div>
                 <div className="hidden sm:flex col-span-5 items-center gap-2">
@@ -350,7 +359,7 @@ export default async function AdvancementsLeaderboardPage({
                     </span>
                   </span>
                 </div>
-              </Link>
+              </LeaderboardPlayerLink>
             );
           })}
 
@@ -374,7 +383,7 @@ export default async function AdvancementsLeaderboardPage({
           >
             {page > 1 ? (
               <Link
-                href={buildPageUrl(category, page - 1)}
+                href={buildPageUrl(category, page - 1, showHidden)}
                 className="px-4 py-2 text-sm font-bold rounded-xl bg-paper-2 hover:bg-orange-50/60 dark:hover:bg-[#2a221b] text-gray-700 dark:text-gray-300 transition-colors"
               >
                 &larr; Prev
@@ -389,7 +398,7 @@ export default async function AdvancementsLeaderboardPage({
             </span>
             {page < totalPages ? (
               <Link
-                href={buildPageUrl(category, page + 1)}
+                href={buildPageUrl(category, page + 1, showHidden)}
                 className="px-4 py-2 text-sm font-bold rounded-xl bg-paper-2 hover:bg-orange-50/60 dark:hover:bg-[#2a221b] text-gray-700 dark:text-gray-300 transition-colors"
               >
                 Next &rarr;

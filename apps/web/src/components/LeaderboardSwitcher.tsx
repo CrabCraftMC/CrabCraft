@@ -9,7 +9,7 @@ export default function LeaderboardSwitcher() {
   const isAwards = pathname === "/leaderboard" || (pathname.startsWith("/leaderboard") && !isAdvancements);
 
   return (
-    <h1 className="text-4xl lg:text-5xl font-bold font-mc flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
+    <h1 key={pathname} className="text-4xl lg:text-5xl font-bold font-mc flex items-center justify-center gap-3 sm:gap-4 flex-wrap animate-in">
       {isAwards ? (
         <span className="text-orange-500">Awards</span>
       ) : (
