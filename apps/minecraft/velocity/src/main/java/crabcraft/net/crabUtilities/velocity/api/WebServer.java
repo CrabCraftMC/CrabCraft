@@ -409,6 +409,7 @@ public class WebServer {
             + "\"description\":\"Returns every enabled award definition along with the current #1 holder for each. Awards are grouped by bucket (combat, mining, crafting, building, items, food, movement, misc) and sorted by display order within each bucket.\","
             + "\"operationId\":\"getAwards\","
             + "\"parameters\":["
+            + "{\"name\":\"show_hidden\",\"in\":\"query\",\"schema\":{\"type\":\"boolean\",\"default\":false},\"description\":\"Include anonymous manually hidden players in ranks. Their UUIDs and nicknames are null and their username is Hidden player.\"},"
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}"
             + "],"
             + "\"responses\":{"
@@ -418,7 +419,7 @@ public class WebServer {
             + "\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},"
             + "\"unit\":{\"type\":\"string\"},\"bucket\":{\"type\":\"string\"},\"icon\":{\"type\":\"string\"},"
             + "\"leader\":{\"type\":\"object\",\"nullable\":true,\"properties\":{"
-            + "\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},\"score\":{\"type\":\"number\"}"
+            + "\"hidden\":{\"type\":\"boolean\"},\"uuid\":{\"type\":\"string\",\"nullable\":true},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},\"score\":{\"type\":\"number\"}"
             + "}}"
             + "}}}"
             + "}}}}},"
@@ -435,6 +436,7 @@ public class WebServer {
             + "\"description\":\"Returns the leaderboard for a single award, showing the top players ranked by score. The response includes the award metadata (title, description, unit, icon) and a paginated list of entries. Each entry contains the player's rank, UUID, username, score, and medal (1=gold, 2=silver, 3=bronze, 0=none). Supports pagination with limit and offset.\","
             + "\"operationId\":\"getAwardLeaderboard\","
             + "\"parameters\":["
+            + "{\"name\":\"show_hidden\",\"in\":\"query\",\"schema\":{\"type\":\"boolean\",\"default\":false},\"description\":\"Include anonymous manually hidden players in ranks. Their UUIDs and nicknames are null and their username is Hidden player.\"},"
             + "{\"name\":\"id\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9_]+$\"},\"description\":\"Award ID (e.g. aviate, kill_any, mine_diamond_ore)\"},"
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
             + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
@@ -448,7 +450,7 @@ public class WebServer {
             + "\"unit\":{\"type\":\"string\"},\"bucket\":{\"type\":\"string\"},\"icon\":{\"type\":\"string\"}"
             + "}},"
             + "\"leaderboard\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
-            + "\"rank\":{\"type\":\"integer\"},\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"rank\":{\"type\":\"integer\"},\"hidden\":{\"type\":\"boolean\"},\"uuid\":{\"type\":\"string\",\"nullable\":true},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},"
             + "\"score\":{\"type\":\"number\"},\"medal\":{\"type\":\"integer\",\"description\":\"1=gold, 2=silver, 3=bronze, 0=none\"}"
             + "}}},"
             + "\"total\":{\"type\":\"integer\"},\"offset\":{\"type\":\"integer\"},\"limit\":{\"type\":\"integer\"}"
@@ -464,9 +466,10 @@ public class WebServer {
             + "\"get\":{"
             + "\"tags\":[\"Awards\"],"
             + "\"summary\":\"Crown leaderboard\","
-            + "\"description\":\"Returns the Hall of Fame leaderboard, ranking players by their crown score. The crown score is a weighted sum of medal placements across all awards: gold (1st place) = 4 points, silver (2nd) = 2 points, bronze (3rd) = 1 point. Only players with at least one medal are included. Supports pagination with limit and offset.\","
+            + "\"description\":\"Returns the Hall of Fame leaderboard, ranking players by their crown score. The crown score is a weighted sum of medal placements across all awards: gold (1st place) = 5 points, silver (2nd) = 3 points, bronze (3rd) = 1 point. Only players with at least one medal are included. Supports pagination with limit and offset.\","
             + "\"operationId\":\"getCrownLeaderboard\","
             + "\"parameters\":["
+            + "{\"name\":\"show_hidden\",\"in\":\"query\",\"schema\":{\"type\":\"boolean\",\"default\":false},\"description\":\"Include anonymous manually hidden players in ranks. Identities are redacted; crown points are recalculated for this view without changing stored medals.\"},"
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
             + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
             + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}"
@@ -475,7 +478,7 @@ public class WebServer {
             + "\"200\":{\"description\":\"Paginated crown score leaderboard\","
             + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
             + "\"leaderboard\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
-            + "\"rank\":{\"type\":\"integer\"},\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"rank\":{\"type\":\"integer\"},\"hidden\":{\"type\":\"boolean\"},\"uuid\":{\"type\":\"string\",\"nullable\":true},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},"
             + "\"gold\":{\"type\":\"integer\"},\"silver\":{\"type\":\"integer\"},\"bronze\":{\"type\":\"integer\"},"
             + "\"crown_score\":{\"type\":\"integer\"}"
             + "}}},"
@@ -495,6 +498,7 @@ public class WebServer {
             + "\"description\":\"Returns a global leaderboard ranking players by the number of Minecraft advancements they have completed. Only players with at least one completed advancement are included. Supports pagination with limit and offset.\","
             + "\"operationId\":\"getAdvancementLeaderboard\","
             + "\"parameters\":["
+            + "{\"name\":\"show_hidden\",\"in\":\"query\",\"schema\":{\"type\":\"boolean\",\"default\":false},\"description\":\"Include anonymous manually hidden players in ranks. Their UUIDs and nicknames are null and their username is Hidden player.\"},"
             + "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"},"
             + "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"},"
             + "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"},"
@@ -504,7 +508,7 @@ public class WebServer {
             + "\"200\":{\"description\":\"Paginated advancement completion leaderboard\","
             + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
             + "\"leaderboard\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
-            + "\"rank\":{\"type\":\"integer\"},\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},"
+            + "\"rank\":{\"type\":\"integer\"},\"hidden\":{\"type\":\"boolean\"},\"uuid\":{\"type\":\"string\",\"nullable\":true},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},"
             + "\"completed\":{\"type\":\"integer\"}"
             + "}}},"
             + "\"total\":{\"type\":\"integer\"},\"totalAdvancements\":{\"type\":\"integer\"},"
@@ -1000,7 +1004,7 @@ public class WebServer {
                 try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
                 try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                 var result = plugin.getAwardQueryService().getCrownLeaderboard(
-                        params.get("season"), limit, offset);
+                        params.get("season"), limit, offset, "true".equals(params.get("show_hidden")));
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
                     return;
@@ -1184,7 +1188,7 @@ public class WebServer {
                     try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
                     try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                     var result = plugin.getAwardQueryService().getAwardLeaderboard(
-                            awardId, params.get("season"), limit, offset);
+                            awardId, params.get("season"), limit, offset, "true".equals(params.get("show_hidden")));
                     if (result == null) {
                         sendError(exchange, 404, "no current season");
                         return;
@@ -1199,7 +1203,7 @@ public class WebServer {
 
                 // /awards — list all awards with leaders
                 var result = plugin.getAwardQueryService().getAllAwards(
-                        params.get("season"));
+                        params.get("season"), "true".equals(params.get("show_hidden")));
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
                     return;
@@ -1229,7 +1233,8 @@ public class WebServer {
                 try { limit = Integer.parseInt(params.getOrDefault("limit", "100")); } catch (NumberFormatException ignored) {}
                 try { offset = Integer.parseInt(params.getOrDefault("offset", "0")); } catch (NumberFormatException ignored) {}
                 var result = plugin.getAdvancementQueryService().getAdvancementLeaderboard(
-                        params.get("season"), limit, offset, params.get("category"));
+                        params.get("season"), limit, offset, params.get("category"),
+                        "true".equals(params.get("show_hidden")));
                 if (result == null) {
                     sendError(exchange, 404, "no current season");
                     return;

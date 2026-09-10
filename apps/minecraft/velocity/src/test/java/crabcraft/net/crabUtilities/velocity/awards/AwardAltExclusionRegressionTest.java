@@ -12,6 +12,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 final class AwardAltExclusionRegressionTest {
 
@@ -21,10 +22,16 @@ final class AwardAltExclusionRegressionTest {
                 (proxy, method, methodArgs) -> defaultValue(method.getReturnType()));
         AwardQueryService queries = new AwardQueryService(dataSource, logger);
 
-        queries.getAllAwards("7");
+        JsonObject overview = queries.getAllAwards("7");
         JsonObject awardLeaderboard = queries.getAwardLeaderboard("test-award", "7", 10, 0);
         queries.getCrownLeaderboard("7", 10, 0);
         queries.getPlayerAwards("primary-uuid", "7");
+
+        JsonObject visibleLeader = overview.getAsJsonArray("awards").get(0)
+                .getAsJsonObject().getAsJsonObject("leader");
+        check(!visibleLeader.get("hidden").getAsBoolean()
+                        && visibleLeader.get("uuid").getAsString().equals(dataSource.visibleUuid),
+                "default awards overview lost its visible leader");
 
         JsonArray entries = awardLeaderboard.getAsJsonArray("leaderboard");
         check(entries.size() == 3, "expected the tie-ranking fixture");
@@ -51,6 +58,25 @@ final class AwardAltExclusionRegressionTest {
                 "a public award query does not use the 30-day window");
         check(rankingQueries.stream().filter(sql -> sql.contains("rank() over")).count() == 5,
                 "medal-bearing award queries do not derive ranks after filtering alts");
+
+        check(dataSource.visibility.stream().allMatch(value -> !value),
+                "a leaderboard includes hidden players by default");
+        for (JsonObject response : List.of(
+                queries.getAllAwards("7", true),
+                queries.getAwardLeaderboard("test-award", "7", 10, 0, true),
+                queries.getCrownLeaderboard("7", 10, 0, true))) {
+            JsonObject hidden = response.has("awards")
+                    ? response.getAsJsonArray("awards").get(0).getAsJsonObject().getAsJsonObject("leader")
+                    : response.getAsJsonArray("leaderboard").get(0).getAsJsonObject();
+            check(hidden.get("hidden").getAsBoolean(), "hidden entry lost its marker");
+            check(hidden.get("uuid").isJsonNull() && hidden.get("nickname").isJsonNull(),
+                    "hidden entry exposes a UUID or nickname");
+            check(hidden.get("username").getAsString().equals("Hidden player"),
+                    "hidden entry exposes its username");
+            check(!response.toString().contains(dataSource.hiddenUuid)
+                            && !response.toString().contains(dataSource.hiddenName),
+                    "hidden identity leaked in the API payload");
+        }
 
         dataSource.sql.clear();
         new AwardDbWriter(dataSource, logger).recomputeMedals("7");
@@ -80,6 +106,11 @@ final class AwardAltExclusionRegressionTest {
 
     private static final class CapturingDataSource extends HikariDataSource {
         private final List<String> sql = new ArrayList<>();
+        private final List<Boolean> visibility = new ArrayList<>();
+        private final String hiddenUuid = UUID.randomUUID().toString();
+        private final String hiddenName = "Fixture_" + UUID.randomUUID();
+        private final String visibleUuid = UUID.randomUUID().toString();
+        private final String visibleName = "Fixture_" + UUID.randomUUID();
 
         @Override
         public Connection getConnection() {
@@ -92,18 +123,39 @@ final class AwardAltExclusionRegressionTest {
         private PreparedStatement preparedStatement(String rawSql) {
             String normalized = rawSql.toLowerCase().replaceAll("\\s+", " ").trim();
             sql.add(normalized);
+            boolean[] showHidden = {false};
             return proxy(PreparedStatement.class, (proxy, method, args) -> switch (method.getName()) {
-                case "executeQuery" -> resultSet(normalized);
+                case "setBoolean" -> {
+                    showHidden[0] = (boolean) args[1];
+                    visibility.add(showHidden[0]);
+                    yield null;
+                }
+                case "executeQuery" -> resultSet(normalized, showHidden[0]);
                 case "executeUpdate" -> 0;
                 default -> defaultValue(method.getReturnType());
             });
         }
 
-        private ResultSet resultSet(String sql) {
+        private ResultSet resultSet(String sql, boolean showHidden) {
             List<Map<String, Object>> rows;
-            if (sql.contains("select distinct season from player_award_scores")) {
+            if (sql.contains("select distinct on (scores.award_id)")) {
+                rows = List.of(Map.of(
+                        "award_id", "test-award",
+                        "minecraft_uuid", showHidden ? hiddenUuid : visibleUuid,
+                        "minecraft_username", showHidden ? hiddenName : visibleName,
+                        "nickname", "Alias_" + (showHidden ? hiddenName : visibleName),
+                        "hidden", showHidden,
+                        "best_score", new java.util.Random().nextDouble(1000, 2000)));
+            } else if (showHidden && (sql.contains("case when ranked.rnk <= 3") || sql.contains("crowns.gold,"))) {
+                rows = List.of(Map.ofEntries(
+                        Map.entry("minecraft_uuid", hiddenUuid), Map.entry("minecraft_username", hiddenName),
+                        Map.entry("nickname", "Alias_" + hiddenName), Map.entry("hidden", true),
+                        Map.entry("score", new java.util.Random().nextDouble(1000, 2000)),
+                        Map.entry("rnk", 1), Map.entry("medal", 1), Map.entry("gold", 2),
+                        Map.entry("silver", 1), Map.entry("bronze", 0), Map.entry("crown_score", 13)));
+            } else if (sql.contains("select distinct season from player_award_scores")) {
                 rows = List.of(Map.of("season", "7"));
-            } else if (sql.contains("from awards where id = ?")) {
+            } else if (sql.contains("from awards where id = ?") || sql.contains("from awards where enabled = true")) {
                 rows = List.of(Map.of(
                         "id", "test-award",
                         "title", "Test Award",
@@ -139,7 +191,8 @@ final class AwardAltExclusionRegressionTest {
             int[] index = {-1};
             return proxy(ResultSet.class, (proxy, method, args) -> switch (method.getName()) {
                 case "next" -> ++index[0] < rows.size();
-                case "getString" -> String.valueOf(rows.get(index[0]).get(args[0]));
+                case "getString" -> (String) rows.get(index[0]).get(args[0]);
+                case "getBoolean" -> Boolean.TRUE.equals(rows.get(index[0]).get(args[0]));
                 case "getInt" -> ((Number) rows.get(index[0]).get(args[0])).intValue();
                 case "getDouble" -> ((Number) rows.get(index[0]).get(args[0])).doubleValue();
                 default -> defaultValue(method.getReturnType());

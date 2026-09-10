@@ -4,10 +4,17 @@ import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
 import { formatValue } from "@/lib/formatValue";
 import { notFound } from "next/navigation";
-import { playerDisplayName } from "@/lib/playerName";
+import LeaderboardVisibilityToggle from "@/components/LeaderboardVisibilityToggle";
+import {
+  LeaderboardPlayerLink,
+  LeaderboardPlayerAvatar,
+  leaderboardPlayerName,
+} from "@/components/LeaderboardPlayer";
+import { leaderboardApiUrl } from "@/lib/leaderboardApi";
 
 interface Props {
   params: Promise<{ key: string }>;
+  searchParams: Promise<{ show_hidden?: string }>;
 }
 
 interface ProxyAwardDef {
@@ -21,7 +28,8 @@ interface ProxyAwardDef {
 
 interface ProxyLeaderboardEntry {
   rank: number;
-  uuid: string;
+  uuid: string | null;
+  hidden?: boolean;
   username: string | null;
   nickname: string | null;
   score: number;
@@ -33,8 +41,8 @@ interface ProxyAwardResponse {
   leaderboard: ProxyLeaderboardEntry[];
 }
 
-async function fetchAwardLeaderboard(key: string): Promise<ProxyAwardResponse | null> {
-  const res = await fetch(`https://api.crabcraft.net/awards/${key}`, {
+async function fetchAwardLeaderboard(key: string, showHidden = false): Promise<ProxyAwardResponse | null> {
+  const res = await fetch(leaderboardApiUrl(`/awards/${encodeURIComponent(key)}${showHidden ? "?show_hidden=true" : ""}`), {
     next: { revalidate: 30 },
   });
   if (res.status === 404) return null;
@@ -52,16 +60,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function AwardLeaderboardPage({ params }: Props) {
+export default async function AwardLeaderboardPage({ params, searchParams }: Props) {
   const { key } = await params;
-  const data = await fetchAwardLeaderboard(key);
+  const showHidden = (await searchParams).show_hidden === "true";
+  const data = await fetchAwardLeaderboard(key, showHidden);
 
   if (!data) notFound();
 
   const meta = data.award;
   const entries = data.leaderboard.map((entry) => ({
     ...entry,
-    displayName: playerDisplayName(entry.nickname, entry.username),
+    displayName: leaderboardPlayerName(entry),
   }));
   const awardUnits: Record<string, string> = { [meta.id]: meta.unit };
 
@@ -88,30 +97,34 @@ export default async function AwardLeaderboardPage({ params }: Props) {
           </p>
         </div>
 
+        <div className="flex justify-end mb-2 px-1">
+          <LeaderboardVisibilityToggle showHidden={showHidden} />
+        </div>
+
         <Squircle
           cornerRadius={32}
           className="bg-paper-2 overflow-hidden animate-in"
-          style={{ animationDelay: "0.1s" }}
+          style={{ animationDelay: "0.25s" }}
         >
           {entries.length > 0 ? (
             <>
-              <div className="flex items-center gap-5 px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028]">
-                <span className="w-14">Rank</span>
+              <div className="flex items-center gap-3 px-4 sm:gap-5 sm:px-6 py-3 text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028]">
+                <span className="w-9 sm:w-14 shrink-0">Rank</span>
                 <span className="flex-1">Player</span>
                 <span className="shrink-0">Value</span>
               </div>
               {entries.map((entry, i) => (
-                <Link
-                  key={entry.uuid}
-                  href={`/stats/${entry.uuid}`}
-                  className={`flex items-center gap-5 px-6 py-3 transition-colors hover:bg-orange-50/60 dark:hover:bg-[#2a221b] ${
+                <LeaderboardPlayerLink
+                  key={entry.uuid ?? `hidden-${i}`}
+                  player={entry}
+                  className={`flex items-center gap-3 px-4 sm:gap-5 sm:px-6 py-3 transition-colors hover:bg-orange-50/60 dark:hover:bg-[#2a221b] ${
                     i % 2 === 0
                       ? "bg-paper-2"
                       : "bg-paper/60 dark:bg-[#2a221b]/40"
                   }`}
                 >
                   <span
-                    className={`w-14 text-sm font-bold shrink-0 ${
+                    className={`w-9 sm:w-14 text-sm font-bold shrink-0 ${
                       entry.rank === 1
                         ? "text-yellow-500"
                         : entry.rank === 2
@@ -130,19 +143,18 @@ export default async function AwardLeaderboardPage({ params }: Props) {
                           ? "rd"
                           : "th"}
                   </span>
-                  <PixelIcon
-                    src={`https://mc-heads.net/avatar/${entry.uuid}/64.png`}
-                    alt={entry.displayName}
+                  <LeaderboardPlayerAvatar
+                    player={entry}
                     size={32}
                     imgClassName="rounded"
                   />
-                  <span className="flex-1 font-bold text-sm text-gray-800 dark:text-gray-200 truncate">
-                    {entry.displayName}
+                  <span className="flex-1 min-w-0 font-bold text-sm text-gray-800 dark:text-gray-200">
+                    <span className={entry.hidden ? "block" : "block truncate"}>{entry.displayName}</span>
                   </span>
                   <span className="text-sm font-bold text-gray-600 dark:text-gray-400 shrink-0">
                     {formatValue(entry.score, key, awardUnits)}
                   </span>
-                </Link>
+                </LeaderboardPlayerLink>
               ))}
             </>
           ) : (
@@ -155,10 +167,10 @@ export default async function AwardLeaderboardPage({ params }: Props) {
 
         <div
           className="mt-8 text-center animate-in"
-          style={{ animationDelay: "0.2s" }}
+          style={{ animationDelay: "0.35s" }}
         >
           <Link
-            href="/awards"
+            href={`/awards${showHidden ? "?show_hidden=true" : ""}`}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-orange-500 transition-colors"
           >
             &larr; Back to Awards

@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 final class AdvancementLeaderboardRegressionTest {
 
@@ -33,6 +34,9 @@ final class AdvancementLeaderboardRegressionTest {
                 "a leaderboard query does not exclude inactive players");
         check(dataSource.sql.stream().allMatch(sql -> sql.contains("2592000")),
                 "a leaderboard query does not use the 30-day window");
+        check(dataSource.sql.stream().allMatch(sql -> sql.contains("(? or eligible_player.awards_excluded = false)")),
+                "a leaderboard query bypasses manual exclusions");
+        check(dataSource.visibility.equals(List.of(false, false)), "hidden entries are enabled by default");
         check(dataSource.boundAdvancementIds.size() == 2,
                 "the registry IDs were not bound to both leaderboard queries");
         check(dataSource.boundAdvancementIds.stream().allMatch(ids -> ids.size() == 126),
@@ -49,10 +53,22 @@ final class AdvancementLeaderboardRegressionTest {
         check(dataSource.boundAdvancementIds.stream().flatMap(List::stream)
                         .allMatch(id -> id.startsWith("minecraft:adventure/")),
                 "the Adventure leaderboard bound an advancement from another category");
+
+        dataSource.clear();
+        var result = queries.getAdvancementLeaderboard("7", 25, 25, "adventure", true);
+        check(dataSource.visibility.equals(List.of(true, true)), "count and page disagree on hidden visibility");
+        var hidden = result.getAsJsonArray("leaderboard").get(0).getAsJsonObject();
+        check(hidden.get("rank").getAsInt() == 26, "hidden entry lost its paginated position");
+        check(hidden.get("hidden").getAsBoolean(), "hidden entry lost its marker");
+        check(hidden.get("uuid").isJsonNull() && hidden.get("nickname").isJsonNull(), "hidden identity leaked");
+        check(hidden.get("username").getAsString().equals("Hidden player"), "hidden name was not redacted");
+        check(!result.toString().contains(dataSource.hiddenIdentity), "hidden identity appears elsewhere in the response");
     }
 
     private static final class CapturingDataSource extends HikariDataSource {
         private final List<String> sql = new ArrayList<>();
+        private final List<Boolean> visibility = new ArrayList<>();
+        private final String hiddenIdentity = UUID.randomUUID().toString();
         private final List<List<String>> boundAdvancementIds = new ArrayList<>();
 
         @Override
@@ -76,6 +92,7 @@ final class AdvancementLeaderboardRegressionTest {
         private PreparedStatement preparedStatement(String rawSql) {
             String normalized = rawSql.toLowerCase().replaceAll("\\s+", " ").trim();
             sql.add(normalized);
+            boolean[] showHidden = {false};
             return proxy(PreparedStatement.class, (proxy, method, args) -> switch (method.getName()) {
                 case "setArray" -> {
                     Object[] values = (Object[]) ((Array) args[1]).getArray();
@@ -83,13 +100,18 @@ final class AdvancementLeaderboardRegressionTest {
                             Arrays.stream(values).map(String::valueOf).toList());
                     yield null;
                 }
-                case "executeQuery" -> resultSet(normalized.startsWith("select count"));
+                case "setBoolean" -> {
+                    showHidden[0] = (boolean) args[1];
+                    visibility.add(showHidden[0]);
+                    yield null;
+                }
+                case "executeQuery" -> resultSet(normalized.startsWith("select count"), showHidden[0]);
                 default -> defaultValue(method.getReturnType());
             });
         }
 
-        private ResultSet resultSet(boolean countQuery) {
-            boolean[] unread = {countQuery};
+        private ResultSet resultSet(boolean countQuery, boolean showHidden) {
+            boolean[] unread = {countQuery || showHidden};
             return proxy(ResultSet.class, (proxy, method, args) -> switch (method.getName()) {
                 case "next" -> {
                     boolean hasNext = unread[0];
@@ -97,12 +119,15 @@ final class AdvancementLeaderboardRegressionTest {
                     yield hasNext;
                 }
                 case "getInt" -> 1;
+                case "getBoolean" -> showHidden;
+                case "getString" -> hiddenIdentity;
                 default -> defaultValue(method.getReturnType());
             });
         }
 
         private void clear() {
             sql.clear();
+            visibility.clear();
             boundAdvancementIds.clear();
         }
     }

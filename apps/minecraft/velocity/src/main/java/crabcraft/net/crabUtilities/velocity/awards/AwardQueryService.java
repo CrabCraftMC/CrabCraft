@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.velocity.awards;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.zaxxer.hikari.HikariDataSource;
+import crabcraft.net.crabUtilities.velocity.api.LeaderboardIdentity;
 import org.slf4j.Logger;
 
 import java.sql.Connection;
@@ -40,6 +41,10 @@ public final class AwardQueryService {
     }
 
     public JsonObject getAllAwards(String seasonParam) {
+        return getAllAwards(seasonParam, false);
+    }
+
+    public JsonObject getAllAwards(String seasonParam, boolean showHidden) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
 
@@ -50,9 +55,10 @@ public final class AwardQueryService {
             try (PreparedStatement stmt = conn.prepareStatement("""
                     SELECT DISTINCT ON (scores.award_id)
                         scores.award_id,
-                        scores.minecraft_uuid AS best_uuid,
-                        u.minecraft_username AS best_username,
-                        u.nickname AS best_nickname,
+                        scores.minecraft_uuid,
+                        u.minecraft_username,
+                        u.nickname,
+                        u.awards_excluded AS hidden,
                         scores.score AS best_score
                     FROM player_award_scores scores
                     LEFT JOIN players u ON u.minecraft_uuid = scores.minecraft_uuid
@@ -66,19 +72,18 @@ public final class AwardQueryService {
                           SELECT 1 FROM players eligible_player
                           WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                             AND eligible_player.is_discord_member = true
-                            AND eligible_player.awards_excluded = false
+                            AND (? OR eligible_player.awards_excluded = false)
                             AND eligible_player.last_mc_login_at >=
                                 EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                       )
                     ORDER BY scores.award_id, scores.score DESC, scores.minecraft_uuid
                     """)) {
                 stmt.setString(1, season);
+                stmt.setBoolean(2, showHidden);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         JsonObject leader = new JsonObject();
-                        leader.addProperty("uuid", rs.getString("best_uuid"));
-                        leader.addProperty("username", rs.getString("best_username"));
-                        leader.addProperty("nickname", rs.getString("best_nickname"));
+                        LeaderboardIdentity.addTo(leader, rs);
                         leader.addProperty("score", rs.getDouble("best_score"));
                         leaderMap.put(rs.getString("award_id"), leader);
                     }
@@ -135,6 +140,11 @@ public final class AwardQueryService {
 
     public JsonObject getAwardLeaderboard(String awardId, String seasonParam,
                                            int limit, int offset) {
+        return getAwardLeaderboard(awardId, seasonParam, limit, offset, false);
+    }
+
+    public JsonObject getAwardLeaderboard(String awardId, String seasonParam,
+                                           int limit, int offset, boolean showHidden) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
         if (limit <= 0 || limit > 100) limit = 100;
@@ -161,13 +171,14 @@ public final class AwardQueryService {
                           SELECT 1 FROM players eligible_player
                           WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                             AND eligible_player.is_discord_member = true
-                            AND eligible_player.awards_excluded = false
+                            AND (? OR eligible_player.awards_excluded = false)
                             AND eligible_player.last_mc_login_at >=
                                 EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                       )
                     """)) {
                 stmt.setString(1, awardId);
                 stmt.setString(2, season);
+                stmt.setBoolean(3, showHidden);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) total = rs.getInt(1);
                 }
@@ -179,6 +190,7 @@ public final class AwardQueryService {
                         ranked.minecraft_uuid,
                         u.minecraft_username,
                         u.nickname,
+                        u.awards_excluded AS hidden,
                         ranked.score,
                         ranked.rnk,
                         CASE WHEN ranked.rnk <= 3 THEN ranked.rnk::int ELSE 0 END AS medal
@@ -197,7 +209,7 @@ public final class AwardQueryService {
                               SELECT 1 FROM players eligible_player
                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                 AND eligible_player.is_discord_member = true
-                                AND eligible_player.awards_excluded = false
+                                AND (? OR eligible_player.awards_excluded = false)
                                 AND eligible_player.last_mc_login_at >=
                                     EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                           )
@@ -208,15 +220,14 @@ public final class AwardQueryService {
                     """)) {
                 stmt.setString(1, awardId);
                 stmt.setString(2, season);
-                stmt.setInt(3, limit);
-                stmt.setInt(4, offset);
+                stmt.setBoolean(3, showHidden);
+                stmt.setInt(4, limit);
+                stmt.setInt(5, offset);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         JsonObject entry = new JsonObject();
                         entry.addProperty("rank", rs.getInt("rnk"));
-                        entry.addProperty("uuid", rs.getString("minecraft_uuid"));
-                        entry.addProperty("username", rs.getString("minecraft_username"));
-                        entry.addProperty("nickname", rs.getString("nickname"));
+                        LeaderboardIdentity.addTo(entry, rs);
                         entry.addProperty("score", rs.getDouble("score"));
                         entry.addProperty("medal", rs.getInt("medal"));
                         leaderboard.add(entry);
@@ -238,6 +249,10 @@ public final class AwardQueryService {
     }
 
     public JsonObject getCrownLeaderboard(String seasonParam, int limit, int offset) {
+        return getCrownLeaderboard(seasonParam, limit, offset, false);
+    }
+
+    public JsonObject getCrownLeaderboard(String seasonParam, int limit, int offset, boolean showHidden) {
         String season = resolveSeason(seasonParam);
         if (season == null) return null;
         if (limit <= 0 || limit > 100) limit = 100;
@@ -263,7 +278,7 @@ public final class AwardQueryService {
                               SELECT 1 FROM players eligible_player
                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                 AND eligible_player.is_discord_member = true
-                                AND eligible_player.awards_excluded = false
+                                AND (? OR eligible_player.awards_excluded = false)
                                 AND eligible_player.last_mc_login_at >=
                                     EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                           )
@@ -273,6 +288,7 @@ public final class AwardQueryService {
                     WHERE medal_rank <= 3
                     """)) {
                 stmt.setString(1, season);
+                stmt.setBoolean(2, showHidden);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) total = rs.getInt(1);
                 }
@@ -295,7 +311,7 @@ public final class AwardQueryService {
                                SELECT 1 FROM players eligible_player
                                WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                  AND eligible_player.is_discord_member = true
-                                 AND eligible_player.awards_excluded = false
+                                 AND (? OR eligible_player.awards_excluded = false)
                                  AND eligible_player.last_mc_login_at >=
                                      EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                            )
@@ -317,27 +333,27 @@ public final class AwardQueryService {
                          crowns.minecraft_uuid,
                          u.minecraft_username,
                          u.nickname,
+                         u.awards_excluded AS hidden,
                          crowns.gold,
                          crowns.silver,
                          crowns.bronze,
                          crowns.crown_score
                      FROM crowns
                      LEFT JOIN players u ON u.minecraft_uuid = crowns.minecraft_uuid
-                     ORDER BY crowns.crown_score DESC, crowns.gold DESC, crowns.silver DESC
+                     ORDER BY crowns.crown_score DESC, crowns.gold DESC, crowns.silver DESC, crowns.minecraft_uuid
                      LIMIT ? OFFSET ?
                      """)) {
                 stmt.setString(1, season);
-                stmt.setInt(2, limit);
-                stmt.setInt(3, offset);
+                stmt.setBoolean(2, showHidden);
+                stmt.setInt(3, limit);
+                stmt.setInt(4, offset);
                 try (ResultSet rs = stmt.executeQuery()) {
                     int rank = offset;
                     while (rs.next()) {
                         rank++;
                         JsonObject entry = new JsonObject();
                         entry.addProperty("rank", rank);
-                        entry.addProperty("uuid", rs.getString("minecraft_uuid"));
-                        entry.addProperty("username", rs.getString("minecraft_username"));
-                        entry.addProperty("nickname", rs.getString("nickname"));
+                        LeaderboardIdentity.addTo(entry, rs);
                         entry.addProperty("gold", rs.getInt("gold"));
                         entry.addProperty("silver", rs.getInt("silver"));
                         entry.addProperty("bronze", rs.getInt("bronze"));
