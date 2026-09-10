@@ -41,6 +41,7 @@ public final class BingoManager {
     private final JavaPlugin plugin;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final ConcurrentLinkedQueue<PendingCompletion> pending = new ConcurrentLinkedQueue<>();
+    private final Set<UUID> pendingViews = new java.util.HashSet<>();
     private final Set<String> excludedWorlds;
     private final String stream;
     private final String activeCardKey;
@@ -164,6 +165,48 @@ public final class BingoManager {
         return isEligible(player) && card != null && card.contains(task);
     }
 
+    void showCard(Player player, int square) {
+        if (!enabled || !running) {
+            player.sendMessage(Component.text("Bingo is not enabled on this server."));
+            return;
+        }
+        BingoActiveCard card = activeCard;
+        if (card == null || !card.isLive()) {
+            player.sendMessage(Component.text("There isn't an active bingo card available right now."));
+            return;
+        }
+        UUID playerId = player.getUniqueId();
+        if (!pendingViews.add(playerId)) return;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            Set<String> completed = loadProgress(card, playerId);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                pendingViews.remove(playerId);
+                if (!running || !player.isOnline()) return;
+                if (!card.equals(activeCard) || !card.isLive()) {
+                    player.sendMessage(Component.text("The bingo card has changed. Run /bingo again."));
+                } else if (completed == null) {
+                    player.sendMessage(Component.text("Couldn't load your bingo progress. Please try again shortly."));
+                } else {
+                    player.sendMessage(square < 0
+                            ? BingoChatView.grid(card, completed)
+                            : BingoChatView.detail(card, completed, square));
+                }
+            });
+        });
+    }
+
+    private synchronized Set<String> loadProgress(BingoActiveCard card, UUID playerId) {
+        if (!running || jedisPool == null) return null;
+        try (Jedis jedis = jedisPool.getResource()) {
+            Set<String> completed = jedis.smembers("crabcraft:bingo:progress:" + card.id() + ":" + playerId);
+            redisRecovered();
+            return completed;
+        } catch (Exception e) {
+            logRedisFailure("load bingo progress", e);
+            return null;
+        }
+    }
+
     private int activeCardId() {
         BingoActiveCard card = activeCard;
         return card == null ? Integer.MIN_VALUE : card.id();
@@ -184,7 +227,8 @@ public final class BingoManager {
                 List<String> unsupported = next.taskIds().stream()
                         .filter(taskId -> BingoTask.fromId(taskId).isEmpty())
                         .toList();
-                if (next.taskIds().size() != 16 || !unsupported.isEmpty()) {
+                if (next.taskIds().size() != 16 || Set.copyOf(next.taskIds()).size() != 16
+                        || !unsupported.isEmpty()) {
                     plugin.getLogger().severe("Refusing Bingo #" + next.number()
                             + ": expected 16 deployed task detectors; unsupported=" + unsupported);
                     next = null;
