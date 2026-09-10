@@ -76,7 +76,7 @@ public class StatsPushTask {
         Path playersDirectory = playerStorageDirectory(plugin.getServer().getLevelDirectory());
         this.statsDir = playersDirectory.resolve("stats").toFile();
         this.advancementsDir = playersDirectory.resolve("advancements").toFile();
-        this.playerDataDir = playersDirectory.resolve("playerdata").toFile();
+        this.playerDataDir = playersDirectory.resolve("data").toFile();
     }
 
     static Path playerStorageDirectory(Path levelDirectory) {

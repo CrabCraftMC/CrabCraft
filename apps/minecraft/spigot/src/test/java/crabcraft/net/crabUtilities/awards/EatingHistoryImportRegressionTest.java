@@ -19,7 +19,7 @@ public final class EatingHistoryImportRegressionTest {
         Random random = new Random(795_316L);
         var world = Files.createTempDirectory("eating-history-regression-");
         try {
-            var players = Files.createDirectories(world.resolve("players/playerdata"));
+            var players = Files.createDirectories(world.resolve("players/data"));
             var lock = Files.createFile(world.resolve("session.lock"));
             UUID uuid = new UUID(random.nextLong(), random.nextLong());
             var save = players.resolve(uuid + ".dat");

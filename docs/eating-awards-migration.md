@@ -18,7 +18,7 @@ This does not reconstruct unknown historical meals. A planting-only subtraction 
    ```
 
    Apply it with the normal `DATABASE_URL` environment and `--apply`, then restart Velocity so its evaluator reloads the nine definitions. The script changes only these reader definitions and descriptions, preserves enabled flags and scores, and requires all nine rows to exist. No PostgreSQL schema changes are needed.
-3. Stop the Minecraft server cleanly before exporting or importing player saves. This saves newly tracked meals and prevents in-memory player data from overwriting the import. Work on the authoritative world directory, not an old copy. The tool acquires the world’s `session.lock` and refuses a running server.
+3. Stop the Minecraft server cleanly before exporting or importing player saves. This saves newly tracked meals and prevents in-memory player data from overwriting the import. Work on the authoritative world directory, not an old copy. Minecraft 26.2 stores player saves under `players/data` within that directory. The tool acquires the world's `session.lock` and refuses a running server.
 4. From `apps/minecraft`, export a manifest:
 
    ```sh
