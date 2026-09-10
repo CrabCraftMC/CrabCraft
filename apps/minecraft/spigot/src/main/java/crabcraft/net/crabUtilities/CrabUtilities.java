@@ -372,7 +372,7 @@ public final class CrabUtilities extends JavaPlugin {
         }
         stopPlayerSettings();
         startPlayerSettings();
-        messages.add("Player settings and restricted-area policy reloaded.");
+        messages.add("Player settings and unverified-player protection reloaded.");
     }
 
     private void reloadIntegrationsRuntime(List<String> messages) {

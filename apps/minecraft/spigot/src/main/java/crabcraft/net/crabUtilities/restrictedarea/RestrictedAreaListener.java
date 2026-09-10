@@ -1,12 +1,10 @@
 package crabcraft.net.crabUtilities.restrictedarea;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
-import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.event.player.PlayerChangeBeaconEffectEvent;
 import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import io.papermc.paper.event.player.PlayerInsertLecternBookEvent;
 import io.papermc.paper.event.player.PlayerItemFrameChangeEvent;
-import io.papermc.paper.event.player.PlayerLecternPageChangeEvent;
 import io.papermc.paper.event.player.PlayerLoomPatternSelectEvent;
 import io.papermc.paper.event.player.PlayerNameEntityEvent;
 import io.papermc.paper.event.player.PlayerOpenSignEvent;
@@ -15,14 +13,10 @@ import io.papermc.paper.event.player.PlayerStonecutterRecipeSelectEvent;
 import io.papermc.paper.event.player.PlayerSwapWithEquipmentSlotEvent;
 import io.papermc.paper.event.player.PlayerToggleEntityAgeLockEvent;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.Firework;
+import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Tameable;
@@ -31,6 +25,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockFertilizeEvent;
@@ -39,16 +34,11 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.AreaEffectCloudApplyEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityExhaustionEvent;
 import org.bukkit.event.entity.EntityMountEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityPlaceEvent;
-import org.bukkit.event.entity.EntityResurrectEvent;
 import org.bukkit.event.entity.EntityTameEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
-import org.bukkit.event.entity.EntityToggleGlideEvent;
-import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.event.entity.ArrowBodyCountChangeEvent;
 import org.bukkit.event.entity.PlayerLeashEntityEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
@@ -57,6 +47,7 @@ import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.TradeSelectEvent;
 import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
@@ -64,57 +55,39 @@ import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketEntityEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
-import org.bukkit.event.player.PlayerChangedWorldEvent;
-import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerEditBookEvent;
-import org.bukkit.event.player.PlayerExpChangeEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerHarvestBlockEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.event.player.PlayerItemMendEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
-import org.bukkit.event.player.PlayerPortalEvent;
-import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerRiptideEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
-import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerTakeLecternBookEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.player.PlayerUnleashEntityEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
-import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.projectiles.ProjectileSource;
 
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
- * Confines non-operators without the configured permission to one cuboid and blocks
- * their non-combat actions. Permission checks are deliberately live so
- * LuckPerms changes take effect on the next attempted action without a cache
- * or reconnect.
+ * Protects blocks, containers, and entities from unverified players in every world.
+ * Permission checks are live so verification takes effect without reconnecting.
  */
 public final class RestrictedAreaListener implements Listener {
 
     private final CrabUtilities plugin;
     private final VerificationReminder reminder = new VerificationReminder();
-    private final Set<UUID> correctiveTeleports = ConcurrentHashMap.newKeySet();
     private volatile RestrictedAreaSettings settings = RestrictedAreaSettings.disabled();
 
     public RestrictedAreaListener(final CrabUtilities plugin) {
-        this.plugin = plugin;
+        this(plugin, RestrictedAreaSettings.disabled());
         refresh();
+    }
+
+    RestrictedAreaListener(final CrabUtilities plugin, final RestrictedAreaSettings settings) {
+        this.plugin = plugin;
+        this.settings = settings;
     }
 
     public void refresh() {
@@ -123,68 +96,11 @@ public final class RestrictedAreaListener implements Listener {
             loaded = RestrictedAreaSettings.load(plugin.getConfig());
         } catch (IllegalArgumentException exception) {
             settings = RestrictedAreaSettings.disabled();
-            plugin.getLogger().severe("Restricted area disabled: " + exception.getMessage());
+            plugin.getLogger().severe("Unverified-player protection disabled: " + exception.getMessage());
             return;
         }
 
-        if (loaded.enabled() && Bukkit.getWorld(loaded.area().world()) == null) {
-            settings = RestrictedAreaSettings.disabled();
-            plugin.getLogger().severe("Restricted area disabled: world '"
-                    + loaded.area().world() + "' is not loaded");
-            return;
-        }
         settings = loaded;
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onMove(final PlayerMoveEvent event) {
-        final Player player = event.getPlayer();
-        final RestrictedAreaSettings current = settings;
-        if (!isRestricted(player, current) || event.getTo() == null) {
-            return;
-        }
-
-        if (player.isFlying()) {
-            player.setFlying(false);
-        }
-        if (player.isGliding()) {
-            player.setGliding(false);
-        }
-
-        final Location from = event.getFrom();
-        final Location to = event.getTo();
-        final RestrictedAreaSettings.MovementDecision decision = current.area().movementDecision(
-                from.getWorld().getName(), from.getX(), from.getY(), from.getZ(),
-                to.getWorld().getName(), to.getX(), to.getY(), to.getZ());
-        if (decision == RestrictedAreaSettings.MovementDecision.ALLOW) {
-            return;
-        }
-        remind(player);
-        if (decision == RestrictedAreaSettings.MovementDecision.BLOCK) {
-            event.setTo(new Location(from.getWorld(), from.getX(), from.getY(), from.getZ(),
-                    to.getYaw(), to.getPitch()));
-            return;
-        }
-        event.setTo(returnLocation(current));
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onTeleport(final PlayerTeleportEvent event) {
-        if (isRestricted(event.getPlayer())
-                && !correctiveTeleports.contains(event.getPlayer().getUniqueId())) {
-            event.setCancelled(true);
-            remind(event.getPlayer());
-        }
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onPortal(final PlayerPortalEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onJoin(final PlayerJoinEvent event) {
-        Bukkit.getScheduler().runTask(plugin, () -> ensureInside(event.getPlayer()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -192,45 +108,34 @@ public final class RestrictedAreaListener implements Listener {
         reminder.forget(event.getPlayer().getUniqueId());
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onWorldChanged(final PlayerChangedWorldEvent event) {
-        ensureInside(event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onRespawn(final PlayerRespawnEvent event) {
-        final RestrictedAreaSettings current = settings;
-        if (isRestricted(event.getPlayer(), current)) {
-            event.setRespawnLocation(returnLocation(current));
-        }
-    }
-
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onInteract(final PlayerInteractEvent event) {
         if (!isRestricted(event.getPlayer())) {
             return;
         }
-        if (isCombatItem(event.getMaterial())) {
+        final Action action = event.getAction();
+        if (action == Action.PHYSICAL) {
+            // Prevent pressure plates and farmland trampling without spamming people who walk over them.
             event.setUseInteractedBlock(Event.Result.DENY);
-            event.setUseItemInHand(Event.Result.ALLOW);
-            if (event.getClickedBlock() != null && event.getClickedBlock().getType().isInteractable()) {
-                remind(event.getPlayer());
-            }
             return;
         }
-        event.setCancelled(true);
-        remind(event.getPlayer());
+        if (action != Action.LEFT_CLICK_BLOCK && action != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+        event.setUseInteractedBlock(Event.Result.DENY);
+        final boolean blockedItem = event.hasItem() && !isPersonalItem(event.getMaterial());
+        if (action == Action.RIGHT_CLICK_BLOCK && blockedItem) {
+            event.setUseItemInHand(Event.Result.DENY);
+        }
+        if (action == Action.LEFT_CLICK_BLOCK || blockedItem
+                || event.getClickedBlock() != null && event.getClickedBlock().getType().isInteractable()) {
+            remind(event.getPlayer());
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onInteractEntity(final PlayerInteractEntityEvent event) {
-        if (isRestricted(event.getPlayer())
-                || event.getRightClicked() instanceof Player target && isRestricted(target)) {
-            event.setCancelled(true);
-            if (isRestricted(event.getPlayer())) {
-                remind(event.getPlayer());
-            }
-        }
+        cancel(event, event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -270,34 +175,33 @@ public final class RestrictedAreaListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onInventoryOpen(final InventoryOpenEvent event) {
-        cancel(event, player(event.getPlayer()));
+        if (!isPersonalInventory(event.getInventory().getType())) {
+            cancel(event, player(event.getPlayer()));
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onInventoryClick(final InventoryClickEvent event) {
-        cancel(event, player(event.getWhoClicked()));
+        if (!isPersonalInventory(event.getView().getType())) {
+            cancel(event, player(event.getWhoClicked()));
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onInventoryDrag(final InventoryDragEvent event) {
-        cancel(event, player(event.getWhoClicked()));
+        if (!isPersonalInventory(event.getView().getType())) {
+            cancel(event, player(event.getWhoClicked()));
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPreAttack(final PrePlayerAttackEntityEvent event) {
-        if (isRestricted(event.getPlayer()) && !isPvpTarget(event.getAttacked())) {
-            event.setCancelled(true);
-            remind(event.getPlayer());
-        }
+        cancel(event, event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onDamageByEntity(final EntityDamageByEntityEvent event) {
-        if (isRestricted(responsiblePlayer(event.getDamager()))
-                && !isPvpTarget(event.getEntity())) {
-            event.setCancelled(true);
-            remind(responsiblePlayer(event.getDamager()));
-        }
+        cancel(event, responsiblePlayer(event.getDamager()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -310,7 +214,7 @@ public final class RestrictedAreaListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onProjectileLaunch(final ProjectileLaunchEvent event) {
         final Player shooter = responsiblePlayer(event.getEntity());
-        if (isRestricted(shooter) && !isCombatProjectile(event.getEntity())) {
+        if (isRestricted(shooter) && !(event.getEntity() instanceof EnderPearl)) {
             event.setCancelled(true);
             remind(shooter);
         }
@@ -329,26 +233,6 @@ public final class RestrictedAreaListener implements Listener {
         if (isRestricted(responsiblePlayer(cloud.getSource()))) {
             event.setCancelled(true);
         }
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onResurrect(final EntityResurrectEvent event) {
-        cancelSilently(event, player(event.getEntity()));
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onArrowBodyCount(final ArrowBodyCountChangeEvent event) {
-        cancelSilently(event, player(event.getEntity()));
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onFoodLevel(final FoodLevelChangeEvent event) {
-        cancelSilently(event, player(event.getEntity()));
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onExhaustion(final EntityExhaustionEvent event) {
-        cancelSilently(event, player(event.getEntity()));
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -391,16 +275,6 @@ public final class RestrictedAreaListener implements Listener {
         cancel(event, responsiblePlayer(event.getAttacker()));
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onVehicleMove(final VehicleMoveEvent event) {
-        for (Entity passenger : event.getVehicle().getPassengers()) {
-            if (passenger instanceof Player player && isRestricted(player)) {
-                event.getVehicle().removePassenger(player);
-                ensureInside(player);
-            }
-        }
-    }
-
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onLeash(final PlayerLeashEntityEvent event) {
         cancel(event, event.getPlayer());
@@ -427,11 +301,6 @@ public final class RestrictedAreaListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onDrop(final PlayerDropItemEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onArmourStand(final PlayerArmorStandManipulateEvent event) {
         cancel(event, event.getPlayer());
     }
@@ -453,13 +322,7 @@ public final class RestrictedAreaListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onFish(final PlayerFishEvent event) {
-        if (isRestricted(event.getPlayer())
-                || event.getCaught() instanceof Player caught && isRestricted(caught)) {
-            event.setCancelled(true);
-            if (isRestricted(event.getPlayer())) {
-                remind(event.getPlayer());
-            }
-        }
+        cancel(event, event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -473,68 +336,12 @@ public final class RestrictedAreaListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onEditBook(final PlayerEditBookEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onConsume(final PlayerItemConsumeEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onItemMend(final PlayerItemMendEvent event) {
-        cancelSilently(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onExperience(final PlayerExpChangeEvent event) {
-        if (isRestricted(event.getPlayer())) {
-            event.setAmount(0);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onSwapHands(final PlayerSwapHandItemsEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onTakeLecternBook(final PlayerTakeLecternBookEvent event) {
         cancel(event, event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onBedEnter(final PlayerBedEnterEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onRiptide(final PlayerRiptideEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onStartFlying(final PlayerToggleFlightEvent event) {
-        if (event.isFlying()) {
-            cancel(event, event.getPlayer());
-        }
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onStartGliding(final EntityToggleGlideEvent event) {
-        if (event.isGliding()) {
-            cancel(event, player(event.getEntity()));
-        }
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onCommand(final PlayerCommandPreprocessEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onChat(final AsyncChatEvent event) {
         cancel(event, event.getPlayer());
     }
 
@@ -579,11 +386,6 @@ public final class RestrictedAreaListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onLecternPage(final PlayerLecternPageChangeEvent event) {
-        cancel(event, event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onNameEntity(final PlayerNameEntityEvent event) {
         cancel(event, event.getPlayer());
     }
@@ -615,19 +417,13 @@ public final class RestrictedAreaListener implements Listener {
                 && !player.isOp() && !player.hasPermission(current.permission());
     }
 
-    static boolean isCombatItem(final Material material) {
-        return material == Material.BOW
-                || material == Material.CROSSBOW
-                || material == Material.TRIDENT
-                || material == Material.SHIELD;
+    static boolean isPersonalItem(final Material material) {
+        return material.isEdible() || material == Material.POTION || material == Material.MILK_BUCKET
+                || material == Material.SHIELD || material == Material.ENDER_PEARL;
     }
 
-    static boolean isPvpTarget(final Entity entity) {
-        return entity instanceof Player;
-    }
-
-    private static boolean isCombatProjectile(final Projectile projectile) {
-        return projectile instanceof AbstractArrow || projectile instanceof Firework;
+    static boolean isPersonalInventory(final InventoryType type) {
+        return type == InventoryType.CRAFTING || type == InventoryType.CREATIVE || type == InventoryType.PLAYER;
     }
 
     private void cancel(final Cancellable event, final Player player) {
@@ -644,37 +440,7 @@ public final class RestrictedAreaListener implements Listener {
     }
 
     private void remind(final Player player) {
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (player.isOnline() && isRestricted(player)) {
-                    reminder.send(player.getUniqueId(), player);
-                }
-            });
-            return;
-        }
         reminder.send(player.getUniqueId(), player);
-    }
-
-    private void ensureInside(final Player player) {
-        final RestrictedAreaSettings current = settings;
-        if (!isRestricted(player, current)
-                || current.area().contains(
-                        player.getWorld().getName(), player.getX(), player.getY(), player.getZ())) {
-            return;
-        }
-
-        correctiveTeleports.add(player.getUniqueId());
-        try {
-            player.teleport(returnLocation(current), PlayerTeleportEvent.TeleportCause.PLUGIN);
-        } finally {
-            correctiveTeleports.remove(player.getUniqueId());
-        }
-    }
-
-    private static Location returnLocation(final RestrictedAreaSettings current) {
-        final World world = Bukkit.getWorld(current.area().world());
-        final RestrictedAreaSettings.ReturnPoint point = current.returnPoint();
-        return new Location(world, point.x(), point.y(), point.z(), point.yaw(), point.pitch());
     }
 
     private static Player responsiblePlayer(final Entity entity) {

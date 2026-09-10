@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.LongSupplier;
 
-/** Shared wording and per-player throttling for blocked verification actions. */
+/** Wording and per-player throttling for blocked verification actions. */
 public final class VerificationReminder {
 
     private static final long COOLDOWN_NANOS = 5_000_000_000L;

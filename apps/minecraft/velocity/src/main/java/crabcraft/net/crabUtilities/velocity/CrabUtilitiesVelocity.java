@@ -27,7 +27,6 @@ import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.VelocityChatBridge;
-import crabcraft.net.crabUtilities.velocity.restrictedarea.RestrictedAreaProxyListener;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
 import crabcraft.net.crabUtilities.velocity.voicechat.CallCommand;
 import crabcraft.net.crabUtilities.velocity.voicechat.CallManager;
@@ -129,7 +128,6 @@ public class CrabUtilitiesVelocity {
         this.chatBridge = new VelocityChatBridge(this);
         chatBridge.start();
 
-        server.getEventManager().register(this, new RestrictedAreaProxyListener(this));
 
         MsgCommand.register(this);
         StaffChatToggleCommand.register(this);

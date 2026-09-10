@@ -50,7 +50,7 @@ commands:
     aliases: [staffchat]
 permissions:
   crabutilities.restricted-area.bypass:
-    description: Bypass the permission-gated holding area and action restrictions.
+    description: Bypass unverified-player grief protection.
     default: op
   crabutilities.reload:
     description: Reload CrabUtilities configuration.
