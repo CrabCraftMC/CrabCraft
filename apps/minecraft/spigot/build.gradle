@@ -137,6 +137,7 @@ def regressionTests = [
     accurateBlockPlacementRegressionTest: 'crabcraft.net.crabUtilities.accurateplacement.AccurateBlockPlacementRegressionTest',
     appleSkinLifecycleRegressionTest: 'crabcraft.net.crabUtilities.appleskin.AppleSkinLifecycleRegressionTest',
     bingoTaskRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoTaskRegressionTest',
+    bingoChatViewRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoChatViewRegressionTest',
     hardBingoListenerRegressionTest: 'crabcraft.net.crabUtilities.bingo.HardBingoListenerRegressionTest',
     bingoCardTwoListenerRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoCardTwoListenerRegressionTest',
     bingoCardThreeCoreListenerRegressionTest: 'crabcraft.net.crabUtilities.bingo.BingoCardThreeCoreListenerRegressionTest',

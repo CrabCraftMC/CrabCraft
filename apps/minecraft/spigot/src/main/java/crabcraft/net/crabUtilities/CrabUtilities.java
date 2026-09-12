@@ -560,6 +560,9 @@ public final class CrabUtilities extends JavaPlugin {
 
     private void startBingo() {
         BingoManager manager = new BingoManager(this);
+        var command = new crabcraft.net.crabUtilities.bingo.BingoCommand(manager);
+        getCommand("bingo").setExecutor(command);
+        getCommand("bingo").setTabCompleter(command);
         manager.start();
         if (getConfig().getBoolean("bingo.enabled", false)) {
             this.bingoManager = manager;
