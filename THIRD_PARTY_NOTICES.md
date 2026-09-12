@@ -4,13 +4,13 @@ This file records material source and binary components that are bundled or adap
 
 ## Leaves Jade implementation
 
-The Jade implementation under `apps/minecraft/spigot/src/main/java/crabcraft/net/crabUtilities/jade` is derived from [LeavesMC/Leaves](https://github.com/LeavesMC/Leaves) and is identified upstream as GPL-3.0 licensed. The GPLv3 text is included in the repository's root `LICENSE`. The Minecraft module and its distribution terms must remain GPL-compatible wherever this derivative is distributed.
+The Jade implementation under `apps/minecraft/spigot/src/main/kotlin/crabcraft/net/crabUtilities/jade` is derived from [LeavesMC/Leaves](https://github.com/LeavesMC/Leaves) and is identified upstream as GPL-3.0 licensed. The GPLv3 text is included in the repository's root `LICENSE`. The Minecraft module and its distribution terms must remain GPL-compatible wherever this derivative is distributed.
 
 CrabCraft contributors have modified this implementation for standalone plug-in integration and security hardening, including modifications through 23 July 2026. A modification notice and the GPLv3 text are also included in the built Spigot JAR.
 
 ## AppleSkinSpigot
 
-Source under `apps/minecraft/spigot/src/main/java/crabcraft/net/crabUtilities/appleskin` is adapted from [AppleSkinSpigot](https://github.com/jmattingley23/AppleSkinSpigot) at the audited upstream revision `20c95d…`.
+Source under `apps/minecraft/spigot/src/main/kotlin/crabcraft/net/crabUtilities/appleskin` is adapted from [AppleSkinSpigot](https://github.com/jmattingley23/AppleSkinSpigot) at the audited upstream revision `20c95d…`.
 
 Copyright (c) 2021 jmattingley23. Licensed under the MIT Licence. The required licence notice is included at `apps/minecraft/spigot/src/main/resources/appleskin/LICENSE`.
 
