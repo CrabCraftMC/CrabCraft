@@ -324,7 +324,9 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
                 var offset = 0
                 try { limit = Integer.parseInt(params.getOrDefault("limit", "100")) } catch (ignored: NumberFormatException) {}
                 try { offset = Integer.parseInt(params.getOrDefault("offset", "0")) } catch (ignored: NumberFormatException) {}
-                val result = plugin.getAwardQueryService().getCrownLeaderboard(params["season"], limit, offset)
+                val result = plugin.getAwardQueryService().getCrownLeaderboard(
+                    params["season"], limit, offset, params["show_hidden"] == "true",
+                )
                 if (result == null) {
                     sendError(exchange, 404, "no current season")
                     return@registerRateLimitedGet
@@ -503,7 +505,9 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
                     var offset = 0
                     try { limit = Integer.parseInt(params.getOrDefault("limit", "100")) } catch (ignored: NumberFormatException) {}
                     try { offset = Integer.parseInt(params.getOrDefault("offset", "0")) } catch (ignored: NumberFormatException) {}
-                    val result = plugin.getAwardQueryService().getAwardLeaderboard(awardId, params["season"], limit, offset)
+                    val result = plugin.getAwardQueryService().getAwardLeaderboard(
+                        awardId, params["season"], limit, offset, params["show_hidden"] == "true",
+                    )
                     if (result == null) {
                         sendError(exchange, 404, "no current season")
                         return@registerRateLimitedGet
@@ -517,7 +521,9 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
                 }
 
                 // /awards — list all awards with leaders
-                val result = plugin.getAwardQueryService().getAllAwards(params["season"])
+                val result = plugin.getAwardQueryService().getAllAwards(
+                    params["season"], params["show_hidden"] == "true",
+                )
                 if (result == null) {
                     sendError(exchange, 404, "no current season")
                     return@registerRateLimitedGet
@@ -547,7 +553,7 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
                 try { limit = Integer.parseInt(params.getOrDefault("limit", "100")) } catch (ignored: NumberFormatException) {}
                 try { offset = Integer.parseInt(params.getOrDefault("offset", "0")) } catch (ignored: NumberFormatException) {}
                 val result = plugin.getAdvancementQueryService().getAdvancementLeaderboard(
-                    params["season"], limit, offset, params["category"],
+                    params["season"], limit, offset, params["category"], params["show_hidden"] == "true",
                 )
                 if (result == null) {
                     sendError(exchange, 404, "no current season")
@@ -1092,6 +1098,7 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
             "\"description\":\"Returns every enabled award definition along with the current #1 holder for each. Awards are grouped by bucket (combat, mining, crafting, building, items, food, movement, misc) and sorted by display order within each bucket.\"," +
             "\"operationId\":\"getAwards\"," +
             "\"parameters\":[" +
+            "{\"name\":\"show_hidden\",\"in\":\"query\",\"schema\":{\"type\":\"boolean\",\"default\":false},\"description\":\"Include anonymous manually hidden players in ranks. Their UUIDs and nicknames are null and their username is Hidden player.\"}," +
             "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}" +
             "]," +
             "\"responses\":{" +
@@ -1101,7 +1108,7 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
             "\"id\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"}," +
             "\"unit\":{\"type\":\"string\"},\"bucket\":{\"type\":\"string\"},\"icon\":{\"type\":\"string\"}," +
             "\"leader\":{\"type\":\"object\",\"nullable\":true,\"properties\":{" +
-            "\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},\"score\":{\"type\":\"number\"}" +
+            "\"hidden\":{\"type\":\"boolean\"},\"uuid\":{\"type\":\"string\",\"nullable\":true},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true},\"score\":{\"type\":\"number\"}" +
             "}}" +
             "}}}" +
             "}}}}}," +
@@ -1119,6 +1126,7 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
             "\"description\":\"Returns the leaderboard for a single award, showing the top players ranked by score. The response includes the award metadata (title, description, unit, icon) and a paginated list of entries. Each entry contains the player's rank, UUID, username, score, and medal (1=gold, 2=silver, 3=bronze, 0=none). Supports pagination with limit and offset.\"," +
             "\"operationId\":\"getAwardLeaderboard\"," +
             "\"parameters\":[" +
+            "{\"name\":\"show_hidden\",\"in\":\"query\",\"schema\":{\"type\":\"boolean\",\"default\":false},\"description\":\"Include anonymous manually hidden players in ranks. Their UUIDs and nicknames are null and their username is Hidden player.\"}," +
             "{\"name\":\"id\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"pattern\":\"^[a-z0-9_]+\$\"},\"description\":\"Award ID (e.g. aviate, kill_any, mine_diamond_ore)\"}," +
             "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}," +
             "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"}," +
@@ -1132,7 +1140,7 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
             "\"unit\":{\"type\":\"string\"},\"bucket\":{\"type\":\"string\"},\"icon\":{\"type\":\"string\"}" +
             "}}," +
             "\"leaderboard\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{" +
-            "\"rank\":{\"type\":\"integer\"},\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true}," +
+            "\"rank\":{\"type\":\"integer\"},\"hidden\":{\"type\":\"boolean\"},\"uuid\":{\"type\":\"string\",\"nullable\":true},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true}," +
             "\"score\":{\"type\":\"number\"},\"medal\":{\"type\":\"integer\",\"description\":\"1=gold, 2=silver, 3=bronze, 0=none\"}" +
             "}}}," +
             "\"total\":{\"type\":\"integer\"},\"offset\":{\"type\":\"integer\"},\"limit\":{\"type\":\"integer\"}" +
@@ -1151,9 +1159,10 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
             "\"get\":{" +
             "\"tags\":[\"Awards\"]," +
             "\"summary\":\"Crown leaderboard\"," +
-            "\"description\":\"Returns the Hall of Fame leaderboard, ranking players by their crown score. The crown score is a weighted sum of medal placements across all awards: gold (1st place) = 4 points, silver (2nd) = 2 points, bronze (3rd) = 1 point. Only players with at least one medal are included. Supports pagination with limit and offset.\"," +
+            "\"description\":\"Returns the Hall of Fame leaderboard, ranking players by their crown score. The crown score is a weighted sum of medal placements across all awards: gold (1st place) = 5 points, silver (2nd) = 3 points, bronze (3rd) = 1 point. Only players with at least one medal are included. Supports pagination with limit and offset.\"," +
             "\"operationId\":\"getCrownLeaderboard\"," +
             "\"parameters\":[" +
+            "{\"name\":\"show_hidden\",\"in\":\"query\",\"schema\":{\"type\":\"boolean\",\"default\":false},\"description\":\"Include anonymous manually hidden players in ranks. Identities are redacted; crown points are recalculated for this view without changing stored medals.\"}," +
             "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}," +
             "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"}," +
             "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}" +
@@ -1162,7 +1171,7 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
             "\"200\":{\"description\":\"Paginated crown score leaderboard\"," +
             "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{" +
             "\"leaderboard\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{" +
-            "\"rank\":{\"type\":\"integer\"},\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true}," +
+            "\"rank\":{\"type\":\"integer\"},\"hidden\":{\"type\":\"boolean\"},\"uuid\":{\"type\":\"string\",\"nullable\":true},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true}," +
             "\"gold\":{\"type\":\"integer\"},\"silver\":{\"type\":\"integer\"},\"bronze\":{\"type\":\"integer\"}," +
             "\"crown_score\":{\"type\":\"integer\"}" +
             "}}}," +
@@ -1182,6 +1191,7 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
             "\"description\":\"Returns a global leaderboard ranking players by the number of Minecraft advancements they have completed. Only players with at least one completed advancement are included. Supports pagination with limit and offset.\"," +
             "\"operationId\":\"getAdvancementLeaderboard\"," +
             "\"parameters\":[" +
+            "{\"name\":\"show_hidden\",\"in\":\"query\",\"schema\":{\"type\":\"boolean\",\"default\":false},\"description\":\"Include anonymous manually hidden players in ranks. Their UUIDs and nicknames are null and their username is Hidden player.\"}," +
             "{\"name\":\"season\",\"in\":\"query\",\"schema\":{\"type\":\"string\"},\"description\":\"Season ID. Defaults to the current active season.\"}," +
             "{\"name\":\"limit\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":100,\"maximum\":100},\"description\":\"Maximum number of entries to return (1-100)\"}," +
             "{\"name\":\"offset\",\"in\":\"query\",\"schema\":{\"type\":\"integer\",\"default\":0},\"description\":\"Number of entries to skip for pagination\"}," +
@@ -1191,7 +1201,7 @@ open class WebServer(private val plugin: CrabUtilitiesVelocity, private val port
             "\"200\":{\"description\":\"Paginated advancement completion leaderboard\"," +
             "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{" +
             "\"leaderboard\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{" +
-            "\"rank\":{\"type\":\"integer\"},\"uuid\":{\"type\":\"string\"},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true}," +
+            "\"rank\":{\"type\":\"integer\"},\"hidden\":{\"type\":\"boolean\"},\"uuid\":{\"type\":\"string\",\"nullable\":true},\"username\":{\"type\":\"string\",\"nullable\":true},\"nickname\":{\"type\":\"string\",\"nullable\":true}," +
             "\"completed\":{\"type\":\"integer\"}" +
             "}}}," +
             "\"total\":{\"type\":\"integer\"},\"totalAdvancements\":{\"type\":\"integer\"}," +

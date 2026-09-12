@@ -10,19 +10,21 @@ import {
 
 interface AdvancementsCategoryTabsProps {
   active: AdvancementCategory | null;
+  showHidden: boolean;
 }
 
 export default function AdvancementsCategoryTabs({
   active,
+  showHidden,
 }: AdvancementsCategoryTabsProps) {
   const router = useRouter();
 
   const go = (cat: AdvancementCategory | null) => {
-    router.push(
-      cat
-        ? `/leaderboard/advancements?category=${cat}`
-        : "/leaderboard/advancements",
-    );
+    const params = new URLSearchParams();
+    if (cat) params.set("category", cat);
+    if (showHidden) params.set("show_hidden", "true");
+    const query = params.toString();
+    router.push(`/leaderboard/advancements${query ? `?${query}` : ""}`);
   };
 
   return (

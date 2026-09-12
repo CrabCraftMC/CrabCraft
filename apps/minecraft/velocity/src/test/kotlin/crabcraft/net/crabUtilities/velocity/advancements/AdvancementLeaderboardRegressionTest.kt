@@ -7,6 +7,7 @@ import java.sql.Array as SqlArray
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.util.UUID
 
 object AdvancementLeaderboardRegressionTest {
     @JvmStatic
@@ -26,6 +27,9 @@ object AdvancementLeaderboardRegressionTest {
             "a leaderboard query does not exclude inactive players")
         check(dataSource.sql.all { sql -> sql.contains("2592000") },
             "a leaderboard query does not use the 30-day window")
+        check(dataSource.sql.all { sql -> sql.contains("(? or eligible_player.awards_excluded = false)") },
+            "a leaderboard query bypasses manual exclusions")
+        check(dataSource.visibility == listOf(false, false), "hidden entries are enabled by default")
         check(dataSource.boundAdvancementIds.size == 2, "the registry IDs were not bound to both leaderboard queries")
         check(dataSource.boundAdvancementIds.all { ids -> ids.size == 126 },
             "the full leaderboard did not bind all 126 registered advancements")
@@ -38,10 +42,22 @@ object AdvancementLeaderboardRegressionTest {
             "the Adventure leaderboard did not bind its 47 registered advancements")
         check(dataSource.boundAdvancementIds.flatten().all { id -> id.startsWith("minecraft:adventure/") },
             "the Adventure leaderboard bound an advancement from another category")
+
+        dataSource.clear()
+        val result = queries.getAdvancementLeaderboard("7", 25, 25, "adventure", true)!!
+        check(dataSource.visibility == listOf(true, true), "count and page disagree on hidden visibility")
+        val hidden = result.getAsJsonArray("leaderboard").get(0).asJsonObject
+        check(hidden.get("rank").asInt == 26, "hidden entry lost its paginated position")
+        check(hidden.get("hidden").asBoolean, "hidden entry lost its marker")
+        check(hidden.get("uuid").isJsonNull && hidden.get("nickname").isJsonNull, "hidden identity leaked")
+        check(hidden.get("username").asString == "Hidden player", "hidden name was not redacted")
+        check(!result.toString().contains(dataSource.hiddenIdentity), "hidden identity appears elsewhere in the response")
     }
 
     private class CapturingDataSource : HikariDataSource() {
         val sql = ArrayList<String>()
+        val visibility = ArrayList<Boolean>()
+        val hiddenIdentity = UUID.randomUUID().toString()
         val boundAdvancementIds = ArrayList<List<String>>()
 
         override fun getConnection(): Connection = proxy(Connection::class.java) { _, method, args ->
@@ -66,6 +82,7 @@ object AdvancementLeaderboardRegressionTest {
         private fun preparedStatement(rawSql: String): PreparedStatement {
             val normalised = rawSql.lowercase(java.util.Locale.getDefault()).replace(Regex("\\s+"), " ").trim()
             sql.add(normalised)
+            var showHidden = false
             return proxy(PreparedStatement::class.java) { _, method, args ->
                 when (method.name) {
                     "setArray" -> {
@@ -73,14 +90,19 @@ object AdvancementLeaderboardRegressionTest {
                         boundAdvancementIds.add(values.map { it.toString() })
                         null
                     }
-                    "executeQuery" -> resultSet(normalised.startsWith("select count"))
+                    "setBoolean" -> {
+                        showHidden = args!![1] as Boolean
+                        visibility.add(showHidden)
+                        null
+                    }
+                    "executeQuery" -> resultSet(normalised.startsWith("select count"), showHidden)
                     else -> defaultValue(method.returnType)
                 }
             }
         }
 
-        private fun resultSet(countQuery: Boolean): ResultSet {
-            var unread = countQuery
+        private fun resultSet(countQuery: Boolean, showHidden: Boolean): ResultSet {
+            var unread = countQuery || showHidden
             return proxy(ResultSet::class.java) { _, method, _ ->
                 when (method.name) {
                     "next" -> {
@@ -89,6 +111,8 @@ object AdvancementLeaderboardRegressionTest {
                         hasNext
                     }
                     "getInt" -> 1
+                    "getBoolean" -> showHidden
+                    "getString" -> hiddenIdentity
                     else -> defaultValue(method.returnType)
                 }
             }
@@ -96,6 +120,7 @@ object AdvancementLeaderboardRegressionTest {
 
         fun clear() {
             sql.clear()
+            visibility.clear()
             boundAdvancementIds.clear()
         }
     }

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import AwardsTabs from "@/components/AwardsTabs";
 import { categorise } from "@/lib/categories";
-import { playerDisplayName } from "@/lib/playerName";
+import { leaderboardPlayerName } from "@/components/LeaderboardPlayer";
+import { leaderboardApiUrl } from "@/lib/leaderboardApi";
 
 export const metadata: Metadata = {
   title: "Awards",
@@ -17,8 +18,9 @@ interface ProxyAward {
   bucket: string;
   icon: string;
   leader: {
-    uuid: string;
-    username: string;
+    uuid: string | null;
+    hidden?: boolean;
+    username: string | null;
     nickname: string | null;
     score: number;
   } | null;
@@ -28,9 +30,9 @@ interface ProxyAwardsResponse {
   awards: ProxyAward[];
 }
 
-async function fetchAwards(): Promise<ProxyAwardsResponse | null> {
+async function fetchAwards(showHidden: boolean): Promise<ProxyAwardsResponse | null> {
   try {
-    const res = await fetch("https://api.crabcraft.net/awards", {
+    const res = await fetch(leaderboardApiUrl(`/awards${showHidden ? "?show_hidden=true" : ""}`), {
       next: { revalidate: 30 },
     });
     if (!res.ok) return null;
@@ -40,8 +42,11 @@ async function fetchAwards(): Promise<ProxyAwardsResponse | null> {
   }
 }
 
-export default async function AwardsPage() {
-  const data = await fetchAwards();
+export default async function AwardsPage({ searchParams }: {
+  searchParams: Promise<{ show_hidden?: string }>;
+}) {
+  const showHidden = (await searchParams).show_hidden === "true";
+  const data = await fetchAwards(showHidden);
 
   const awards = data?.awards ?? [];
 
@@ -53,9 +58,10 @@ export default async function AwardsPage() {
     title: d.title,
     desc: d.description || null,
     bestName: d.leader
-      ? playerDisplayName(d.leader.nickname, d.leader.username)
+      ? leaderboardPlayerName(d.leader)
       : null,
-    bestUuid: d.leader?.uuid ?? null,
+    bestUuid: d.leader?.hidden ? null : d.leader?.uuid ?? null,
+    bestHidden: d.leader?.hidden ?? false,
     bestValue: d.leader?.score ?? 0,
   }));
 
@@ -76,11 +82,11 @@ export default async function AwardsPage() {
           </p>
         </div>
 
-        <AwardsTabs buckets={buckets} units={awardUnits} />
+        <AwardsTabs buckets={buckets} units={awardUnits} showHidden={showHidden} />
 
         <div
           className="mt-8 text-center animate-in"
-          style={{ animationDelay: "0.2s" }}
+          style={{ animationDelay: "0.35s" }}
         >
           <Link
             href="/leaderboard"

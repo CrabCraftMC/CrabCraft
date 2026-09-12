@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import PixelIcon from "@/components/PixelIcon";
 import Squircle from "@/components/Squircle";
+import LeaderboardVisibilityToggle from "@/components/LeaderboardVisibilityToggle";
+import { LeaderboardPlayerAvatar } from "@/components/LeaderboardPlayer";
 import { formatValue, type Units } from "@/lib/formatValue";
 
 interface AwardEntry {
@@ -14,15 +16,17 @@ interface AwardEntry {
   desc: string | null;
   bestName: string | null;
   bestUuid: string | null;
+  bestHidden: boolean;
   bestValue: number;
 }
 
 interface AwardsTabsProps {
   buckets: Record<string, AwardEntry[]>;
   units: Units;
+  showHidden: boolean;
 }
 
-export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
+export default function AwardsTabs({ buckets, units, showHidden }: AwardsTabsProps) {
   const tabs = Object.keys(buckets);
   const [activeTab, setActiveTab] = useState(tabs[0] || "");
   const [search, setSearch] = useState("");
@@ -51,7 +55,10 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
   return (
     <>
       {/* Search */}
-      <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100/80 dark:bg-white/5 mb-4 max-w-md mx-auto">
+      <div
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100/80 dark:bg-white/5 mb-4 max-w-md mx-auto animate-in"
+        style={{ animationDelay: "0.05s" }}
+      >
         <Search className="w-4 h-4 text-gray-400 shrink-0" />
         <input
           type="search"
@@ -65,7 +72,10 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
 
       {/* Tab bar — hidden when searching */}
       {!searchResults && (
-      <div className="flex gap-2 pb-2 mb-6 justify-center flex-wrap">
+      <div
+        className="flex gap-2 pb-2 mb-6 justify-center flex-wrap animate-in"
+        style={{ animationDelay: "0.05s" }}
+      >
         {tabs.map((tab) => (
           <Squircle
             key={tab}
@@ -86,10 +96,15 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
       </div>
       )}
 
+      <div className="flex justify-end mb-2 px-1">
+        <LeaderboardVisibilityToggle showHidden={showHidden} />
+      </div>
+
       {/* Awards table */}
       <Squircle
         cornerRadius={32}
-        className="bg-paper-2 overflow-hidden"
+        className="bg-paper-2 overflow-hidden animate-in"
+        style={{ animationDelay: "0.25s" }}
       >
         <div className="grid grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_10rem_7rem] md:grid-cols-[minmax(0,1fr)_14rem_8rem] items-center gap-4 px-5 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-[#3d3028]">
           <span>Award</span>
@@ -100,7 +115,7 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
           <button
             type="button"
             key={award.key}
-            onClick={() => router.push(`/awards/${award.key}`)}
+            onClick={() => router.push(`/awards/${award.key}${showHidden ? "?show_hidden=true" : ""}`)}
             className={`grid grid-cols-[minmax(0,1fr)_6rem] sm:grid-cols-[minmax(0,1fr)_10rem_7rem] md:grid-cols-[minmax(0,1fr)_14rem_8rem] items-center gap-4 px-5 py-3 cursor-pointer transition-colors hover:bg-orange-50/60 dark:hover:bg-[#2a221b] w-full text-left ${
               i % 2 === 0
                 ? "bg-paper-2"
@@ -124,7 +139,13 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
                 )}
               </div>
             </div>
-            {award.bestUuid && (
+            {award.bestHidden && (
+              <span className="hidden sm:flex min-w-0 items-center justify-end gap-2 text-xs font-bold text-gray-600 dark:text-gray-400">
+                <LeaderboardPlayerAvatar player={{ hidden: true, uuid: null, username: null, nickname: null }} size={24} />
+                <span>Hidden Player</span>
+              </span>
+            )}
+            {!award.bestHidden && award.bestUuid && (
               <Link
                 href={`/stats/${award.bestUuid}`}
                 onClick={(e) => e.stopPropagation()}
@@ -141,7 +162,7 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
                 </span>
               </Link>
             )}
-            {!award.bestUuid && (
+            {!award.bestHidden && !award.bestUuid && (
               <span className="hidden sm:block text-right text-xs font-bold text-gray-400 dark:text-gray-500">
                 Unclaimed
               </span>
@@ -150,7 +171,13 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
               <span className="block truncate text-sm font-bold text-orange-500">
                 {formatValue(award.bestValue, award.key, units)}
               </span>
-              {award.bestUuid && (
+              {award.bestHidden && (
+                <span className="flex sm:hidden items-center gap-1.5 justify-end mt-1 text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                  <LeaderboardPlayerAvatar player={{ hidden: true, uuid: null, username: null, nickname: null }} size={16} />
+                  <span>Hidden Player</span>
+                </span>
+              )}
+              {!award.bestHidden && award.bestUuid && (
                 <Link
                   href={`/stats/${award.bestUuid}`}
                   onClick={(e) => e.stopPropagation()}
@@ -167,7 +194,7 @@ export default function AwardsTabs({ buckets, units }: AwardsTabsProps) {
                   </span>
                 </Link>
               )}
-              {!award.bestUuid && (
+              {!award.bestHidden && !award.bestUuid && (
                 <span className="flex sm:hidden justify-end mt-1 text-[10px] font-bold text-gray-400 dark:text-gray-500">
                   Unclaimed
                 </span>

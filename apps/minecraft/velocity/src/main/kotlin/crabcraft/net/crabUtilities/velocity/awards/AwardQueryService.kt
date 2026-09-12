@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.velocity.awards
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.zaxxer.hikari.HikariDataSource
+import crabcraft.net.crabUtilities.velocity.api.LeaderboardIdentity
 import org.slf4j.Logger
 
 import java.sql.Connection
@@ -33,6 +34,10 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
     }
 
     fun getAllAwards(seasonParam: String?): JsonObject? {
+        return getAllAwards(seasonParam, false)
+    }
+
+    fun getAllAwards(seasonParam: String?, showHidden: Boolean): JsonObject? {
         val season = resolveSeason(seasonParam)
         if (season == null) return null
 
@@ -44,9 +49,10 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                 conn.prepareStatement("""
                         SELECT DISTINCT ON (scores.award_id)
                             scores.award_id,
-                            scores.minecraft_uuid AS best_uuid,
-                            u.minecraft_username AS best_username,
-                            u.nickname AS best_nickname,
+                            scores.minecraft_uuid,
+                            u.minecraft_username,
+                            u.nickname,
+                            u.awards_excluded AS hidden,
                             scores.score AS best_score
                         FROM player_award_scores scores
                         LEFT JOIN players u ON u.minecraft_uuid = scores.minecraft_uuid
@@ -60,19 +66,18 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                               SELECT 1 FROM players eligible_player
                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                 AND eligible_player.is_discord_member = true
-                                AND eligible_player.awards_excluded = false
+                                AND (? OR eligible_player.awards_excluded = false)
                                 AND eligible_player.last_mc_login_at >=
                                     EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                           )
                         ORDER BY scores.award_id, scores.score DESC, scores.minecraft_uuid
                         """.trimIndent() + "\n").use { stmt ->
                     stmt.setString(1, season)
+                    stmt.setBoolean(2, showHidden)
                     stmt.executeQuery().use { rs ->
                         while (rs.next()) {
                             var leader = JsonObject()
-                            leader.addProperty("uuid", rs.getString("best_uuid"))
-                            leader.addProperty("username", rs.getString("best_username"))
-                            leader.addProperty("nickname", rs.getString("best_nickname"))
+                            LeaderboardIdentity.addTo(leader, rs)
                             leader.addProperty("score", rs.getDouble("best_score"))
                             leaderMap.put(rs.getString("award_id"), leader)
                         }
@@ -130,6 +135,10 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
     }
 
     fun getAwardLeaderboard(awardId: String?, seasonParam: String?, limitParam: Int, offsetParam: Int): JsonObject? {
+        return getAwardLeaderboard(awardId, seasonParam, limitParam, offsetParam, false)
+    }
+
+    fun getAwardLeaderboard(awardId: String?, seasonParam: String?, limitParam: Int, offsetParam: Int, showHidden: Boolean): JsonObject? {
         var limit = limitParam
         var offset = offsetParam
         val season = resolveSeason(seasonParam)
@@ -159,13 +168,14 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                               SELECT 1 FROM players eligible_player
                               WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                 AND eligible_player.is_discord_member = true
-                                AND eligible_player.awards_excluded = false
+                                AND (? OR eligible_player.awards_excluded = false)
                                 AND eligible_player.last_mc_login_at >=
                                     EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                           )
                         """.trimIndent() + "\n").use { stmt ->
                     stmt.setString(1, awardId)
                     stmt.setString(2, season)
+                    stmt.setBoolean(3, showHidden)
                     stmt.executeQuery().use { rs ->
                         if (rs.next()) total = rs.getInt(1)
                     }
@@ -177,6 +187,7 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                             ranked.minecraft_uuid,
                             u.minecraft_username,
                             u.nickname,
+                            u.awards_excluded AS hidden,
                             ranked.score,
                             ranked.rnk,
                             CASE WHEN ranked.rnk <= 3 THEN ranked.rnk::int ELSE 0 END AS medal
@@ -195,7 +206,7 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                                   SELECT 1 FROM players eligible_player
                                   WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                     AND eligible_player.is_discord_member = true
-                                    AND eligible_player.awards_excluded = false
+                                    AND (? OR eligible_player.awards_excluded = false)
                                     AND eligible_player.last_mc_login_at >=
                                         EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                               )
@@ -206,15 +217,14 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                         """.trimIndent() + "\n").use { stmt ->
                     stmt.setString(1, awardId)
                     stmt.setString(2, season)
-                    stmt.setInt(3, limit)
-                    stmt.setInt(4, offset)
+                    stmt.setBoolean(3, showHidden)
+                    stmt.setInt(4, limit)
+                    stmt.setInt(5, offset)
                     stmt.executeQuery().use { rs ->
                         while (rs.next()) {
                             var entry = JsonObject()
                             entry.addProperty("rank", rs.getInt("rnk"))
-                            entry.addProperty("uuid", rs.getString("minecraft_uuid"))
-                            entry.addProperty("username", rs.getString("minecraft_username"))
-                            entry.addProperty("nickname", rs.getString("nickname"))
+                            LeaderboardIdentity.addTo(entry, rs)
                             entry.addProperty("score", rs.getDouble("score"))
                             entry.addProperty("medal", rs.getInt("medal"))
                             leaderboard.add(entry)
@@ -237,6 +247,10 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
     }
 
     fun getCrownLeaderboard(seasonParam: String?, limitParam: Int, offsetParam: Int): JsonObject? {
+        return getCrownLeaderboard(seasonParam, limitParam, offsetParam, false)
+    }
+
+    fun getCrownLeaderboard(seasonParam: String?, limitParam: Int, offsetParam: Int, showHidden: Boolean): JsonObject? {
         var limit = limitParam
         var offset = offsetParam
         val season = resolveSeason(seasonParam)
@@ -265,7 +279,7 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                                   SELECT 1 FROM players eligible_player
                                   WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                     AND eligible_player.is_discord_member = true
-                                    AND eligible_player.awards_excluded = false
+                                    AND (? OR eligible_player.awards_excluded = false)
                                     AND eligible_player.last_mc_login_at >=
                                         EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                               )
@@ -275,6 +289,7 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                         WHERE medal_rank <= 3
                         """.trimIndent() + "\n").use { stmt ->
                     stmt.setString(1, season)
+                    stmt.setBoolean(2, showHidden)
                     stmt.executeQuery().use { rs ->
                         if (rs.next()) total = rs.getInt(1)
                     }
@@ -297,7 +312,7 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                                    SELECT 1 FROM players eligible_player
                                    WHERE eligible_player.minecraft_uuid = scores.minecraft_uuid
                                      AND eligible_player.is_discord_member = true
-                                     AND eligible_player.awards_excluded = false
+                                     AND (? OR eligible_player.awards_excluded = false)
                                      AND eligible_player.last_mc_login_at >=
                                          EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
                                )
@@ -319,27 +334,27 @@ class AwardQueryService(private val dataSource: HikariDataSource, private val lo
                              crowns.minecraft_uuid,
                              u.minecraft_username,
                              u.nickname,
+                             u.awards_excluded AS hidden,
                              crowns.gold,
                              crowns.silver,
                              crowns.bronze,
                              crowns.crown_score
                          FROM crowns
                          LEFT JOIN players u ON u.minecraft_uuid = crowns.minecraft_uuid
-                         ORDER BY crowns.crown_score DESC, crowns.gold DESC, crowns.silver DESC
+                         ORDER BY crowns.crown_score DESC, crowns.gold DESC, crowns.silver DESC, crowns.minecraft_uuid
                          LIMIT ? OFFSET ?
                          """.trimIndent() + "\n").use { stmt ->
                     stmt.setString(1, season)
-                    stmt.setInt(2, limit)
-                    stmt.setInt(3, offset)
+                    stmt.setBoolean(2, showHidden)
+                    stmt.setInt(3, limit)
+                    stmt.setInt(4, offset)
                     stmt.executeQuery().use { rs ->
                         var rank = offset
                         while (rs.next()) {
                             rank++
                             var entry = JsonObject()
                             entry.addProperty("rank", rank)
-                            entry.addProperty("uuid", rs.getString("minecraft_uuid"))
-                            entry.addProperty("username", rs.getString("minecraft_username"))
-                            entry.addProperty("nickname", rs.getString("nickname"))
+                            LeaderboardIdentity.addTo(entry, rs)
                             entry.addProperty("gold", rs.getInt("gold"))
                             entry.addProperty("silver", rs.getInt("silver"))
                             entry.addProperty("bronze", rs.getInt("bronze"))

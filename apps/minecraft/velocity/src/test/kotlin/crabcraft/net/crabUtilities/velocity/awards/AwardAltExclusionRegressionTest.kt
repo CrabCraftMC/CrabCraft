@@ -6,6 +6,7 @@ import java.lang.reflect.Proxy
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.util.UUID
 
 object AwardAltExclusionRegressionTest {
     @JvmStatic
@@ -14,10 +15,14 @@ object AwardAltExclusionRegressionTest {
         val logger = proxy(Logger::class.java) { _, method, _ -> defaultValue(method.returnType) }
         val queries = AwardQueryService(dataSource, logger)
 
-        queries.getAllAwards("7")
+        val overview = queries.getAllAwards("7")
         val awardLeaderboard = queries.getAwardLeaderboard("test-award", "7", 10, 0)
         queries.getCrownLeaderboard("7", 10, 0)
         queries.getPlayerAwards("primary-uuid", "7")
+
+        val visibleLeader = overview!!.getAsJsonArray("awards").get(0).asJsonObject.getAsJsonObject("leader")
+        check(!visibleLeader.get("hidden").asBoolean && visibleLeader.get("uuid").asString == dataSource.visibleUuid,
+            "default awards overview lost its visible leader")
 
         val entries = awardLeaderboard!!.getAsJsonArray("leaderboard")
         check(entries.size() == 3, "expected the tie-ranking fixture")
@@ -43,6 +48,27 @@ object AwardAltExclusionRegressionTest {
         check(rankingQueries.count { sql -> sql.contains("rank() over") } == 5,
             "medal-bearing award queries do not derive ranks after filtering alts")
 
+        check(dataSource.visibility.all { value -> !value },
+            "a leaderboard includes hidden players by default")
+        for (response in listOf(
+            queries.getAllAwards("7", true)!!,
+            queries.getAwardLeaderboard("test-award", "7", 10, 0, true)!!,
+            queries.getCrownLeaderboard("7", 10, 0, true)!!
+        )) {
+            val hidden = if (response.has("awards")) {
+                response.getAsJsonArray("awards").get(0).asJsonObject.getAsJsonObject("leader")
+            } else {
+                response.getAsJsonArray("leaderboard").get(0).asJsonObject
+            }
+            check(hidden.get("hidden").asBoolean, "hidden entry lost its marker")
+            check(hidden.get("uuid").isJsonNull && hidden.get("nickname").isJsonNull,
+                "hidden entry exposes a UUID or nickname")
+            check(hidden.get("username").asString == "Hidden player",
+                "hidden entry exposes its username")
+            check(!response.toString().contains(dataSource.hiddenUuid) && !response.toString().contains(dataSource.hiddenName),
+                "hidden identity leaked in the API payload")
+        }
+
         dataSource.sql.clear()
         AwardDbWriter(dataSource, logger).recomputeMedals("7")
         check(dataSource.sql.size == 2, "medal recomputation must reset then rank")
@@ -63,6 +89,11 @@ object AwardAltExclusionRegressionTest {
 
     private class CapturingDataSource : HikariDataSource() {
         val sql = ArrayList<String>()
+        val visibility = ArrayList<Boolean>()
+        val hiddenUuid = UUID.randomUUID().toString()
+        val hiddenName = "Fixture_" + UUID.randomUUID()
+        val visibleUuid = UUID.randomUUID().toString()
+        val visibleName = "Fixture_" + UUID.randomUUID()
 
         override fun getConnection(): Connection = proxy(Connection::class.java) { _, method, args ->
             when (method.name) {
@@ -74,19 +105,38 @@ object AwardAltExclusionRegressionTest {
         private fun preparedStatement(rawSql: String): PreparedStatement {
             val normalised = rawSql.lowercase(java.util.Locale.getDefault()).replace(Regex("\\s+"), " ").trim()
             sql.add(normalised)
-            return proxy(PreparedStatement::class.java) { _, method, _ ->
+            var showHidden = false
+            return proxy(PreparedStatement::class.java) { _, method, args ->
                 when (method.name) {
-                    "executeQuery" -> resultSet(normalised)
+                    "setBoolean" -> {
+                        showHidden = args!![1] as Boolean
+                        visibility.add(showHidden)
+                        null
+                    }
+                    "executeQuery" -> resultSet(normalised, showHidden)
                     "executeUpdate" -> 0
                     else -> defaultValue(method.returnType)
                 }
             }
         }
 
-        private fun resultSet(sql: String): ResultSet {
+        private fun resultSet(sql: String, showHidden: Boolean): ResultSet {
             val rows: List<Map<String, Any>> = when {
+                sql.contains("select distinct on (scores.award_id)") -> listOf(mapOf(
+                    "award_id" to "test-award",
+                    "minecraft_uuid" to if (showHidden) hiddenUuid else visibleUuid,
+                    "minecraft_username" to if (showHidden) hiddenName else visibleName,
+                    "nickname" to "Alias_" + if (showHidden) hiddenName else visibleName,
+                    "hidden" to showHidden,
+                    "best_score" to java.util.Random().nextDouble(1000.0, 2000.0)))
+                showHidden && (sql.contains("case when ranked.rnk <= 3") || sql.contains("crowns.gold,")) -> listOf(mapOf(
+                    "minecraft_uuid" to hiddenUuid, "minecraft_username" to hiddenName,
+                    "nickname" to "Alias_" + hiddenName, "hidden" to true,
+                    "score" to java.util.Random().nextDouble(1000.0, 2000.0),
+                    "rnk" to 1, "medal" to 1, "gold" to 2,
+                    "silver" to 1, "bronze" to 0, "crown_score" to 13))
                 sql.contains("select distinct season from player_award_scores") -> listOf(mapOf("season" to "7"))
-                sql.contains("from awards where id = ?") -> listOf(mapOf(
+                sql.contains("from awards where id = ?") || sql.contains("from awards where enabled = true") -> listOf(mapOf(
                     "id" to "test-award", "title" to "Test Award", "description" to "Test",
                     "unit" to "int", "bucket" to "misc", "icon" to "test.png"))
                 sql.contains("case when ranked.rnk <= 3") -> listOf(
@@ -100,7 +150,8 @@ object AwardAltExclusionRegressionTest {
             return proxy(ResultSet::class.java) { _, method, args ->
                 when (method.name) {
                     "next" -> ++index < rows.size
-                    "getString" -> rows[index][args!![0]].toString()
+                    "getString" -> rows[index][args!![0]] as String?
+                    "getBoolean" -> rows[index][args!![0]] == true
                     "getInt" -> (rows[index][args!![0]] as Number).toInt()
                     "getDouble" -> (rows[index][args!![0]] as Number).toDouble()
                     else -> defaultValue(method.returnType)

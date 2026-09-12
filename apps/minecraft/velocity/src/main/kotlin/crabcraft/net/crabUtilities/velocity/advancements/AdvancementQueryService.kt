@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.velocity.advancements
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.zaxxer.hikari.HikariDataSource
+import crabcraft.net.crabUtilities.velocity.api.LeaderboardIdentity
 import org.slf4j.Logger
 
 import java.sql.Connection
@@ -104,6 +105,10 @@ class AdvancementQueryService(private val dataSource: HikariDataSource, private 
     }
 
     fun getAdvancementLeaderboard(seasonParam: String?, limitParam: Int, offsetParam: Int, category: String?): JsonObject? {
+        return getAdvancementLeaderboard(seasonParam, limitParam, offsetParam, category, false)
+    }
+
+    fun getAdvancementLeaderboard(seasonParam: String?, limitParam: Int, offsetParam: Int, category: String?, showHidden: Boolean): JsonObject? {
         var limit = limitParam
         var offset = offsetParam
         val season = resolveSeason(seasonParam)
@@ -131,10 +136,12 @@ class AdvancementQueryService(private val dataSource: HikariDataSource, private 
                         + " AND EXISTS (SELECT 1 FROM players eligible_player"
                         + " WHERE eligible_player.minecraft_uuid = p.minecraft_uuid"
                         + " AND eligible_player.is_discord_member = true"
+                        + " AND (? OR eligible_player.awards_excluded = false)"
                         + " AND eligible_player.last_mc_login_at >="
                         + " EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000)").use { stmt ->
                         stmt.setString(1, season)
                         stmt.setArray(2, registeredIds)
+                        stmt.setBoolean(3, showHidden)
                         stmt.executeQuery().use { rs ->
                             if (rs.next()) total = rs.getInt(1)
                         }
@@ -145,6 +152,7 @@ class AdvancementQueryService(private val dataSource: HikariDataSource, private 
                         + " p.minecraft_uuid,"
                         + " u.minecraft_username,"
                         + " u.nickname,"
+                        + " u.awards_excluded AS hidden,"
                         + " COUNT(*) FILTER (WHERE p.completed = true)::int AS completed"
                         + " FROM player_advancements p"
                         + " LEFT JOIN players u ON u.minecraft_uuid = p.minecraft_uuid"
@@ -153,25 +161,25 @@ class AdvancementQueryService(private val dataSource: HikariDataSource, private 
                         + " AND EXISTS (SELECT 1 FROM players eligible_player"
                         + " WHERE eligible_player.minecraft_uuid = p.minecraft_uuid"
                         + " AND eligible_player.is_discord_member = true"
+                        + " AND (? OR eligible_player.awards_excluded = false)"
                         + " AND eligible_player.last_mc_login_at >="
                         + " EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000)"
-                        + " GROUP BY p.minecraft_uuid, u.minecraft_username, u.nickname"
+                        + " GROUP BY p.minecraft_uuid, u.minecraft_username, u.nickname, u.awards_excluded"
                         + " HAVING COUNT(*) FILTER (WHERE p.completed = true) > 0"
                         + " ORDER BY completed DESC, p.minecraft_uuid"
                         + " LIMIT ? OFFSET ?").use { stmt ->
                         stmt.setString(1, season)
                         stmt.setArray(2, registeredIds)
-                        stmt.setInt(3, limit)
-                        stmt.setInt(4, offset)
+                        stmt.setBoolean(3, showHidden)
+                        stmt.setInt(4, limit)
+                        stmt.setInt(5, offset)
                         stmt.executeQuery().use { rs ->
                             var rank = offset
                             while (rs.next()) {
                                 rank++
                                 var entry = JsonObject()
                                 entry.addProperty("rank", rank)
-                                entry.addProperty("uuid", rs.getString("minecraft_uuid"))
-                                entry.addProperty("username", rs.getString("minecraft_username"))
-                                entry.addProperty("nickname", rs.getString("nickname"))
+                                LeaderboardIdentity.addTo(entry, rs)
                                 entry.addProperty("completed", rs.getInt("completed"))
                                 leaderboard.add(entry)
                             }
