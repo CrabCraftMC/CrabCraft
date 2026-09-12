@@ -832,6 +832,13 @@ export async function searchUsers(
   );
 }
 
+function normalisePlayerIdentifier(identifier: string): string {
+  return identifier.replace(
+    /^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/i,
+    "$1-$2-$3-$4-$5",
+  );
+}
+
 export async function getUserByIdentifier(
   identifier: string,
 ): Promise<{
@@ -841,6 +848,7 @@ export async function getUserByIdentifier(
   nickname: string | null;
   nickname_raw: string | null;
 } | null> {
+  identifier = normalisePlayerIdentifier(identifier);
   const isUuid = identifier.includes("-") || identifier.length === 32;
   const rows = await db
     .select({
@@ -880,6 +888,7 @@ export async function getAltOwner(
   owner_uuid: string;
   owner_username: string;
 } | null> {
+  identifier = normalisePlayerIdentifier(identifier);
   const isUuid = identifier.includes("-") || identifier.length === 32;
   const rows = await db
     .select({
