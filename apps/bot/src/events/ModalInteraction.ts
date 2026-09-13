@@ -130,14 +130,15 @@ export default class ModalInteractionEvent extends Event {
         return;
       }
 
+      // Discord requires an acknowledgement before any potentially slow lookup.
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
       const logChannel = await (
         interaction.member as GuildMember
       ).guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null) as TextChannel | null;
 
-      interaction.message?.delete().catch(() => null);
-
       if (age < 17) {
-        await interaction.reply({
+        await (interaction.channel as TextChannel).send({
           components: [
             errorContainer(
               "**Sorry**, you must be 17 or older to join CrabCraft.",
@@ -145,6 +146,8 @@ export default class ModalInteractionEvent extends Event {
           ],
           flags: MessageFlags.IsComponentsV2,
         });
+        await interaction.message?.delete().catch(() => null);
+        await interaction.deleteReply().catch(() => null);
         if (logChannel) {
           await logChannel.send({
             content: logAutoReject(
@@ -166,7 +169,7 @@ export default class ModalInteractionEvent extends Event {
           aboutYou,
           referralSource,
         });
-        await interaction.reply({
+        await (interaction.channel as TextChannel).send({
           components: [
             errorContainer(
               `**Sorry**, the provided username: \`${minecraftUsername}\` is not a valid Minecraft Java username.\n\nClick below to try a different username.`,
@@ -175,6 +178,8 @@ export default class ModalInteractionEvent extends Event {
           ],
           flags: MessageFlags.IsComponentsV2,
         });
+        await interaction.message?.delete().catch(() => null);
+        await interaction.deleteReply().catch(() => null);
         return;
       }
 
@@ -193,14 +198,14 @@ export default class ModalInteractionEvent extends Event {
 
     // ── Full Application Retry ────────────────────────────────────────
     if (interaction.customId === "retry-application") {
-      interaction.message?.delete().catch(() => null);
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const minecraftUsername =
         interaction.fields.getTextInputValue("minecraft-username");
       const stored = getRetry(interaction.user.id);
 
       if (!stored || stored.type !== "full") {
-        await interaction.reply({
+        await interaction.editReply({
           components: [
             errorContainer(
               "Your retry session has expired. Please start a new application.",
@@ -219,7 +224,7 @@ export default class ModalInteractionEvent extends Event {
       if (!resolved) {
         // Re-store so they can retry again
         storeRetry(interaction.user.id, stored);
-        await interaction.reply({
+        await (interaction.channel as TextChannel).send({
           components: [
             errorContainer(
               `**Sorry**, the provided username: \`${minecraftUsername}\` is not a valid Minecraft Java username.\n\nClick below to try again.`,
@@ -228,6 +233,8 @@ export default class ModalInteractionEvent extends Event {
           ],
           flags: MessageFlags.IsComponentsV2,
         });
+        await interaction.message?.delete().catch(() => null);
+        await interaction.deleteReply().catch(() => null);
         return;
       }
 
@@ -246,6 +253,8 @@ export default class ModalInteractionEvent extends Event {
 
     // ── Edit Application ──────────────────────────────────────────────
     if (interaction.customId === "edit-application") {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
       const minecraftUsername = interaction.fields.getTextInputValue("minecraft-username");
       const ageInput = interaction.fields.getTextInputValue("age");
       const joinReason = interaction.fields.getTextInputValue("join-reason");
@@ -256,25 +265,25 @@ export default class ModalInteractionEvent extends Event {
       // Verify application is still pending
       const application = await appDb.getLatestApplication(interaction.user.id);
       if (!application || application.status !== "pending") {
-        await interaction.reply({
+        await interaction.editReply({
           components: [errorContainer("Your application can no longer be edited.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
 
       const age = parseApplicantAge(ageInput);
       if (age === null) {
-        await interaction.reply({
+        await interaction.editReply({
           components: [errorContainer("Please enter your age as a whole number.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
       if (age < 17) {
-        await interaction.reply({
+        await interaction.editReply({
           components: [errorContainer("You must be 17 or older to join CrabCraft.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
@@ -282,13 +291,13 @@ export default class ModalInteractionEvent extends Event {
       // Validate MC username
       const resolved = await resolveUsername(minecraftUsername);
       if (!resolved) {
-        await interaction.reply({
+        await interaction.editReply({
           components: [
             errorContainer(
               `**Sorry**, the provided username: \`${minecraftUsername}\` is not a valid Minecraft Java username.`,
             ),
           ],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          flags: MessageFlags.IsComponentsV2,
         });
         return;
       }
@@ -312,10 +321,15 @@ export default class ModalInteractionEvent extends Event {
         });
       } catch (e) {
         logger.error("Failed to update application in database:", e);
+        await interaction.editReply({
+          components: [errorContainer("**Error!** Failed to update your application. Please contact a moderator.")],
+          flags: MessageFlags.IsComponentsV2,
+        });
+        return;
       }
 
       // Re-render the application-submitted message (the one this modal was
-      // opened from) with the updated details. Editing it is the ack.
+      // opened from) with the updated details after acknowledging the modal.
       const fields = [
         `**${APPLICATION_QUESTIONS.age}**\n${age}`,
         `**${APPLICATION_QUESTIONS.joinReason}**\n${joinReason}`,
@@ -341,17 +355,18 @@ export default class ModalInteractionEvent extends Event {
         .addTextDisplayComponents((td) => td.setContent(fields.join("\n\n")));
 
       if (interaction.isFromMessage()) {
-        await interaction.update({
+        await interaction.message.edit({
           components: [
             updatedContainer,
             buildApplicationActionRow(minecraftUsername),
           ],
           flags: MessageFlags.IsComponentsV2,
         });
+        await interaction.deleteReply().catch(() => null);
       } else {
-        await interaction.reply({
+        await interaction.editReply({
           components: [primaryContainer("Your application has been updated.")],
-          flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+          flags: MessageFlags.IsComponentsV2,
         });
       }
       return;
@@ -629,10 +644,6 @@ export default class ModalInteractionEvent extends Event {
     aboutYou: string,
     referralSource: string,
   ) {
-    // Acknowledge the modal up-front (ephemeral). The submitted + policy
-    // messages are posted as fresh channel messages, then this ack is cleared.
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
     const channel = interaction.channel as TextChannel;
 
     // Cancel any stale pending applications (e.g. user left and rejoined)
@@ -724,17 +735,14 @@ export default class ModalInteractionEvent extends Event {
     }
 
     if (!persisted) {
-      await channel
-        .send({
-          components: [
-            errorContainer(
-              "**Error!** Failed to save your application. Please contact a moderator.",
-            ),
-          ],
-          flags: MessageFlags.IsComponentsV2,
-        })
-        .catch((e) => logger.error("Failed to send persist-failure notice:", e));
-      await interaction.deleteReply().catch(() => null);
+      await interaction.editReply({
+        components: [
+          errorContainer(
+            "**Error!** Failed to save your application. Please contact a moderator.",
+          ),
+        ],
+        flags: MessageFlags.IsComponentsV2,
+      });
       return;
     }
 
@@ -752,6 +760,14 @@ export default class ModalInteractionEvent extends Event {
         return null;
       });
 
+    if (!submittedMessage) {
+      await interaction.editReply({
+        components: [errorContainer("Your application was saved, but I couldn't post it in this channel. Please contact a moderator.")],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
+    }
+
     // Policy message — sent as a reply to the application-submitted message.
     const policyContainer = primaryContainer(
       "## CrabCraft's Griefing & Stealing Policy\n**Just before we review your application, we need to ensure that you understand our policy on stealing.**\n\nWe have a zero tolerance policy towards stealing. If you steal from another player, you will be banned from the server.\nAll block interactions are logged, and all players are able to look into chest logs. This means any stealing will be traced back to the offending player.",
@@ -767,21 +783,30 @@ export default class ModalInteractionEvent extends Event {
         .setStyle(ButtonStyle.Danger),
     );
 
-    await channel
+    const policyMessage = await channel
       .send({
         components: [policyContainer, policyRow],
         flags: MessageFlags.IsComponentsV2,
-        ...(submittedMessage
-          ? {
-              reply: {
-                messageReference: submittedMessage.id,
-                failIfNotExists: false,
-              },
-            }
-          : {}),
+        reply: {
+          messageReference: submittedMessage.id,
+          failIfNotExists: false,
+        },
       })
-      .catch((e) => logger.error("Failed to send policy message:", e));
+      .catch((e) => {
+        logger.error("Failed to send policy message:", e);
+        return null;
+      });
 
+    if (!policyMessage) {
+      await interaction.editReply({
+        components: [errorContainer("Your application was saved, but I couldn't post the policy agreement. Please contact a moderator.")],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      return;
+    }
+
+    // Keep the welcome/retry message until both replacement messages exist.
+    await interaction.message?.delete().catch(() => null);
     await interaction.deleteReply().catch(() => null);
   }
 }
