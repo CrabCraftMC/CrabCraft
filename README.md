@@ -113,8 +113,8 @@ the community that need to stay reliable between restarts:
 | --- | --- | --- |
 | [`apps/web`](apps/web) | Public site, profiles, Wrapped, awards, rankings, applications and tools | Next.js 16, React 19, Tailwind CSS |
 | [`apps/bot`](apps/bot) | Discord commands, applications, tickets, leaderboards and background jobs | Bun, TypeScript, discord.js |
-| [`apps/minecraft/spigot`](apps/minecraft/spigot) | Paper gameplay features and integrations | Java 25, Paper |
-| [`apps/minecraft/velocity`](apps/minecraft/velocity) | Proxy services, public API, network messaging and persistence | Java 25, Velocity |
+| [`apps/minecraft/spigot`](apps/minecraft/spigot) | Paper gameplay features and integrations | Kotlin, Java 25, Paper |
+| [`apps/minecraft/velocity`](apps/minecraft/velocity) | Proxy services, public API, network messaging and persistence | Kotlin, Java 25, Velocity |
 | [`packages/db`](packages/db) | PostgreSQL schema, queries and award definitions | Drizzle ORM, PostgreSQL |
 | [`packages/shared`](packages/shared) | Shared data types and Minecraft identity utilities | TypeScript |
 | [`packages/tsconfig`](packages/tsconfig) | Shared TypeScript compiler presets | TypeScript |
@@ -184,9 +184,9 @@ Useful root commands:
 | `bun run seed:awards` | Seeds award definitions into PostgreSQL |
 
 When changing PostgreSQL tables, columns, indexes, constraints or enums, update
-both [`packages/db/src/schema.ts`](packages/db/src/schema.ts) and the Java/JDBC
+both [`packages/db/src/schema.ts`](packages/db/src/schema.ts) and the Kotlin/JDBC
 schema under
-[`apps/minecraft/velocity/src/main/java/crabcraft/net/crabUtilities/velocity/db`](apps/minecraft/velocity/src/main/java/crabcraft/net/crabUtilities/velocity/db).
+[`apps/minecraft/velocity/src/main/kotlin/crabcraft/net/crabUtilities/velocity/db`](apps/minecraft/velocity/src/main/kotlin/crabcraft/net/crabUtilities/velocity/db).
 
 ### Paper configuration
 

@@ -1,0 +1,51 @@
+[versions]
+kotlin = "2.4.20"
+shadow = "9.6.0"
+paperweight = "2.0.0-beta.21"
+run-paper = "3.0.2"
+minecraft = "26.2"
+paper = "26.2.build.87-stable"
+paper-build = "87"
+velocity = "3.4.0-SNAPSHOT"
+essentialsx = "2.20.1"
+adventure = "4.17.0"
+voicechat = "2.6.13"
+placeholderapi = "2.11.6"
+bluemap = "2.7.7"
+packetevents = "2.13.0"
+nexo = "1.27.0"
+configurate = "4.1.2"
+gson = "2.10.1"
+luckperms = "5.5"
+litebans = "0.6.1"
+jedis = "5.1.0"
+postgresql = "42.7.13"
+hikaricp = "7.1.0"
+
+[libraries]
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+paper-dev-bundle = { module = "io.papermc.paper:dev-bundle", version.ref = "paper" }
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
+velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
+essentialsx = { module = "net.essentialsx:EssentialsX", version.ref = "essentialsx" }
+adventure-legacy = { module = "net.kyori:adventure-text-serializer-legacy", version.ref = "adventure" }
+adventure-minimessage = { module = "net.kyori:adventure-text-minimessage", version.ref = "adventure" }
+voicechat = { module = "de.maxhenkel.voicechat:voicechat-api", version.ref = "voicechat" }
+placeholderapi = { module = "me.clip:placeholderapi", version.ref = "placeholderapi" }
+bluemap = { module = "de.bluecolored:bluemap-api", version.ref = "bluemap" }
+packetevents = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetevents" }
+nexo = { module = "com.nexomc:nexo", version.ref = "nexo" }
+configurate-yaml = { module = "org.spongepowered:configurate-yaml", version.ref = "configurate" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+luckperms = { module = "net.luckperms:api", version.ref = "luckperms" }
+litebans = { module = "com.gitlab.ruany:LiteBansAPI", version.ref = "litebans" }
+jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+paperweight = { id = "io.papermc.paperweight.userdev", version.ref = "paperweight" }
+run-paper = { id = "xyz.jpenilla.run-paper", version.ref = "run-paper" }
