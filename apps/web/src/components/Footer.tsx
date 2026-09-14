@@ -124,7 +124,19 @@ export default function Footer() {
             <div className="text-center md:text-left">
               <p className="font-semibold">
                 <span className="text-orange-500">{config.site.name}</span>{" "}
-                &copy; {new Date().getFullYear()}.
+                &copy; {new Date().getFullYear()}
+                <span className="font-normal">
+                  {" · by "}
+                  <a
+                    href="https://www.crabstudios.net/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-4 transition-colors hover:text-orange-500"
+                  >
+                    Crab Studios
+                    <span className="sr-only"> (opens in a new tab)</span>
+                  </a>
+                </span>
               </p>
               <p className="mt-1 max-w-2xl text-xs">{config.site.disclaimer}</p>
             </div>
