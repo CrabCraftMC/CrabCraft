@@ -173,15 +173,21 @@ final class VoiceRelayRegressionTest {
                 Group.Type.OPEN, true, false);
         check(CallTargetSynchronizer.isCallGroup(call),
                 "authoritative private call definition was rejected");
+        check(!GroupSynchronizer.isHiddenLocally(call),
+                "private call was hidden from the local group list");
         check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
                         call.id(), call.name(), call.password(), Group.Type.NORMAL, true, false)),
                 "non-OPEN group was accepted as a private call");
         check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
                         call.id(), call.name(), call.password(), Group.Type.OPEN, false, false)),
-                "visible group was accepted as a private call");
+                "visible registry group was accepted as a private call");
         check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
                         call.id(), call.name(), null, Group.Type.OPEN, true, false)),
                 "passwordless group was accepted as a private call");
+        VoiceMessages.GroupDefinition ordinary = new VoiceMessages.GroupDefinition(
+                UUID.randomUUID(), "Secret Club", "another-secret", Group.Type.OPEN, true, false);
+        check(GroupSynchronizer.isHiddenLocally(ordinary),
+                "ordinary hidden group became visible locally");
     }
 
     private static void verifyRingtoneFrames() {

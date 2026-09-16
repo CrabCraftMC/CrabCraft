@@ -150,7 +150,7 @@ final class GroupSynchronizer {
                     .setName(definition.name())
                     .setPassword(definition.password())
                     .setType(definition.type())
-                    .setHidden(definition.hidden())
+                    .setHidden(isHiddenLocally(definition))
                     .setPersistent(true)
                     .build();
             Group group = findLocal(definition.id());
@@ -229,6 +229,12 @@ final class GroupSynchronizer {
         Object password = getPassword.invoke(internalGroup);
         if (password instanceof String value) return value;
         throw new ReflectiveOperationException("missing group password");
+    }
+
+    static boolean isHiddenLocally(VoiceMessages.GroupDefinition definition) {
+        // Keep the Redis call marker compatible with older backends while
+        // exposing calls in the group list on upgraded backends.
+        return definition.hidden() && !CallTargetSynchronizer.isCallGroup(definition);
     }
 
     private static VoiceMessages.GroupDefinition definitionOf(

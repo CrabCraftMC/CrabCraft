@@ -182,7 +182,7 @@ final class CallManagerRegressionTest {
         check("Private Call".equals(definition.name()), "call marker name changed");
         check(call.password().equals(definition.password()), "call password changed");
         check("OPEN".equals(definition.type()), "call group is no longer OPEN");
-        check(definition.hidden(), "call group is no longer hidden");
+        check(definition.hidden(), "call registry marker is no longer hidden");
         check(!definition.permanent(), "call group became permanent");
         check(CallManager.isCallGroupDefinition(definition),
                 "call definition was not recognised as a call");
