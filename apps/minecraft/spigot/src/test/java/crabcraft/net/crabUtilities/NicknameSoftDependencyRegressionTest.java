@@ -19,6 +19,10 @@ final class NicknameSoftDependencyRegressionTest {
                 "missing EssentialsX did not fall back for an online player");
         check(NicknameComponentResolver.forUniqueId(null, UUID.randomUUID()) == null,
                 "missing EssentialsX did not fall back for a UUID lookup");
+        check(!VanishStatus.isVanished(null, player),
+                "missing EssentialsX did not default to visible");
+        check(!VanishStatus.setVanished(null, player, true),
+                "missing EssentialsX claimed to apply vanish state");
     }
 
     private static void check(boolean condition, String message) {

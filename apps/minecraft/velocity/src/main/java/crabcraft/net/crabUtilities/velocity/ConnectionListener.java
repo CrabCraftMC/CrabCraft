@@ -19,6 +19,8 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -40,6 +42,7 @@ public class ConnectionListener {
 
     private final CrabUtilitiesVelocity plugin;
     private final Set<UUID> announcedPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> silentJoinPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> nicknameSeeds = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, ActiveStreakSession> activeStreakSessions = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, byte[]> jadeHandshakes = new ConcurrentHashMap<>();
@@ -76,6 +79,14 @@ public class ConnectionListener {
     public void onLogin(LoginEvent event) {
         Player player = event.getPlayer();
         String uuid = player.getUniqueId().toString();
+        String virtualHost = player.getVirtualHost()
+                .map(address -> address.getHostString())
+                .orElse("");
+        if (isSilentJoinHost(virtualHost, plugin.getConfig().getSilentJoinHosts())) {
+            silentJoinPlayers.add(player.getUniqueId());
+        } else {
+            silentJoinPlayers.remove(player.getUniqueId());
+        }
 
         // Warm the player's settings (Postgres -> cache + Redis hash) so the
         // backend sees them on join and proxy features (message DND) can read them.
@@ -164,6 +175,9 @@ public class ConnectionListener {
         }
 
         String currentServerName = currentServer.getServerInfo().getName();
+        if (silentJoinPlayers.contains(player.getUniqueId())) {
+            plugin.getVanishManager().applyVanish(player, currentServer);
+        }
 
         // Publish cached nickname state immediately. Unknown state must not be
         // sent as a clear while its Redis/database seed is still in flight.
@@ -174,46 +188,26 @@ public class ConnectionListener {
         }
 
         if (previousServer == null) {
-            // Player just joined the proxy
-            if (isIgnored(currentServerName)) return;
-
-            // Check if nickname is already cached.
-            if (plugin.getNicknameCache().isLoaded(player.getUniqueId())) {
-                broadcastJoin(player);
-                return;
-            }
-
-            // Wait for the DB/Redis seed, with timeout fallback.
-            CompletableFuture<Void> pending = plugin.getPendingJoinManager().register(player.getUniqueId());
-            ensureNicknameSeed(player);
-            pending.orTimeout(2, TimeUnit.SECONDS)
-                    .whenComplete((result, throwable) -> {
-                        plugin.getServer().getScheduler()
-                                .buildTask(plugin, () -> broadcastJoin(player))
-                                .schedule();
-                    });
-        } else {
-            // Player swapped servers
-            String previousServerName = previousServer.getServerInfo().getName();
-            if (isIgnored(currentServerName) || isIgnored(previousServerName)) return;
-
-            Component displayName = getDisplayName(player);
-            Component message = MINI_MESSAGE.deserialize(
-                    "<yellow><name> swapped to the <server> server</yellow>",
-                    Placeholder.component("name", displayName),
-                    Placeholder.unparsed("server", currentServerName)
-            );
-            broadcast(message);
-
-            String discordMsg = formatDiscord(plugin.getConfig().getDiscordSwapFormat(), player, currentServerName);
-            plugin.getDiscordWebhook().send(discordMsg);
+            // EssentialsX on the backend is authoritative. Do not expose a
+            // connection until that exact backend reports it as visible.
+            plugin.getVanishManager().beginSession(player, currentServer,
+                    visible -> handleInitialJoin(player, currentServerName, visible));
+            return;
         }
+
+        String previousServerName = previousServer.getServerInfo().getName();
+        plugin.getVanishManager().beginSession(player, currentServer, visible -> {
+            if (visible) {
+                broadcastSwap(player, previousServerName, currentServerName);
+            }
+        });
     }
 
     @Subscribe(order = PostOrder.EARLY)
     public void onDisconnect(DisconnectEvent event) {
         Player player = event.getPlayer();
         jadeHandshakes.remove(player.getUniqueId());
+        silentJoinPlayers.remove(player.getUniqueId());
         finishLoginStreakSession(player.getUniqueId());
 
         var settingsService = plugin.getPlayerSettingsService();
@@ -221,7 +215,8 @@ public class ConnectionListener {
             settingsService.onDisconnect(player.getUniqueId());
         }
 
-        if (!announcedPlayers.remove(player.getUniqueId())) return;
+        boolean publiclyVisible = plugin.getVanishManager().isVisible(player);
+        if (!announcedPlayers.remove(player.getUniqueId()) || !publiclyVisible) return;
 
         RegisteredServer lastServer = player.getCurrentServer()
                 .map(conn -> conn.getServer())
@@ -243,6 +238,7 @@ public class ConnectionListener {
     public void shutdown() {
         jadeHandshakes.clear();
         nicknameSeeds.clear();
+        silentJoinPlayers.clear();
         plugin.getServer().getChannelRegistrar().unregister(JADE_CLIENT_HANDSHAKE, CLIENT_PROTOCOL);
         long now = epochSeconds();
         for (var entry : activeStreakSessions.entrySet()) {
@@ -389,7 +385,51 @@ public class ConnectionListener {
         return System.currentTimeMillis() / 1000L;
     }
 
-    private void broadcastJoin(Player player) {
+    private void handleInitialJoin(Player player, String serverName, boolean visible) {
+        if (isIgnored(serverName)) return;
+
+        if (plugin.getNicknameCache().isLoaded(player.getUniqueId())) {
+            recordJoin(player, visible && !silentJoinPlayers.contains(player.getUniqueId()));
+            return;
+        }
+
+        CompletableFuture<Void> pending = plugin.getPendingJoinManager().register(player.getUniqueId());
+        ensureNicknameSeed(player);
+        pending.orTimeout(2, TimeUnit.SECONDS)
+                .whenComplete((result, throwable) -> plugin.getServer().getScheduler()
+                        .buildTask(plugin, () -> recordJoin(
+                                player,
+                                visible && !silentJoinPlayers.contains(player.getUniqueId())))
+                        .schedule());
+    }
+
+    private void broadcastSwap(Player player, String previousServerName, String currentServerName) {
+        if (!player.isActive()
+                || !plugin.getVanishManager().isVisible(player)
+                || isIgnored(currentServerName)
+                || isIgnored(previousServerName)) {
+            return;
+        }
+
+        String actualServer = player.getCurrentServer()
+                .map(connection -> connection.getServer().getServerInfo().getName())
+                .orElse(null);
+        if (!currentServerName.equals(actualServer)) return;
+
+        Component displayName = getDisplayName(player);
+        Component message = MINI_MESSAGE.deserialize(
+                "<yellow><name> swapped to the <server> server</yellow>",
+                Placeholder.component("name", displayName),
+                Placeholder.unparsed("server", currentServerName)
+        );
+        broadcast(message);
+
+        String discordMsg = formatDiscord(
+                plugin.getConfig().getDiscordSwapFormat(), player, currentServerName);
+        plugin.getDiscordWebhook().send(discordMsg);
+    }
+
+    private void recordJoin(Player player, boolean announce) {
         if (!player.isActive()) return;
 
         // Run the DB lookup and per-join writes off-thread so a slow
@@ -407,25 +447,25 @@ public class ConnectionListener {
             // someone who's no longer here.
             if (!player.isActive()) return;
 
-            // Atomic check-and-add: if a previous in-flight task already
-            // announced this UUID (rapid disconnect/reconnect), skip.
-            if (!announcedPlayers.add(playerId)) return;
+            if (announce
+                    && plugin.getVanishManager().isVisible(player)
+                    && announcedPlayers.add(playerId)) {
+                Component displayName = getDisplayName(player);
+                String inGameFormat = firstJoin
+                        ? plugin.getConfig().getFirstJoinFormat()
+                        : "<yellow><name> joined the game</yellow>";
+                Component message = MINI_MESSAGE.deserialize(inGameFormat,
+                        Placeholder.component("name", displayName),
+                        Placeholder.unparsed("username", player.getUsername())
+                );
+                broadcast(message);
 
-            Component displayName = getDisplayName(player);
-            String inGameFormat = firstJoin
-                    ? plugin.getConfig().getFirstJoinFormat()
-                    : "<yellow><name> joined the game</yellow>";
-            Component message = MINI_MESSAGE.deserialize(inGameFormat,
-                    Placeholder.component("name", displayName),
-                    Placeholder.unparsed("username", player.getUsername())
-            );
-            broadcast(message);
-
-            String discordFormat = firstJoin
-                    ? plugin.getConfig().getDiscordFirstJoinFormat()
-                    : plugin.getConfig().getDiscordJoinFormat();
-            String discordMsg = formatDiscord(discordFormat, player, null);
-            plugin.getDiscordWebhook().send(discordMsg);
+                String discordFormat = firstJoin
+                        ? plugin.getConfig().getDiscordFirstJoinFormat()
+                        : plugin.getConfig().getDiscordJoinFormat();
+                String discordMsg = formatDiscord(discordFormat, player, null);
+                plugin.getDiscordWebhook().send(discordMsg);
+            }
 
             // Update player info in PostgreSQL (also sets last_mc_login_at).
             // Order matters: must run after hasJoinedBefore captured the
@@ -564,6 +604,15 @@ public class ConnectionListener {
 
     private boolean isIgnored(String serverName) {
         return plugin.getConfig().getIgnoredServers().contains(serverName.toLowerCase());
+    }
+
+    static boolean isSilentJoinHost(String host, List<String> silentHosts) {
+        if (host == null || silentHosts == null) return false;
+        String normalised = host.strip().toLowerCase(Locale.ROOT);
+        while (normalised.endsWith(".")) {
+            normalised = normalised.substring(0, normalised.length() - 1);
+        }
+        return silentHosts.contains(normalised);
     }
 
     private boolean isPlayerActive(UUID playerId) {

@@ -231,6 +231,9 @@ public class GlobalChatService {
             if (player == null || !player.isOnline()) {
                 return;
             }
+            if (plugin.isVanished(player)) {
+                return;
+            }
 
             String username = player.getName();
             // Resolve the nick from EssentialsX directly: player.displayName() does
@@ -323,7 +326,14 @@ public class GlobalChatService {
 
     /** Publishes the accepted message as plain visible text for public consumers. */
     public void publishPublicChat(UUID senderUuid, String username, String rawMessage) {
+        runOnMain(() -> publishPublicChatOnMain(senderUuid, username, rawMessage));
+    }
+
+    private void publishPublicChatOnMain(UUID senderUuid, String username, String rawMessage) {
         if (!publicChatEnabled || stopped) return;
+        Player player = Bukkit.getPlayer(senderUuid);
+        if (player == null || !player.isOnline() || plugin.isVanished(player)) return;
+
         JedisPool pool = jedisPool;
         if (pool == null || pool.isClosed()) return;
         Map<String, String> fields = publicChatFields(senderUuid, username, rawMessage);

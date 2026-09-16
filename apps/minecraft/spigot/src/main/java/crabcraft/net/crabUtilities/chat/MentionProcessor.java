@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities.chat;
 
 import crabcraft.net.crabUtilities.NicknameComponentResolver;
+import crabcraft.net.crabUtilities.VanishStatus;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -107,6 +108,7 @@ public class MentionProcessor {
         PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
         List<MentionIdentity> identities = new ArrayList<>();
         for (Player player : players) {
+            if (VanishStatus.isVanished(essentialsPlugin, player)) continue;
             Component nickname = NicknameComponentResolver.forPlayer(essentialsPlugin, player);
             String nicknameText = nickname == null ? null : plain.serialize(nickname).trim();
             identities.add(new MentionIdentity(

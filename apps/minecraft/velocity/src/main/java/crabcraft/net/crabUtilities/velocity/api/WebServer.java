@@ -123,7 +123,7 @@ public class WebServer {
             + "\"get\":{"
             + "\"tags\":[\"Server\"],"
             + "\"summary\":\"Server status\","
-            + "\"description\":\"Returns an overview of the proxy including whether it is online, the current player count, maximum player slots, and the server version string.\","
+            + "\"description\":\"Returns an overview of the proxy including whether it is online, the visible player count, maximum player slots, and the server version string. Vanished players are excluded.\","
             + "\"operationId\":\"getStatus\","
             + "\"responses\":{"
             + "\"200\":{"
@@ -131,7 +131,7 @@ public class WebServer {
             + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
             + "\"online\":{\"type\":\"boolean\",\"description\":\"Always true when the API is reachable\"},"
             + "\"players\":{\"type\":\"object\",\"properties\":{"
-            + "\"online\":{\"type\":\"integer\",\"description\":\"Number of players currently connected\"},"
+            + "\"online\":{\"type\":\"integer\",\"description\":\"Number of visible players currently connected\"},"
             + "\"max\":{\"type\":\"integer\",\"description\":\"Maximum player slots configured on the proxy\"}"
             + "}},"
             + "\"version\":{\"type\":\"string\",\"description\":\"Velocity proxy version string\"}"
@@ -161,7 +161,7 @@ public class WebServer {
             + "\"get\":{"
             + "\"tags\":[\"Server\"],"
             + "\"summary\":\"List backend servers\","
-            + "\"description\":\"Returns all backend servers registered on the proxy with the number of players currently connected to each. This includes all servers regardless of whether they have players.\","
+            + "\"description\":\"Returns all backend servers registered on the proxy with the number of visible players currently connected to each. Vanished players are excluded.\","
             + "\"operationId\":\"getServers\","
             + "\"responses\":{"
             + "\"200\":{"
@@ -169,7 +169,7 @@ public class WebServer {
             + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
             + "\"servers\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{"
             + "\"name\":{\"type\":\"string\",\"description\":\"Server name as registered in the proxy config\"},"
-            + "\"players\":{\"type\":\"integer\",\"description\":\"Number of players on this server\"}"
+            + "\"players\":{\"type\":\"integer\",\"description\":\"Number of visible players on this server\"}"
             + "}}}"
             + "}}}}"
             + "},"
@@ -183,13 +183,13 @@ public class WebServer {
             + "\"get\":{"
             + "\"tags\":[\"Players\"],"
             + "\"summary\":\"List online players\","
-            + "\"description\":\"Returns all players currently connected to the proxy across all backend servers. Each player object includes their username, UUID, display nickname (if set via EssentialsX), ping, and which backend server they are on.\","
+            + "\"description\":\"Returns all visible players currently connected to the proxy across all backend servers. EssentialsX-vanished players are excluded. Each player object includes their username, UUID, display nickname, ping, and backend server.\","
             + "\"operationId\":\"getPlayers\","
             + "\"responses\":{"
             + "\"200\":{"
             + "\"description\":\"Player list retrieved\","
             + "\"content\":{\"application/json\":{\"schema\":{\"type\":\"object\",\"properties\":{"
-            + "\"count\":{\"type\":\"integer\",\"description\":\"Total number of online players\"},"
+            + "\"count\":{\"type\":\"integer\",\"description\":\"Total number of visible online players\"},"
             + "\"players\":{\"type\":\"array\",\"items\":" + PLAYER_SCHEMA + "}"
             + "}}}}"
             + "},"
@@ -202,7 +202,7 @@ public class WebServer {
             + "\"get\":{"
             + "\"tags\":[\"Players\"],"
             + "\"summary\":\"Look up online player\","
-            + "\"description\":\"Returns details for a specific player by their Minecraft username. The player must be currently online. Returns 404 if the player is not connected to the proxy.\","
+            + "\"description\":\"Returns details for a specific visible player by their Minecraft username. Returns 404 when the player is offline or vanished.\","
             + "\"operationId\":\"getPlayer\","
             + "\"parameters\":[{\"name\":\"name\",\"in\":\"path\",\"required\":true,\"schema\":{\"type\":\"string\",\"pattern\":\"^[a-zA-Z0-9_]{3,16}$\"},\"description\":\"Minecraft username (3-16 alphanumeric characters or underscores)\"}],"
             + "\"responses\":{"
@@ -211,7 +211,7 @@ public class WebServer {
             + "\"content\":{\"application/json\":{\"schema\":" + PLAYER_SCHEMA + "}}"
             + "},"
             + "\"400\":{\"description\":\"Username does not match the required format\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
-            + "\"404\":{\"description\":\"No player with that username is currently online\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
+            + "\"404\":{\"description\":\"No visible online player has that username\",\"content\":{\"application/json\":{\"schema\":" + ERROR_SCHEMA + "}}},"
             + COMMON_ERRORS
             + "}"
             + "}"
@@ -894,7 +894,7 @@ public class WebServer {
 
             registerRateLimitedGet("/status", exchange -> {
                 JsonObject players = new JsonObject();
-                players.addProperty("online", plugin.getServer().getPlayerCount());
+                players.addProperty("online", plugin.getVanishManager().visiblePlayers().size());
                 players.addProperty("max", plugin.getServer().getConfiguration().getShowMaxPlayers());
 
                 JsonObject response = new JsonObject();
@@ -910,7 +910,7 @@ public class WebServer {
                 for (RegisteredServer rs : plugin.getServer().getAllServers()) {
                     JsonObject obj = new JsonObject();
                     obj.addProperty("name", rs.getServerInfo().getName());
-                    obj.addProperty("players", rs.getPlayersConnected().size());
+                    obj.addProperty("players", plugin.getVanishManager().visiblePlayerCount(rs));
                     servers.add(obj);
                 }
 
@@ -922,7 +922,7 @@ public class WebServer {
 
             registerRateLimitedGet("/players", exchange -> {
                 JsonArray players = new JsonArray();
-                for (Player player : plugin.getServer().getAllPlayers()) {
+                for (Player player : plugin.getVanishManager().visiblePlayers()) {
                     players.add(buildPlayerJson(player));
                 }
 
@@ -1165,7 +1165,7 @@ public class WebServer {
                     return;
                 }
                 Optional<Player> target = plugin.getServer().getPlayer(sub);
-                if (target.isPresent()) {
+                if (target.isPresent() && plugin.getVanishManager().isVisible(target.get())) {
                     sendJson(exchange, GSON.toJson(buildPlayerJson(target.get())));
                 } else {
                     sendError(exchange, 404, "player not online");

@@ -74,6 +74,7 @@ public final class CrabUtilities extends JavaPlugin {
     private ModuleConfigManager moduleConfigManager;
     private BingoManager bingoManager;
     private RestrictedAreaListener restrictedAreaListener;
+    private VanishStatusPublisher vanishStatusPublisher;
 
     @Override
     public void onEnable() {
@@ -86,6 +87,15 @@ public final class CrabUtilities extends JavaPlugin {
         saveDefaultConfig();
         this.moduleConfigManager = new ModuleConfigManager(this);
         moduleConfigManager.initialise();
+
+        // EssentialsX is authoritative for vanish state. Report it to the
+        // proxy before features that can publicly expose connected players.
+        this.vanishStatusPublisher = new VanishStatusPublisher(this);
+        vanishStatusPublisher.start();
+        if (essentials != null) {
+            Bukkit.getPluginManager().registerEvents(
+                    new EssentialsVanishListener(this, vanishStatusPublisher), this);
+        }
 
         // Discs, horns and the shared yt-dlp/FFmpeg media pipeline.
         MediaFeature.enable(this);
@@ -262,6 +272,17 @@ public final class CrabUtilities extends JavaPlugin {
 
     public Plugin getEssentials() {
         return essentials;
+    }
+
+    public boolean isVanished(org.bukkit.entity.Player player) {
+        return VanishStatus.isVanished(essentials, player);
+    }
+
+    public void onVanishStatusChanged(org.bukkit.entity.Player player) {
+        refreshMentionAutocomplete();
+        if (locatorBarManager != null) {
+            locatorBarManager.refresh(player);
+        }
     }
 
     public void refreshMentionAutocomplete() {
@@ -711,6 +732,10 @@ public final class CrabUtilities extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (vanishStatusPublisher != null) {
+            vanishStatusPublisher.shutdown();
+            vanishStatusPublisher = null;
+        }
         stopSimpleVoiceAnimations();
         stopAccurateBlockPlacement();
         stopStatsPushTask();

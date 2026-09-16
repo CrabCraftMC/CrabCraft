@@ -100,11 +100,19 @@ public class LocatorBarManager implements Listener {
     }
 
     private void apply(Player player, boolean enabled) {
-        setAttribute(player, Attribute.WAYPOINT_TRANSMIT_RANGE, ENABLED_RANGE);
+        boolean vanished = plugin.isVanished(player);
+        setAttribute(player, Attribute.WAYPOINT_TRANSMIT_RANGE,
+                vanished ? DISABLED_RECEIVE_RANGE : ENABLED_RANGE);
         setAttribute(player, Attribute.WAYPOINT_RECEIVE_RANGE, enabled ? ENABLED_RANGE : DISABLED_RECEIVE_RANGE);
-        if (!enabled) {
+        if (!enabled && !vanished) {
             keepTransmittingWaypoint(player);
         }
+    }
+
+    /** Re-applies waypoint visibility immediately after an EssentialsX vanish change. */
+    public void refresh(Player player) {
+        UUID uuid = player.getUniqueId();
+        apply(player, settingsService.isLoaded(uuid) && settingsService.isLocatorBarEnabled(uuid));
     }
 
     private void setAttribute(Player player, Attribute attribute, double value) {

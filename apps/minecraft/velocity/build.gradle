@@ -67,6 +67,8 @@ def regressionTests = [
                 'crabcraft.net.crabUtilities.velocity.LoginStreakCacheSeedRegressionTest',
         nicknameRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.NicknameRegressionTest',
+        vanishBridgeProtocolRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.VanishBridgeProtocolRegressionTest',
         jadeClientProtocolPayloadRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.JadeClientProtocolPayloadRegressionTest',
         playerLookupRegressionTest:

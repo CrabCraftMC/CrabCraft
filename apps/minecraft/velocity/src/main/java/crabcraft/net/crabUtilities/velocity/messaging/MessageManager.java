@@ -54,7 +54,8 @@ public class MessageManager {
             return;
         }
 
-        Optional<Player> target = plugin.getServer().getPlayer(partner);
+        Optional<Player> target = plugin.getServer().getPlayer(partner)
+                .filter(plugin.getVanishManager()::isVisible);
         if (target.isEmpty()) {
             deliver(source, MINI_MESSAGE.deserialize(plugin.getConfig().getMsgPlayerNotFound()));
             return;

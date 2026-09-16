@@ -60,6 +60,11 @@ private-messages:
 join-leave-messages:
   # Servers that should NOT trigger join/leave/swap messages.
   ignored-servers: []
+  # Connections made through these hostnames are automatically vanished with
+  # EssentialsX and do not announce their initial join (or matching leave).
+  # This is not an access-control mechanism.
+  silent-join-hosts:
+    - "mods.crabcraft.net"
   # Placeholders: <name>, <username>
   first-join: "<yellow><name> joined the game for the first time</yellow>"
   # Discord webhook. Empty webhook-url disables it.
