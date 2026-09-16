@@ -28,6 +28,7 @@ public final class VanishManager {
 
     private static final MinecraftChannelIdentifier CHANNEL =
             MinecraftChannelIdentifier.from(VanishBridgeProtocol.CHANNEL);
+    private static final Duration SESSION_TIMEOUT = Duration.ofSeconds(2);
 
     private final CrabUtilitiesVelocity plugin;
     private final ConcurrentHashMap<UUID, Snapshot> states = new ConcurrentHashMap<>();
@@ -62,7 +63,19 @@ public final class VanishManager {
         if (current != null && current.serverName.equals(serverName)
                 && pendingSessions.remove(player.getUniqueId(), pending)) {
             completion.accept(!current.vanished);
+            return;
         }
+
+        // Keep public visibility fail-closed, but do not leave private join
+        // processing blocked when a backend cannot report its vanish state.
+        plugin.getServer().getScheduler()
+                .buildTask(plugin, () -> {
+                    if (pendingSessions.remove(player.getUniqueId(), pending)) {
+                        completion.accept(false);
+                    }
+                })
+                .delay(SESSION_TIMEOUT)
+                .schedule();
     }
 
     public boolean isVisible(Player player) {
