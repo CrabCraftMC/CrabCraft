@@ -18,11 +18,12 @@ public final class PlayerLookup {
     private PlayerLookup() {}
 
     public static Optional<Player> resolve(CrabUtilitiesVelocity plugin, String name) {
-        Optional<Player> byUsername = plugin.getServer().getPlayer(name);
+        Optional<Player> byUsername = plugin.getServer().getPlayer(name)
+                .filter(plugin.getVanishManager()::isVisible);
         if (byUsername.isPresent()) return byUsername;
 
         return uniqueNicknameMatch(
-                plugin.getServer().getAllPlayers(),
+                plugin.getVanishManager().visiblePlayers(),
                 player -> plugin.getNicknameCache().getPlainNickname(player.getUniqueId()),
                 name);
     }
@@ -33,14 +34,14 @@ public final class PlayerLookup {
             UUID selfId = ctx.getSource() instanceof Player p ? p.getUniqueId() : null;
             Map<String, Integer> nicknameCounts = new HashMap<>();
 
-            for (Player player : plugin.getServer().getAllPlayers()) {
+            for (Player player : plugin.getVanishManager().visiblePlayers()) {
                 String plain = plugin.getNicknameCache().getPlainNickname(player.getUniqueId());
                 if (plain != null && !plain.isBlank()) {
                     nicknameCounts.merge(plain.toLowerCase(Locale.ROOT), 1, Integer::sum);
                 }
             }
 
-            for (Player player : plugin.getServer().getAllPlayers()) {
+            for (Player player : plugin.getVanishManager().visiblePlayers()) {
                 if (player.getUniqueId().equals(selfId)) continue;
 
                 // Show a single name per player: the nickname when set,
@@ -51,6 +52,7 @@ public final class PlayerLookup {
                         && !plain.isBlank()
                         && nicknameCounts.getOrDefault(plain.toLowerCase(Locale.ROOT), 0) == 1
                         && plugin.getServer().getPlayer(plain)
+                                .filter(plugin.getVanishManager()::isVisible)
                                 .map(byUsername -> byUsername.getUniqueId().equals(player.getUniqueId()))
                                 .orElse(true);
                 String display = usableNickname ? plain : player.getUsername();

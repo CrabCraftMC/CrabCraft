@@ -57,6 +57,7 @@ public class VelocityConfig {
     private final int publicChatMaxConnectionsPerIp;
     private final List<String> publicChatAllowedOrigins;
     private final List<String> ignoredServers;
+    private final List<String> silentJoinHosts;
     private final String firstJoinFormat;
     private final String discordWebhookUrl;
     private final String discordJoinFormat;
@@ -92,7 +93,8 @@ public class VelocityConfig {
                            int publicChatReplayMessages, int publicChatMaxConnections,
                            int publicChatMaxConnectionsPerIp,
                            List<String> publicChatAllowedOrigins,
-                           List<String> ignoredServers, String firstJoinFormat,
+                           List<String> ignoredServers, List<String> silentJoinHosts,
+                           String firstJoinFormat,
                            String discordWebhookUrl, String discordJoinFormat,
                            String discordLeaveFormat, String discordSwapFormat,
                            String discordFirstJoinFormat,
@@ -131,6 +133,7 @@ public class VelocityConfig {
         this.publicChatMaxConnectionsPerIp = publicChatMaxConnectionsPerIp;
         this.publicChatAllowedOrigins = publicChatAllowedOrigins;
         this.ignoredServers = ignoredServers;
+        this.silentJoinHosts = silentJoinHosts;
         this.firstJoinFormat = firstJoinFormat;
         this.discordWebhookUrl = discordWebhookUrl;
         this.discordJoinFormat = discordJoinFormat;
@@ -243,7 +246,8 @@ public class VelocityConfig {
             }
 
             List<String> ignoredServers = new ArrayList<>();
-            ConfigurationNode ignoredNode = root.node("join-leave-messages", "ignored-servers");
+            ConfigurationNode joinLeave = root.node("join-leave-messages");
+            ConfigurationNode ignoredNode = joinLeave.node("ignored-servers");
             if (!ignoredNode.virtual()) {
                 for (ConfigurationNode child : ignoredNode.childrenList()) {
                     String val = child.getString();
@@ -251,10 +255,21 @@ public class VelocityConfig {
                 }
             }
 
-            String firstJoinFormat = root.node("join-leave-messages", "first-join")
+            List<String> silentJoinHosts = new ArrayList<>();
+            ConfigurationNode silentHostsNode = joinLeave.node("silent-join-hosts");
+            if (!silentHostsNode.virtual()) {
+                for (ConfigurationNode child : silentHostsNode.childrenList()) {
+                    String val = child.getString();
+                    if (val != null && !val.isBlank()) {
+                        silentJoinHosts.add(val.toLowerCase());
+                    }
+                }
+            }
+
+            String firstJoinFormat = joinLeave.node("first-join")
                     .getString("<yellow><name> joined the game for the first time</yellow>");
 
-            ConfigurationNode discord = root.node("join-leave-messages", "discord");
+            ConfigurationNode discord = joinLeave.node("discord");
             String discordWebhookUrl = discord.node("webhook-url").getString("");
             String discordJoinFormat = discord.node("join").getString("{name} joined the game");
             String discordLeaveFormat = discord.node("leave").getString("{name} left the game");
@@ -289,7 +304,8 @@ public class VelocityConfig {
                     publicChatEnabled, publicChatStream, publicChatReplayMessages,
                     publicChatMaxConnections, publicChatMaxConnectionsPerIp,
                     List.copyOf(publicChatAllowedOrigins),
-                    ignoredServers, firstJoinFormat, discordWebhookUrl, discordJoinFormat,
+                    ignoredServers, silentJoinHosts, firstJoinFormat,
+                    discordWebhookUrl, discordJoinFormat,
                     discordLeaveFormat, discordSwapFormat, discordFirstJoinFormat,
                     dbUrl, dbUsername, dbPassword,
                     updateEnabled, updateInterval, updateIncludePre, updateRepo, updateToken,
@@ -305,7 +321,8 @@ public class VelocityConfig {
                     true, "minecraft:entity.experience_orb.pickup", 1.0f, 1.0f, 8080,
                     false, "crabcraft:public-chat", 6, 64, 2,
                     List.of("https://crabcraft.net", "https://www.crabcraft.net"),
-                    List.of(), "<yellow><name> joined the game for the first time</yellow>",
+                    List.of(), List.of("mods.crabcraft.net"),
+                    "<yellow><name> joined the game for the first time</yellow>",
                     "", "{name} joined the game", "{name} left the game", "{name} swapped to the {server} server",
                     "{name} joined the game for the first time!",
                     "jdbc:postgresql://localhost:5432/crabcraft", "crabcraft", "",
@@ -342,6 +359,7 @@ public class VelocityConfig {
     public int getPublicChatMaxConnectionsPerIp() { return publicChatMaxConnectionsPerIp; }
     public List<String> getPublicChatAllowedOrigins() { return publicChatAllowedOrigins; }
     public List<String> getIgnoredServers() { return ignoredServers; }
+    public List<String> getSilentJoinHosts() { return silentJoinHosts; }
     public String getFirstJoinFormat() { return firstJoinFormat; }
     public String getDiscordWebhookUrl() { return discordWebhookUrl; }
     public String getDiscordJoinFormat() { return discordJoinFormat; }

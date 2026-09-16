@@ -89,6 +89,7 @@ public class CrabUtilitiesVelocity {
     private LoginStreakService loginStreakService;
     private LoginStreakPublisher loginStreakPublisher;
     private ConnectionListener connectionListener;
+    private VanishManager vanishManager;
     private PlayerSettingsService playerSettingsService;
     private LiteBansInfractionService liteBansInfractionService;
     private PunishmentEventPublisher punishmentEventPublisher;
@@ -110,6 +111,8 @@ public class CrabUtilitiesVelocity {
         this.nicknameCache = new NicknameCache();
         this.pendingJoinManager = new PendingJoinManager();
         this.messageManager = new MessageManager(this);
+        this.vanishManager = new VanishManager(this);
+        vanishManager.start();
 
         this.pgWriter = new PostgresStatsWriter(
             config.getDbUrl(), config.getDbUsername(), config.getDbPassword(), logger
@@ -156,6 +159,10 @@ public class CrabUtilitiesVelocity {
                 connectionListener.shutdown();
             }
             stopRuntimeConsumers();
+            if (vanishManager != null) {
+                vanishManager.shutdown();
+                vanishManager = null;
+            }
             shutdownDatabaseExecutor("shutdown");
             if (pgWriter != null) {
                 pgWriter.close();
@@ -284,6 +291,7 @@ public class CrabUtilitiesVelocity {
     public LoginStreakService getLoginStreakService() { return loginStreakService; }
     public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
     public PlayerSettingsService getPlayerSettingsService() { return playerSettingsService; }
+    public VanishManager getVanishManager() { return vanishManager; }
     public LiteBansInfractionService getLiteBansInfractionService() { return liteBansInfractionService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
     public CallManager getCallManager() { return callManager; }
