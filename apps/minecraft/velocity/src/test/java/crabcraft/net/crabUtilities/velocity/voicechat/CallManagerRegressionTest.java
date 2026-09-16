@@ -182,13 +182,13 @@ final class CallManagerRegressionTest {
         check("Private Call".equals(definition.name()), "call marker name changed");
         check(call.password().equals(definition.password()), "call password changed");
         check("OPEN".equals(definition.type()), "call group is no longer OPEN");
-        check(definition.hidden(), "call group is no longer hidden");
+        check(!definition.hidden(), "call group is no longer visible");
         check(!definition.permanent(), "call group became permanent");
         check(CallManager.isCallGroupDefinition(definition),
                 "call definition was not recognised as a call");
 
         CallManager.GroupDefinition ordinary = new CallManager.GroupDefinition(
-                groupId, "Secret Club", call.password(), "OPEN", true, false);
+                groupId, "Secret Club", call.password(), "OPEN", false, false);
         check(!CallManager.isCallGroupDefinition(ordinary),
                 "an ordinary passworded group was co-opted as a call");
         check(CallManager.CONTROL_CHANNEL.equals("crabcraft:svc:lifecycle"),

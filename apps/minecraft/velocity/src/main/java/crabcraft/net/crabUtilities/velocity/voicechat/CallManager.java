@@ -798,7 +798,7 @@ public final class CallManager {
                 "1",
                 encodeText(call.password()),
                 "OPEN",
-                "1",
+                "0",
                 "0");
     }
 
@@ -825,7 +825,7 @@ public final class CallManager {
     static boolean isCallGroupDefinition(GroupDefinition definition) {
         return definition != null
                 && CALL_GROUP_NAME.equals(definition.name())
-                && definition.hidden()
+                && !definition.hidden()
                 && !definition.permanent()
                 && "OPEN".equals(definition.type())
                 && isValidPassword(definition.password());

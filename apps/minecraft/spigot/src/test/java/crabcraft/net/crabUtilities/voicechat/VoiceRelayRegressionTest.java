@@ -170,17 +170,17 @@ final class VoiceRelayRegressionTest {
     private static void verifyPrivateCallDefinition() {
         VoiceMessages.GroupDefinition call = new VoiceMessages.GroupDefinition(
                 UUID.randomUUID(), CallTargetSynchronizer.CALL_GROUP_NAME, "random-secret",
-                Group.Type.OPEN, true, false);
+                Group.Type.OPEN, false, false);
         check(CallTargetSynchronizer.isCallGroup(call),
                 "authoritative private call definition was rejected");
         check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
-                        call.id(), call.name(), call.password(), Group.Type.NORMAL, true, false)),
+                        call.id(), call.name(), call.password(), Group.Type.NORMAL, false, false)),
                 "non-OPEN group was accepted as a private call");
         check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
-                        call.id(), call.name(), call.password(), Group.Type.OPEN, false, false)),
-                "visible group was accepted as a private call");
+                        call.id(), call.name(), call.password(), Group.Type.OPEN, true, false)),
+                "hidden group was accepted as a private call");
         check(!CallTargetSynchronizer.isCallGroup(new VoiceMessages.GroupDefinition(
-                        call.id(), call.name(), null, Group.Type.OPEN, true, false)),
+                        call.id(), call.name(), null, Group.Type.OPEN, false, false)),
                 "passwordless group was accepted as a private call");
     }
 

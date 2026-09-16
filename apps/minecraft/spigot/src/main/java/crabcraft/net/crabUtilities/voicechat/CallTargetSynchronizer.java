@@ -293,7 +293,7 @@ final class CallTargetSynchronizer implements AutoCloseable {
                 && definition.password() != null
                 && !definition.password().isBlank()
                 && definition.type() == Group.Type.OPEN
-                && definition.hidden()
+                && !definition.hidden()
                 && !definition.permanent();
     }
 
