@@ -13,6 +13,9 @@ softdepend:
   - BlueMap
   - Nexo
 commands:
+  bingo:
+    description: Show your weekly bingo grid; hover or click a square for details.
+    usage: /bingo [A1-D4]
   crabutilities:
     description: CrabUtilities admin commands.
     usage: /crabutilities <reload|update|viewdistance>
