@@ -365,6 +365,28 @@ export const bingoPlayerMilestones = pgTable(
   ],
 );
 
+// ── Halloween challenge ───────────────────────────────────────
+export const halloweenEvents = pgTable("halloween_events", {
+  id: text("id").primaryKey(),
+  starts_at: integer("starts_at").notNull(),
+  ends_at: integer("ends_at").notNull(),
+  guild_id: text("guild_id").notNull(),
+  role_id: text("role_id").notNull(),
+});
+
+export const halloweenPlayerProgress = pgTable("halloween_player_progress", {
+  event_id: text("event_id").notNull().references(() => halloweenEvents.id, { onDelete: "cascade" }),
+  minecraft_uuid: text("minecraft_uuid").notNull(),
+  hunt_mask: integer("hunt_mask").notNull().default(0),
+  trick_or_treat: boolean("trick_or_treat").notNull().default(false),
+  back_from_the_dead: boolean("back_from_the_dead").notNull().default(false),
+  last_stream_id: text("last_stream_id").notNull().default("0-0"),
+  completed_at: integer("completed_at"),
+  role_awarded_at: integer("role_awarded_at"),
+}, (table) => [
+  primaryKey({ columns: [table.event_id, table.minecraft_uuid] }),
+]);
+
 // ── player_login_streaks ───────────────────────────────────────
 // All-time login streaks per Minecraft account. Updated by the
 // Velocity proxy after a player has been online long enough to qualify

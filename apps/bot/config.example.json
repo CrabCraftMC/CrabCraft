@@ -7,6 +7,7 @@
     "bingoLine": "",
     "bingoBlackout": "",
     "bingoPing": "",
+    "halloween": "",
     "live": "",
     "currentSeason": ""
   },
@@ -33,6 +34,12 @@
   },
   "gallery": {
     "channels": []
+  },
+  "halloween": {
+    "enabled": true,
+    "eventId": "halloween-2026",
+    "startsAt": 1790204400,
+    "endsAt": 1793491200
   },
   "bingo": {
     "ownerUserId": "866686984587313173",

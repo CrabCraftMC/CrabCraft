@@ -13,6 +13,9 @@ softdepend:
   - BlueMap
   - Nexo
 commands:
+  halloween:
+    description: Show the Halloween tasks and your progress.
+    usage: /halloween
   crabutilities:
     description: CrabUtilities admin commands.
     usage: /crabutilities <reload|update|viewdistance>

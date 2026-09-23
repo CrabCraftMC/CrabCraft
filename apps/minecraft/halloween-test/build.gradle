@@ -1,0 +1,36 @@
+plugins {
+    id 'xyz.jpenilla.run-paper'
+    id 'com.gradleup.shadow'
+}
+
+sourceSets.main.java {
+    srcDir('../spigot/src/main/java')
+    include 'crabcraft/net/halloweentest/**'
+    include 'crabcraft/net/crabUtilities/CrabMessages.java'
+    include 'crabcraft/net/crabUtilities/halloween/**'
+    include 'crabcraft/net/crabUtilities/bingo/BingoTask.java'
+    include 'crabcraft/net/crabUtilities/bingo/BingoDetector.java'
+    include 'crabcraft/net/crabUtilities/bingo/BingoCardTwoListener.java'
+}
+repositories { maven { url = uri('https://repo.papermc.io/repository/maven-public/') } }
+dependencies {
+    compileOnly('io.papermc.paper:paper-api:26.2.build.87-stable')
+    implementation('redis.clients:jedis:5.1.0')
+}
+shadowJar {
+    archiveFileName.set('CrabHalloweenTest.jar')
+    relocate 'redis.clients.jedis', 'crabcraft.net.libs.jedis'
+    relocate 'org.apache.commons.pool2', 'crabcraft.net.libs.pool2'
+    relocate 'org.json', 'crabcraft.net.libs.json'
+}
+tasks.register('prepareHalloweenTestServer', Copy) {
+    from(layout.projectDirectory.file('server.properties'))
+    into(layout.projectDirectory.dir('run'))
+}
+runServer {
+    dependsOn prepareHalloweenTestServer
+    minecraftVersion('26.2')
+    build(87)
+    jvmArgs('-Xms512M', '-Xmx2G', '-Dcom.mojang.eula.agree=true')
+}
+tasks.named('test') { failOnNoDiscoveredTests = false }
