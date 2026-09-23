@@ -6,6 +6,7 @@ import crabcraft.net.crabUtilities.awards.EatingAwardTracker;
 import crabcraft.net.crabUtilities.awards.SuspiciousBrushTracker;
 import crabcraft.net.crabUtilities.bluemap.SignMarkerService;
 import crabcraft.net.crabUtilities.bingo.BingoManager;
+import crabcraft.net.crabUtilities.halloween.HalloweenManager;
 import crabcraft.net.crabUtilities.cauldron.CauldronRecipeListener;
 import crabcraft.net.crabUtilities.chat.*;
 import crabcraft.net.crabUtilities.chat.bridge.PaperChatBridge;
@@ -73,6 +74,7 @@ public final class CrabUtilities extends JavaPlugin {
     private SimpleVoiceAnimationsIntegration simpleVoiceAnimationsIntegration;
     private ModuleConfigManager moduleConfigManager;
     private BingoManager bingoManager;
+    private HalloweenManager halloweenManager;
     private RestrictedAreaListener restrictedAreaListener;
     private VanishStatusPublisher vanishStatusPublisher;
 
@@ -242,6 +244,17 @@ public final class CrabUtilities extends JavaPlugin {
 
         // Weekly bingo is opt-out for players but feature-gated for deployment.
         startBingo();
+        startHalloween();
+        getCommand("halloween").setExecutor((sender, command, label, args) -> {
+            if (!(sender instanceof org.bukkit.entity.Player player)) {
+                sender.sendMessage("Use /halloween in-game to see your progress.");
+            } else if (halloweenManager == null) {
+                player.sendMessage(CrabMessages.muted("The Halloween event is currently disabled."));
+            } else {
+                halloweenManager.showProgress(player);
+            }
+            return true;
+        });
 
         // BlueMap sign markers: signs with [map] on the top line become POI
         // markers on the BlueMap web map. Soft dependency — skipped when the
@@ -419,6 +432,11 @@ public final class CrabUtilities extends JavaPlugin {
         messages.add(bingoManager != null
                 ? "Weekly bingo tracking restarted."
                 : "Weekly bingo tracking inactive (disabled in config).");
+        stopHalloween();
+        startHalloween();
+        messages.add(halloweenManager != null
+                ? "Halloween tracking restarted."
+                : "Halloween tracking inactive (disabled in config).");
 
         stopSignMarkers();
         startSignMarkers();
@@ -577,6 +595,18 @@ public final class CrabUtilities extends JavaPlugin {
             playerSettingsService.shutdown();
             playerSettingsService = null;
         }
+    }
+
+    private void startHalloween() {
+        if (!getConfig().getBoolean("halloween.enabled", false)) return;
+        halloweenManager = new HalloweenManager(this);
+        halloweenManager.start();
+    }
+
+    private void stopHalloween() {
+        if (halloweenManager == null) return;
+        halloweenManager.shutdown();
+        halloweenManager = null;
     }
 
     private void startBingo() {
@@ -764,6 +794,7 @@ public final class CrabUtilities extends JavaPlugin {
         }
         stopGlobalChatService();
         stopBingo();
+        stopHalloween();
         stopPlayerSettings();
         stopSignMarkers();
         stopHappyGhastSpeed();

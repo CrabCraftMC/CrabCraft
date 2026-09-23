@@ -38,6 +38,7 @@ import { startPunishmentRoleSync } from "../utils/punishmentRoleSync.js";
 import { startBotPlayerStatus } from "../utils/botStatus.js";
 import { startGallerySync } from "../utils/gallerySync.js";
 import { startBingoService } from "../utils/bingoService.js";
+import { startHalloweenService } from "../utils/halloweenService.js";
 import { syncPlayerDiscordMembership } from "../utils/discordMembershipSync.js";
 
 export default class ReadyEvent extends Event {
@@ -236,6 +237,7 @@ export default class ReadyEvent extends Event {
 
     // Weekly card publication, durable Paper completion intake and milestone delivery.
     startBingoService(client);
+    startHalloweenService(client);
 
     // Deploy slash commands on every startup
     if (!client.user) return;

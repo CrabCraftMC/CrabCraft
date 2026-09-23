@@ -14,6 +14,7 @@ interface IdConfig {
     bingoLine?: string;
     bingoBlackout?: string;
     bingoPing?: string;
+    halloween?: string;
     live?: string;
     currentSeason?: string;
   };
@@ -47,6 +48,12 @@ interface IdConfig {
   bingo?: {
     ownerUserId?: string;
     missingCardWarningHours?: number;
+  };
+  halloween?: {
+    enabled?: boolean;
+    eventId?: string;
+    startsAt?: number;
+    endsAt?: number;
   };
 }
 
@@ -198,6 +205,11 @@ interface IConfig {
   BINGO_PING_ROLE_ID: string;
   BINGO_OWNER_USER_ID: string;
   BINGO_MISSING_CARD_WARNING_HOURS: number;
+  HALLOWEEN_ENABLED: boolean;
+  HALLOWEEN_EVENT_ID: string;
+  HALLOWEEN_STARTS_AT: number;
+  HALLOWEEN_ENDS_AT: number;
+  HALLOWEEN_ROLE_ID: string;
   TICKET_CATEGORY_ID: string;
   GALLERY_CHANNELS: readonly GalleryChannelConfig[];
   GALLERY_CONFIGURATION_ERRORS: readonly string[];
@@ -253,6 +265,12 @@ const config: IConfig = {
   BINGO_BLACKOUT_ROLE_ID: ids.roles.bingoBlackout ?? "",
   BINGO_PING_ROLE_ID: ids.roles.bingoPing ?? "",
   BINGO_OWNER_USER_ID: ids.bingo?.ownerUserId ?? "",
+  HALLOWEEN_ENABLED: ids.halloween?.enabled ?? true,
+  HALLOWEEN_EVENT_ID: ids.halloween?.eventId ?? "halloween-2026",
+  // Midnight 24 September BST through midnight 1 November GMT (exclusive).
+  HALLOWEEN_STARTS_AT: ids.halloween?.startsAt ?? 1_790_204_400,
+  HALLOWEEN_ENDS_AT: ids.halloween?.endsAt ?? 1_793_491_200,
+  HALLOWEEN_ROLE_ID: ids.roles.halloween ?? "",
   BINGO_MISSING_CARD_WARNING_HOURS: Math.min(
     168,
     Math.max(1, ids.bingo?.missingCardWarningHours ?? 48),

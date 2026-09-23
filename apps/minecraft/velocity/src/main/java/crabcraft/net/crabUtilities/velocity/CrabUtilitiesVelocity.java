@@ -22,6 +22,7 @@ import crabcraft.net.crabUtilities.velocity.advancements.AdvancementRegistry;
 import crabcraft.net.crabUtilities.velocity.awards.AwardSeeder;
 import crabcraft.net.crabUtilities.velocity.db.PlayerSettingsRepository;
 import crabcraft.net.crabUtilities.velocity.db.BingoRepository;
+import crabcraft.net.crabUtilities.velocity.db.HalloweenRepository;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
 import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
@@ -218,6 +219,7 @@ public class CrabUtilitiesVelocity {
                 config.getLoginStreakResetHourUtc(),
                 config.getLoginStreakRequiredPlaySeconds());
         new BingoRepository(dataSource, logger);
+        new HalloweenRepository(dataSource, logger);
         this.liteBansInfractionService = new LiteBansInfractionService(logger);
     }
 

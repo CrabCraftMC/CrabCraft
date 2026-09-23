@@ -7,6 +7,8 @@
     "./client": "./src/client.ts",
     "./queries/bot": "./src/queries/bot.ts",
     "./queries/bingo": "./src/queries/bingo.ts",
+    "./queries/halloween": "./src/queries/halloween.ts",
+    "./halloweenLogic": "./src/halloweenLogic.ts",
     "./queries/web": "./src/queries/web.ts",
     "./queries/auth": "./src/queries/auth.ts"
   },
