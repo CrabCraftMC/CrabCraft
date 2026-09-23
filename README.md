@@ -127,7 +127,7 @@ web and bot, while the shared packages keep identity and data contracts aligned.
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) 1.3.13 or newer
+- [Bun](https://bun.sh) 1.4.2 or newer
 - Java 25
 - Docker with Docker Compose
 - PostgreSQL 18 and Redis 8, or the supplied development containers
