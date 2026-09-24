@@ -620,30 +620,27 @@ export interface SeasonWithPlaytime extends Season {
   play_time_seconds: number;
 }
 
+const seasonSelection = {
+  id: seasonsTable.id,
+  name: seasonsTable.name,
+  start_date: seasonsTable.start_date,
+  end_date: seasonsTable.end_date,
+  is_current: seasonsTable.is_current,
+};
+
 export async function getSeasons(): Promise<Season[]> {
-  const rows = await db
-    .select()
+  return db
+    .select(seasonSelection)
     .from(seasonsTable)
     .orderBy(asc(seasonsTable.id));
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    is_current: row.is_current,
-  }));
 }
 
 export async function getPlayerSeasons(
   uuid: string,
 ): Promise<SeasonWithPlaytime[]> {
-  const rows = await db
+  return db
     .select({
-      id: seasonsTable.id,
-      name: seasonsTable.name,
-      start_date: seasonsTable.start_date,
-      end_date: seasonsTable.end_date,
-      is_current: seasonsTable.is_current,
+      ...seasonSelection,
       play_time_seconds: playerSeasonStats.play_time_seconds,
     })
     .from(seasonsTable)
@@ -653,31 +650,15 @@ export async function getPlayerSeasons(
     )
     .where(eq(playerSeasonStats.minecraft_uuid, uuid))
     .orderBy(asc(seasonsTable.id));
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    is_current: row.is_current,
-    play_time_seconds: row.play_time_seconds,
-  }));
 }
 
 export async function getCurrentSeason(): Promise<Season | null> {
-  const rows = await db
-    .select()
+  const [row] = await db
+    .select(seasonSelection)
     .from(seasonsTable)
     .where(eq(seasonsTable.is_current, true))
     .limit(1);
-  if (rows.length === 0) return null;
-  const row = rows[0];
-  return {
-    id: row.id,
-    name: row.name,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    is_current: true,
-  };
+  return row ?? null;
 }
 
 export async function getHomepageStats(): Promise<{
@@ -930,15 +911,8 @@ export async function getJoinedSeason(
   return rows[0].season;
 }
 
-export async function getUserApplications(
-  discordId: string,
-): Promise<Application[]> {
-  const rows = await db
-    .select()
-    .from(applications)
-    .where(eq(applications.discord_id, discordId))
-    .orderBy(desc(applications.applied_at));
-  return rows.map((row) => ({
+function applicationFromRow(row: typeof applications.$inferSelect): Application {
+  return {
     discord_id: row.discord_id,
     discord_username: row.discord_username,
     minecraft_username: row.minecraft_username,
@@ -955,7 +929,18 @@ export async function getUserApplications(
     applied_at: row.applied_at,
     resolved_at: row.resolved_at ?? null,
     resolved_by_discord_id: row.resolved_by_discord_id ?? null,
-  }));
+  };
+}
+
+export async function getUserApplications(
+  discordId: string,
+): Promise<Application[]> {
+  const rows = await db
+    .select()
+    .from(applications)
+    .where(eq(applications.discord_id, discordId))
+    .orderBy(desc(applications.applied_at));
+  return rows.map(applicationFromRow);
 }
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
@@ -1039,24 +1024,7 @@ export async function getOverviewStats(): Promise<{
     playerCount: Number(playerRows[0]?.count ?? 0),
     applicationsByStatus,
     currentSeason,
-    recentApplications: recentApps.map((row) => ({
-      discord_id: row.discord_id,
-      discord_username: row.discord_username,
-      minecraft_username: row.minecraft_username,
-      minecraft_uuid: row.minecraft_uuid ?? "",
-      age: row.age,
-      age_met: row.age_met,
-      policy_agreed: row.policy_agreed,
-      status: row.status as "pending" | "accepted" | "denied",
-      join_reason: row.join_reason ?? "",
-      about_you: row.about_you ?? "",
-      referral_source: row.referral_source ?? "",
-      denial_reason: row.denial_reason ?? null,
-      season: row.season ?? "",
-      applied_at: row.applied_at,
-      resolved_at: row.resolved_at ?? null,
-      resolved_by_discord_id: row.resolved_by_discord_id ?? null,
-    })),
+    recentApplications: recentApps.map(applicationFromRow),
   };
 }
 
@@ -1081,24 +1049,7 @@ export async function getAllApplications(filters?: {
     ? await query.where(and(...conditions))
     : await query;
 
-  return rows.map((row) => ({
-    discord_id: row.discord_id,
-    discord_username: row.discord_username,
-    minecraft_username: row.minecraft_username,
-    minecraft_uuid: row.minecraft_uuid ?? "",
-    age: row.age,
-    age_met: row.age_met,
-    policy_agreed: row.policy_agreed,
-    status: row.status as "pending" | "accepted" | "denied",
-    join_reason: row.join_reason ?? "",
-    about_you: row.about_you ?? "",
-    referral_source: row.referral_source ?? "",
-    denial_reason: row.denial_reason ?? null,
-    season: row.season ?? "",
-    applied_at: row.applied_at,
-    resolved_at: row.resolved_at ?? null,
-    resolved_by_discord_id: row.resolved_by_discord_id ?? null,
-  }));
+  return rows.map(applicationFromRow);
 }
 
 export async function createSeason(data: {
@@ -1321,6 +1272,34 @@ export async function getAwardsSummary(
   }));
 }
 
+const eligibleAwardPlayer = sql`
+  EXISTS (
+    SELECT 1 FROM players eligible_player
+    WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
+      AND eligible_player.is_discord_member = true
+      AND eligible_player.awards_excluded = false
+      AND eligible_player.last_mc_login_at >=
+        EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
+  )
+`;
+
+function crownScoresForSeason(season: string) {
+  return sql`
+    SELECT
+      minecraft_uuid,
+      COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
+      COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
+      COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
+      (COUNT(*) FILTER (WHERE medal = 1) * 5
+       + COUNT(*) FILTER (WHERE medal = 2) * 3
+       + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
+    FROM player_award_scores
+    WHERE season = ${season}
+      AND ${eligibleAwardPlayer}
+    GROUP BY minecraft_uuid
+  `;
+}
+
 /**
  * Hall of Fame ranking (crown score). Serves /leaderboard.
  *
@@ -1343,25 +1322,7 @@ export async function getCrownLeaderboard(
         c.bronze,
         c.crown_score
       FROM (
-        SELECT
-          minecraft_uuid,
-          COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
-          COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
-          COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-          (COUNT(*) FILTER (WHERE medal = 1) * 5
-           + COUNT(*) FILTER (WHERE medal = 2) * 3
-           + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
-        FROM player_award_scores
-        WHERE season = ${season}
-          AND EXISTS (
-            SELECT 1 FROM players eligible_player
-            WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
-              AND eligible_player.is_discord_member = true
-              AND eligible_player.awards_excluded = false
-              AND eligible_player.last_mc_login_at >=
-                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
-          )
-        GROUP BY minecraft_uuid
+        ${crownScoresForSeason(season)}
       ) c
       LEFT JOIN players u ON u.minecraft_uuid = c.minecraft_uuid
       WHERE c.crown_score > 0
@@ -1409,14 +1370,7 @@ export async function getPlayerAwardHoldings(
         FROM player_award_scores
         WHERE season = ${season}
           AND score > 0
-          AND EXISTS (
-            SELECT 1 FROM players eligible_player
-            WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
-              AND eligible_player.is_discord_member = true
-              AND eligible_player.awards_excluded = false
-              AND eligible_player.last_mc_login_at >=
-                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
-          )
+          AND ${eligibleAwardPlayer}
       ) ranked
       WHERE minecraft_uuid = ${uuid} AND medal > 0
       ORDER BY medal ASC, score DESC
@@ -1451,25 +1405,7 @@ export async function getPlayerCrownScore(
   const rows = await db.execute(
     sql`
       WITH crown AS (
-        SELECT
-          minecraft_uuid,
-          COUNT(*) FILTER (WHERE medal = 1)::int AS gold,
-          COUNT(*) FILTER (WHERE medal = 2)::int AS silver,
-          COUNT(*) FILTER (WHERE medal = 3)::int AS bronze,
-          (COUNT(*) FILTER (WHERE medal = 1) * 5
-           + COUNT(*) FILTER (WHERE medal = 2) * 3
-           + COUNT(*) FILTER (WHERE medal = 3))::int AS crown_score
-        FROM player_award_scores
-        WHERE season = ${season}
-          AND EXISTS (
-            SELECT 1 FROM players eligible_player
-            WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
-              AND eligible_player.is_discord_member = true
-              AND eligible_player.awards_excluded = false
-              AND eligible_player.last_mc_login_at >=
-                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
-          )
-        GROUP BY minecraft_uuid
+        ${crownScoresForSeason(season)}
       ),
       ranked AS (
         SELECT
@@ -1529,14 +1465,7 @@ export async function getPlayerAwardScores(
         FROM player_award_scores
         WHERE season = ${season}
           AND score > 0
-          AND EXISTS (
-            SELECT 1 FROM players eligible_player
-            WHERE eligible_player.minecraft_uuid = player_award_scores.minecraft_uuid
-              AND eligible_player.is_discord_member = true
-              AND eligible_player.awards_excluded = false
-              AND eligible_player.last_mc_login_at >=
-                EXTRACT(EPOCH FROM NOW())::INTEGER - 2592000
-          )
+          AND ${eligibleAwardPlayer}
       ) ranked
       WHERE minecraft_uuid = ${uuid}
     `,

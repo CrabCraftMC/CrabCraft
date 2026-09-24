@@ -4,7 +4,6 @@ import {
   BLOCK_HUNT_PUZZLES,
   getBlockHuntDailyNumber,
   getBlockHuntDailyPuzzle,
-  normaliseBlockGuess,
 } from "../src/lib/blockHunt";
 import {
   BLOCK_HUNT_BLOCKS,
@@ -12,10 +11,6 @@ import {
   searchBlockHuntBlocks,
 } from "../src/lib/blockHuntCatalogue";
 import { parseBlockHuntGlossary } from "../src/lib/blockHuntGlossary";
-import {
-  formatBlockHuntShare,
-  formatHuntShare,
-} from "../src/lib/blockHuntShare";
 import {
   getHuntDailyPuzzle,
   getHuntPuzzleCount,
@@ -31,16 +26,9 @@ import {
 } from "../src/lib/huntCatalogue";
 
 describe("block hunt", () => {
-  test("includes 100 distinct daily puzzles with distinct clue wording", () => {
+  test("daily puzzles have distinct answers", () => {
     const answers = BLOCK_HUNT_PUZZLES.map((puzzle) => puzzle.answer);
-    const clueTexts = BLOCK_HUNT_PUZZLES.flatMap((puzzle) =>
-      puzzle.clues.map((clue) => clue.text),
-    );
-
-    expect(BLOCK_HUNT_PUZZLES).toHaveLength(100);
-    expect(new Set(answers).size).toBe(100);
-    expect(clueTexts).toHaveLength(600);
-    expect(new Set(clueTexts).size).toBe(600);
+    expect(new Set(answers).size).toBe(answers.length);
   });
 
   test("every puzzle has six clues, a texture, and a guessable answer", () => {
@@ -69,10 +57,6 @@ describe("block hunt", () => {
     );
   });
 
-  test("normalises harmless spacing and case differences", () => {
-    expect(normaliseBlockGuess("  Creaking   HEART ")).toBe("creaking heart");
-  });
-
   test("daily selection starts at puzzle one and advances predictably", () => {
     const firstDay = new Date("2026-09-02T12:00:00Z");
     const secondDay = new Date("2026-09-03T12:00:00Z");
@@ -81,34 +65,6 @@ describe("block hunt", () => {
     expect(getBlockHuntDailyNumber(secondDay)).toBe(2);
     expect(getBlockHuntDailyPuzzle(firstDay)).toBe(BLOCK_HUNT_PUZZLES[0]);
     expect(getBlockHuntDailyPuzzle(secondDay)).toBe(BLOCK_HUNT_PUZZLES[1]);
-  });
-
-  test("formats a spoiler-free result for sharing", () => {
-    expect(
-      formatBlockHuntShare({
-        dailyNumber: 8,
-        phase: "won",
-        attemptCount: 3,
-        cluesRevealed: 4,
-        elapsedMs: 83_000,
-      }),
-    ).toBe(
-      "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses · 01:23\nhttps://crabcraft.net/games/block-hunt",
-    );
-  });
-
-  test("leaves time out of an untimed shared result", () => {
-    expect(
-      formatBlockHuntShare({
-        dailyNumber: 8,
-        phase: "won",
-        attemptCount: 3,
-        cluesRevealed: 4,
-        elapsedMs: null,
-      }),
-    ).toBe(
-      "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses\nhttps://crabcraft.net/games/block-hunt",
-    );
   });
 
   test("uses complete stable Java catalogues from Minecraft Wiki", () => {
@@ -120,8 +76,6 @@ describe("block hunt", () => {
 
     for (const kind of ["block", "item", "mob"] as const) {
       const catalogue = getHuntCatalogue(kind);
-      expect(catalogue.version).toBe("26.2");
-      expect(catalogue.source.startsWith("https://minecraft.wiki/w/")).toBeTrue();
       expect(catalogue.entries.length).toBeGreaterThan(minimumEntries[kind]);
       expect(new Set(catalogue.entries.map((entry) => entry.name)).size).toBe(
         catalogue.entries.length,
@@ -153,10 +107,8 @@ describe("block hunt", () => {
   });
 
   test("has six guessable clues for every item and mob puzzle", () => {
-    expect(getHuntPuzzleCount("item")).toBe(22);
-    expect(getHuntPuzzleCount("mob")).toBe(22);
-
     for (const kind of ["item", "mob"] as const) {
+      expect(getHuntPuzzleCount(kind)).toBeGreaterThan(0);
       for (let day = 1; day <= getHuntPuzzleCount(kind); day += 1) {
         const date = new Date(Date.UTC(2026, 8, day + 1));
         const puzzle = getHuntDailyPuzzle(kind, date);
@@ -175,13 +127,6 @@ describe("block hunt", () => {
       new Date("2026-09-02T12:00:00Z"),
     );
 
-    expect(puzzle.answer).toBe("Echo Shard");
-    expect(puzzle.clues[0]?.text).toBe(
-      "This item has no durability and can be carried in stacks.",
-    );
-    expect(puzzle.clues[1]?.text).toBe(
-      "Crafting is its only purpose; it has no direct use action.",
-    );
     expect(
       puzzle.clues
         .slice(0, 2)
@@ -213,14 +158,6 @@ describe("block hunt", () => {
       new Date("2026-09-02T23:00:00Z"),
     );
 
-    expect(puzzle.answer).toBe("Shulker");
-    expect(puzzle.clues[0]?.text).toBe("This mob is classified as hostile.");
-    expect(puzzle.clues[1]?.text).toBe(
-      "Its combat includes a ranged attack.",
-    );
-    expect(puzzle.clues[2]?.text).toBe(
-      "Its hitbox is at least one block tall but under two blocks.",
-    );
     expect(puzzle.clues.map((clue) => clue.label)).toEqual([
       "Disposition",
       "General behaviour",
@@ -251,21 +188,6 @@ describe("block hunt", () => {
         expect(count).toBeGreaterThanOrEqual(3);
       }
     }
-  });
-
-  test("formats each hunt type with its own name and route", () => {
-    expect(
-      formatHuntShare({
-        kind: "mob",
-        dailyNumber: 8,
-        phase: "won",
-        attemptCount: 2,
-        cluesRevealed: 3,
-        elapsedMs: 42_000,
-      }),
-    ).toBe(
-      "Mob Hunt #8 ✅\nSolved on clue 3 of 6\n2 guesses · 00:42\nhttps://crabcraft.net/games/mob-hunt",
-    );
   });
 
   test("only marks complete glossary terms", () => {

@@ -361,16 +361,13 @@ export async function prepareGalleryStorageWrites(
   });
 }
 
+/** Callers must hold storage-key locks for every queued image. */
 async function queueGalleryStorageDeletions(
   tx: GalleryTransaction,
   images: Array<{ storageKey: string; publicUrl: string }>,
   queuedAt: number,
 ): Promise<void> {
   if (images.length === 0) return;
-  await lockGalleryStorageKeys(
-    tx,
-    images.map((image) => image.storageKey),
-  );
   const deleteAfter = queuedAt + GALLERY_STORAGE_DELETE_GRACE_SECONDS;
   await tx
     .insert(galleryStorageDeletions)
@@ -395,10 +392,10 @@ async function queueGalleryStorageDeletions(
     });
 }
 
-async function queueAndRemoveGalleryImages(
+async function markGalleryPostsDeletedInTransaction(
   tx: GalleryTransaction,
   threadIds: string[],
-  queuedAt: number,
+  deletedAt: number,
 ): Promise<void> {
   if (threadIds.length === 0) return;
   const images = await tx
@@ -408,10 +405,22 @@ async function queueAndRemoveGalleryImages(
     })
     .from(galleryImages)
     .where(inArray(galleryImages.post_id, threadIds));
-  await queueGalleryStorageDeletions(tx, images, queuedAt);
+  await lockGalleryStorageKeys(
+    tx,
+    images.map((image) => image.storageKey),
+  );
+  await queueGalleryStorageDeletions(tx, images, deletedAt);
   await tx
     .delete(galleryImages)
     .where(inArray(galleryImages.post_id, threadIds));
+  await tx
+    .update(galleryPosts)
+    .set({
+      published: false,
+      deleted_at: deletedAt,
+      last_synced_at: deletedAt,
+    })
+    .where(inArray(galleryPosts.thread_id, threadIds));
 }
 
 /** Allocate one total-order revision before fetching any Discord state. */
@@ -741,15 +750,7 @@ export async function markGalleryPostDeleted(
       revision,
     );
     if (accepted.length === 0) return false;
-    await queueAndRemoveGalleryImages(tx, accepted, deletedAt);
-    await tx
-      .update(galleryPosts)
-      .set({
-        published: false,
-        deleted_at: deletedAt,
-        last_synced_at: deletedAt,
-      })
-      .where(eq(galleryPosts.thread_id, threadId));
+    await markGalleryPostsDeletedInTransaction(tx, accepted, deletedAt);
     return true;
   });
 }
@@ -787,17 +788,7 @@ export async function markGalleryChannelDeleted(
       posts.map((post) => post.threadId),
       revision,
     );
-    await queueAndRemoveGalleryImages(tx, accepted, deletedAt);
-    if (accepted.length > 0) {
-      await tx
-        .update(galleryPosts)
-        .set({
-          published: false,
-          deleted_at: deletedAt,
-          last_synced_at: deletedAt,
-        })
-        .where(inArray(galleryPosts.thread_id, accepted));
-    }
+    await markGalleryPostsDeletedInTransaction(tx, accepted, deletedAt);
     return true;
   });
 }
@@ -837,17 +828,7 @@ export async function markGalleryPostsDeletedExcept(
       posts.map((post) => post.threadId),
       revision,
     );
-    await queueAndRemoveGalleryImages(tx, accepted, deletedAt);
-    if (accepted.length > 0) {
-      await tx
-        .update(galleryPosts)
-        .set({
-          published: false,
-          deleted_at: deletedAt,
-          last_synced_at: deletedAt,
-        })
-        .where(inArray(galleryPosts.thread_id, accepted));
-    }
+    await markGalleryPostsDeletedInTransaction(tx, accepted, deletedAt);
     return accepted.length;
   });
 }

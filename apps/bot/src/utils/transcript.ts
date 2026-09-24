@@ -10,6 +10,11 @@ import logger from "./logger.js";
 
 const DEFAULT_MAX_MESSAGES = 2_000;
 const MAX_MESSAGES = 5_000;
+const timestampFormatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "short", timeStyle: "short" });
+
+function formatTimestamp(date: Date): string {
+  return Number.isNaN(date.getTime()) ? "Invalid Date" : timestampFormatter.format(date);
+}
 
 // ── Public API ────────────────────────────────────────────────────────
 
@@ -70,7 +75,7 @@ function renderMessage(msg: Message): string {
 
   // Author header (always visible, independent of Skyra)
   const displayName = author.displayName ?? author.username;
-  const time = msg.createdAt.toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
+  const time = formatTimestamp(msg.createdAt);
   const botBadge = author.bot ? ' <span class="msg-bot-badge">BOT</span>' : "";
   let inner = `<div class="msg-header">${avatar ? `<img class="msg-avatar" src="${esc(avatar)}" alt="" />` : ""}<span class="msg-author">${esc(displayName)}</span>${botBadge}<span class="msg-time">${esc(time)}</span></div>`;
 
@@ -256,7 +261,7 @@ function renderEmbed(embed: APIEmbed): string {
     inner = `<div style="display:flex;justify-content:space-between"><div>${inner}</div><img src="${esc(thumbnailUrl)}" style="max-width:80px;max-height:80px;border-radius:4px;margin-left:16px" /></div>`;
   }
   if (embed.footer?.text) {
-    inner += `<div class="embed-footer">${esc(embed.footer.text)}${embed.timestamp ? ` • ${new Date(embed.timestamp).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}` : ""}</div>`;
+    inner += `<div class="embed-footer">${esc(embed.footer.text)}${embed.timestamp ? ` • ${formatTimestamp(new Date(embed.timestamp))}` : ""}</div>`;
   }
 
   return `<div class="embed" style="${color}">${inner}</div>`;
