@@ -155,8 +155,8 @@ source also invalidates all of its optimized variants, according to
 ## 3. Deploy the database schema
 
 Back up the production database first. Before using Drizzle, perform the
-repository's required parity audit: compare every Java `CREATE TABLE` under
-`apps/minecraft/velocity/src/main/java/crabcraft/net/crabUtilities/velocity/db/`
+repository's required parity audit: compare every Kotlin `CREATE TABLE` under
+`apps/minecraft/velocity/src/main/kotlin/crabcraft/net/crabUtilities/velocity/db/`
 with `packages/db/src/schema.ts`, and resolve any drift. In particular, confirm
 that the proposed change only adds the Gallery tables and intended indexes and
 constraints.

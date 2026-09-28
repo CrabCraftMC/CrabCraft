@@ -22,8 +22,9 @@ Thumbs.db
 .idea/
 *.iml
 
-# Gradle
+# Gradle / Kotlin
 .gradle/
+.kotlin/
 apps/minecraft/build/
 apps/minecraft/spigot/build/
 apps/minecraft/velocity/build/

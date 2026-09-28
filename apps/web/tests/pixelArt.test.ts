@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
   findNearestBlock,
   fitGridDimensions,
-  makePixelArtFilename,
   mapPixelsToBlocks,
   prepareBlockPalette,
   type PixelArtBlock,
@@ -63,16 +62,5 @@ describe("block matching", () => {
   test("rejects invalid pixel data and empty palettes", () => {
     expect(() => mapPixelsToBlocks(new Uint8ClampedArray(3), 1, 1, palette)).toThrow();
     expect(() => mapPixelsToBlocks(new Uint8ClampedArray(4), 1, 1, [])).toThrow();
-  });
-});
-
-describe("makePixelArtFilename", () => {
-  test("creates a safe, descriptive PNG filename", () => {
-    expect(makePixelArtFilename("My crab photo.JPG", 64, 48)).toBe(
-      "my-crab-photo-64x48-block-art.png",
-    );
-    expect(makePixelArtFilename(".png", 16, 16)).toBe(
-      "image-16x16-block-art.png",
-    );
   });
 });

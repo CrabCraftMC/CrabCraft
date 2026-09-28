@@ -572,15 +572,14 @@ export default function EnchantmentPlanner() {
   useEffect(() => {
     const saved = loadSaved();
     if (saved) {
-      if (ITEMS.some((item) => item.key === saved.itemKey)) {
-        setItemKey(saved.itemKey);
-      }
+      const savedItem = ITEMS.find((item) => item.key === saved.itemKey) ?? ITEMS[0];
+      setItemKey(savedItem.key);
       if (saved.selected && typeof saved.selected === "object") {
         setSelected(
           Object.fromEntries(
             Object.entries(saved.selected).filter(
               ([id, level]) =>
-                ENCHANTMENTS[id] && typeof level === "number"
+                savedItem.enchantments.includes(id) && typeof level === "number"
             )
           ) as Record<string, number>
         );
@@ -593,16 +592,6 @@ export default function EnchantmentPlanner() {
     () => ITEMS.find((entry) => entry.key === itemKey) ?? ITEMS[0],
     [itemKey]
   );
-
-  useEffect(() => {
-    setSelected((prev) => {
-      const allowed = new Set(item.enchantments);
-      const next = Object.fromEntries(
-        Object.entries(prev).filter(([id]) => allowed.has(id))
-      ) as Record<string, number>;
-      return Object.keys(next).length === Object.keys(prev).length ? prev : next;
-    });
-  }, [item]);
 
   useEffect(() => {
     if (!hydrated) return;

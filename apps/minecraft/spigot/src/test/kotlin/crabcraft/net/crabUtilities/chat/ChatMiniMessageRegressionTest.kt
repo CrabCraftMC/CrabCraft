@@ -1,0 +1,72 @@
+package crabcraft.net.crabUtilities.chat
+
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.Style
+import net.kyori.adventure.text.format.TextDecoration
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+
+object ChatMiniMessageRegressionTest {
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val allowed =
+            SafeChatMiniMessage.deserialize(
+                "<red><bold>Bold</bold> <italic>italic</italic> " +
+                    "<underlined>underlined</underlined> <strikethrough>struck</strikethrough></red>"
+            )
+        check(plain(allowed) == "Bold italic underlined struck", "allowed visual tags changed the message text")
+        check(anyStyle(allowed) { it.color() == NamedTextColor.RED }, "named colour tag was not applied")
+        check(
+            anyStyle(allowed) { it.decoration(TextDecoration.BOLD) == TextDecoration.State.TRUE },
+            "bold tag was not applied",
+        )
+        check(
+            anyStyle(allowed) { it.decoration(TextDecoration.ITALIC) == TextDecoration.State.TRUE },
+            "italic tag was not applied",
+        )
+        check(
+            anyStyle(allowed) { it.decoration(TextDecoration.UNDERLINED) == TextDecoration.State.TRUE },
+            "underline tag was not applied",
+        )
+        check(
+            anyStyle(allowed) { it.decoration(TextDecoration.STRIKETHROUGH) == TextDecoration.State.TRUE },
+            "strikethrough tag was not applied",
+        )
+        val hex = SafeChatMiniMessage.deserialize("<#12abef>hex</#12abef>")
+        check(anyStyle(hex) { it.color()?.value() == 0x12ABEF }, "hex colour tag was not applied")
+        val rejected =
+            SafeChatMiniMessage.deserialize(
+                "<click:run_command:'/op'><hover:show_text:'secret'><insertion:test>" +
+                    "<font:minecraft:uniform><obfuscated><rainbow>unsafe</rainbow></obfuscated>" +
+                    "</font></insertion></hover></click><newline>tail"
+            )
+        check(!hasInteractiveStyle(rejected), "interactive MiniMessage tag was applied")
+        check(
+            !anyStyle(rejected) { it.decoration(TextDecoration.OBFUSCATED) == TextDecoration.State.TRUE },
+            "obfuscated formatting was applied",
+        )
+        check(!plain(rejected).contains("\n"), "newline tag was applied")
+        check(
+            plain(rejected).contains("unsafe") && plain(rejected).contains("tail"),
+            "rejected tags swallowed player text",
+        )
+        val malformed = SafeChatMiniMessage.deserialize("<color:not-a-colour>still sent</color>")
+        check(plain(malformed).contains("still sent"), "malformed colour tag cancelled the message")
+    }
+
+    private fun hasInteractiveStyle(component: Component): Boolean =
+        anyStyle(component) {
+            it.clickEvent() != null || it.hoverEvent() != null || it.insertion() != null || it.font() != null
+        }
+
+    private fun anyStyle(component: Component, predicate: (Style) -> Boolean): Boolean {
+        if (predicate(component.style())) return true
+        return component.children().any { anyStyle(it, predicate) }
+    }
+
+    private fun plain(component: Component): String = PlainTextComponentSerializer.plainText().serialize(component)
+
+    private fun check(condition: Boolean, message: String) {
+        if (!condition) throw AssertionError(message)
+    }
+}

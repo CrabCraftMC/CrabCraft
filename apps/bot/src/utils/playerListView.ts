@@ -350,39 +350,27 @@ async function getFontContext(): Promise<FontContext> {
 }
 
 function scanGlyphWidth(source: RawImage, sx: number, sy: number, width: number, height: number) {
-  let last = -1;
-  for (let x = 0; x < width; x++) {
+  for (let x = width - 1; x >= 0; x--) {
     for (let y = 0; y < height; y++) {
       const index = ((sy + y) * source.width + sx + x) * 4 + 3;
-      if (source.data[index] > 0) {
-        last = x;
-        break;
-      }
+      if (source.data[index] > 0) return x + 1;
     }
   }
-  return last + 1;
+  return 0;
 }
 
 function createImage(width: number, height: number, color: Rgba): RawImage {
-  const data = Buffer.alloc(width * height * 4);
-  for (let i = 0; i < data.length; i += 4) {
-    data[i] = color.r;
-    data[i + 1] = color.g;
-    data[i + 2] = color.b;
-    data[i + 3] = color.a;
-  }
+  const data = Buffer.alloc(width * height * 4, Buffer.from([color.r, color.g, color.b, color.a]));
   return { data, width, height };
 }
 
 function drawRect(dest: RawImage, x: number, y: number, width: number, height: number, color: Rgba) {
-  for (let iy = 0; iy < height; iy++) {
-    const py = y + iy;
-    if (py < 0 || py >= dest.height) continue;
-    for (let ix = 0; ix < width; ix++) {
-      const px = x + ix;
-      if (px < 0 || px >= dest.width) continue;
-      setPixel(dest, px, py, color);
-    }
+  const left = Math.max(0, x);
+  const right = Math.min(dest.width, x + width);
+  if (left >= right) return;
+  const pixel = Buffer.from([color.r, color.g, color.b, color.a]);
+  for (let py = Math.max(0, y); py < Math.min(dest.height, y + height); py++) {
+    dest.data.fill(pixel, (py * dest.width + left) * 4, (py * dest.width + right) * 4);
   }
 }
 
@@ -393,7 +381,7 @@ function drawText(
   x: number,
   y: number,
 ) {
-  drawTextPass(dest, font, shadowSegments(segments), x + 2, y + 2);
+  drawTextPass(dest, font, segments, x + 2, y + 2, true);
   drawTextPass(dest, font, segments, x, y);
 }
 
@@ -403,11 +391,17 @@ function drawTextPass(
   segments: TextSegment[],
   x: number,
   y: number,
+  shadow = false,
 ) {
   let cursor = x;
   for (const segment of segments) {
     const startX = cursor;
     const color = parseHex(segment.color);
+    if (shadow) {
+      color.r = Math.floor(color.r * CHAT_COLOR_BACKGROUND_FACTOR);
+      color.g = Math.floor(color.g * CHAT_COLOR_BACKGROUND_FACTOR);
+      color.b = Math.floor(color.b * CHAT_COLOR_BACKGROUND_FACTOR);
+    }
     for (let i = 0; i < segment.text.length;) {
       const code = segment.text.codePointAt(i) ?? 32;
       const char = String.fromCodePoint(code);
@@ -612,7 +606,7 @@ function parseTextIntoSegments(
       continue;
     }
 
-    if (raw.slice(i).toLowerCase().startsWith("<reset>")) {
+    if (raw.slice(i, i + 7).toLowerCase() === "<reset>") {
       style.color = "#ffffff";
       style.bold = false;
       style.underline = false;
@@ -622,7 +616,7 @@ function parseTextIntoSegments(
       continue;
     }
 
-    if (raw.slice(i).toLowerCase().startsWith("</gradient>")) {
+    if (raw.slice(i, i + 11).toLowerCase() === "</gradient>") {
       i += "</gradient>".length;
       continue;
     }
@@ -644,8 +638,7 @@ function parseTextIntoSegments(
 }
 
 function readGradientTag(raw: string, index: number) {
-  const tagStart = raw.slice(index).toLowerCase();
-  if (!tagStart.startsWith("<gradient:")) return null;
+  if (raw.slice(index, index + 10).toLowerCase() !== "<gradient:") return null;
 
   const tagEnd = raw.indexOf(">", index);
   if (tagEnd < 0) return null;
@@ -677,7 +670,7 @@ function readGradientTag(raw: string, index: number) {
 }
 
 function readColorTag(raw: string, index: number) {
-  const match = raw.slice(index).match(/^<#([0-9a-fA-F]{6})>/);
+  const match = raw.slice(index, index + 9).match(/^<#([0-9a-fA-F]{6})>/);
   if (!match) return null;
   return {
     color: normalizeHex(match[1]) ?? "#ffffff",
@@ -785,12 +778,12 @@ function countRenderableCharacters(raw: string) {
       continue;
     }
 
-    if (raw.slice(i).toLowerCase().startsWith("<reset>")) {
+    if (raw.slice(i, i + 7).toLowerCase() === "<reset>") {
       i += "<reset>".length;
       continue;
     }
 
-    if (raw.slice(i).toLowerCase().startsWith("</gradient>")) {
+    if (raw.slice(i, i + 11).toLowerCase() === "</gradient>") {
       i += "</gradient>".length;
       continue;
     }
@@ -824,10 +817,6 @@ function legacyFormatEnd(raw: string, index: number) {
   return code && (LEGACY_COLORS[code] || code === "l" || code === "m" || code === "n" || code === "o" || code === "r")
     ? index + 2
     : index;
-}
-
-function shadowSegments(segments: TextSegment[]): TextSegment[] {
-  return segments.map((segment) => ({ ...segment, color: shadowColor(segment.color) }));
 }
 
 function measureText(segments: TextSegment[], font: FontContext): number {
@@ -938,22 +927,6 @@ function rgbaToHex(color: Rgba) {
   return `#${[color.r, color.g, color.b]
     .map((part) => part.toString(16).padStart(2, "0"))
     .join("")}`;
-}
-
-function shadowColor(color: string): string {
-  const value = parseHex(color);
-  const red = Math.floor(value.r * CHAT_COLOR_BACKGROUND_FACTOR);
-  const green = Math.floor(value.g * CHAT_COLOR_BACKGROUND_FACTOR);
-  const blue = Math.floor(value.b * CHAT_COLOR_BACKGROUND_FACTOR);
-  return `#${[red, green, blue].map((part) => part.toString(16).padStart(2, "0")).join("")}`;
-}
-
-function setPixel(dest: RawImage, x: number, y: number, color: Rgba) {
-  const index = (y * dest.width + x) * 4;
-  dest.data[index] = color.r;
-  dest.data[index + 1] = color.g;
-  dest.data[index + 2] = color.b;
-  dest.data[index + 3] = color.a;
 }
 
 function blendPixel(dest: RawImage, x: number, y: number, source: Rgba) {

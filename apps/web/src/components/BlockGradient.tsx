@@ -16,7 +16,7 @@ import {
 } from "@/lib/colors";
 import { RotateCcw, ArrowLeftRight, ChevronDown, Check, Shuffle, Link2, Maximize2, Minimize2 } from "lucide-react";
 import blocks from "@/data/blocks.json";
-import { findClosestBlockAtRank } from "@/lib/blockGradient";
+import { findClosestBlocks } from "@/lib/blockGradient";
 import { createBlockGradientShareAction } from "@/app/tools/block-gradient/actions";
 import type { BlockGradientShareState } from "@/lib/blockGradientShare";
 import { trackUmamiEvent } from "@/lib/umami";
@@ -359,10 +359,6 @@ export default function BlockGradient({
         : "Blocks must match every selected preset.";
 
   const presetBlocks = useMemo(() => {
-    return blocks.filter((block) => isBlockAllowedForPresets(block, blockPresets));
-  }, [blockPresets]);
-
-  const presetBlocksWithLab = useMemo(() => {
     return blocksWithLab.filter((block) => isBlockAllowedForPresets(block, blockPresets));
   }, [blocksWithLab, blockPresets]);
 
@@ -390,10 +386,10 @@ export default function BlockGradient({
   // Available blocks for gradient matching (excluding preset-hidden, user-excluded + glazed terracotta)
   const availableBlocks = useMemo(() => {
     const excluded = new Set(excludedIds);
-    return presetBlocksWithLab.filter(
+    return presetBlocks.filter(
       (b) => !excluded.has(b.id) && !b.id.endsWith("_glazed_terracotta")
     );
-  }, [presetBlocksWithLab, excludedIds]);
+  }, [presetBlocks, excludedIds]);
 
   // Pre-compute start/end OkLAB values
   const startLab = useMemo(
@@ -405,47 +401,34 @@ export default function BlockGradient({
     [end.color]
   );
 
-  // Find closest block to an OkLAB color
-  const findClosest = useCallback(
-    (targetLab: [number, number, number], rank = 0): BlockWithLab => {
-      const fallbackBlock = blocksWithLab[0];
-      if (!fallbackBlock) {
-        throw new Error("No blocks are available for gradient matching");
-      }
-      const searchBlocks =
-        availableBlocks.length > 0
-          ? availableBlocks
-          : presetBlocksWithLab.length > 0
-            ? presetBlocksWithLab
-            : [fallbackBlock];
-      return findClosestBlockAtRank(targetLab, searchBlocks, rank);
-    },
-    [availableBlocks, presetBlocksWithLab, blocksWithLab]
-  );
-
-  // Discover all unique blocks along the gradient by oversampling. This is
-  // the expensive part (100 samples × nearest-match over the palette), and
-  // it is independent of the Blocks slider so drags never re-run it.
+  // Discover every alternative in one palette scan per sample. This expensive
+  // work is independent of the Blocks slider so drags never re-run it.
   const uniqueGradientOptions = useMemo(() => {
     const startBlock = start.blockId
-      ? presetBlocksWithLab.find((b) => b.id === start.blockId)
+      ? presetBlocks.find((b) => b.id === start.blockId)
       : null;
     const endBlock = end.blockId
-      ? presetBlocksWithLab.find((b) => b.id === end.blockId)
+      ? presetBlocks.find((b) => b.id === end.blockId)
       : null;
 
+    const searchBlocks = availableBlocks.length > 0
+      ? availableBlocks
+      : presetBlocks.length > 0 ? presetBlocks : blocksWithLab.slice(0, 1);
+    const OVERSAMPLE = 100;
+    const samples = Array.from({ length: OVERSAMPLE }, (_, i) =>
+      findClosestBlocks(
+        interpolateOklchValues(startLab, endLab, i / (OVERSAMPLE - 1)),
+        searchBlocks,
+        MAX_PALETTE_OPTIONS,
+      ),
+    );
     const options: BlockWithLab[][] = [];
     const signatures = new Set<string>();
 
     for (let rank = 0; rank < MAX_PALETTE_OPTIONS; rank++) {
-      // Oversample at high resolution to discover all unique blocks.
-      const OVERSAMPLE = 100;
-      const oversampled: BlockWithLab[] = [];
-      for (let i = 0; i < OVERSAMPLE; i++) {
-        const t = i / (OVERSAMPLE - 1);
-        const lab = interpolateOklchValues(startLab, endLab, t);
-        oversampled.push(findClosest(lab, rank));
-      }
+      const oversampled = samples.map((matches) =>
+        matches[Math.min(rank, matches.length - 1)],
+      );
 
       // Collapse repeated runs before preserving the chosen endpoints.
       const sampled = oversampled.filter(
@@ -477,7 +460,7 @@ export default function BlockGradient({
     }
 
     return options;
-  }, [startLab, endLab, findClosest, start.blockId, end.blockId, presetBlocksWithLab]);
+  }, [startLab, endLab, availableBlocks, blocksWithLab, start.blockId, end.blockId, presetBlocks]);
 
   // Select `steps` blocks evenly from every unique option, then discard any
   // options that become identical at the chosen display length.

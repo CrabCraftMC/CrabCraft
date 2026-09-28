@@ -162,7 +162,7 @@ jobs:
             exit 1
           fi
 
-      - name: Build JARs with Gradle
+      - name: Test and build JARs with Gradle
         run: |
           chmod +x apps/minecraft/gradlew
           cd apps/minecraft
@@ -172,7 +172,7 @@ jobs:
           elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             GRADLE_ARGS="-Pversion=0.0.0-SNAPSHOT.${GITHUB_SHA::7}"
           fi
-          ./gradlew build $GRADLE_ARGS
+          ./gradlew test build $GRADLE_ARGS
 
       - name: Generate SHA256SUMS.txt
         run: |

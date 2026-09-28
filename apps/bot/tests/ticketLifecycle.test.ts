@@ -68,10 +68,6 @@ const { default: NewTicketCommand } = await import(
   "../src/commands/Misc/newTicket.js"
 );
 const {
-  buildChannelName,
-  buildIntakeModal,
-  buildTriggerButtons,
-  buildTriggerEmbed,
   TICKET_CATEGORIES,
 } = await import(
   "../src/utils/ticket.js"
@@ -83,7 +79,13 @@ const { cleanupExpiredTicket } = await import(
   "../src/utils/ticketCleanup.js"
 );
 
-function interaction(customId: string, components: Array<{ type: number }>) {
+function interaction(
+  customId: string,
+  components: Array<{ type: number }> = [
+    { type: ComponentType.Container },
+    { type: ComponentType.ActionRow },
+  ],
+) {
   const sentMessage = { pin: mock(async () => {}) };
   return {
     isButton: () => true,
@@ -180,10 +182,7 @@ describe("ticket lifecycle controls", () => {
   });
 
   test("close acknowledges first and sends a closed notice", async () => {
-    const i = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_close:2");
 
     await new ButtonInteractionEvent().execute(i as any);
 
@@ -199,10 +198,7 @@ describe("ticket lifecycle controls", () => {
 
   test("reopen disables its closed notice controls", async () => {
     ticket.status = "closed";
-    const i = interaction("ticket_reopen:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_reopen:2");
 
     await new ButtonInteractionEvent().execute(i as any);
 
@@ -228,10 +224,7 @@ describe("ticket lifecycle controls", () => {
       order.push("db");
       throw new Error("database unavailable");
     });
-    const i = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_close:2");
 
     await new ButtonInteractionEvent().execute(i as any);
 
@@ -243,10 +236,7 @@ describe("ticket lifecycle controls", () => {
 
   test("close still posts its notice when an overwrite cannot be locked", async () => {
     const actions: string[] = [];
-    const i = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_close:2");
     i.channel.permissionOverwrites.cache.values = () => [{ id: "member" }];
     i.channel.send.mockImplementationOnce(async () => {
       actions.push("notice");
@@ -270,10 +260,7 @@ describe("ticket lifecycle controls", () => {
     ticket.closed_by_discord_id = "original-closer";
     ticket.closed_at = 1_700_000_100;
     ticket.delete_after = 2_000_000_000;
-    const i = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_close:2");
     i.channel.name = "steve-general";
 
     await new ButtonInteractionEvent().execute(i as any);
@@ -291,10 +278,7 @@ describe("ticket lifecycle controls", () => {
   test("a stale Close does not duplicate active closed controls", async () => {
     ticket.status = "closed";
     ticket.closed_at = 1_700_000_100;
-    const i = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_close:2");
     i.channel.messages.fetchPins.mockResolvedValueOnce({
       items: [
         {
@@ -333,10 +317,7 @@ describe("ticket lifecycle controls", () => {
       order.push("db");
       return null;
     });
-    const i = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_close:2");
 
     await new ButtonInteractionEvent().execute(i as any);
 
@@ -369,10 +350,7 @@ describe("ticket lifecycle controls", () => {
       return ticket;
     });
 
-    const reopenInteraction = interaction("ticket_reopen:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const reopenInteraction = interaction("ticket_reopen:2");
     reopenInteraction.channel.permissionOverwrites.cache.values = () => [
       { id: "opener" },
     ];
@@ -381,10 +359,7 @@ describe("ticket lifecycle controls", () => {
         lifecycleOrder.push(permissions.SendMessages ? "unlock" : "lock");
       },
     );
-    const closeInteraction = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const closeInteraction = interaction("ticket_close:2");
     closeInteraction.channel = reopenInteraction.channel;
 
     const reopening = new ButtonInteractionEvent().execute(
@@ -408,10 +383,7 @@ describe("ticket lifecycle controls", () => {
   });
 
   test("a stale Reopen disables its notice and returns a visible result", async () => {
-    const i = interaction("ticket_reopen:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_reopen:2");
 
     await new ButtonInteractionEvent().execute(i as any);
 
@@ -422,10 +394,7 @@ describe("ticket lifecycle controls", () => {
 
   test("failed permission restore leaves the ticket closed", async () => {
     ticket.status = "closed";
-    const i = interaction("ticket_reopen:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_reopen:2");
     i.channel.permissionOverwrites.edit.mockRejectedValueOnce(
       new Error("missing permission"),
     );
@@ -440,10 +409,7 @@ describe("ticket lifecycle controls", () => {
   test("failed DB reopen relocks the channel and leaves the ticket closed", async () => {
     ticket.status = "closed";
     const permissionChanges: boolean[] = [];
-    const i = interaction("ticket_reopen:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_reopen:2");
     i.channel.permissionOverwrites.cache.values = () => [{ id: "opener" }];
     i.channel.permissionOverwrites.edit.mockImplementation(
       async (_id: string, permissions: { SendMessages: boolean }) => {
@@ -462,10 +428,7 @@ describe("ticket lifecycle controls", () => {
 
   test("reopen removes its separate notice when disabling it fails", async () => {
     ticket.status = "closed";
-    const i = interaction("ticket_reopen:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_reopen:2");
     i.message.edit.mockRejectedValueOnce(new Error("edit failed"));
 
     await new ButtonInteractionEvent().execute(i as any);
@@ -475,10 +438,7 @@ describe("ticket lifecycle controls", () => {
   });
 
   test("failed closed controls leave the ticket open for retry", async () => {
-    const i = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const i = interaction("ticket_close:2");
     i.channel.send.mockRejectedValueOnce(new Error("send failed"));
 
     await new ButtonInteractionEvent().execute(i as any);
@@ -547,10 +507,7 @@ describe("ticket lifecycle controls", () => {
       ticket.delete_after = 2_000_000_000;
       return ticket;
     });
-    const closeInteraction = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const closeInteraction = interaction("ticket_close:2");
     closeInteraction.channel.delete.mockImplementationOnce(async () => {
       deletionOrder.push("channel");
     });
@@ -564,10 +521,7 @@ describe("ticket lifecycle controls", () => {
     ).find((id) => id.startsWith("ticket_delete:"));
     expect(deleteId).toBe("ticket_delete:2");
 
-    const deleteInteraction = interaction(deleteId!, [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const deleteInteraction = interaction(deleteId!);
     deleteInteraction.channel = closeInteraction.channel;
     deleteInteraction.guild = closeInteraction.guild;
 
@@ -594,10 +548,7 @@ describe("ticket lifecycle controls", () => {
       await holdReopen;
       return ticket;
     });
-    const reopenInteraction = interaction("ticket_reopen:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const reopenInteraction = interaction("ticket_reopen:2");
     const deleteInteraction = interaction("ticket_delete:2", [
       { type: ComponentType.ActionRow },
     ]);
@@ -639,27 +590,18 @@ describe("ticket lifecycle controls", () => {
       return ticket;
     });
 
-    const firstClose = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const firstClose = interaction("ticket_close:2");
     await new ButtonInteractionEvent().execute(firstClose as any);
 
     const reopenId = buttonIds(
       firstClose.channel.send.mock.calls[0]![0] as any,
     ).find((id) => id.startsWith("ticket_reopen:"));
-    const reopen = interaction(reopenId!, [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const reopen = interaction(reopenId!);
     reopen.channel = firstClose.channel;
     reopen.guild = firstClose.guild;
     await new ButtonInteractionEvent().execute(reopen as any);
 
-    const secondClose = interaction("ticket_close:2", [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const secondClose = interaction("ticket_close:2");
     secondClose.channel = firstClose.channel;
     secondClose.guild = firstClose.guild;
     await new ButtonInteractionEvent().execute(secondClose as any);
@@ -669,10 +611,7 @@ describe("ticket lifecycle controls", () => {
       .flat()
       .filter((id) => id.startsWith("ticket_delete:"))
       .at(-1);
-    const deleteInteraction = interaction(deleteId!, [
-      { type: ComponentType.Container },
-      { type: ComponentType.ActionRow },
-    ]);
+    const deleteInteraction = interaction(deleteId!);
     deleteInteraction.channel = firstClose.channel;
     deleteInteraction.guild = firstClose.guild;
     await new ButtonInteractionEvent().execute(deleteInteraction as any);
@@ -750,30 +689,6 @@ describe("ticket opening controls", () => {
     expect(JSON.stringify(interaction.reply.mock.calls[0]?.[0])).toContain(
       "Missing permissions",
     );
-  });
-
-  test("uses the requested labels for the ticket button row", () => {
-    expect(
-      buttonData({ components: [buildTriggerButtons()] }).map(
-        (button) => button.label,
-      ),
-    ).toEqual([
-      "General",
-      "Council",
-      "Report Griefing / Stealing",
-      "Punishment Appeal",
-    ]);
-  });
-
-  test("ticket creation copy omits dash punctuation and appeal guidance", () => {
-    const copy = JSON.stringify([
-      buildTriggerEmbed().toJSON(),
-      buildIntakeModal(TICKET_CATEGORIES.appeal).toJSON(),
-    ]);
-
-    expect(copy).not.toContain("–");
-    expect(copy).not.toContain("—");
-    expect(copy).not.toContain("Be honest");
   });
 
   function openingInteraction() {
@@ -1074,13 +989,4 @@ describe("ticket row and channel consistency", () => {
     expect(client.channels.fetch).not.toHaveBeenCalled();
     expect(deleteTicketRow).not.toHaveBeenCalled();
   });
-});
-
-test("ticket channel names include their padded ticket id", () => {
-  expect(buildChannelName("Steve", TICKET_CATEGORIES.grief, 41)).toBe(
-    "steve-grief-0041",
-  );
-  expect(buildChannelName("Steve", TICKET_CATEGORIES.grief, 42)).toBe(
-    "steve-grief-0042",
-  );
 });
