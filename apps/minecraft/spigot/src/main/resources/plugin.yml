@@ -36,6 +36,10 @@ commands:
     description: Return to where you entered spectator mode.
     usage: /specback
     permission: crabutilities.specback
+  smite:
+    description: Smite a player.
+    usage: /smite <player>
+    permission: crabutilites.smite
   model:
     description: Apply a custom cosmetic model to a helmet or split it back out.
     usage: /model <merge|split>

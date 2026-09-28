@@ -17,6 +17,7 @@ import crabcraft.net.crabUtilities.happyghast.HappyGhastSpeedManager;
 import crabcraft.net.crabUtilities.heads.PersistentHeadsListener;
 import crabcraft.net.crabUtilities.heads.PlayerHeadDropsListener;
 import crabcraft.net.crabUtilities.jade.JadeBootstrap;
+import crabcraft.net.crabUtilities.moderation.ModerationToolsManager;
 import crabcraft.net.crabUtilities.netherportals.CustomNetherPortalListener;
 import crabcraft.net.crabUtilities.recipes.UnlockAllRecipesManager;
 import crabcraft.net.crabUtilities.restrictedarea.RestrictedAreaListener;
@@ -77,6 +78,7 @@ public final class CrabUtilities extends JavaPlugin {
     private HalloweenManager halloweenManager;
     private RestrictedAreaListener restrictedAreaListener;
     private VanishStatusPublisher vanishStatusPublisher;
+    private ModerationToolsManager moderationToolsManager;
 
     @Override
     public void onEnable() {
@@ -98,6 +100,9 @@ public final class CrabUtilities extends JavaPlugin {
             Bukkit.getPluginManager().registerEvents(
                     new EssentialsVanishListener(this, vanishStatusPublisher), this);
         }
+
+        this.moderationToolsManager = new ModerationToolsManager(this);
+        moderationToolsManager.register();
 
         // Discs, horns and the shared yt-dlp/FFmpeg media pipeline.
         MediaFeature.enable(this);
