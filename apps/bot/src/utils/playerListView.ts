@@ -543,7 +543,7 @@ async function fetchAvatar(uuid: string, shouldFetch: boolean): Promise<RawImage
   try {
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), AVATAR_FETCH_TIMEOUT_MS);
-    const res = await fetch(`https://mc-heads.net/avatar/${encodeURIComponent(uuid)}/16.png`, {
+    const res = await fetch(`https://minotar.net/helm/${encodeURIComponent(uuid)}/16.png`, {
       signal: ctrl.signal,
     }).finally(() => clearTimeout(timeout));
     if (!res.ok) {
