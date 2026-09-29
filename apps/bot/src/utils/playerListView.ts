@@ -543,7 +543,7 @@ async function fetchAvatar(uuid: string, shouldFetch: boolean): Promise<RawImage
   try {
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), AVATAR_FETCH_TIMEOUT_MS);
-    const res = await fetch(`https://minotar.net/helm/${encodeURIComponent(uuid)}/16.png`, {
+    const res = await fetch(`https://api.crabstudios.net/v1/renders/${encodeURIComponent(uuid)}/avatar?size=16`, {
       signal: ctrl.signal,
     }).finally(() => clearTimeout(timeout));
     if (!res.ok) {

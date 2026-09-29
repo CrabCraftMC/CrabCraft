@@ -152,7 +152,7 @@ export default function AwardsTabs({ buckets, units, showHidden }: AwardsTabsPro
                 className="hidden sm:flex min-w-0 items-center justify-end gap-2 hover:text-orange-500 transition-colors"
               >
                 <PixelIcon
-                  src={`https://mc-heads.net/avatar/${award.bestUuid}/32.png`}
+                  src={`https://api.crabstudios.net/v1/renders/${award.bestUuid}/avatar?size=32`}
                   alt={award.bestName || ""}
                   size={24}
                   imgClassName="rounded"
@@ -184,7 +184,7 @@ export default function AwardsTabs({ buckets, units, showHidden }: AwardsTabsPro
                   className="flex sm:hidden items-center gap-1.5 justify-end mt-1 hover:text-orange-500 transition-colors"
                 >
                   <PixelIcon
-                    src={`https://mc-heads.net/avatar/${award.bestUuid}/32.png`}
+                    src={`https://api.crabstudios.net/v1/renders/${award.bestUuid}/avatar?size=32`}
                     alt={award.bestName || ""}
                     size={16}
                     imgClassName="rounded"

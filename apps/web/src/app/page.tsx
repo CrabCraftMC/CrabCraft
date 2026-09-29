@@ -180,7 +180,7 @@ export default async function HomePage() {
                       style={{ animationDelay: `${0.35 + i * 0.08}s` }}
                     >
                       <PixelIcon
-                        src={`https://mc-heads.net/avatar/${player.uuid}/100.png`}
+                        src={`https://api.crabstudios.net/v1/renders/${player.uuid}/avatar?size=100`}
                         alt={player.name}
                         size={60}
                         imgClassName="rounded-md"

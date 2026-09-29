@@ -62,7 +62,7 @@ export default function PlayersTab({
                   <div className="flex items-center gap-2">
                     {player.minecraft_uuid && (
                       <PixelIcon
-                        src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/24`}
+                        src={`https://api.crabstudios.net/v1/renders/${player.minecraft_uuid}/avatar?size=24`}
                         alt=""
                         size={24}
                         className="hidden sm:inline-flex"

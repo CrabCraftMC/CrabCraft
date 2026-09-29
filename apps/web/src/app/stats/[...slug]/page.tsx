@@ -96,7 +96,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: `View ${name}'s stats and awards on CrabCraft.`,
       images:
         name !== identifier
-          ? [`https://mc-heads.net/avatar/${identifier}/256.png`]
+          ? [`https://api.crabstudios.net/v1/renders/${identifier}/avatar?size=256`]
           : undefined,
     },
   };

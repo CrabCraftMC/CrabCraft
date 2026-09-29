@@ -307,7 +307,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 >
                                     {user.minecraftUuid ? (
                                         <PixelIcon
-                                            src={`https://mc-heads.net/avatar/${user.minecraftUuid}/56.png`}
+                                            src={`https://api.crabstudios.net/v1/renders/${user.minecraftUuid}/avatar?size=56`}
                                             alt={playerName}
                                             size={28}
                                             imgClassName="rounded"
@@ -484,7 +484,7 @@ export default function Navbar({ user }: { user?: UserData | null }) {
                                 <div className="flex items-center gap-3 px-3 py-2">
                                     {user.minecraftUuid ? (
                                         <PixelIcon
-                                            src={`https://mc-heads.net/avatar/${user.minecraftUuid}/64.png`}
+                                            src={`https://api.crabstudios.net/v1/renders/${user.minecraftUuid}/avatar?size=64`}
                                             alt={playerName}
                                             size={28}
                                             imgClassName="rounded"

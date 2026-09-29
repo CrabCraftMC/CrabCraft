@@ -95,7 +95,7 @@ export default function SearchPage() {
                   }`}
                 >
                   <PixelIcon
-                    src={`https://mc-heads.net/avatar/${player.minecraft_uuid}/28`}
+                    src={`https://api.crabstudios.net/v1/renders/${player.minecraft_uuid}/avatar?size=28`}
                     alt={playerDisplayName(player.nickname, player.minecraft_username)}
                     size={28}
                     imgClassName="rounded"

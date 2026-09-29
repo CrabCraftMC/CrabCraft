@@ -38,7 +38,7 @@ staff-chat:
   # avatar-url placeholder: {uuid}
   discord:
     webhook-url: ""
-    avatar-url: "https://mc-heads.net/head/{uuid}"
+    avatar-url: "https://api.crabstudios.net/v1/renders/{uuid}/head?size=128"
 
 private-messages:
   # Placeholders: <target>, <message>

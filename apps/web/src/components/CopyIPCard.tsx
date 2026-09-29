@@ -163,7 +163,7 @@ export default function CopyIPCard({
                   className="rounded transition-transform hover:scale-110 hover:z-10"
                 >
                   <PixelIcon
-                    src={`https://mc-heads.net/avatar/${p.uuid}/16.png`}
+                    src={`https://api.crabstudios.net/v1/renders/${p.uuid}/avatar?size=16`}
                     alt={playerDisplayName(p.nickname, p.name)}
                     size={HEAD_SIZE}
                     imgClassName="rounded"

@@ -11,8 +11,8 @@ const PADDING = (CANVAS_SIZE - HEAD_SIZE) / 2;
 
 /** Fetch a player's head, apply a squircle mask, and pad with transparency for spacing. */
 async function generateSquircleAvatar(uuid: string): Promise<Buffer> {
-  const res = await fetch(`https://mc-heads.net/avatar/${uuid}/${HEAD_SIZE}`);
-  if (!res.ok) throw new Error(`mc-heads.net returned ${res.status}`);
+  const res = await fetch(`https://api.crabstudios.net/v1/renders/${uuid}/avatar?size=${HEAD_SIZE}`);
+  if (!res.ok) throw new Error(`Crab Studios API returned ${res.status}`);
 
   const avatar = Buffer.from(await res.arrayBuffer());
 

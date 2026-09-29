@@ -28,7 +28,7 @@ describe("hidden leaderboard entries", () => {
       </LeaderboardPlayerLink>,
     );
     expect(html).toContain(`/stats/${player.uuid}`);
-    expect(html).toContain(`https://mc-heads.net/avatar/${player.uuid}/100.png`);
+    expect(html).toContain(`https://api.crabstudios.net/v1/renders/${player.uuid}/avatar?size=100`);
     expect(html).toContain(player.username);
   });
 

@@ -123,7 +123,7 @@ export default async function ApplicationsPage() {
                     <div className="flex items-center gap-3 mb-4">
                       {app.minecraft_uuid && (
                         <PixelIcon
-                          src={`https://mc-heads.net/avatar/${app.minecraft_uuid}/32.png`}
+                          src={`https://api.crabstudios.net/v1/renders/${app.minecraft_uuid}/avatar?size=32`}
                           alt={app.minecraft_username ?? ""}
                           size={32}
                           imgClassName="rounded"

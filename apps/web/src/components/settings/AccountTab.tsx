@@ -70,7 +70,7 @@ export default function AccountTab({
             <p className="text-xs font-medium uppercase tracking-wider opacity-60 mb-2">Minecraft</p>
             <div className="flex items-center gap-3">
               <PixelIcon
-                src={`https://mc-heads.net/avatar/${minecraftUuid}/32.png`}
+                src={`https://api.crabstudios.net/v1/renders/${minecraftUuid}/avatar?size=32`}
                 alt="Minecraft skin"
                 size={32}
                 imgClassName="rounded"
@@ -131,7 +131,7 @@ export default function AccountTab({
                   <div className="flex items-center gap-3 mb-3">
                     {app.minecraft_uuid && (
                       <PixelIcon
-                        src={`https://mc-heads.net/avatar/${app.minecraft_uuid}/28.png`}
+                        src={`https://api.crabstudios.net/v1/renders/${app.minecraft_uuid}/avatar?size=28`}
                         alt={app.minecraft_username ?? ""}
                         size={28}
                         imgClassName="rounded"
