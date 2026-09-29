@@ -175,7 +175,7 @@ function galleryAuthorFromRow(row: GalleryPostRow): GalleryPostAuthor {
       ? `/stats/${encodeURIComponent(row.minecraftUsername)}`
       : null,
     avatarUrl: row.minecraftUuid
-      ? `https://mc-heads.net/avatar/${row.minecraftUuid}/64.png`
+      ? `https://api.crabstudios.net/v1/renders/${row.minecraftUuid}/avatar?size=64`
       : "/logo.png",
   };
 }
@@ -413,7 +413,7 @@ export async function getGalleryFilterOptions(): Promise<{
         row.minecraftUsername ?? row.displayName ?? row.discordUsername,
       nickname: row.minecraftNickname,
       avatarUrl: row.minecraftUuid
-        ? `https://mc-heads.net/avatar/${row.minecraftUuid}/64.png`
+        ? `https://api.crabstudios.net/v1/renders/${row.minecraftUuid}/avatar?size=64`
         : "/logo.png",
     }))
     .sort((left, right) =>

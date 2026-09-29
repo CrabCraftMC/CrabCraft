@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
       process.env.NODE_ENV === "development"
         ? "'self' 'unsafe-inline' 'unsafe-eval' https://web.maxmoon.sh"
         : "'self' 'unsafe-inline' https://web.maxmoon.sh";
-    const csp = `default-src 'self'; script-src ${scriptSrc}; img-src 'self' data: https://mc-heads.net https://cdn.discordapp.com ${galleryMediaUrl.origin} https://map.crabcraft.net https://mc-api.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net https://web.maxmoon.sh; font-src 'self'; frame-ancestors 'none'`;
+    const csp = `default-src 'self'; script-src ${scriptSrc}; img-src 'self' data: https://api.crabstudios.net https://cdn.discordapp.com ${galleryMediaUrl.origin} https://map.crabcraft.net https://mc-api.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net https://web.maxmoon.sh; font-src 'self'; frame-ancestors 'none'`;
     return [
       {
         source: "/:path*.webp",
@@ -77,7 +77,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "mc-heads.net" },
+      { protocol: "https", hostname: "api.crabstudios.net", pathname: "/v1/renders/**" },
       { protocol: "https", hostname: "map.crabcraft.net" },
       { protocol: "https", hostname: "cdn.discordapp.com" },
       {

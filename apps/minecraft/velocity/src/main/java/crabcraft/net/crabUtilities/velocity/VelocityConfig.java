@@ -203,7 +203,7 @@ public class VelocityConfig {
             ConfigurationNode staffChatDiscord = root.node("staff-chat", "discord");
             String staffChatDiscordWebhookUrl = staffChatDiscord.node("webhook-url").getString("");
             String staffChatDiscordAvatarUrl = staffChatDiscord.node("avatar-url")
-                    .getString("https://mc-heads.net/head/{uuid}");
+                    .getString("https://api.crabstudios.net/v1/renders/{uuid}/head?size=128");
 
             ConfigurationNode msgNode = root.node("private-messages");
             String msgOutgoing = msgNode.node("outgoing-format").getString(DEFAULT_MSG_OUTGOING);
@@ -315,7 +315,7 @@ public class VelocityConfig {
             logger.error("Failed to load config, using defaults", e);
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat",
                     "crabcraft:punishments", 10L, DEFAULT_FORMAT,
-                    "", "https://mc-heads.net/head/{uuid}",
+                    "", "https://api.crabstudios.net/v1/renders/{uuid}/head?size=128",
                     DEFAULT_MSG_OUTGOING, DEFAULT_MSG_INCOMING, DEFAULT_MSG_SPY,
                     DEFAULT_MSG_PLAYER_NOT_FOUND, DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF,
                     true, "minecraft:entity.experience_orb.pickup", 1.0f, 1.0f, 8080,

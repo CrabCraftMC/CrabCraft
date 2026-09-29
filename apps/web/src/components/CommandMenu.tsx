@@ -162,7 +162,7 @@ export default function CommandMenu() {
             label: playerDisplayName(p.nickname, p.minecraft_username),
             url: `/stats/${p.minecraft_uuid}`,
             category: "Players" as const,
-            avatar: `https://mc-heads.net/avatar/${p.minecraft_uuid}/24.png`,
+            avatar: `https://api.crabstudios.net/v1/renders/${p.minecraft_uuid}/avatar?size=24`,
           }))
         );
       } catch {

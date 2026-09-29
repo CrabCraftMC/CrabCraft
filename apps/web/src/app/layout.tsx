@@ -86,7 +86,7 @@ export default async function RootLayout({
     userData = {
       name: user.name || "User",
       avatarUrl: user.minecraftUuid
-        ? `https://mc-heads.net/avatar/${user.minecraftUuid}/56.png`
+        ? `https://api.crabstudios.net/v1/renders/${user.minecraftUuid}/avatar?size=56`
         : getAvatarUrl(user),
       minecraftUuid: user.minecraftUuid,
       minecraftUsername: user.minecraftUsername,

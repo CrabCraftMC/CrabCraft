@@ -113,7 +113,7 @@ export default function LiveChatSnippet({ streamUrl }: { streamUrl: string }) {
                     className="flex gap-3 px-5 py-3 sm:px-6 sm:py-4"
                   >
                     <PixelIcon
-                      src={`https://mc-heads.net/avatar/${encodeURIComponent(message.uuid)}/32.png`}
+                      src={`https://api.crabstudios.net/v1/renders/${encodeURIComponent(message.uuid)}/avatar?size=32`}
                       alt=""
                       size={32}
                       imgClassName="rounded"

@@ -40,5 +40,5 @@ export function LeaderboardPlayerAvatar({ player, size, className = "", imgClass
       </span>
     );
   }
-  return <PixelIcon src={`https://mc-heads.net/avatar/${player.uuid}/100.png`} alt={leaderboardPlayerName(player)} size={size} className={className} imgClassName={imgClassName} />;
+  return <PixelIcon src={`https://api.crabstudios.net/v1/renders/${player.uuid}/avatar?size=100`} alt={leaderboardPlayerName(player)} size={size} className={className} imgClassName={imgClassName} />;
 }
