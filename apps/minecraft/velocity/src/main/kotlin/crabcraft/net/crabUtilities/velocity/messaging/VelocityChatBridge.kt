@@ -70,13 +70,13 @@ class VelocityChatBridge(private val plugin: CrabUtilitiesVelocity) {
     }
 
     private fun handle(player: Player, packet: ChatBridgeProtocol.Packet) {
-        when (packet.type()) {
+        when (packet.type) {
             ChatBridgeProtocol.Type.PRIVATE_REQUEST ->
-                plugin.getMessageManager()!!.sendToName(player, packet.target()!!, Component.text(packet.content()!!))
+                plugin.getMessageManager()!!.sendToName(player, packet.target!!, Component.text(packet.content!!))
             ChatBridgeProtocol.Type.REPLY_REQUEST ->
-                plugin.getMessageManager()!!.reply(player, Component.text(packet.content()!!))
-            ChatBridgeProtocol.Type.STAFF_REQUEST -> handleStaffRequest(player, packet.content()!!)
-            else -> plugin.getLogger().warn("Ignored proxy-bound chat bridge packet of type {}", packet.type())
+                plugin.getMessageManager()!!.reply(player, Component.text(packet.content!!))
+            ChatBridgeProtocol.Type.STAFF_REQUEST -> handleStaffRequest(player, packet.content!!)
+            else -> plugin.getLogger().warn("Ignored proxy-bound chat bridge packet of type {}", packet.type)
         }
     }
 

@@ -116,17 +116,17 @@ class PaperChatBridge(private val plugin: CrabUtilities) : Listener, PluginMessa
                 plugin.getLogger().warning("Ignored malformed chat bridge payload: ${e.message}")
                 return
             }
-        val playerId = packet.playerId()
+        val playerId = packet.playerId
         if (playerId == null || playerId != carrier.uniqueId) {
             plugin.getLogger().warning("Ignored chat bridge payload delivered through the wrong player")
             return
         }
-        when (packet.type()) {
-            ChatBridgeProtocol.Type.DELIVERY -> deliver(carrier, packet.content())
+        when (packet.type) {
+            ChatBridgeProtocol.Type.DELIVERY -> deliver(carrier, packet.content)
             ChatBridgeProtocol.Type.STAFF_STATE -> {
-                if (packet.enabled()) staffChatDisabled.remove(playerId) else staffChatDisabled.add(playerId)
+                if (packet.enabled) staffChatDisabled.remove(playerId) else staffChatDisabled.add(playerId)
             }
-            else -> plugin.getLogger().warning("Ignored server-bound chat bridge packet of type ${packet.type()}")
+            else -> plugin.getLogger().warning("Ignored server-bound chat bridge packet of type ${packet.type}")
         }
     }
 

@@ -42,20 +42,20 @@ object ChatBridgeRegressionTest {
 
     private fun checkProtocolRoundTrips() {
         val request = ChatBridgeProtocol.decode(ChatBridgeProtocol.privateRequest("Crab Lord", "hello 🦀 [i]"))
-        check(request.type() == ChatBridgeProtocol.Type.PRIVATE_REQUEST, "private request type changed")
-        check(request.target() == "Crab Lord" && request.content() == "hello 🦀 [i]", "private request payload changed")
+        check(request.type == ChatBridgeProtocol.Type.PRIVATE_REQUEST, "private request type changed")
+        check(request.target == "Crab Lord" && request.content == "hello 🦀 [i]", "private request payload changed")
         val playerId = UUID.randomUUID()
         val componentJson = "{\"text\":\"hello\",\"font\":\"crabcraft:emoji\"}"
         val delivery = ChatBridgeProtocol.decode(ChatBridgeProtocol.delivery(playerId, componentJson))
         check(
-            delivery.type() == ChatBridgeProtocol.Type.DELIVERY &&
-                delivery.playerId() == playerId &&
-                delivery.content() == componentJson,
+            delivery.type == ChatBridgeProtocol.Type.DELIVERY &&
+                delivery.playerId == playerId &&
+                delivery.content == componentJson,
             "component delivery did not round-trip",
         )
         val state = ChatBridgeProtocol.decode(ChatBridgeProtocol.staffState(playerId, false))
         check(
-            state.type() == ChatBridgeProtocol.Type.STAFF_STATE && !state.enabled(),
+            state.type == ChatBridgeProtocol.Type.STAFF_STATE && !state.enabled,
             "staff-chat state did not round-trip",
         )
     }

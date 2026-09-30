@@ -28,22 +28,12 @@ object ChatBridgeProtocol {
     }
 
     data class Packet(
-        private val type: Type,
-        private val playerId: UUID?,
-        private val target: String?,
-        private val content: String?,
-        private val enabled: Boolean,
-    ) {
-        fun type(): Type = type
-
-        fun playerId(): UUID? = playerId
-
-        fun target(): String? = target
-
-        fun content(): String? = content
-
-        fun enabled(): Boolean = enabled
-    }
+        val type: Type,
+        val playerId: UUID?,
+        val target: String?,
+        val content: String?,
+        val enabled: Boolean,
+    )
 
     @JvmStatic
     fun privateRequest(target: String?, message: String?): ByteArray =
