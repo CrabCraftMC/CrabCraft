@@ -6,8 +6,6 @@ plugins {
 
 base { archivesName.set("CrabUtilities-Velocity") }
 
-kotlin.sourceSets.named("main") { kotlin.srcDir("${rootDir}/shared/src/main/kotlin") }
-
 repositories {
     maven("https://repo.papermc.io/repository/maven-public/") { name = "papermc" }
     maven("https://repo.lucko.me/") { name = "luckperms" }
@@ -15,6 +13,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":shared"))
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
     kapt("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
     testCompileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")

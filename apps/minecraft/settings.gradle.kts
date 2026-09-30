@@ -11,4 +11,4 @@ plugins {
 
 rootProject.name = "CrabUtilities"
 
-include("spigot", "velocity", "bingo-test", "halloween-test")
+include(":spigot", ":velocity", ":bingo-test", ":halloween-test", ":shared")

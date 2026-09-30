@@ -7,8 +7,6 @@ plugins {
 
 base { archivesName.set("CrabUtilities") }
 
-kotlin.sourceSets.named("main") { kotlin.srcDir("${rootDir}/shared/src/main/kotlin") }
-
 repositories {
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/") { name = "spigotmc-repo" }
     maven("https://repo.essentialsx.net/releases/") { name = "essentialsx" }
@@ -21,6 +19,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":shared"))
     paperweight.paperDevBundle("26.2.build.87-stable")
     compileOnly("net.essentialsx:EssentialsX:2.20.1") {
         // Its older Spigot API conflicts with the Paper development bundle.
