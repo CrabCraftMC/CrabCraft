@@ -209,6 +209,15 @@ file. To reload one area, use `core`, `integrations`, `chat`, `voicechat`,
 `media`, `gameplay` or `tweaks` as the final argument. The command reports
 settings that still require a server restart.
 
+Staff with `crabutilities.staffvc` (operators by default) can use `/staffvc` to
+join the shared staff voice-chat group, then run it again to leave. The group is
+hidden from the Simple Voice Chat group list and isolated from proximity voice.
+It uses the existing cross-server voice bridge when enabled. Entry is permission
+checked, including invites and automatic rejoining after a server switch.
+Active members are rechecked every second and removed if their permission is revoked.
+The group icon beside player name tags remains visible; selectively hiding it
+requires a client-side mod.
+
 ## Contributing and security
 
 Focused contributions are welcome. Please read
