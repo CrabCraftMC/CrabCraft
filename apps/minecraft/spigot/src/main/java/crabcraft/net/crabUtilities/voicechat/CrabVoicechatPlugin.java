@@ -71,6 +71,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
     private AudioRelay audioRelay;
     private RosterTracker roster;
     private SvcPacketSender svcPackets;
+    private BukkitTask staffMembershipCheckTask;
     private BukkitTask rosterRebroadcastTask;
     private BukkitTask sweepTask;
     private BukkitTask groupReconcileTask;
@@ -165,6 +166,9 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
             permanentGroups.add(group);
             logger.info("Created persistent voice chat group '" + name + "' (" + group.getId() + ")");
         }
+
+        staffMembershipCheckTask = Bukkit.getScheduler().runTaskTimer(plugin,
+                this::reconcileStaffMembership, 20L, 20L);
 
         if (lofiEnabled) {
             this.groupSpeechAttenuator = new GroupSpeechAttenuator(
@@ -522,6 +526,16 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         scheduleMembershipReconciliation(playerId);
     }
 
+    private void reconcileStaffMembership() {
+        if (api == null) return;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!StaffVoicechatCommand.evictUnauthorisedMember(api, player)) continue;
+            UUID playerId = player.getUniqueId();
+            restoreSessions.remove(playerId);
+            reconcileMembership(playerId);
+        }
+    }
+
     private void scheduleMembershipReconciliation(UUID playerId) {
         try {
             Bukkit.getScheduler().runTask(plugin, () -> reconcileMembership(playerId));
@@ -652,7 +666,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
         voiceSessions.clear();
         restoreSessions.clear();
         for (BukkitTask task : new BukkitTask[]{
-                rosterRebroadcastTask, sweepTask, groupReconcileTask, routeRefreshTask,
+                staffMembershipCheckTask, rosterRebroadcastTask, sweepTask, groupReconcileTask, routeRefreshTask,
                 callTargetReconcileTask}) {
             if (task != null) {
                 try { task.cancel(); } catch (Exception ignored) {}

@@ -40,6 +40,20 @@ final class StaffVoicechatCommand implements CommandExecutor, TabCompleter {
         return !GROUP_ID.equals(groupId) || player.hasPermission(PERMISSION);
     }
 
+    static boolean evictUnauthorisedMember(VoicechatServerApi api, Player player) {
+        VoicechatConnection connection = api.getConnectionOf(player.getUniqueId());
+        Group group = connection == null ? null : connection.getGroup();
+        if (group == null || canJoin(player, group.getId())) return false;
+
+        connection.setGroup(null);
+        VoicechatConnection updated = api.getConnectionOf(player.getUniqueId());
+        Group committed = updated == null ? null : updated.getGroup();
+        if (updated == null || committed != null && GROUP_ID.equals(committed.getId())) return false;
+
+        player.sendMessage(CrabMessages.error("Removed from staff voice chat because you no longer have permission."));
+        return true;
+    }
+
     static void guardGroupEntry(JoinGroupEvent event) {
         Group group = event.getGroup();
         if (event.isCancelled() || group == null || !GROUP_ID.equals(group.getId())) return;

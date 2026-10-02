@@ -29,6 +29,7 @@ final class StaffVoicechatRegressionTest {
         verifyCommandGates();
         verifyToggleAndCancelledChanges();
         verifyGroupEntryGates();
+        verifyPermissionRevocation();
         verifyRegistration();
     }
 
@@ -130,6 +131,58 @@ final class StaffVoicechatRegressionTest {
         check(!guardCancelled(fixture.staffGroup, fixture.connection()), "staff group entry was blocked");
         check(StaffVoicechatCommand.canJoin(fixture.player, StaffVoicechatCommand.GROUP_ID),
                 "authorised staff cannot rejoin after a server switch");
+    }
+
+    private static void verifyPermissionRevocation() {
+        Fixture fixture = new Fixture();
+        fixture.run();
+        fixture.permitted = false;
+        fixture.run();
+        check(fixture.currentGroup == fixture.staffGroup,
+                "test did not reproduce membership retained after command permission was revoked");
+        check(StaffVoicechatCommand.evictUnauthorisedMember(fixture.api, fixture.player),
+                "revoked staff member was not removed by membership reconciliation");
+        check(fixture.currentGroup == null,
+                "revoked staff member retained access to private voice chat");
+        check(fixture.lastMessage().startsWith("Removed"), "permission removal was not reported");
+        check(!StaffVoicechatCommand.evictUnauthorisedMember(fixture.api, fixture.player),
+                "repeated reconciliation reported another eviction");
+
+        Fixture authorised = new Fixture();
+        authorised.run();
+        check(!StaffVoicechatCommand.evictUnauthorisedMember(authorised.api, authorised.player)
+                        && authorised.currentGroup == authorised.staffGroup,
+                "authorised staff member was removed from voice chat");
+
+        Fixture ordinary = new Fixture();
+        Group ordinaryGroup = group(UUID.randomUUID());
+        ordinary.currentGroup = ordinaryGroup;
+        ordinary.permitted = false;
+        check(!StaffVoicechatCommand.evictUnauthorisedMember(ordinary.api, ordinary.player)
+                        && ordinary.currentGroup == ordinaryGroup,
+                "ordinary group membership was changed by staff permission reconciliation");
+
+        Fixture disconnected = new Fixture();
+        disconnected.run();
+        disconnected.permitted = false;
+        disconnected.connected = false;
+        check(StaffVoicechatCommand.evictUnauthorisedMember(disconnected.api, disconnected.player)
+                        && disconnected.currentGroup == null,
+                "revoked staff membership survived a disconnected voice client");
+
+        Fixture cancelled = new Fixture();
+        cancelled.run();
+        cancelled.permitted = false;
+        cancelled.acceptChanges = false;
+        int messagesBefore = cancelled.messages.size();
+        check(!StaffVoicechatCommand.evictUnauthorisedMember(cancelled.api, cancelled.player)
+                        && cancelled.currentGroup == cancelled.staffGroup
+                        && cancelled.messages.size() == messagesBefore,
+                "cancelled eviction was incorrectly reported as committed");
+        cancelled.acceptChanges = true;
+        check(StaffVoicechatCommand.evictUnauthorisedMember(cancelled.api, cancelled.player)
+                        && cancelled.currentGroup == null,
+                "membership reconciliation did not retry a cancelled eviction");
     }
 
     private static boolean guardCancelled(Group group, VoicechatConnection connection) {

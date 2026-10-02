@@ -214,6 +214,7 @@ join the shared staff voice-chat group, then run it again to leave. The group is
 hidden from the Simple Voice Chat group list and isolated from proximity voice.
 It uses the existing cross-server voice bridge when enabled. Entry is permission
 checked, including invites and automatic rejoining after a server switch.
+Active members are rechecked every second and removed if their permission is revoked.
 The group icon beside player name tags remains visible; selectively hiding it
 requires a client-side mod.
 
