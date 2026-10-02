@@ -366,6 +366,21 @@
     }
   },
   {
+    "id": "craft_golden_apple",
+    "title": "Golden Delicious",
+    "description": "Golden apples crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_golden_apple.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:golden_apple"
+      ]
+    }
+  },
+  {
     "id": "craft_honey_block",
     "title": "Honey I'm Home",
     "description": "Honey blocks crafted",
@@ -377,6 +392,21 @@
       "path": [
         "minecraft:crafted",
         "minecraft:honey_block"
+      ]
+    }
+  },
+  {
+    "id": "craft_honeycomb_block",
+    "title": "Comb Builder",
+    "description": "Honeycomb blocks crafted",
+    "unit": "int",
+    "bucket": "crafting",
+    "icon": "/awards/icons/craft_honeycomb_block.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:crafted",
+        "minecraft:honeycomb_block"
       ]
     }
   },
@@ -974,6 +1004,62 @@
       "path": [
         "minecraft:picked_up",
         "minecraft:bamboo"
+      ]
+    }
+  },
+  {
+    "id": "harvest_cocoa",
+    "title": "Cocoa Farmer",
+    "description": "Cocoa beans dropped from mature pods harvested by players since tracking began",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/harvest_cocoa.png",
+    "reader": {
+      "type": "custom-int",
+      "path": [
+        "harvest_cocoa"
+      ]
+    }
+  },
+  {
+    "id": "harvest_glow_ink_sac",
+    "title": "Glow Getter",
+    "description": "Glow ink sacs dropped by glow squid kills credited to players since tracking began",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/harvest_glow_ink_sac.png",
+    "reader": {
+      "type": "custom-int",
+      "path": [
+        "harvest_glow_ink_sac"
+      ]
+    }
+  },
+  {
+    "id": "harvest_honeycomb",
+    "title": "Comb Collector",
+    "description": "Honeycomb produced by players shearing bee nests and beehives since tracking began",
+    "unit": "int",
+    "bucket": "food",
+    "icon": "/awards/icons/harvest_honeycomb.png",
+    "reader": {
+      "type": "custom-int",
+      "path": [
+        "harvest_honeycomb"
+      ]
+    }
+  },
+  {
+    "id": "harvest_ink_sac",
+    "title": "Ink Collector",
+    "description": "Ink sacs dropped by squid kills credited to players since tracking began",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/harvest_ink_sac.png",
+    "reader": {
+      "type": "custom-int",
+      "path": [
+        "harvest_ink_sac"
       ]
     }
   },
@@ -2812,6 +2898,21 @@
     }
   },
   {
+    "id": "place_cake",
+    "title": "Cake Stand",
+    "description": "Cakes placed",
+    "unit": "int",
+    "bucket": "building",
+    "icon": "/awards/icons/place_cake.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:cake"
+      ]
+    }
+  },
+  {
     "id": "place_candle",
     "title": "Candle Lighter",
     "description": "Candles placed",
@@ -3737,6 +3838,21 @@
       "path": [
         "minecraft:used",
         "minecraft:honey_bottle"
+      ]
+    }
+  },
+  {
+    "id": "use_honeycomb",
+    "title": "Wax On",
+    "description": "Honeycomb used to wax blocks and signs",
+    "unit": "int",
+    "bucket": "items",
+    "icon": "/awards/icons/use_honeycomb.png",
+    "reader": {
+      "type": "int",
+      "path": [
+        "minecraft:used",
+        "minecraft:honeycomb"
       ]
     }
   },

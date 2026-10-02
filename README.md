@@ -52,7 +52,7 @@ services and the shared data layer.
 - **CrabCraft Wrapped** turns each season into an interactive, animated story.
   Players can revisit their playtime, travel, mining, combat, building, unusual
   stats and server-wide rankings across nine responsive scenes.
-- **268 data-driven awards** cover combat, mining, building, crafting, food,
+- **278 data-driven awards** cover combat, mining, building, crafting, food,
   movement, interaction and more. Every award has its own leaderboard, while
   gold, silver and bronze placements feed the overall crown ranking.
 - **Rich player profiles** bring together seasonal statistics, award positions,
