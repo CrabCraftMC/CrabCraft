@@ -39,6 +39,9 @@ staff-chat:
   discord:
     webhook-url: ""
     avatar-url: "https://api.crabstudios.net/v1/renders/{uuid}/head?size=128"
+    # Prepended to staff-chat.format for messages received by Crabby from Discord.
+    # MiniMessage; set to "" for the same appearance as Minecraft staff chat.
+    incoming-prefix: "<#5865f2>[Discord]</#5865f2> "
 
 private-messages:
   # Placeholders: <target>, <message>

@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.velocity.staffchat;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import crabcraft.net.crabUtilities.velocity.CrabUtilitiesVelocity;
+import crabcraft.net.crabUtilities.velocity.NicknameComponentParser;
 import crabcraft.net.crabUtilities.velocity.RedisPools;
 import crabcraft.net.crabUtilities.velocity.VelocityConfig;
 import net.kyori.adventure.text.Component;
@@ -41,7 +42,7 @@ public class RedisStaffChat {
                 plugin.getServer().getScheduler()
                         .buildTask(plugin, () ->
                                 plugin.getStaffChatManager().displayMessage(
-                                        staffMessage.senderName(), staffMessage.message())
+                                        staffMessage.sender(), staffMessage.message(), staffMessage.fromDiscord())
                         )
                         .schedule();
             }
@@ -98,19 +99,29 @@ public class RedisStaffChat {
         }).schedule();
     }
 
-    private StaffMessage decode(String payload) {
+    static StaffMessage decode(String payload) {
         try {
             JsonObject envelope = JsonParser.parseString(payload).getAsJsonObject();
             String senderName = envelope.get("sender").getAsString();
+            if (envelope.has("source")) {
+                if (!"discord".equals(envelope.get("source").getAsString())) return null;
+                String text = envelope.get("message").getAsString();
+                if (senderName.isBlank() || text.isBlank()) return null;
+                String nicknameRaw = envelope.has("nicknameRaw") && !envelope.get("nicknameRaw").isJsonNull()
+                        ? envelope.get("nicknameRaw").getAsString() : null;
+                Component sender = nicknameRaw == null || nicknameRaw.isBlank()
+                        ? Component.text(senderName) : NicknameComponentParser.parse(nicknameRaw);
+                return new StaffMessage(sender, Component.text(text), true);
+            }
             Component message = GSON.deserialize(envelope.get("message").getAsString());
-            return new StaffMessage(senderName, message);
+            return new StaffMessage(NicknameComponentParser.parse(senderName), message, false);
         } catch (Exception ignored) {
             // Accept the old delimiter format during a rolling proxy update.
             int separator = payload.indexOf(SEPARATOR);
             if (separator == -1) return null;
             return new StaffMessage(
-                    payload.substring(0, separator),
-                    Component.text(payload.substring(separator + 1)));
+                    NicknameComponentParser.parse(payload.substring(0, separator)),
+                    Component.text(payload.substring(separator + 1)), false);
         }
     }
 
@@ -132,5 +143,5 @@ public class RedisStaffChat {
         }
     }
 
-    private record StaffMessage(String senderName, Component message) {}
+    record StaffMessage(Component sender, Component message, boolean fromDiscord) {}
 }
