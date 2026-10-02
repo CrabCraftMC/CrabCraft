@@ -55,7 +55,14 @@ commands:
     description: Send a cross-server staff-chat message.
     usage: /sc <message>
     aliases: [staffchat]
+  staffvc:
+    description: Join or leave the private staff voice-chat group.
+    usage: /staffvc
+    permission: crabutilities.staffvc
 permissions:
+  crabutilities.staffvc:
+    description: Join the hidden, isolated staff voice-chat group.
+    default: op
   crabutilities.restricted-area.bypass:
     description: Bypass unverified-player grief protection.
     default: op

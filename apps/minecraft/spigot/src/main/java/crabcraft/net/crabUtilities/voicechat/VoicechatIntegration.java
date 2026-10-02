@@ -21,6 +21,9 @@ public final class VoicechatIntegration {
         }
 
         CrabVoicechatPlugin voicechatPlugin = new CrabVoicechatPlugin(plugin);
+        StaffVoicechatCommand staffVoicechat = new StaffVoicechatCommand(voicechatPlugin::serverApi);
+        plugin.getCommand("staffvc").setExecutor(staffVoicechat);
+        plugin.getCommand("staffvc").setTabCompleter(staffVoicechat);
         service.registerPlugin(voicechatPlugin);
         Listener quitListener = new Listener() {};
         plugin.getServer().getPluginManager().registerEvent(

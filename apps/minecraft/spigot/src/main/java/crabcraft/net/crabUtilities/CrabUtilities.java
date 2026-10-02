@@ -277,6 +277,10 @@ public final class CrabUtilities extends JavaPlugin {
         // Simple Voice Chat integration: mirrors group definitions and bridges
         // grouped voice across backends via Redis.
         // Soft dependency — skipped silently if the SVC plugin isn't installed.
+        getCommand("staffvc").setExecutor((sender, command, label, args) -> {
+            sender.sendMessage(CrabMessages.error("Staff voice chat is unavailable on this server."));
+            return true;
+        });
         if (Bukkit.getPluginManager().getPlugin("voicechat") != null) {
             try {
                 this.voicechatRegistration = VoicechatIntegration.register(this);
