@@ -1836,6 +1836,21 @@ export async function getPlayerLink(
   return row ?? null;
 }
 
+/** Primary linked account and nickname for Discord-to-Minecraft staff chat. */
+export async function getStaffChatIdentity(discordId: string) {
+  const [row] = await db
+    .select({
+      minecraft_uuid: players.minecraft_uuid,
+      minecraft_username: players.minecraft_username,
+      nickname: players.nickname,
+      nickname_raw: players.nickname_raw,
+    })
+    .from(players)
+    .where(eq(players.discord_id, discordId))
+    .limit(1);
+  return row ?? null;
+}
+
 // ── Identity sync ───────────────────────────────────────────────
 
 export interface SyncablePlayerIdentity {
