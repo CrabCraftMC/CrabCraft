@@ -32,6 +32,20 @@ final class StatsPushXpLevelRegressionTest {
                 "unchanged meals must not trigger repeated pushes");
         check(!StatsPushTask.hasLiveEatingScoresChanged(null, first),
                 "an offline player was treated as a live meal change");
+
+        var harvest = java.util.Map.of("harvest_honeycomb", 3L);
+        check(StatsPushTask.resolveHarvestScores(harvest, absentPlayerData).equals(harvest),
+                "live harvest progress must not wait for a player-data save");
+        check(StatsPushTask.resolveHarvestScores(java.util.Map.of(), absentPlayerData).isEmpty(),
+                "failed live harvest reads must not fall back to stale saved counters");
+        check(StatsPushTask.resolveHarvestScores(null, absentPlayerData).isEmpty(),
+                "missing offline counters must not fabricate zero scores");
+        check(StatsPushTask.hasLiveHarvestScoresChanged(harvest, null)
+                        && StatsPushTask.hasLiveHarvestScoresChanged(harvest, java.util.Map.of("harvest_honeycomb", 0L)),
+                "new harvests must trigger a stats push before vanilla stats are saved");
+        check(!StatsPushTask.hasLiveHarvestScoresChanged(harvest, harvest)
+                        && !StatsPushTask.hasLiveHarvestScoresChanged(null, harvest),
+                "unchanged or offline harvests must not trigger repeated pushes");
     }
 
     private static void check(boolean condition, String message) {
