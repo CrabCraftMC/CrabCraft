@@ -62,16 +62,16 @@ public class LoginStreakPublisher {
         if (jedisPool == null || jedisPool.isClosed() || snapshot == null) return;
 
         long now = System.currentTimeMillis() / 1000L;
-        long expiresAt = LoginStreakService.expiryOf(snapshot.lastLoginAt, resetHourUtc);
+        long expiresAt = LoginStreakService.expiryOf(snapshot.lastLoginAt(), resetHourUtc);
         boolean active = now < expiresAt;
 
         JsonObject payload = new JsonObject();
         payload.addProperty("uuid", uuid);
-        payload.addProperty("current_streak", active ? snapshot.currentStreak : 0);
-        payload.addProperty("pending_streak", snapshot.currentStreak);
-        payload.addProperty("longest_streak", snapshot.longestStreak);
-        payload.addProperty("last_login_at", snapshot.lastLoginAt);
-        payload.addProperty("streak_started_at", snapshot.streakStartedAt);
+        payload.addProperty("current_streak", active ? snapshot.currentStreak() : 0);
+        payload.addProperty("pending_streak", snapshot.currentStreak());
+        payload.addProperty("longest_streak", snapshot.longestStreak());
+        payload.addProperty("last_login_at", snapshot.lastLoginAt());
+        payload.addProperty("streak_started_at", snapshot.streakStartedAt());
         payload.addProperty("expires_at", expiresAt);
         payload.addProperty("active", active);
 
@@ -80,7 +80,7 @@ public class LoginStreakPublisher {
             jedis.eval(
                     PUBLISH_SCRIPT,
                     List.of(HASH_KEY),
-                    List.of(uuid, Long.toString(snapshot.lastLoginAt), body, UPDATE_CHANNEL));
+                    List.of(uuid, Long.toString(snapshot.lastLoginAt()), body, UPDATE_CHANNEL));
             if (redisFailureLogged) {
                 plugin.getLogger().info("Login streak Redis publisher recovered.");
                 redisFailureLogged = false;
