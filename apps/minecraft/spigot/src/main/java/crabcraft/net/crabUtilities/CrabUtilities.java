@@ -80,6 +80,7 @@ public final class CrabUtilities extends JavaPlugin {
     private RestrictedAreaListener restrictedAreaListener;
     private VanishStatusPublisher vanishStatusPublisher;
     private ModerationToolsManager moderationToolsManager;
+    private PlayerStatusPublisher playerStatusPublisher;
 
     @Override
     public void onEnable() {
@@ -275,6 +276,9 @@ public final class CrabUtilities extends JavaPlugin {
         // Adapt simulation and view distances to server tick time. Disabled by
         // default; the manager owns its tick listener and repeating task.
         startViewDistanceManager();
+
+        playerStatusPublisher = new PlayerStatusPublisher(this);
+        playerStatusPublisher.start();
 
         // Simple Voice Chat integration: mirrors group definitions and bridges
         // grouped voice across backends via Redis.
@@ -813,6 +817,10 @@ public final class CrabUtilities extends JavaPlugin {
         stopAccurateBlockPlacement();
         JadeBootstrap.disable(this);
         AppleSkinIntegration.disable(this);
+        if (playerStatusPublisher != null) {
+            playerStatusPublisher.shutdown();
+            playerStatusPublisher = null;
+        }
     }
 
 }
