@@ -39,6 +39,15 @@ final class EatingAwardDbIntegrationTest {
                 }
                 var logger = LoggerFactory.getLogger(EatingAwardDbIntegrationTest.class);
                 var writer = new AwardDbWriter(db, logger);
+                writer.writeScoresForPlayer("large-score", "7", Map.of("eat_meat", 16777216d));
+                for (int meals = 0; meals <= 2; meals++) {
+                    writer.writeScoresForPlayer("large-score", "7", Map.of(), Map.of("eat_meat",
+                            new EatingAwardSnapshot(100, 200 + meals, meals, null)));
+                    check(accumulatedScore(db, "large-score") == 16777216L + meals,
+                            "the checkpoint lost an exact meal total to REAL rounding");
+                }
+                check(score(db, "large-score", "7", "eat_meat") == 16777218d,
+                        "single-meal deliveries were lost at the REAL exact-integer limit");
                 writer.writeScoresForPlayer("player", "7", Map.of("eat_meat", 2495d, "play", 100d));
                 write(writer, new EatingAwardSnapshot(100, 200, 10, null));
                 check(score(db, "player", "7", "eat_meat") == 2495d, "first checkpoint changed the displayed score");
@@ -67,8 +76,23 @@ final class EatingAwardDbIntegrationTest {
                 // A fresh writer/pool must recover the checkpoint from PostgreSQL, not memory.
                 try (var reopened = new HikariDataSource(config)) {
                     var restarted = new AwardDbWriter(reopened, logger);
+                    restarted.writeScoresForPlayer("large-score", "7", Map.of(), Map.of("eat_meat",
+                            new EatingAwardSnapshot(100, 300, 3, null)));
+                    check(accumulatedScore(reopened, "large-score") == 16777219L,
+                            "restart recovered the rounded projection instead of the exact total");
+                    restarted.writeScoresForPlayer("long-score", "7", Map.of(), Map.of("eat_meat",
+                            new EatingAwardSnapshot(100, 200, 9007199254740992L, null)));
+                    restarted.writeScoresForPlayer("long-score", "7", Map.of(), Map.of("eat_meat",
+                            new EatingAwardSnapshot(100, 300, 9007199254740993L, null)));
+                    check(accumulatedScore(reopened, "long-score") == 9007199254740993L,
+                            "PostgreSQL lost a meal beyond double precision");
+                    // Checkpoints written before the exact accumulator was added remain readable.
+                    try (var conn = reopened.getConnection(); var stmt = conn.createStatement()) {
+                        stmt.executeUpdate("UPDATE player_award_scores SET eating_progress = eating_progress - 'accumulatedScore' WHERE minecraft_uuid = 'player'");
+                    }
                     write(restarted, new EatingAwardSnapshot(100, 500, 13, null));
                     check(score(reopened, "player", "7", "eat_meat") == 2498d, "restart lost the checkpoint");
+                    check(accumulatedScore(reopened, "player") == 2498L, "legacy checkpoint did not acquire an exact total");
                     restarted.writeScoresForPlayer("player", "7", Map.of("eat_meat", 9000d, "play", 101d));
                     check(score(reopened, "player", "7", "eat_meat") == 2498d, "legacy payload overwrote tracked meals");
                     check(score(reopened, "player", "7", "play") == 101d, "ordinary awards stopped updating");
@@ -77,6 +101,7 @@ final class EatingAwardDbIntegrationTest {
                     write(restarted, new EatingAwardSnapshot(100, 700, 12, 100L));
                     write(restarted, new EatingAwardSnapshot(100, 800, 14, null));
                     check(score(reopened, "player", "7", "eat_meat") == 113d, "stale or pending data undid verified history");
+                    check(accumulatedScore(reopened, "player") == 113L, "verified history did not correct the exact total");
 
                     restarted.writeScoresForPlayer("new-player", "7", Map.of(),
                             Map.of("eat_meat", new EatingAwardSnapshot(100, 200, 2, 0L)));
@@ -118,6 +143,17 @@ final class EatingAwardDbIntegrationTest {
             try (var rs = stmt.executeQuery()) {
                 check(rs.next(), "score row is missing");
                 return rs.getDouble(1);
+            }
+        }
+    }
+
+    private static long accumulatedScore(HikariDataSource db, String player) throws Exception {
+        try (var conn = db.getConnection(); var stmt = conn.prepareStatement(
+                "SELECT eating_progress->>'accumulatedScore' FROM player_award_scores WHERE minecraft_uuid = ? AND season = '7' AND award_id = 'eat_meat'")) {
+            stmt.setString(1, player);
+            try (var rs = stmt.executeQuery()) {
+                check(rs.next(), "exact score row is missing");
+                return rs.getBigDecimal(1).longValueExact();
             }
         }
     }

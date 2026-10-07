@@ -94,11 +94,11 @@ public final class EatingAwardTracker implements Listener {
     }
 
     /** Uninitialised, missing or unreadable saves must not replace existing scores with zero. */
-    public static Map<String, Long> scores(Path playerDataFile, JsonObject rawStats) {
-        return confirmedScores(snapshots(playerDataFile, rawStats));
+    public static Map<String, Long> scores(Path playerDataFile, JsonObject rawStats, long statsModifiedAt) {
+        return confirmedScores(snapshots(playerDataFile, rawStats, statsModifiedAt));
     }
 
-    public static Map<String, EatingAwardSnapshot> snapshots(Path playerDataFile, JsonObject rawStats) {
+    public static Map<String, EatingAwardSnapshot> snapshots(Path playerDataFile, JsonObject rawStats, long statsModifiedAt) {
         if (!Files.isRegularFile(playerDataFile)) return Map.of();
         try {
             var playerData = NbtIo.readCompressed(playerDataFile, NbtAccounter.defaultQuota());
@@ -110,7 +110,9 @@ public final class EatingAwardTracker implements Listener {
             JsonObject custom = stats.getAsJsonObject("minecraft:custom");
             long cakeSlices = custom != null && custom.has("minecraft:eat_cake_slice")
                     ? custom.get("minecraft:eat_cake_slice").getAsLong() : 0L;
-            return decode(saved.get()).snapshots(cakeSlices, Files.getLastModifiedTime(playerDataFile).toMillis());
+            // Cake slices come from stats JSON, which can be saved after the player's NBT data.
+            long capturedAt = Math.max(statsModifiedAt, Files.getLastModifiedTime(playerDataFile).toMillis());
+            return decode(saved.get()).snapshots(cakeSlices, capturedAt);
         } catch (IOException | RuntimeException e) {
             return Map.of();
         }

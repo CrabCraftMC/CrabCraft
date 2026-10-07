@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -126,17 +127,23 @@ public final class AwardDbWriter {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (!rs.next()) throw new SQLException("Eating-award row disappeared");
                 String saved = rs.getString("eating_progress");
-                EatingAwardSnapshot previous = saved == null ? null
-                        : EatingAwardSnapshot.fromJson(JsonParser.parseString(saved).getAsJsonObject());
-                Double score = EatingAwardScore.advance(inserted ? null : rs.getDouble("score"), previous, incoming);
+                var checkpoint = saved == null ? null : JsonParser.parseString(saved).getAsJsonObject();
+                EatingAwardSnapshot previous = checkpoint == null ? null : EatingAwardSnapshot.fromJson(checkpoint);
+                // REAL is a leaderboard projection, not an exact accumulator. Retain every meal in JSONB.
+                BigDecimal accumulatedScore = checkpoint != null && checkpoint.has("accumulatedScore")
+                        ? checkpoint.get("accumulatedScore").getAsBigDecimal()
+                        : (inserted ? null : rs.getBigDecimal("score"));
+                BigDecimal score = EatingAwardScore.advance(accumulatedScore, previous, incoming);
                 if (score == null) return;
+                var nextCheckpoint = incoming.toJson();
+                nextCheckpoint.addProperty("accumulatedScore", score);
                 try (PreparedStatement update = conn.prepareStatement("""
                         UPDATE player_award_scores SET score = ?, eating_progress = ?::jsonb,
                             computed_at = EXTRACT(EPOCH FROM NOW())::INTEGER
                         WHERE minecraft_uuid = ? AND season = ? AND award_id = ?
                         """)) {
-                    update.setDouble(1, score);
-                    update.setString(2, incoming.toJson().toString());
+                    update.setBigDecimal(1, score);
+                    update.setString(2, nextCheckpoint.toString());
                     update.setString(3, uuid);
                     update.setString(4, season);
                     update.setString(5, award);

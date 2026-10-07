@@ -208,7 +208,7 @@ public class StatsPushTask {
                 }
                 Map<String, EatingAwardSnapshot> eatingScores = liveEatingScores != null
                         ? liveEatingScores
-                        : EatingAwardTracker.snapshots(playerDataFile.toPath(), envelope.getAsJsonObject("stats"));
+                        : EatingAwardTracker.snapshots(playerDataFile.toPath(), envelope.getAsJsonObject("stats"), mtime);
                 EatingAwardTracker.confirmedScores(eatingScores).forEach(custom::addProperty);
                 JsonObject eating = new JsonObject();
                 eatingScores.forEach((award, snapshot) -> eating.add(award, snapshot.toJson()));

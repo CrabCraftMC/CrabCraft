@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
+import java.nio.file.attribute.FileTime;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Random;
@@ -108,16 +109,26 @@ public final class EatingAwardTrackerRegressionTest {
             custom.addProperty("minecraft:eat_cake_slice", cake[0]);
             stats.add("minecraft:custom", custom);
             raw.add("stats", stats);
-            check(EatingAwardTracker.scores(save, raw).equals(EatingAwardTracker.scores(player)), "offline/restart scores differ");
+            check(EatingAwardTracker.scores(save, raw, 0L).equals(EatingAwardTracker.scores(player)), "offline/restart scores differ");
             var online = EatingAwardTracker.snapshots(player);
-            var offline = EatingAwardTracker.snapshots(save, raw);
+            var offline = EatingAwardTracker.snapshots(save, raw, 0L);
             check(online.keySet().equals(offline.keySet()) && online.entrySet().stream()
                             .allMatch(entry -> entry.getValue().sameProgress(offline.get(entry.getKey()))),
                     "offline/restart meal checkpoints differ");
+            long playerDataTime = progress.trackingStartedAt + 1000;
+            Files.setLastModifiedTime(save, FileTime.fromMillis(playerDataTime));
+            var beforeCakeSave = EatingAwardTracker.snapshots(save, raw, playerDataTime - 500).get("eat_veggie");
+            check(beforeCakeSave.capturedAt() == playerDataTime, "newer player data did not set the checkpoint timestamp");
+            custom.addProperty("minecraft:eat_cake_slice", cake[0] + 1);
+            var afterCakeSave = EatingAwardTracker.snapshots(save, raw, playerDataTime + 1000).get("eat_veggie");
+            check(afterCakeSave.meals() == beforeCakeSave.meals() + 1
+                            && afterCakeSave.capturedAt() == playerDataTime + 1000
+                            && Files.getLastModifiedTime(save).toMillis() == playerDataTime,
+                    "a newer offline cake statistic reused the older player-data timestamp");
             NbtIo.writeCompressed(new CompoundTag(), save);
-            check(EatingAwardTracker.scores(save, raw).isEmpty(), "uninitialised offline data reset scores");
+            check(EatingAwardTracker.scores(save, raw, 0L).isEmpty(), "uninitialised offline data reset scores");
             Files.writeString(save, "synthetic malformed save");
-            check(EatingAwardTracker.scores(save, raw).isEmpty(), "unreadable data reset scores");
+            check(EatingAwardTracker.scores(save, raw, 0L).isEmpty(), "unreadable data reset scores");
         } finally {
             Files.deleteIfExists(save);
             Files.deleteIfExists(directory);
