@@ -189,7 +189,9 @@ public class StatsPushSubscriber {
         if (evaluator != null && writer != null) {
             try {
                 Map<String, Double> scores = evaluator.evaluate(stats, customMetrics, advancements);
-                writer.writeScoresForPlayer(uuid, season, scores);
+                var eating = evaluator.eatingSnapshots(envelope.has("eating")
+                        ? envelope.getAsJsonObject("eating") : null);
+                writer.writeScoresForPlayer(uuid, season, scores, eating);
                 queueMedalRecompute(season);
             } catch (Exception e) {
                 logger.warn("Failed to write award scores for uuid={}", uuid, e);

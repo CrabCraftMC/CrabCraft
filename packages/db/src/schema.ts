@@ -190,6 +190,8 @@ export const playerAwardScores = pgTable(
       .references(() => awards.id, { onDelete: "cascade" }),
     score: real("score").notNull().default(0),
     medal: integer("medal").notNull().default(0), // 0 = none, 1 = gold, 2 = silver, 3 = bronze
+    // Last consumption snapshot applied atomically with the score; null until the tracker publishes one.
+    eating_progress: jsonb("eating_progress"),
     computed_at: integer("computed_at")
       .notNull()
       .$defaultFn(() => Math.floor(Date.now() / 1000)),

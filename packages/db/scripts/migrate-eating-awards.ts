@@ -33,7 +33,7 @@ if (!Bun.argv.includes("--apply")) {
         }).where(eq(awards.id, row.id));
       }
     });
-    console.log("Updated nine eating readers. Restart Velocity to load them; existing scores remain until confirmed totals arrive.");
+    console.log("Updated nine eating readers. Reload Velocity to load them; updated plugins preserve pending scores and add meals after the first checkpoint.");
   } finally {
     await closeDatabase();
   }

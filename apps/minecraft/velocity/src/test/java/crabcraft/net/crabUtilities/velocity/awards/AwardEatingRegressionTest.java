@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.velocity.awards;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import crabcraft.net.crabUtilities.awards.EatingAwardSnapshot;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +27,20 @@ public final class AwardEatingRegressionTest {
         }
         check(definitions.size() == 10, "An eating award is missing");
         var evaluator = new AwardEvaluator(definitions);
+        JsonObject eating = new JsonObject();
+        var pending = new EatingAwardSnapshot(1, 2, 3, null);
+        eating.add("eat_meat", pending.toJson());
+        eating.add("play", pending.toJson());
+        check(evaluator.eatingSnapshots(eating).equals(java.util.Map.of("eat_meat", pending)),
+                "pending consumption snapshots were lost or unrelated awards accepted");
+        check(new AwardEvaluator(java.util.Map.of()).eatingSnapshots(eating).isEmpty(),
+                "disabled awards accepted consumption updates");
+        var vanillaMeat = new AwardDefinition();
+        vanillaMeat.id = "eat_meat";
+        vanillaMeat.reader = new AwardDefinition.Reader();
+        vanillaMeat.reader.type = "match-sum";
+        check(new AwardEvaluator(java.util.Map.of("eat_meat", vanillaMeat)).eatingSnapshots(eating).isEmpty(),
+                "a legacy vanilla reader accepted consumption checkpoints before migration");
         Random random = new Random(362_591L);
         JsonObject used = new JsonObject();
         for (String food : new String[]{"potato", "carrot", "bread", "cake", "sweet_berries", "cooked_beef", "cookie"}) {
