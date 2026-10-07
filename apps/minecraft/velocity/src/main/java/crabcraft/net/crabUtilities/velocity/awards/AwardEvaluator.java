@@ -2,6 +2,7 @@ package crabcraft.net.crabUtilities.velocity.awards;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import crabcraft.net.crabUtilities.awards.EatingAwardSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +39,20 @@ public final class AwardEvaluator {
 
     public AwardEvaluator(Map<String, AwardDefinition> definitions) {
         this.definitions = definitions;
+    }
+
+    /** Only enabled definitions using the consumption tracker may update its checkpoints. */
+    public Map<String, EatingAwardSnapshot> eatingSnapshots(JsonObject eating) {
+        Map<String, EatingAwardSnapshot> snapshots = new HashMap<>();
+        if (eating == null) return snapshots;
+        for (String id : EatingAwardSnapshot.AWARDS) {
+            AwardDefinition definition = definitions.get(id);
+            if (definition == null || definition.reader == null
+                    || !"custom-int".equals(definition.reader.type)
+                    || !List.of(id).equals(definition.reader.path) || !eating.has(id)) continue;
+            snapshots.put(id, EatingAwardSnapshot.fromJson(eating.getAsJsonObject(id)));
+        }
+        return snapshots;
     }
 
     /**

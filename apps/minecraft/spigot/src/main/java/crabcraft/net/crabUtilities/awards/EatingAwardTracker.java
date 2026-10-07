@@ -60,9 +60,14 @@ public final class EatingAwardTracker implements Listener {
         save(player, progress);
     }
 
-    /** Called on the server thread; pending baselines are omitted, preserving old scores. */
+    /** Absolute totals for older proxies; pending history is carried separately in snapshots. */
     public static Map<String, Long> scores(Player player) {
         return progress(player).scores(player.getStatistic(Statistic.CAKE_SLICES_EATEN));
+    }
+
+    /** Called on the server thread, including meals whose historical total is still pending. */
+    public static Map<String, EatingAwardSnapshot> snapshots(Player player) {
+        return progress(player).snapshots(player.getStatistic(Statistic.CAKE_SLICES_EATEN), System.currentTimeMillis());
     }
 
     private static Progress progress(Player player) {
@@ -89,7 +94,11 @@ public final class EatingAwardTracker implements Listener {
     }
 
     /** Uninitialised, missing or unreadable saves must not replace existing scores with zero. */
-    public static Map<String, Long> scores(Path playerDataFile, JsonObject rawStats) {
+    public static Map<String, Long> scores(Path playerDataFile, JsonObject rawStats, long statsModifiedAt) {
+        return confirmedScores(snapshots(playerDataFile, rawStats, statsModifiedAt));
+    }
+
+    public static Map<String, EatingAwardSnapshot> snapshots(Path playerDataFile, JsonObject rawStats, long statsModifiedAt) {
         if (!Files.isRegularFile(playerDataFile)) return Map.of();
         try {
             var playerData = NbtIo.readCompressed(playerDataFile, NbtAccounter.defaultQuota());
@@ -101,10 +110,22 @@ public final class EatingAwardTracker implements Listener {
             JsonObject custom = stats.getAsJsonObject("minecraft:custom");
             long cakeSlices = custom != null && custom.has("minecraft:eat_cake_slice")
                     ? custom.get("minecraft:eat_cake_slice").getAsLong() : 0L;
-            return decode(saved.get()).scores(cakeSlices);
+            // Cake slices come from stats JSON, which can be saved after the player's NBT data.
+            long capturedAt = Math.max(statsModifiedAt, Files.getLastModifiedTime(playerDataFile).toMillis());
+            return decode(saved.get()).snapshots(cakeSlices, capturedAt);
         } catch (IOException | RuntimeException e) {
             return Map.of();
         }
+    }
+
+    public static Map<String, Long> confirmedScores(Map<String, EatingAwardSnapshot> snapshots) {
+        Map<String, Long> scores = new HashMap<>();
+        snapshots.forEach((award, snapshot) -> {
+            if (snapshot.historicalScore() != null) {
+                scores.put(award, Math.addExact(snapshot.historicalScore(), snapshot.meals()));
+            }
+        });
+        return Map.copyOf(scores);
     }
 
     static String encode(Progress progress) {
@@ -133,18 +154,22 @@ public final class EatingAwardTracker implements Listener {
         Map<String, Long> itemUsesAtStart = new HashMap<>();
 
         Map<String, Long> scores(long cakeSlices) {
-            Map<String, Long> scores = new HashMap<>();
-            historicalScores.forEach((award, baseline) -> {
-                if (!FOODS.containsKey(award)) return;
+            return confirmedScores(snapshots(cakeSlices, System.currentTimeMillis()));
+        }
+
+        Map<String, EatingAwardSnapshot> snapshots(long cakeSlices, long capturedAt) {
+            Map<String, EatingAwardSnapshot> snapshots = new HashMap<>();
+            FOODS.keySet().forEach(award -> {
                 long mealsSinceStart = meals.getOrDefault(award, 0L);
                 if (award.equals("eat_veggie")) {
                     // Cake consumption does not fire PlayerItemConsumeEvent.
                     if (cakeSlices < cakeSlicesAtStart) return; // Wait for a consistent stats save.
                     mealsSinceStart = Math.addExact(mealsSinceStart, cakeSlices - cakeSlicesAtStart);
                 }
-                scores.put(award, Math.addExact(baseline, mealsSinceStart));
+                snapshots.put(award, new EatingAwardSnapshot(trackingStartedAt, capturedAt,
+                        mealsSinceStart, historicalScores.get(award)));
             });
-            return Map.copyOf(scores);
+            return Map.copyOf(snapshots);
         }
     }
 }

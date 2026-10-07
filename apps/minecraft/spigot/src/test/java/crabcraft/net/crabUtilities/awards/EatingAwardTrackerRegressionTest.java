@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
+import java.nio.file.attribute.FileTime;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Random;
@@ -26,6 +27,7 @@ public final class EatingAwardTrackerRegressionTest {
         used.put(Material.POTATO, 100 + random.nextInt(900));
         used.put(Material.BREAD, 100 + random.nextInt(900));
         used.put(Material.GOLDEN_CARROT, 100 + random.nextInt(900));
+        used.put(Material.COOKED_BEEF, 100);
         int[] cake = {1 + random.nextInt(40)};
         var stored = new HashMap<Object, Object>();
         PersistentDataContainer data = (PersistentDataContainer) Proxy.newProxyInstance(
@@ -66,8 +68,13 @@ public final class EatingAwardTrackerRegressionTest {
         var beforeImport = EatingAwardTracker.scores(player);
         check(beforeImport.get("eat_cookie") == 2L && beforeImport.get("eat_rawmeat") == 1L,
                 "replacement meal type or raw meat classification was wrong");
-        check(beforeImport.get("eat_fish") == 1L && beforeImport.get("eat_meat") == 2L,
+        check(beforeImport.get("eat_fish") == 1L && !beforeImport.containsKey("eat_meat"),
                 "cooked food classification was wrong");
+        var pendingMeat = EatingAwardTracker.snapshots(player).get("eat_meat");
+        check(pendingMeat.meals() == 2L && pendingMeat.historicalScore() == null,
+                "pending history withheld confirmed meat meals from the new protocol");
+        check(EatingAwardTracker.snapshots(player).get("eat_rawmeat").meals() == 1L,
+                "raw meat was not kept separate from cooked meat");
         check(beforeImport.get("eat_soup") == 1L && beforeImport.get("eat_junkfood") == 1L
                 && beforeImport.get("eat_sweet_berries") == 1L, "overlapping eating awards missed meals");
 
@@ -77,11 +84,14 @@ public final class EatingAwardTrackerRegressionTest {
         long baseline = 1 + random.nextInt(200);
         progress.historicalScores.put("eat_veggie", baseline);
         progress.historicalScores.put("eat_bread", 0L);
+        progress.historicalScores.put("eat_meat", 100L);
         stored.put(EatingAwardTracker.DATA_KEY, EatingAwardTracker.encode(progress));
         cake[0] += 2;
         check(EatingAwardTracker.scores(player).get("eat_veggie") == baseline + 6L,
                 "historical import discarded meals or double-counted historical cake");
         check(EatingAwardTracker.scores(player).get("eat_bread") == 1L, "verified zero baseline discarded a new meal");
+        check(EatingAwardTracker.scores(player).get("eat_meat") == 102L,
+                "meat history discarded previously pending meals");
         EventHandler handler = EatingAwardTracker.class.getMethod("onConsume", PlayerItemConsumeEvent.class).getAnnotation(EventHandler.class);
         check(handler.ignoreCancelled() && handler.priority() == EventPriority.MONITOR, "consumption needs final cancellation state");
 
@@ -99,11 +109,26 @@ public final class EatingAwardTrackerRegressionTest {
             custom.addProperty("minecraft:eat_cake_slice", cake[0]);
             stats.add("minecraft:custom", custom);
             raw.add("stats", stats);
-            check(EatingAwardTracker.scores(save, raw).equals(EatingAwardTracker.scores(player)), "offline/restart scores differ");
+            check(EatingAwardTracker.scores(save, raw, 0L).equals(EatingAwardTracker.scores(player)), "offline/restart scores differ");
+            var online = EatingAwardTracker.snapshots(player);
+            var offline = EatingAwardTracker.snapshots(save, raw, 0L);
+            check(online.keySet().equals(offline.keySet()) && online.entrySet().stream()
+                            .allMatch(entry -> entry.getValue().sameProgress(offline.get(entry.getKey()))),
+                    "offline/restart meal checkpoints differ");
+            long playerDataTime = progress.trackingStartedAt + 1000;
+            Files.setLastModifiedTime(save, FileTime.fromMillis(playerDataTime));
+            var beforeCakeSave = EatingAwardTracker.snapshots(save, raw, playerDataTime - 500).get("eat_veggie");
+            check(beforeCakeSave.capturedAt() == playerDataTime, "newer player data did not set the checkpoint timestamp");
+            custom.addProperty("minecraft:eat_cake_slice", cake[0] + 1);
+            var afterCakeSave = EatingAwardTracker.snapshots(save, raw, playerDataTime + 1000).get("eat_veggie");
+            check(afterCakeSave.meals() == beforeCakeSave.meals() + 1
+                            && afterCakeSave.capturedAt() == playerDataTime + 1000
+                            && Files.getLastModifiedTime(save).toMillis() == playerDataTime,
+                    "a newer offline cake statistic reused the older player-data timestamp");
             NbtIo.writeCompressed(new CompoundTag(), save);
-            check(EatingAwardTracker.scores(save, raw).isEmpty(), "uninitialised offline data reset scores");
+            check(EatingAwardTracker.scores(save, raw, 0L).isEmpty(), "uninitialised offline data reset scores");
             Files.writeString(save, "synthetic malformed save");
-            check(EatingAwardTracker.scores(save, raw).isEmpty(), "unreadable data reset scores");
+            check(EatingAwardTracker.scores(save, raw, 0L).isEmpty(), "unreadable data reset scores");
         } finally {
             Files.deleteIfExists(save);
             Files.deleteIfExists(directory);

@@ -63,6 +63,8 @@ tasks.jar {
 }
 
 def regressionTests = [
+        eatingAwardScoreRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.awards.EatingAwardScoreRegressionTest',
         loginStreakCacheSeedRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.LoginStreakCacheSeedRegressionTest',
         nicknameRegressionTest:
@@ -122,6 +124,13 @@ regressionTests.each { taskName, testClass ->
 
 tasks.named('test') {
     failOnNoDiscoveredTests = false
+}
+
+tasks.register('eatingAwardDbIntegrationTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.awards.EatingAwardDbIntegrationTest')
 }
 
 tasks.named('check') {

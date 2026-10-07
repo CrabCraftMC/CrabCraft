@@ -125,9 +125,15 @@ public class PostgresStatsWriter {
                          awards_excluded BOOLEAN NOT NULL DEFAULT FALSE
                      """)) {
             stmt.executeUpdate();
+            // Keep the nullable checkpoint synchronised with packages/db/src/schema.ts.
+            try (PreparedStatement eating = conn.prepareStatement("""
+                    ALTER TABLE player_award_scores ADD COLUMN IF NOT EXISTS eating_progress JSONB
+                    """)) {
+                eating.executeUpdate();
+            }
         } catch (SQLException e) {
             dataSource.close();
-            throw new IllegalStateException("Failed to initialise player award exclusions", e);
+            throw new IllegalStateException("Failed to initialise player award schema", e);
         }
     }
 
