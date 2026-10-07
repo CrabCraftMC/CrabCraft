@@ -19,7 +19,8 @@
     "punishmentGroup": "crabcraft-bot",
     "bingoStream": "crabcraft:bingo:completions",
     "bingoGroup": "crabcraft-bot-bingo",
-    "bingoActiveCardKey": "crabcraft:bingo:active-card"
+    "bingoActiveCardKey": "crabcraft:bingo:active-card",
+    "staffChatChannel": "crabutilities:staffchat"
   },
   "channels": {
     "applicationCategory": "",
@@ -30,6 +31,7 @@
     "starboard": "",
     "counting": "",
     "bingo": "",
+    "staffChat": "",
     "ticketCategory": ""
   },
   "gallery": {

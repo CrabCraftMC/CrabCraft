@@ -156,6 +156,47 @@ bun run dev
 Runtime `.env` files, `.infisical.json` and `apps/bot/config.json` are ignored.
 Never commit credentials or a production configuration.
 
+### Two-way staff chat
+
+Crabby relays new Discord text messages into Velocity staff chat over Redis.
+It uses the existing `DISCORD_BOT_TOKEN`; no additional Discord client or token
+is needed in the Minecraft plugin.
+
+1. Enable **Message Content Intent** for Crabby in the Discord Developer Portal
+   and give the bot **View Channel** permission in the staff channel.
+2. Set `channels.staffChat` in `apps/bot/config.json` to that channel's ID. An
+   empty value disables incoming Discord staff chat. Set `guildId`, `roles.mod`
+   and `roles.council` to the existing guild and staff roles; only members with
+   either configured role can relay messages.
+3. Point the bot's `redis.host`, `redis.port` and `redis.password` at the same
+   Redis instance as Velocity. The bot's `redis.staffChatChannel` must match
+   Velocity's `redis.channel` (both default to `crabutilities:staffchat`).
+4. Keep the existing Velocity webhook pointed at the same Discord staff channel
+   for Minecraft-to-Discord messages. Configure the Minecraft display in
+   Velocity's CrabUtilities `config.yml`, then restart Crabby and Velocity:
+
+   ```yaml
+   staff-chat:
+     format: '<#ff6e67>ᴍᴏᴅ ᴄʜᴀᴛ</#ff6e67> <#bebebe><sender>: <message></#bebebe>'
+     discord:
+       webhook-url: 'YOUR_EXISTING_STAFF_WEBHOOK_URL'
+       incoming-prefix: '<#5865f2>[Discord]</#5865f2> '
+   ```
+
+The prefix is prepended to the normal staff-chat format, so formatting changes
+apply to both Minecraft and Discord messages displayed in-game. Replace
+`[Discord]` with a resource-pack icon glyph,
+or set `incoming-prefix` to an empty string to match Minecraft messages exactly.
+Linked users appear under their current Minecraft nickname (including colours),
+or their Minecraft username when no nickname is set. Unlinked users appear under
+their current Discord username. Message text is literal and multiline content
+is normalised into one line. Bots, webhooks, system events, message edits and
+attachment-only posts are ignored.
+
+This is live chat: messages are not queued or replayed during Redis or Velocity
+outages. Crabby logs relay failures and reconnects to Redis automatically with a
+delay capped at three seconds, without retrying failed message commands.
+
 ### Build and test
 
 ```sh
