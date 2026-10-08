@@ -342,13 +342,13 @@ public class ConnectionListener {
         plugin.runDatabaseTask("login-streak-playtime", () -> {
             var result = streakService.recordPlaytime(uuid, segment.from, segment.to);
             if (result == null) return;
-            if (result.streakSnapshot != null && streakPublisher != null) {
-                streakPublisher.publish(uuid, result.streakSnapshot, streakService.getResetHourUtc());
+            if (result.streakSnapshot() != null && streakPublisher != null) {
+                streakPublisher.publish(uuid, result.streakSnapshot(), streakService.getResetHourUtc());
             }
-            if (reschedule && result.progress != null
+            if (reschedule && result.progress() != null
                     && isCurrentStreakSession(session)
                     && isPlayerActive(playerId)) {
-                scheduleNextQualificationCheck(session, result.progress);
+                scheduleNextQualificationCheck(session, result.progress());
             }
         });
     }

@@ -8,48 +8,33 @@ import com.velocitypowered.api.plugin.Dependency;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
-import crabcraft.net.crabUtilities.velocity.api.StatsPushSubscriber;
-import crabcraft.net.crabUtilities.velocity.api.WebServer;
-import crabcraft.net.crabUtilities.velocity.awards.AwardDbWriter;
-import crabcraft.net.crabUtilities.velocity.awards.AwardDefinition;
-import crabcraft.net.crabUtilities.velocity.awards.AwardEvaluator;
-import crabcraft.net.crabUtilities.velocity.awards.AwardLoader;
-import crabcraft.net.crabUtilities.velocity.awards.AwardQueryService;
-import crabcraft.net.crabUtilities.velocity.awards.StatsQueryService;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementDbWriter;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementQueryService;
 import crabcraft.net.crabUtilities.velocity.advancements.AdvancementRegistry;
-import crabcraft.net.crabUtilities.velocity.awards.AwardSeeder;
-import crabcraft.net.crabUtilities.velocity.db.PlayerSettingsRepository;
-import crabcraft.net.crabUtilities.velocity.db.BingoRepository;
-import crabcraft.net.crabUtilities.velocity.db.HalloweenRepository;
-import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
+import crabcraft.net.crabUtilities.velocity.api.StatsPushSubscriber;
+import crabcraft.net.crabUtilities.velocity.api.WebServer;
+import crabcraft.net.crabUtilities.velocity.awards.*;
+import crabcraft.net.crabUtilities.velocity.db.*;
+import crabcraft.net.crabUtilities.velocity.litebans.LiteBansInfractionService;
+import crabcraft.net.crabUtilities.velocity.litebans.PunishmentEventPublisher;
 import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.VelocityChatBridge;
 import crabcraft.net.crabUtilities.velocity.staffchat.RedisStaffChat;
+import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
+import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
+import crabcraft.net.crabUtilities.velocity.update.UpdateService;
 import crabcraft.net.crabUtilities.velocity.voicechat.CallCommand;
 import crabcraft.net.crabUtilities.velocity.voicechat.CallManager;
 import crabcraft.net.crabUtilities.velocity.voicechat.PlayerLocationTracker;
-import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatManager;
-import crabcraft.net.crabUtilities.velocity.staffchat.StaffChatToggleCommand;
-import crabcraft.net.crabUtilities.velocity.db.AltQueryService;
-import crabcraft.net.crabUtilities.velocity.db.LoginStreakService;
-import crabcraft.net.crabUtilities.velocity.litebans.LiteBansInfractionService;
-import crabcraft.net.crabUtilities.velocity.litebans.PunishmentEventPublisher;
-import crabcraft.net.crabUtilities.velocity.update.UpdateService;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 @Plugin(
         id = "crabutilities",
@@ -88,6 +73,7 @@ public class CrabUtilitiesVelocity {
     private UpdateService updateService;
     private AltQueryService altQueryService;
     private LoginStreakService loginStreakService;
+    private PlayerStatusService playerStatusService;
     private LoginStreakPublisher loginStreakPublisher;
     private ConnectionListener connectionListener;
     private VanishManager vanishManager;
@@ -229,6 +215,14 @@ public class CrabUtilitiesVelocity {
         DiscordWebhook staffChatWebhook =
                 new DiscordWebhook(config.getStaffChatDiscordWebhookUrl(), logger);
 
+        this.playerStatusService = new PlayerStatusService(
+                logger,
+                config.getRedisHost(),
+                config.getRedisPort(),
+                config.getRedisPassword()
+        );
+        this.playerStatusService.start();
+
         this.loginStreakPublisher = new LoginStreakPublisher(this, config);
         this.punishmentEventPublisher = new PunishmentEventPublisher(this, config);
         this.punishmentEventPublisher.start();
@@ -291,6 +285,7 @@ public class CrabUtilitiesVelocity {
     public UpdateService getUpdateService() { return updateService; }
     public AltQueryService getAltQueryService() { return altQueryService; }
     public LoginStreakService getLoginStreakService() { return loginStreakService; }
+    public PlayerStatusService getPlayerStatusService() { return playerStatusService; }
     public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
     public PlayerSettingsService getPlayerSettingsService() { return playerSettingsService; }
     public VanishManager getVanishManager() { return vanishManager; }

@@ -690,6 +690,7 @@ public class WebServer {
         obj.addProperty("server", player.getCurrentServer()
                 .map(conn -> conn.getServerInfo().getName())
                 .orElse(null));
+        obj.addProperty("afk", plugin.getPlayerStatusService().isAfk(player.getUniqueId()));
         var streakService = plugin.getLoginStreakService();
         JsonObject streak = streakService == null
                 ? null
