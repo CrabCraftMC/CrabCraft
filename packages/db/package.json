@@ -20,12 +20,12 @@
   },
   "dependencies": {
     "@crabcraft/shared": "workspace:*",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@crabcraft/tsconfig": "workspace:*",
-    "drizzle-kit": "^0.31.0",
+    "drizzle-kit": "^0.31.11",
     "typescript": "^5.8.0"
   }
 }
