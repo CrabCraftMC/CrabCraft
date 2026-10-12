@@ -5,11 +5,7 @@ import com.google.gson.JsonObject;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 
 /**
  * Tracks all-time login streaks per Minecraft account.
@@ -71,11 +67,11 @@ public final class LoginStreakService {
 
     private static final String SELECT_SQL =
             "SELECT current_streak, longest_streak, last_login_at, streak_started_at " +
-            "FROM player_login_streaks WHERE minecraft_uuid = ?";
+                    "FROM player_login_streaks WHERE minecraft_uuid = ?";
 
     private static final String SELECT_PROGRESS_SQL =
             "SELECT accumulated_seconds, qualified_at " +
-            "FROM player_login_streak_progress WHERE minecraft_uuid = ? AND streak_day = ?";
+                    "FROM player_login_streak_progress WHERE minecraft_uuid = ? AND streak_day = ?";
 
     private static final String SELECT_PROGRESS_FOR_UPDATE_SQL =
             SELECT_PROGRESS_SQL + " FOR UPDATE";
@@ -138,14 +134,6 @@ public final class LoginStreakService {
         ensureSchema();
     }
 
-    public int getResetHourUtc() {
-        return resetHourUtc;
-    }
-
-    public int getRequiredPlaySeconds() {
-        return requiredPlaySeconds;
-    }
-
     public static int minutesToSeconds(int minutes) {
         return Math.max(1, minutes) * SECONDS_PER_MINUTE;
     }
@@ -156,19 +144,15 @@ public final class LoginStreakService {
         return resetHourUtc;
     }
 
-    /** The streak-day number a Unix timestamp falls in, given the reset hour. */
+    /**
+     * The streak-day number a Unix timestamp falls in, given the reset hour.
+     */
     private static long dayNumber(long epochSeconds, int resetHourUtc) {
         return Math.floorDiv(epochSeconds - resetHourUtc * 3600L, DAY_SECONDS);
     }
 
     private static long startOfDay(long streakDay, int resetHourUtc) {
         return streakDay * DAY_SECONDS + resetHourUtc * 3600L;
-    }
-
-    public long secondsUntilNextStreakDay(long epochSeconds) {
-        int rh = resetHourUtc;
-        long today = dayNumber(epochSeconds, rh);
-        return Math.max(0L, startOfDay(today + 1, rh) - epochSeconds);
     }
 
     /**
@@ -182,9 +166,37 @@ public final class LoginStreakService {
         return (lastDay + 3) * DAY_SECONDS + resetHourUtc * 3600L;
     }
 
+    private static boolean isAltAccount(Connection conn, String uuid) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(IS_ALT_SQL)) {
+            stmt.setString(1, uuid);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private static long nullableLong(ResultSet rs, String column) throws SQLException {
+        long value = rs.getLong(column);
+        return rs.wasNull() ? 0L : value;
+    }
+
+    public int getResetHourUtc() {
+        return resetHourUtc;
+    }
+
+    public int getRequiredPlaySeconds() {
+        return requiredPlaySeconds;
+    }
+
+    public long secondsUntilNextStreakDay(long epochSeconds) {
+        int rh = resetHourUtc;
+        long today = dayNumber(epochSeconds, rh);
+        return Math.max(0L, startOfDay(today + 1, rh) - epochSeconds);
+    }
+
     private void ensureSchema() {
         try (Connection conn = dataSource.getConnection();
-            java.sql.Statement stmt = conn.createStatement()) {
+             java.sql.Statement stmt = conn.createStatement()) {
             stmt.execute(CREATE_TABLE_SQL);
             stmt.execute(CREATE_CURRENT_IDX_SQL);
             stmt.execute(CREATE_LONGEST_IDX_SQL);
@@ -274,15 +286,6 @@ public final class LoginStreakService {
         }
 
         return new StreakSnapshot(newStreak, newLongest, newLastLoginAt, newStartedAt);
-    }
-
-    private static boolean isAltAccount(Connection conn, String uuid) throws SQLException {
-        try (PreparedStatement stmt = conn.prepareStatement(IS_ALT_SQL)) {
-            stmt.setString(1, uuid);
-            try (ResultSet rs = stmt.executeQuery()) {
-                return rs.next();
-            }
-        }
     }
 
     /**
@@ -421,8 +424,7 @@ public final class LoginStreakService {
     }
 
     private QualificationProgress loadQualificationProgress(Connection conn, String uuid, long at) throws SQLException {
-        int rh = resetHourUtc;
-        long day = dayNumber(at, rh);
+        long day = dayNumber(at, resetHourUtc);
         int accumulated = 0;
         long qualifiedAt = 0L;
 
@@ -454,11 +456,6 @@ public final class LoginStreakService {
                 return dayNumber(lastLoginAt, resetHourUtc) == streakDay ? lastLoginAt : null;
             }
         }
-    }
-
-    private static long nullableLong(ResultSet rs, String column) throws SQLException {
-        long value = rs.getLong(column);
-        return rs.wasNull() ? 0L : value;
     }
 
     public StreakSnapshot get(String uuid) {
@@ -500,7 +497,7 @@ public final class LoginStreakService {
     }
 
     public JsonObject getLeaderboard(int limit, int offset, boolean longest) {
-        int safeLimit = Math.max(1, Math.min(100, limit));
+        int safeLimit = Math.clamp(limit, 1, 100);
         int safeOffset = Math.max(0, offset);
         String column = longest ? "longest_streak" : "current_streak";
 
@@ -582,19 +579,7 @@ public final class LoginStreakService {
         return response;
     }
 
-    public static final class StreakSnapshot {
-        public final int currentStreak;
-        public final int longestStreak;
-        public final long lastLoginAt;
-        public final long streakStartedAt;
-
-        public StreakSnapshot(int currentStreak, int longestStreak,
-                              long lastLoginAt, long streakStartedAt) {
-            this.currentStreak = currentStreak;
-            this.longestStreak = longestStreak;
-            this.lastLoginAt = lastLoginAt;
-            this.streakStartedAt = streakStartedAt;
-        }
+    public record StreakSnapshot(int currentStreak, int longestStreak, long lastLoginAt, long streakStartedAt) {
     }
 
     public static final class QualificationProgress {
@@ -619,13 +604,6 @@ public final class LoginStreakService {
         }
     }
 
-    public static final class PlaytimeCreditResult {
-        public final StreakSnapshot streakSnapshot;
-        public final QualificationProgress progress;
-
-        public PlaytimeCreditResult(StreakSnapshot streakSnapshot, QualificationProgress progress) {
-            this.streakSnapshot = streakSnapshot;
-            this.progress = progress;
-        }
+    public record PlaytimeCreditResult(StreakSnapshot streakSnapshot, QualificationProgress progress) {
     }
 }

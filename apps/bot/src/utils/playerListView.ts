@@ -10,6 +10,7 @@ export interface OnlinePlayer {
   ping: number | null;
   server: string | null;
   current_streak: number;
+  afk: boolean;
 }
 
 export interface OnlinePlayers {
@@ -25,6 +26,7 @@ interface ApiPlayer {
   ping?: unknown;
   server?: unknown;
   current_streak?: unknown;
+  afk?: unknown;
 }
 
 interface ApiPlayersResponse {
@@ -184,7 +186,7 @@ export async function generatePlayerListImage(
     .slice(0, Math.max(0, maxPlayers));
 
   const parsedNames = players.map((player) =>
-    parseMinecraftText(player.nickname_raw || player.nickname || player.username),
+    parseMinecraftText(player.afk ? "§7§oAFK <reset>" : "" + player.nickname_raw || player.nickname || player.username),
   );
   const textWidths = parsedNames.map((name) => measureText(name, font));
   let masterOffsetX = Math.max(1, ...textWidths.map((width) => width + (showAvatar ? 18 : 2)));
@@ -281,6 +283,7 @@ function parseOnlinePlayer(raw: unknown): OnlinePlayer | null {
       typeof player.current_streak === "number" && Number.isFinite(player.current_streak)
         ? player.current_streak
         : 0,
+    afk: typeof player.afk === "boolean" ? player.afk : false
   };
 }
 
