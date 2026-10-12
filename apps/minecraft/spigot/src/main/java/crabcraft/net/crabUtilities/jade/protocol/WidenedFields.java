@@ -1,7 +1,7 @@
 package crabcraft.net.crabUtilities.jade.protocol;
 
-import com.mojang.datafixers.util.Either;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.world.entity.animal.armadillo.Armadillo;
 import net.minecraft.world.entity.animal.frog.Tadpole;
 import net.minecraft.world.entity.animal.golem.CopperGolem;
@@ -19,6 +19,7 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Reflection accessors for vanilla NMS fields/methods Leaf patches to public.
@@ -33,11 +34,12 @@ public final class WidenedFields {
     private static final MethodHandle COPPER_GOLEM_NEXT_WEATHERING_TICK = unreflectField(CopperGolem.class, long.class, "nextWeatheringTick");
     private static final MethodHandle TADPOLE_TICKS_LEFT = unreflectMethod(Tadpole.class, "getTicksLeftUntilAdult", int.class);
     private static final MethodHandle LOOT_POOL_ENTRIES = unreflectField(LootPool.class, List.class, "entries");
+    private static final MethodHandle LOOT_POOL_CONDITION = unreflectField(LootPool.class, Optional.class, "condition");
     private static final MethodHandle LOOT_TABLE_POOLS = unreflectField(LootTable.class, List.class, "pools");
     private static final MethodHandle COMPOSITE_CHILDREN = unreflectField(CompositeEntryBase.class, List.class, "children");
-    private static final MethodHandle ENTRY_CONDITIONS = unreflectField(LootPoolEntryContainer.class, List.class, "conditions");
-    private static final MethodHandle NESTED_CONTENTS = unreflectField(NestedLootTable.class, Either.class, "contents");
-    private static final MethodHandle COMPOSITE_CONDITION_TERMS = unreflectField(CompositeLootItemCondition.class, List.class, "terms");
+    private static final MethodHandle ENTRY_CONDITION = unreflectField(LootPoolEntryContainer.class, Optional.class, "condition");
+    private static final MethodHandle NESTED_CONTENTS = unreflectField(NestedLootTable.class, HolderSet.class, "value");
+    private static final MethodHandle COMPOSITE_CONDITION_TERMS = unreflectField(CompositeLootItemCondition.class, HolderSet.class, "terms");
 
     private WidenedFields() {
     }
@@ -94,27 +96,36 @@ public final class WidenedFields {
     }
 
     @SuppressWarnings("unchecked")
-    public static List<LootItemCondition> conditions(LootPoolEntryContainer entry) {
+    public static Optional<Holder<LootItemCondition>> condition(LootPoolEntryContainer entry) {
         try {
-            return (List<LootItemCondition>) ENTRY_CONDITIONS.invoke(entry);
+            return (Optional<Holder<LootItemCondition>>) ENTRY_CONDITION.invoke(entry);
         } catch (Throwable t) {
             throw rethrow(t);
         }
     }
 
     @SuppressWarnings("unchecked")
-    public static Either<ResourceKey<LootTable>, LootTable> contents(NestedLootTable nested) {
+    public static Optional<Holder<LootItemCondition>> condition(LootPool pool) {
         try {
-            return (Either<ResourceKey<LootTable>, LootTable>) NESTED_CONTENTS.invoke(nested);
+            return (Optional<Holder<LootItemCondition>>) LOOT_POOL_CONDITION.invoke(pool);
         } catch (Throwable t) {
             throw rethrow(t);
         }
     }
 
     @SuppressWarnings("unchecked")
-    public static List<LootItemCondition> terms(CompositeLootItemCondition condition) {
+    public static HolderSet<LootTable> contents(NestedLootTable nested) {
         try {
-            return (List<LootItemCondition>) COMPOSITE_CONDITION_TERMS.invoke(condition);
+            return (HolderSet<LootTable>) NESTED_CONTENTS.invoke(nested);
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static HolderSet<LootItemCondition> terms(CompositeLootItemCondition condition) {
+        try {
+            return (HolderSet<LootItemCondition>) COMPOSITE_CONDITION_TERMS.invoke(condition);
         } catch (Throwable t) {
             throw rethrow(t);
         }

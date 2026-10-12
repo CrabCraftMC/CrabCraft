@@ -3,7 +3,6 @@ package crabcraft.net.crabUtilities.jade.protocol.accessor;
 import com.google.common.base.Suppliers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -107,7 +106,7 @@ public class BlockAccessor extends Accessor<BlockHitResult> {
         public static final StreamCodec<RegistryFriendlyByteBuf, SyncData> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.BOOL,
             SyncData::showDetails,
-            StreamCodec.of(FriendlyByteBuf::writeBlockHitResult, FriendlyByteBuf::readBlockHitResult),
+            BlockHitResult.STREAM_CODEC,
             SyncData::hit,
             ItemStack.OPTIONAL_STREAM_CODEC,
             SyncData::serversideRep,

@@ -110,7 +110,7 @@ public abstract class ItemStorageProvider<T extends Accessor<?>> implements Serv
             return;
         }
         String message = "Jade item storage is unavailable for client protocol " + clientProtocol
-                + ". PacketEvents 2.13.0 or newer is required; inventory data will be omitted.";
+                + ". PacketEvents 2.14.0 or newer is required; inventory data will be omitted.";
         if (cause == null) {
             JadeBootstrap.LOGGER.warn(message);
         } else {

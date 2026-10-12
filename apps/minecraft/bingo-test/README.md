@@ -1,6 +1,6 @@
 # CrabBingoCard6Test
 
-This is a standalone Paper 26.2 test harness for Bingo #6. It has no Redis, database, Discord or
+This is a standalone Paper 26.3 test harness for Bingo #6. It has no Redis, database, Discord or
 production CrabUtilities dependency. Creative and Survival players are both tracked. The bundled
 local server binds to `127.0.0.1`; joining players are made Creative operators for manual testing.
 
@@ -62,5 +62,5 @@ From `apps/minecraft`, run:
 ./gradlew :bingo-test:runServer --console=plain
 ```
 
-Connect with a Minecraft 26.2 client at `localhost:25565`. The server is online-mode and
+Connect with a Minecraft 26.3 client at `localhost:25565`. The server is online-mode and
 loopback-only. Do not copy the harness's automatic operator grant into a public server.

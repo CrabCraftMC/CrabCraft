@@ -1,8 +1,27 @@
 package crabcraft.net.crabUtilities.bingo;
 
+import io.papermc.paper.event.player.PlayerTradeEvent;
+import java.lang.reflect.Proxy;
 import java.util.EnumMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import net.minecraft.SharedConstants;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.Bootstrap;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.MapDecorations;
+import net.minecraft.world.level.saveddata.maps.MapDecorationTypes;
+import net.minecraft.world.level.saveddata.maps.MapId;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.MerchantRecipe;
 
 /** Regression checks for Bingo #2 event correlations. */
 public final class BingoCardTwoListenerRegressionTest {
@@ -13,6 +32,7 @@ public final class BingoCardTwoListenerRegressionTest {
         onlyTheMatchingSameTickEquipIsAttributed();
         everyArmourPieceMustHaveTheSamePlayerOwner();
         capturedFirePlacementRetainsIgnitionOwner();
+        explorerMapTradesUseMapDataAcrossItemTypes();
     }
 
     private static void directOffhandTransitionsAreCorrelated() {
@@ -93,6 +113,55 @@ public final class BingoCardTwoListenerRegressionTest {
                 !BingoCardTwoListener.shouldRetainFireOwnerAfterPlaceEvent(
                         false, player, player),
                 "A non-fire block placement must clear stale fire ownership");
+    }
+
+    private static void explorerMapTradesUseMapDataAcrossItemTypes() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        Item explorerMap = BuiltInRegistries.ITEM.getOptional(
+                Identifier.withDefaultNamespace("woodland_mansion_map")).orElseThrow();
+        for (Item item : new Item[]{Items.FILLED_MAP, explorerMap, Items.COMPASS, Items.EMERALD}) {
+            // Standalone tests do not load item components from data packs.
+            item.builtInRegistryHolder().bindComponents(DataComponentMap.EMPTY);
+        }
+
+        check(completedMapTrades(Items.FILLED_MAP, true, true, true, Villager.Profession.CARTOGRAPHER) == 1,
+                "A decorated filled map trade must still complete the explorer-map task");
+        check(completedMapTrades(explorerMap, true, true, true, Villager.Profession.CARTOGRAPHER) == 1,
+                "The dedicated 26.3 explorer-map item must complete the explorer-map task");
+        check(completedMapTrades(Items.FILLED_MAP, true, false, true, Villager.Profession.CARTOGRAPHER) == 0,
+                "An ordinary filled map without an exploration marker must not complete the task");
+        check(completedMapTrades(explorerMap, false, true, true, Villager.Profession.CARTOGRAPHER) == 0,
+                "An explorer map without generated map data must not complete the task");
+        check(completedMapTrades(explorerMap, true, true, false, Villager.Profession.CARTOGRAPHER) == 0,
+                "A map trade without a compass ingredient must not complete the task");
+        check(completedMapTrades(explorerMap, true, true, true, Villager.Profession.LIBRARIAN) == 0,
+                "A map traded by another profession must not complete the task");
+    }
+
+    private static int completedMapTrades(
+            Item item, boolean hasMapId, boolean hasMarker, boolean costsCompass,
+            Villager.Profession profession) {
+        net.minecraft.world.item.ItemStack result = new net.minecraft.world.item.ItemStack(item);
+        if (hasMapId) result.set(DataComponents.MAP_ID, new MapId(1));
+        if (hasMarker) {
+            result.set(DataComponents.MAP_DECORATIONS, new MapDecorations(Map.of(
+                    "+", new MapDecorations.Entry(MapDecorationTypes.WOODLAND_MANSION, 0, 0, 180))));
+        }
+        MerchantRecipe recipe = new MerchantRecipe(CraftItemStack.asBukkitCopy(result), 10);
+        recipe.addIngredient(CraftItemStack.asBukkitCopy(new net.minecraft.world.item.ItemStack(
+                costsCompass ? Items.COMPASS : Items.EMERALD)));
+        Player player = (Player) Proxy.newProxyInstance(Player.class.getClassLoader(),
+                new Class<?>[]{Player.class}, (proxy, method, args) -> null);
+        Villager villager = (Villager) Proxy.newProxyInstance(Villager.class.getClassLoader(),
+                new Class<?>[]{Villager.class}, (proxy, method, args) ->
+                        method.getName().equals("getProfession") ? profession : null);
+        AtomicInteger completed = new AtomicInteger();
+        BingoCardTwoListener listener = new BingoCardTwoListener(null,
+                (candidate, task) -> candidate == player && task == BingoTask.EXPLORER_MAP_TRADE,
+                (candidate, task) -> completed.incrementAndGet());
+        listener.onPlayerTrade(new PlayerTradeEvent(player, villager, recipe, true, true));
+        return completed.get();
     }
 
     private static void check(boolean condition, String message) {

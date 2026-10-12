@@ -132,6 +132,39 @@ web and bot, while the shared packages keep identity and data contracts aligned.
 - Docker with Docker Compose
 - PostgreSQL 18 and Redis 8, or the supplied development containers
 
+### Minecraft 26.3 deployment
+
+The Minecraft build targets Paper **26.3 build 176** and Velocity **4.2.0** on
+Java 25. Deploy both rebuilt CrabUtilities JARs with those server versions. The
+Paper plugin declares `api-version: '26.3'` because its Minecraft internals are
+version-specific.
+
+Update the optional integrations you use alongside the server:
+
+| Integration | Version for 26.3 | Upstream reference |
+| --- | --- | --- |
+| PacketEvents | 2.14.0 | [26.3 support](https://github.com/retrooper/packetevents/releases/tag/v2.14.0) |
+| Nexo | 1.29.1 (26.3 requires 1.29 or newer) | [Version support](https://docs.nexomc.com/version-support) |
+| Simple Voice Chat | Bukkit 2.6.24 | [26.3 release](https://modrinth.com/plugin/simple-voice-chat/version/bukkit-2.6.24) |
+
+These plugins are not bundled in CrabUtilities. Their API dependencies do not
+update the installed server plugins. The Velocity rebuild also targets
+[Adventure 5's changed click-event API](https://docs.papermc.io/adventure/migration/adventure-4.x/).
+
+[Minecraft 26.3](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-3)
+changes explorer maps into distinct items and restructures loot predicates and
+nested tables; CrabUtilities adapts its Bingo trade detector and Jade harvest
+tooltips accordingly. End-portal restrictions also cover spectator interactions,
+and unverified-player protection handles the new cushion destruction event.
+Resource packs now use format 97.1 and data packs 121.0;
+update separately managed packs too.
+
+Before deployment, back up the world and verify a copy with the server's full
+plugin set and a 26.3 client, including Jade tooltips, accurate block placement,
+custom models, voice chat and proxy messaging. Paper's
+[26.3 announcement](https://papermc.io/news/26-3/) explains that upgraded worlds
+cannot be downgraded.
+
 ### Set up the workspace
 
 ```sh

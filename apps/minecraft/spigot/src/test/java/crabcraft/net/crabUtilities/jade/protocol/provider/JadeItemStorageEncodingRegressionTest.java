@@ -17,7 +17,10 @@ import io.github.retrooper.packetevents.impl.netty.NettyManagerImpl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.SharedConstants;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.server.Bootstrap;
 
 import java.util.HexFormat;
 
@@ -34,11 +37,33 @@ final class JadeItemStorageEncodingRegressionTest {
                 "older clients must not receive newer registry entries without a downgrade rewriter");
         check(ItemStorageProvider.selectEncoding(777, 775, true) == ItemStorageProvider.Encoding.UNAVAILABLE,
                 "unverified multi-version jumps must not use the one-version encoder");
+        check(ItemStorageProvider.selectEncoding(777, 777, true) == ItemStorageProvider.Encoding.NATIVE,
+                "26.3 clients on a 26.3 server should use the native item codec");
+        check(ItemStorageProvider.selectEncoding(776, 777, true) == ItemStorageProvider.Encoding.UNAVAILABLE,
+                "26.2 clients must not receive 26.3 registry entries");
 
         PacketEvents.setAPI(new ProbeApi());
         verifyDiamondEncoding(ClientVersion.V_26_1, "2a83070000");
         verifyDiamondEncoding(ClientVersion.V_26_2, "2a9e070000");
-        verifyComponentEncoding();
+        verify26_3DiamondEncoding();
+        verifyComponentEncoding(ClientVersion.V_26_2);
+        verifyComponentEncoding(ClientVersion.V_26_3);
+    }
+
+    private static void verify26_3DiamondEncoding() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+        RegistryFriendlyByteBuf buffer = buffer();
+        try {
+            // Compare PacketEvents with the real 26.3 registry, without a running server's item sanitiser.
+            buffer.writeVarInt(42);
+            buffer.writeVarInt(BuiltInRegistries.ITEM.getId(net.minecraft.world.item.Items.DIAMOND));
+            buffer.writeVarInt(0); // Added components.
+            buffer.writeVarInt(0); // Removed components.
+            verifyDiamondEncoding(ClientVersion.V_26_3, HexFormat.of().formatHex(bytes(buffer)));
+        } finally {
+            buffer.release();
+        }
     }
 
     private static void verifyDiamondEncoding(ClientVersion version, String expectedHex) {
@@ -61,7 +86,7 @@ final class JadeItemStorageEncodingRegressionTest {
         }
     }
 
-    private static void verifyComponentEncoding() {
+    private static void verifyComponentEncoding(ClientVersion version) {
         ItemStack source = ItemStack.builder()
                 .type(ItemTypes.DIAMOND)
                 .amount(1)
@@ -70,12 +95,12 @@ final class JadeItemStorageEncodingRegressionTest {
                 .build();
         RegistryFriendlyByteBuf buffer = buffer();
         try {
-            PacketEventsItemStackEncoder.writePacketEventsStack(buffer, ClientVersion.V_26_2, source);
-            ItemStack decoded = wrapper(ClientVersion.V_26_2, buffer).readItemStack();
+            PacketEventsItemStackEncoder.writePacketEventsStack(buffer, version, source);
+            ItemStack decoded = wrapper(version, buffer).readItemStack();
             check(decoded.getType() == ItemTypes.DIAMOND && decoded.getAmount() == 1,
-                    "26.2 did not round-trip the component-bearing stack");
+                    version + " did not round-trip the component-bearing stack");
             check(decoded.getComponentOr(ComponentTypes.DAMAGE, -1) == 7,
-                    "26.2 did not remap the stack's data components");
+                    version + " did not remap the stack's data components");
         } finally {
             buffer.release();
         }

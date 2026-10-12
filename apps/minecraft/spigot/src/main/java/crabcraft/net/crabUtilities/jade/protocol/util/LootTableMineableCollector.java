@@ -19,21 +19,18 @@ import org.jetbrains.annotations.NotNull;
 import crabcraft.net.crabUtilities.jade.protocol.tool.ShearsToolHandler;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class LootTableMineableCollector {
 
-    private final HolderGetter<LootTable> lootRegistry;
     private final ItemStack toolItem;
 
-    public LootTableMineableCollector(HolderGetter<LootTable> lootRegistry, ItemStack toolItem) {
-        this.lootRegistry = lootRegistry;
+    public LootTableMineableCollector(ItemStack toolItem) {
         this.toolItem = toolItem;
     }
 
     public static @NotNull List<Block> execute(HolderGetter<LootTable> lootRegistry, ItemStack toolItem) {
-        LootTableMineableCollector collector = new LootTableMineableCollector(lootRegistry, toolItem);
+        LootTableMineableCollector collector = new LootTableMineableCollector(toolItem);
         List<Block> list = Lists.newArrayList();
         for (Block block : BuiltInRegistries.BLOCK) {
             if (!ShearsToolHandler.getInstance().test(block.defaultBlockState()).isEmpty()) {
@@ -50,17 +47,12 @@ public class LootTableMineableCollector {
         return list;
     }
 
-    public static boolean isCorrectConditions(@NotNull List<LootItemCondition> conditions, ItemStack toolItem) {
-        if (conditions.size() != 1) {
-            return false;
-        }
-
-        LootItemCondition condition = conditions.getFirst();
+    public static boolean isCorrectCondition(@NotNull LootItemCondition condition, ItemStack toolItem) {
         if (condition instanceof MatchTool matchTool) {
             return matchesItemPredicate(matchTool.predicate().orElse(null), toolItem);
         } else if (condition instanceof AnyOfCondition anyOfCondition) {
-            for (LootItemCondition child : WidenedFields.terms(anyOfCondition)) {
-                if (isCorrectConditions(List.of(child), toolItem)) {
+            for (Holder<LootItemCondition> child : WidenedFields.terms(anyOfCondition)) {
+                if (isCorrectCondition(child.value(), toolItem)) {
                     return true;
                 }
             }
@@ -78,7 +70,7 @@ public class LootTableMineableCollector {
         return untypedPredicate.test(toolItem);
     }
 
-    private boolean doLootTable(LootTable lootTable) {
+    boolean doLootTable(LootTable lootTable) {
         if (lootTable == null || lootTable == LootTable.EMPTY) {
             return false;
         }
@@ -92,6 +84,13 @@ public class LootTableMineableCollector {
     }
 
     private boolean doLootPool(@NotNull LootPool lootPool) {
+        if (WidenedFields.entries(lootPool).isEmpty()) {
+            return false;
+        }
+        if (WidenedFields.condition(lootPool)
+                .map(condition -> isCorrectCondition(condition.value(), toolItem)).orElse(false)) {
+            return true;
+        }
         for (LootPoolEntryContainer entry : WidenedFields.entries(lootPool)) {
             if (doLootPoolEntry(entry)) {
                 return true;
@@ -108,10 +107,14 @@ public class LootTableMineableCollector {
                 }
             }
         } else if (entry instanceof NestedLootTable nestedLootTable) {
-            LootTable lootTable = WidenedFields.contents(nestedLootTable).map($ -> lootRegistry.get($).map(Holder::value).orElse(null), Function.identity());
-            return doLootTable(lootTable);
+            for (Holder<LootTable> child : WidenedFields.contents(nestedLootTable)) {
+                if (doLootTable(child.value())) {
+                    return true;
+                }
+            }
         } else {
-            return isCorrectConditions(WidenedFields.conditions(entry), toolItem);
+            return WidenedFields.condition(entry)
+                    .map(condition -> isCorrectCondition(condition.value(), toolItem)).orElse(false);
         }
         return false;
     }

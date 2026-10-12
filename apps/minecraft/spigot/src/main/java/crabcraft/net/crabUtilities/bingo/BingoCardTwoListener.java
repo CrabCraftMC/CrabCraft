@@ -700,7 +700,7 @@ public final class BingoCardTwoListener implements BingoDetector {
         ItemStack result = trade.getResult();
         io.papermc.paper.datacomponent.item.MapDecorations decorations =
                 result.getData(DataComponentTypes.MAP_DECORATIONS);
-        if (result.getType() == Material.FILLED_MAP
+        if (result.hasData(DataComponentTypes.MAP_ID)
                 && decorations != null
                 && !decorations.decorations().isEmpty()
                 && trade.getIngredients().stream().anyMatch(item -> item.getType() == Material.COMPASS)
