@@ -1,7 +1,7 @@
 name: CrabHalloweenTest
 version: '1.0'
 main: crabcraft.net.halloweentest.HalloweenTestPlugin
-api-version: '26.2'
+api-version: '26.3'
 commands:
   halloween:
     description: Show the Halloween tasks and your progress.

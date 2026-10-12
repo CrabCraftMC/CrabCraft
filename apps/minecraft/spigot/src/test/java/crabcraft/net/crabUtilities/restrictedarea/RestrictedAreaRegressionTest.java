@@ -1,5 +1,7 @@
 package crabcraft.net.crabUtilities.restrictedarea;
 
+import io.papermc.paper.event.entity.EntityBreakByEntityEvent;
+import io.papermc.paper.event.entity.EntityBreakEvent;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
@@ -15,6 +17,8 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.entity.Cushion;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.EnderPearl;
@@ -64,6 +68,7 @@ public final class RestrictedAreaRegressionTest {
         verifyConfiguration();
         verifyPermissionChangesAreLive();
         verifyGriefProtectionInEveryWorld();
+        verifyCushionBreakProtection();
         verifyPersonalInventoryRemainsUsable();
         verifyNormalMovementAndCommands();
         verifyPassiveInteractionsStaySilent();
@@ -162,6 +167,30 @@ public final class RestrictedAreaRegressionTest {
             check(open.isCancelled() != personal, "incorrect inventory access for " + type);
             check(click.isCancelled() != personal, "incorrect inventory manipulation for " + type);
         }
+    }
+
+    private static void verifyCushionBreakProtection() {
+        RestrictedAreaListener listener = listener();
+        AtomicBoolean verified = new AtomicBoolean();
+        Player player = player(verified, new AtomicBoolean(), new AtomicInteger(),
+                proxy(World.class, Map.of()));
+        Cushion cushion = proxy(Cushion.class, Map.of());
+        DamageSource damageSource = proxy(DamageSource.class, Map.of());
+        for (Entity remover : new Entity[]{player, proxy(Arrow.class, Map.of("getShooter", player))}) {
+            EntityBreakByEntityEvent event = new EntityBreakByEntityEvent(cushion, remover, damageSource,
+                    EntityBreakEvent.RemoveCause.ENTITY);
+            listener.onEntityBreak(event);
+            check(event.isCancelled(), "unverified player or their projectile could break a cushion");
+        }
+        verified.set(true);
+        EntityBreakByEntityEvent permitted = new EntityBreakByEntityEvent(cushion, player, damageSource,
+                EntityBreakEvent.RemoveCause.ENTITY);
+        listener.onEntityBreak(permitted);
+        check(!permitted.isCancelled(), "verified player still cannot break cushions");
+        EntityBreakByEntityEvent unrelated = new EntityBreakByEntityEvent(cushion, proxy(Entity.class, Map.of()),
+                damageSource, EntityBreakEvent.RemoveCause.ENTITY);
+        listener.onEntityBreak(unrelated);
+        check(!unrelated.isCancelled(), "cushion break unrelated to a player was blocked");
     }
 
     private static void verifyNormalMovementAndCommands() throws Exception {

@@ -24,9 +24,9 @@ repositories {
 }
 
 dependencies {
-    compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
-    annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
-    testCompileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    compileOnly("com.velocitypowered:velocity-api:4.2.0")
+    annotationProcessor("com.velocitypowered:velocity-api:4.2.0")
+    testCompileOnly("com.velocitypowered:velocity-api:4.2.0")
     compileOnly("org.spongepowered:configurate-yaml:4.1.2")
     compileOnly("com.google.code.gson:gson:2.10.1")
     compileOnly("net.luckperms:api:5.5")

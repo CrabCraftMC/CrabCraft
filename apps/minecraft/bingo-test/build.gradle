@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly('io.papermc.paper:paper-api:26.2.build.87-stable')
+    compileOnly('io.papermc.paper:paper-api:26.3.build.176-stable')
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -53,8 +53,8 @@ tasks.register('prepareBingoTestServer', Copy) {
 tasks {
     runServer {
         dependsOn prepareBingoTestServer
-        minecraftVersion('26.2')
-        build(87)
+        minecraftVersion('26.3')
+        build(176)
         jvmArgs(
             '-Xms512M',
             '-Xmx2G',
@@ -146,7 +146,7 @@ tasks.register('testJarContentsRegressionTest') {
         List<String> requiredMetadata = [
             "name: ${testPluginName}",
             'main: crabcraft.net.bingotest.CrabBingoTestPlugin',
-            "api-version: '26.2'",
+            "api-version: '26.3'",
             "description: Bingo #${testCardNumber} task detector test harness.",
             'bingotest:',
             'permission: crabbingotest.use',

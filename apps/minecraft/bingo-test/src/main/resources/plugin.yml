@@ -1,7 +1,7 @@
 name: CrabBingoCard6Test
 version: '${version}'
 main: crabcraft.net.bingotest.CrabBingoTestPlugin
-api-version: '26.2'
+api-version: '26.3'
 authors: [Max]
 website: https://www.crabcraft.net
 description: Bingo #6 task detector test harness.

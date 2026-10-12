@@ -1,6 +1,6 @@
 # Halloween manual test server
 
-Minecraft Java **26.2**, **127.0.0.1:25565** on the computer running the server.
+Minecraft Java **26.3**, **127.0.0.1:25565** on the computer running the server.
 This harness uses the production `HalloweenManager`, bell detector, action
 consumer, PostgreSQL progress queries and Minecraft command output. The separate
 local event is active immediately. It does not connect to Discord or grant roles.

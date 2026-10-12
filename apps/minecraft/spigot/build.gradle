@@ -46,10 +46,10 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("26.2.build.87-stable")
+    paperweight.paperDevBundle("26.3.build.176-stable")
     compileOnly("net.essentialsx:EssentialsX:2.20.1") {
         // EssentialsX 2.20.1 transitively pulls spigot-api:1.20.1 which conflicts
-        // with paper-api:26.2 on the org.spigotmc:spigot-api capability.
+        // with paper-api:26.3 on the org.spigotmc:spigot-api capability.
         exclude group: "org.spigotmc", module: "spigot-api"
     }
     compileOnly("net.kyori:adventure-text-serializer-legacy:4.17.0")
@@ -58,9 +58,9 @@ dependencies {
     testImplementation("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("de.bluecolored:bluemap-api:2.7.7")
-    compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
-    testCompileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
-    compileOnly("com.nexomc:nexo:1.27.0")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.14.0")
+    testCompileOnly("com.github.retrooper:packetevents-spigot:2.14.0")
+    compileOnly("com.nexomc:nexo:1.29.1")
     compileOnly("org.projectlombok:lombok:1.18.46")
     annotationProcessor("org.projectlombok:lombok:1.18.46")
     implementation("redis.clients:jedis:5.1.0")
@@ -85,7 +85,8 @@ tasks.build.dependsOn(tasks.shadowJar)
 
 tasks {
     runServer {
-        minecraftVersion("26.2")
+        minecraftVersion("26.3")
+        build(176)
     }
 }
 

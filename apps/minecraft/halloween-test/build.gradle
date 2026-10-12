@@ -14,7 +14,7 @@ sourceSets.main.java {
 }
 repositories { maven { url = uri('https://repo.papermc.io/repository/maven-public/') } }
 dependencies {
-    compileOnly('io.papermc.paper:paper-api:26.2.build.87-stable')
+    compileOnly('io.papermc.paper:paper-api:26.3.build.176-stable')
     implementation('redis.clients:jedis:5.1.0')
 }
 shadowJar {
@@ -29,8 +29,8 @@ tasks.register('prepareHalloweenTestServer', Copy) {
 }
 runServer {
     dependsOn prepareHalloweenTestServer
-    minecraftVersion('26.2')
-    build(87)
+    minecraftVersion('26.3')
+    build(176)
     jvmArgs('-Xms512M', '-Xmx2G', '-Dcom.mojang.eula.agree=true')
 }
 tasks.named('test') { failOnNoDiscoveredTests = false }

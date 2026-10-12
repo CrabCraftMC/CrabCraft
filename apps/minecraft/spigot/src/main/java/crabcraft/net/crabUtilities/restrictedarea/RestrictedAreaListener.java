@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities.restrictedarea;
 
 import crabcraft.net.crabUtilities.CrabUtilities;
+import io.papermc.paper.event.entity.EntityBreakByEntityEvent;
 import io.papermc.paper.event.player.PlayerChangeBeaconEffectEvent;
 import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import io.papermc.paper.event.player.PlayerInsertLecternBookEvent;
@@ -247,6 +248,11 @@ public final class RestrictedAreaListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onHangingBreak(final HangingBreakByEntityEvent event) {
+        cancel(event, responsiblePlayer(event.getRemover()));
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEntityBreak(final EntityBreakByEntityEvent event) {
         cancel(event, responsiblePlayer(event.getRemover()));
     }
 
