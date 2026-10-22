@@ -82,7 +82,8 @@ public class ConnectionListener {
         String virtualHost = player.getVirtualHost()
                 .map(address -> address.getHostString())
                 .orElse("");
-        if (isSilentJoinHost(virtualHost, plugin.getConfig().getSilentJoinHosts())) {
+        if (VanishManager.canVanish(player)
+                && isSilentJoinHost(virtualHost, plugin.getConfig().getSilentJoinHosts())) {
             silentJoinPlayers.add(player.getUniqueId());
         } else {
             silentJoinPlayers.remove(player.getUniqueId());
@@ -175,8 +176,11 @@ public class ConnectionListener {
         }
 
         String currentServerName = currentServer.getServerInfo().getName();
-        if (silentJoinPlayers.contains(player.getUniqueId())) {
-            plugin.getVanishManager().applyVanish(player, currentServer);
+        if (previousServer == null && silentJoinPlayers.contains(player.getUniqueId())) {
+            if (!plugin.getVanishManager().applyVanish(player, currentServer)) {
+                player.disconnect(Component.text("Could not save your automatic vanish state. Please contact an administrator."));
+                return;
+            }
         }
 
         // Publish cached nickname state immediately. Unknown state must not be
@@ -188,8 +192,8 @@ public class ConnectionListener {
         }
 
         if (previousServer == null) {
-            // EssentialsX on the backend is authoritative. Do not expose a
-            // connection until that exact backend reports it as visible.
+            // Do not expose a connection until this backend acknowledges the
+            // authoritative proxy state for its current session.
             plugin.getVanishManager().beginSession(player, currentServer,
                     visible -> handleInitialJoin(player, currentServerName, visible));
             return;

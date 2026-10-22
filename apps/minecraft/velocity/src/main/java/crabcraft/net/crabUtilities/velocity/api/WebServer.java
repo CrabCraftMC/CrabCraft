@@ -183,7 +183,7 @@ public class WebServer {
             + "\"get\":{"
             + "\"tags\":[\"Players\"],"
             + "\"summary\":\"List online players\","
-            + "\"description\":\"Returns all visible players currently connected to the proxy across all backend servers. EssentialsX-vanished players are excluded. Each player object includes their username, UUID, display nickname, ping, and backend server.\","
+            + "\"description\":\"Returns all visible players currently connected to the proxy across all backend servers. Vanished players are excluded. Each player object includes their username, UUID, display nickname, ping, and backend server.\","
             + "\"operationId\":\"getPlayers\","
             + "\"responses\":{"
             + "\"200\":{"
