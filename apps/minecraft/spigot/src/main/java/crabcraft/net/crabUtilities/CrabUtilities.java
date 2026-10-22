@@ -81,7 +81,7 @@ public final class CrabUtilities extends JavaPlugin {
     private BingoManager bingoManager;
     private HalloweenManager halloweenManager;
     private RestrictedAreaListener restrictedAreaListener;
-    private VanishStatusPublisher vanishStatusPublisher;
+    private PaperVanishManager vanishManager;
     private ModerationToolsManager moderationToolsManager;
     private AfkManager afkManager;
     private InventoryInspectionManager inventoryInspectionManager;
@@ -98,14 +98,9 @@ public final class CrabUtilities extends JavaPlugin {
         this.moduleConfigManager = new ModuleConfigManager(this);
         moduleConfigManager.initialise();
 
-        // EssentialsX is authoritative for vanish state. Report it to the
-        // proxy before features that can publicly expose connected players.
-        this.vanishStatusPublisher = new VanishStatusPublisher(this);
-        vanishStatusPublisher.start();
-        if (essentials != null) {
-            Bukkit.getPluginManager().registerEvents(
-                    new EssentialsVanishListener(this, vanishStatusPublisher), this);
-        }
+        // Apply proxy-owned vanish before features that can expose players.
+        this.vanishManager = new PaperVanishManager(this, this::onVanishStatusChanged);
+        vanishManager.start();
 
         this.moderationToolsManager = new ModerationToolsManager(this);
         moderationToolsManager.register();
@@ -320,12 +315,8 @@ public final class CrabUtilities extends JavaPlugin {
         getLogger().info("CrabUtilities enabled. EssentialsX present: " + (essentials != null));
     }
 
-    public Plugin getEssentials() {
-        return essentials;
-    }
-
     public boolean isVanished(org.bukkit.entity.Player player) {
-        return VanishStatus.isVanished(essentials, player);
+        return vanishManager != null && vanishManager.isVanished(player);
     }
 
     public void onVanishStatusChanged(org.bukkit.entity.Player player) {
@@ -807,9 +798,9 @@ public final class CrabUtilities extends JavaPlugin {
             afkManager.shutdown();
             afkManager = null;
         }
-        if (vanishStatusPublisher != null) {
-            vanishStatusPublisher.shutdown();
-            vanishStatusPublisher = null;
+        if (vanishManager != null) {
+            vanishManager.shutdown();
+            vanishManager = null;
         }
         stopSimpleVoiceAnimations();
         stopAccurateBlockPlacement();

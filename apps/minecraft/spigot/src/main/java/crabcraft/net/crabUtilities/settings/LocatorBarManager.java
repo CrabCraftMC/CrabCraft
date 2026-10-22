@@ -109,7 +109,7 @@ public class LocatorBarManager implements Listener {
         }
     }
 
-    /** Re-applies waypoint visibility immediately after an EssentialsX vanish change. */
+    /** Re-applies waypoint visibility immediately after a vanish change. */
     public void refresh(Player player) {
         UUID uuid = player.getUniqueId();
         apply(player, settingsService.isLoaded(uuid) && settingsService.isLocatorBarEnabled(uuid));

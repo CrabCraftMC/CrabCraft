@@ -117,6 +117,7 @@ def regressionTests = [
     nicknameRegressionTest: 'crabcraft.net.crabUtilities.NicknameRegressionTest',
     nicknameSoftDependencyRegressionTest: 'crabcraft.net.crabUtilities.NicknameSoftDependencyRegressionTest',
     playerVisibilityRegressionTest: 'crabcraft.net.crabUtilities.PlayerVisibilityRegressionTest',
+    paperVanishRegressionTest: 'crabcraft.net.crabUtilities.PaperVanishRegressionTest',
     lofiVoicechatRegressionTest: 'crabcraft.net.crabUtilities.voicechat.LofiVoicechatRegressionTest',
     staffVoicechatRegressionTest: 'crabcraft.net.crabUtilities.voicechat.StaffVoicechatRegressionTest',
     simpleVoiceAnimationsProtocolRegressionTest: 'crabcraft.net.crabUtilities.voicechat.SimpleVoiceAnimationsProtocolRegressionTest',

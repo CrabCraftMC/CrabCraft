@@ -62,8 +62,7 @@ public class MentionAutocompleteListener implements Listener {
 
         Set<String> completions = new LinkedHashSet<>();
         MentionProcessor.AliasIndex aliases = MentionProcessor.aliasIndex(
-                PlayerVisibility.visibleTo(viewer, Bukkit.getOnlinePlayers()),
-                plugin.getEssentials());
+                PlayerVisibility.visibleTo(viewer, Bukkit.getOnlinePlayers()));
         for (String name : aliases.completionNames().values()) {
             if (!name.isEmpty()) {
                 completions.add(prefix + name);

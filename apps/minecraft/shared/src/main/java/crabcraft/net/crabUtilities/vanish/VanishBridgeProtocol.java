@@ -1,28 +1,45 @@
 package crabcraft.net.crabUtilities.vanish;
 
-/** Wire format used to report EssentialsX vanish state from Paper to Velocity. */
+import java.nio.ByteBuffer;
+
+/** Velocity publishes authoritative state; Paper acknowledges the exact revision it applied. */
 public final class VanishBridgeProtocol {
 
     public static final String CHANNEL = "crabcraft:vanish";
-    private static final byte VERSION = 1;
-    private static final byte VISIBLE = 0;
-    private static final byte VANISHED = 1;
+    public static final byte VERSION = 2;
+    private static final byte READY = 0;
+    private static final byte STATUS = 1;
 
     private VanishBridgeProtocol() {
     }
 
-    public static byte[] status(boolean vanished) {
-        return new byte[]{VERSION, vanished ? VANISHED : VISIBLE};
+    public static byte[] ready() {
+        return new byte[]{VERSION, READY};
     }
 
-    public static boolean decode(byte[] payload) {
-        if (payload == null || payload.length != 2 || payload[0] != VERSION) {
-            throw new IllegalArgumentException("Invalid vanish status payload");
+    public static byte[] status(long revision, boolean vanished) {
+        if (revision < 0) throw new IllegalArgumentException("Negative vanish revision");
+        return ByteBuffer.allocate(11)
+                .put(VERSION).put(STATUS).putLong(revision).put((byte) (vanished ? 1 : 0)).array();
+    }
+
+    public static Message decode(byte[] payload) {
+        if (payload == null || payload.length < 2 || payload[0] != VERSION) {
+            throw new IllegalArgumentException("Invalid vanish payload");
         }
-        return switch (payload[1]) {
-            case VISIBLE -> false;
-            case VANISHED -> true;
-            default -> throw new IllegalArgumentException("Unknown vanish status value");
-        };
+        if (payload[1] == READY && payload.length == 2) {
+            return new Message(true, 0, false);
+        }
+        if (payload[1] != STATUS || payload.length != 11) {
+            throw new IllegalArgumentException("Invalid vanish message type or length");
+        }
+        long revision = ByteBuffer.wrap(payload, 2, Long.BYTES).getLong();
+        if (revision < 0 || (payload[10] != 0 && payload[10] != 1)) {
+            throw new IllegalArgumentException("Invalid vanish revision or state");
+        }
+        return new Message(false, revision, payload[10] == 1);
+    }
+
+    public record Message(boolean ready, long revision, boolean vanished) {
     }
 }

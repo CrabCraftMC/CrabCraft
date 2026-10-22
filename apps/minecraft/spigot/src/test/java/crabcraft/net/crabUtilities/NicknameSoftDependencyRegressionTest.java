@@ -62,10 +62,6 @@ final class NicknameSoftDependencyRegressionTest {
         check(NicknameComponentResolver.plainNicknameOrName(player).equals("AccountName"),
                 "clearing a nickname did not reset plain nickname lookups");
 
-        check(!VanishStatus.isVanished(null, player),
-                "missing EssentialsX did not default to visible");
-        check(!VanishStatus.setVanished(null, player, true),
-                "missing EssentialsX claimed to apply vanish state");
     }
 
     private static void check(boolean condition, String message) {

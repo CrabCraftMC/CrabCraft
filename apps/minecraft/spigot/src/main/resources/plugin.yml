@@ -126,6 +126,15 @@ permissions:
   crabutilities.afk:
     description: Toggle your cosmetic AFK status.
     default: true
+  crabutilities.vanish:
+    description: Toggle your network-wide vanish state through Velocity.
+    default: op
+  crabutilities.vanish.see:
+    description: See vanished players in the world and tab list.
+    default: op
+  crabutilities.staffchat:
+    description: Access staff chat and see vanished players.
+    default: op
   crabutilities.staffvc:
     description: Join the hidden, isolated staff voice-chat group.
     default: op

@@ -254,6 +254,32 @@ Active members are rechecked every second and removed if their permission is rev
 The group icon beside player name tags remains visible; selectively hiding it
 requires a client-side mod.
 
+### Network vanish
+
+`/vanish` (or `/v`) toggles your own vanish across the network; `/vanish on`
+and `/vanish off` set it explicitly. The command runs on Velocity and requires
+`crabutilities.vanish` or the existing `crabutilities.staffchat` permission.
+Vanish state survives server switches, reconnects and proxy restarts, with UUIDs
+saved in the proxy's `plugins/crabutilities/vanished-players.txt` file.
+
+Paper's native visibility API removes vanished players from entity tracking and
+tab for ordinary players. Moderators with `crabutilities.staffchat` or
+`crabutilities.vanish.see` can still see them. Grant these permissions on the
+Paper servers as well as the proxy; permission changes are applied within one
+second. Public ping counts and hover previews, API/website player lists, public
+chat, mentions and join/leave announcements exclude vanished players.
+
+Deploy the Paper and Velocity jars together: the backend keeps new arrivals
+hidden until it has applied the proxy's state. The configured silent-join
+hostname (`mods.crabcraft.net` by default) automatically vanishes authorised
+staff. Vanish no longer requires EssentialsX; other features still use it.
+Before rollout, clear any old EssentialsX vanish state and revoke its vanish
+and silent-join auto-vanish permissions so both plugins do not manage visibility.
+If TAB supplies the cross-server tab list, grant moderators `tab.seevanished`
+on the server running TAB as well. A Velocity TAB installation also needs
+TAB-Bridge on the Paper servers to read CrabCraft's `vanished` metadata. Check
+the deployed tab list during rollout, since it sends its own player entries.
+
 ## Contributing and security
 
 Focused contributions are welcome. Please read

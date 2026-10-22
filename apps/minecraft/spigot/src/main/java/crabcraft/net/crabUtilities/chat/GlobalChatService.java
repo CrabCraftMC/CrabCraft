@@ -97,7 +97,7 @@ public class GlobalChatService {
         String highlight = plugin.getConfig().getString("global-chat.mentions.highlight",
                 "<yellow><name></yellow>");
         this.mentionProcessor = new MentionProcessor(mentionsEnabled, prefix, highlight,
-                miniMessage, plugin.getEssentials());
+                miniMessage, plugin::isVanished);
 
         this.soundEnabled = plugin.getConfig().getBoolean("global-chat.mentions.sound.enabled", true);
         String soundKey = plugin.getConfig().getString("global-chat.mentions.sound.key",
