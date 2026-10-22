@@ -121,7 +121,7 @@ public final class HalloweenManager implements Listener {
                                             "You've earned an exclusive Discord role and an in-game pumpkin tag!", TextColor.color(0xFFC65A))
                                             .hoverEvent(HoverEvent.showText(CrabMessages.text(
                                                     "Link your Minecraft account on Discord to receive the role."
-                                                    + "\nThe in-game tag lasts while the event is active."))));
+                                                    + "\nYour tag is permanent. Equip it with /tags or /settings → Tags."))));
                                 }
                             });
                         } catch (Exception error) {

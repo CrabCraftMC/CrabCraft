@@ -8,6 +8,8 @@
     "./queries/bot": "./src/queries/bot.ts",
     "./queries/bingo": "./src/queries/bingo.ts",
     "./queries/halloween": "./src/queries/halloween.ts",
+    "./queries/tags": "./src/queries/tags.ts",
+    "./queries/tag-admin": "./src/queries/tag-admin.ts",
     "./halloweenLogic": "./src/halloweenLogic.ts",
     "./queries/web": "./src/queries/web.ts",
     "./queries/auth": "./src/queries/auth.ts"
@@ -16,6 +18,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
+    "tags:backfill-halloween": "bun scripts/backfill-halloween-tags.ts",
+    "test:tags-db": "bun test tests/tags.integration.test.ts tests/tag-admin.integration.test.ts",
     "studio": "drizzle-kit studio"
   },
   "dependencies": {

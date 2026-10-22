@@ -1,0 +1,10 @@
+[
+  {
+    "id": "halloween-2026-pumpkin",
+    "name": "Halloween 2026",
+    "description": "Complete all three Halloween 2026 challenges.",
+    "glyph_id": "pumpkin",
+    "sort_order": 10,
+    "enabled": true
+  }
+]

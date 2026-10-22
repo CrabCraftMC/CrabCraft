@@ -3,6 +3,7 @@ package crabcraft.net.crabUtilities.velocity;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
+import crabcraft.net.crabUtilities.velocity.tags.TagCommand;
 import crabcraft.net.crabUtilities.velocity.update.ReleaseInfo;
 import crabcraft.net.crabUtilities.velocity.update.UpdateService;
 import net.kyori.adventure.text.Component;
@@ -17,7 +18,8 @@ public class ReloadCommand {
         LiteralCommandNode<CommandSource> node = BrigadierCommand.literalArgumentBuilder("crabutilitiesproxy")
                 .requires(source -> source.hasPermission("crabutilities.reload")
                         || source.hasPermission("crabutilities.webapi")
-                        || source.hasPermission("crabutilities.update"))
+                        || source.hasPermission("crabutilities.update")
+                        || TagCommand.hasAnyPermission(source))
                 .then(BrigadierCommand.literalArgumentBuilder("reload")
                         .requires(source -> source.hasPermission("crabutilities.reload"))
                         .executes(ctx -> {
@@ -78,9 +80,10 @@ public class ReloadCommand {
                             return 0;
                         })
                 )
+                .then(TagCommand.tree(plugin))
                 .executes(ctx -> {
                     ctx.getSource().sendMessage(Component.text(
-                            "Usage: /crabutilitiesproxy <reload|webapi|update>", NamedTextColor.RED));
+                            "Usage: /crabutilitiesproxy <reload|webapi|update|tags>", NamedTextColor.RED));
                     return 0;
                 })
                 .build();

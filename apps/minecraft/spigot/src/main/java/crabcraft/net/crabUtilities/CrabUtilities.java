@@ -30,6 +30,9 @@ import crabcraft.net.crabUtilities.slime.SlimeCommand;
 import crabcraft.net.crabUtilities.slime.SlimeMapListener;
 import crabcraft.net.crabUtilities.sleep.SleepBroadcastListener;
 import crabcraft.net.crabUtilities.spectator.SpectatorBackCommand;
+import crabcraft.net.crabUtilities.tags.PaperTagService;
+import crabcraft.net.crabUtilities.tags.TagsCommand;
+import crabcraft.net.crabUtilities.tags.TagsDialog;
 import crabcraft.net.crabUtilities.xaero.XaeroBootstrap;
 import crabcraft.net.crabUtilities.xpclumps.ExperienceClumpListener;
 import crabcraft.net.crabUtilities.update.UpdateCommand;
@@ -69,6 +72,8 @@ public final class CrabUtilities extends JavaPlugin {
     private LocatorBarManager locatorBarManager;
     private CoordinateHudManager coordinateHudManager;
     private SettingsDialog settingsDialog;
+    private volatile PaperTagService tagService;
+    private TagsDialog tagsDialog;
     private SignMarkerService signMarkerService;
     private HappyGhastSpeedManager happyGhastSpeedManager;
     private UnlockAllRecipesManager unlockAllRecipesManager;
@@ -337,6 +342,11 @@ public final class CrabUtilities extends JavaPlugin {
         return playerSettingsService;
     }
 
+    public String getTagPlaceholder(java.util.UUID playerId) {
+        PaperTagService service = tagService;
+        return service == null ? "" : service.cache().placeholder(playerId);
+    }
+
     public boolean isBingoMessagesEnabled(java.util.UUID playerId) {
         return playerSettingsService == null || playerSettingsService.isBingoMessagesEnabled(playerId);
     }
@@ -581,11 +591,18 @@ public final class CrabUtilities extends JavaPlugin {
 
     private void startPlayerSettings() {
         this.playerSettingsService = new PlayerSettingsService(this);
+        this.tagService = new PaperTagService(this);
+        this.tagsDialog = new TagsDialog(tagService, player -> {
+            if (playerSettingsService.isLoaded(player.getUniqueId())) settingsDialog.open(player);
+            else player.sendMessage(CrabMessages.muted("Your settings are still loading, try again in a moment."));
+        });
         this.phantomManager = new PhantomManager(this, playerSettingsService);
         this.locatorBarManager = new LocatorBarManager(this, playerSettingsService);
         this.coordinateHudManager = new CoordinateHudManager(this, playerSettingsService);
-        this.settingsDialog = new SettingsDialog(playerSettingsService);
+        this.settingsDialog = new SettingsDialog(playerSettingsService, tagsDialog);
 
+        tagService.start();
+        Bukkit.getPluginManager().registerEvents(tagsDialog, this);
         Bukkit.getPluginManager().registerEvents(playerSettingsService, this);
         Bukkit.getPluginManager().registerEvents(phantomManager, this);
         Bukkit.getPluginManager().registerEvents(locatorBarManager, this);
@@ -596,14 +613,28 @@ public final class CrabUtilities extends JavaPlugin {
         playerSettingsService.start();
         phantomManager.start();
 
-        SettingsCommand settingsCommand = new SettingsCommand(playerSettingsService, settingsDialog);
+        SettingsCommand settingsCommand = new SettingsCommand(playerSettingsService, settingsDialog, tagsDialog);
         if (getCommand("settings") != null) {
             getCommand("settings").setExecutor(settingsCommand);
             getCommand("settings").setTabCompleter(settingsCommand);
         }
+        TagsCommand tagsCommand = new TagsCommand(tagsDialog);
+        if (getCommand("tags") != null) {
+            getCommand("tags").setExecutor(tagsCommand);
+            getCommand("tags").setTabCompleter(tagsCommand);
+        }
     }
 
     private void stopPlayerSettings() {
+        if (tagsDialog != null) {
+            HandlerList.unregisterAll(tagsDialog);
+            tagsDialog.shutdown();
+            tagsDialog = null;
+        }
+        if (tagService != null) {
+            tagService.shutdown();
+            tagService = null;
+        }
         this.settingsDialog = null;
         if (locatorBarManager != null) {
             HandlerList.unregisterAll(locatorBarManager);

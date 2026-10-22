@@ -1,7 +1,8 @@
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
-import { db } from "../client";
+import { db, type Database } from "../client";
 import { halloweenEvents, halloweenPlayerProgress, playerAlts, players } from "../schema";
 import { advanceHalloweenProgress, isHalloweenComplete, isNewerStreamId, type HalloweenAction } from "../halloweenLogic";
+import { getHalloweenTagSourceKey, grantTagInTransaction, HALLOWEEN_2026_TAG_ID } from "./tags";
 
 export async function configureHalloweenEvent(event: typeof halloweenEvents.$inferInsert) {
   await db.insert(halloweenEvents).values(event).onConflictDoUpdate({
@@ -15,8 +16,8 @@ export async function recordHalloweenAction(event: {
   minecraftUuid: string;
   action: HalloweenAction;
   occurredAt: number;
-}, streamId: string) {
-  return db.transaction(async (tx) => {
+}, streamId: string, database: Database = db) {
+  return database.transaction(async (tx) => {
     const [schedule] = await tx.select().from(halloweenEvents).where(eq(halloweenEvents.id, event.eventId));
     if (!schedule || event.occurredAt < schedule.starts_at || event.occurredAt >= schedule.ends_at) return;
     const key = and(eq(halloweenPlayerProgress.event_id, event.eventId),
@@ -27,6 +28,7 @@ export async function recordHalloweenAction(event: {
     const [previous] = await tx.select().from(halloweenPlayerProgress).where(key).for("update");
     if (!isNewerStreamId(streamId, previous.last_stream_id)) return;
     const next = advanceHalloweenProgress(previous, event.action);
+    const newlyComplete = previous.completed_at === null && isHalloweenComplete(next);
     await tx.update(halloweenPlayerProgress).set({
       hunt_mask: next.hunt_mask,
       trick_or_treat: next.trick_or_treat,
@@ -34,13 +36,21 @@ export async function recordHalloweenAction(event: {
       last_stream_id: streamId,
       completed_at: previous.completed_at ?? (isHalloweenComplete(next) ? event.occurredAt : null),
     }).where(key);
+    const award = newlyComplete && event.eventId === "halloween-2026"
+      ? await grantTagInTransaction(tx, {
+        minecraftUuid: event.minecraftUuid, tagId: HALLOWEEN_2026_TAG_ID,
+        grantedAt: event.occurredAt, source: `halloween:${event.eventId}`, actor: "system:halloween",
+        reason: "Completed all three Halloween 2026 challenges",
+        sourceKey: getHalloweenTagSourceKey(event.eventId, event.minecraftUuid),
+      }) : null;
     // Only a persisted incomplete -> complete transition produces a chat notification.
     const task = previous.hunt_mask !== 31 && next.hunt_mask === 31 ? "pumpkin_hunt"
       : !previous.trick_or_treat && next.trick_or_treat ? "trick_or_treat"
       : !previous.back_from_the_dead && next.back_from_the_dead ? "back_from_the_dead" : null;
-    if (!task) return;
+    if (!task && !award?.ownershipChanged) return;
     return {
       eventId: event.eventId, minecraftUuid: event.minecraftUuid, task,
+      tagAwarded: award?.ownershipChanged ?? false,
       completedTasks: Number(next.hunt_mask === 31) + Number(next.trick_or_treat) + Number(next.back_from_the_dead),
     };
   });

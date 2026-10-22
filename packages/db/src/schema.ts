@@ -13,6 +13,7 @@ import {
   primaryKey,
   check,
   pgSequence,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -300,6 +301,57 @@ export const playerSettings = pgTable("player_settings", {
   settings: text("settings").notNull(),
   updated_at: integer("updated_at").notNull(),
 });
+
+// Permanent collectibles belong to Minecraft accounts, including unlinked alts.
+export const cosmeticTags = pgTable("cosmetic_tags", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  glyph_id: text("glyph_id").notNull(),
+  sort_order: integer("sort_order").notNull().default(0),
+  enabled: boolean("enabled").notNull().default(true),
+});
+
+export const playerTags = pgTable("player_tags", {
+  minecraft_uuid: text("minecraft_uuid").notNull(),
+  tag_id: text("tag_id").notNull().references(() => cosmeticTags.id),
+  granted_at: integer("granted_at").notNull(),
+  source: text("source").notNull(),
+  granted_by: text("granted_by").notNull(),
+}, (table) => [
+  primaryKey({ name: "player_tags_pkey", columns: [table.minecraft_uuid, table.tag_id] }),
+  index("player_tags_tag_id_idx").on(table.tag_id),
+]);
+
+export const playerTagState = pgTable("player_tag_state", {
+  minecraft_uuid: text("minecraft_uuid").primaryKey(),
+  selected_tag_id: text("selected_tag_id"),
+  revision: bigint("revision", { mode: "bigint" }).notNull().default(sql`0`),
+  updated_at: integer("updated_at").notNull(),
+}, (table) => [
+  foreignKey({
+    name: "player_tag_state_owned_tag_fk",
+    columns: [table.minecraft_uuid, table.selected_tag_id],
+    foreignColumns: [playerTags.minecraft_uuid, playerTags.tag_id],
+  }),
+  check("player_tag_state_revision_check", sql`${table.revision} >= 0`),
+]);
+
+export const playerTagAudit = pgTable("player_tag_audit", {
+  id: text("id").primaryKey(),
+  minecraft_uuid: text("minecraft_uuid").notNull(),
+  tag_id: text("tag_id").notNull().references(() => cosmeticTags.id),
+  action: text("action").notNull(),
+  ownership_changed: boolean("ownership_changed").notNull(),
+  actor: text("actor").notNull(),
+  source: text("source").notNull(),
+  reason: text("reason").notNull(),
+  created_at: integer("created_at").notNull(),
+  source_key: text("source_key").unique("player_tag_audit_source_key_unique"),
+}, (table) => [
+  check("player_tag_audit_action_check", sql`${table.action} IN ('grant', 'revoke')`),
+  index("player_tag_audit_player_created_idx").on(table.minecraft_uuid, table.created_at),
+]);
 
 // ── weekly bingo ───────────────────────────────────────────────
 // Cards are prepared in advance. Paper receives the currently active card via

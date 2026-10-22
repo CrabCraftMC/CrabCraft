@@ -118,7 +118,7 @@ const artwork = container({ style: { position: "relative", width, height, backgr
       }),
       text("pumpkin next to your name in-game.", { fontFamily: "Unbounded", fontSize: 20, fontWeight: 600, color: "#21140c", lineHeight: 1.55 }),
     ] }),
-    label("The in-game tag lasts while the event is active.", 28, 80, 16, "#21140c", { width: 1064, textAlign: "center", fontWeight: 500 }),
+    label("Keep your tag forever. Equip it with /tags or /settings → Tags.", 28, 80, 16, "#21140c", { width: 1064, textAlign: "center", fontWeight: 500 }),
   ], { backgroundImage: "linear-gradient(120deg, #f97316, #fb923c)" }),
   label("crabcraft.net", 50, 1222, 36, orange, { fontFamily: "Minecraft" }),
   label("/halloween", 730, 1222, 36, orange, { fontFamily: "Minecraft", width: 420, textAlign: "right" }),

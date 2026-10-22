@@ -24,6 +24,8 @@ import crabcraft.net.crabUtilities.velocity.db.PlayerSettingsRepository;
 import crabcraft.net.crabUtilities.velocity.db.BingoRepository;
 import crabcraft.net.crabUtilities.velocity.db.HalloweenRepository;
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
+import crabcraft.net.crabUtilities.velocity.db.TagRepository;
+import crabcraft.net.crabUtilities.velocity.tags.TagService;
 import crabcraft.net.crabUtilities.velocity.messaging.MessageManager;
 import crabcraft.net.crabUtilities.velocity.messaging.MsgCommand;
 import crabcraft.net.crabUtilities.velocity.messaging.SocialSpyCommand;
@@ -93,6 +95,8 @@ public class CrabUtilitiesVelocity {
     private ConnectionListener connectionListener;
     private VanishManager vanishManager;
     private PlayerSettingsService playerSettingsService;
+    private TagRepository tagRepository;
+    private volatile TagService tagService;
     private LiteBansInfractionService liteBansInfractionService;
     private PunishmentEventPublisher punishmentEventPublisher;
     private LuckPerms luckPerms;
@@ -222,6 +226,12 @@ public class CrabUtilitiesVelocity {
                 config.getLoginStreakRequiredPlaySeconds());
         new BingoRepository(dataSource, logger);
         new HalloweenRepository(dataSource, logger);
+        try {
+            this.tagRepository = new TagRepository(dataSource, logger);
+        } catch (java.sql.SQLException | RuntimeException e) {
+            this.tagRepository = null;
+            logger.error("Collectible tag storage could not initialise; tags will remain unavailable", e);
+        }
         this.liteBansInfractionService = new LiteBansInfractionService(logger);
     }
 
@@ -239,6 +249,9 @@ public class CrabUtilitiesVelocity {
                 new PlayerSettingsRepository(pgWriter.getDataSource(), logger);
         this.playerSettingsService = new PlayerSettingsService(this, settingsRepository, config);
         this.playerSettingsService.start();
+
+        this.tagService = new TagService(this, tagRepository, config);
+        this.tagService.start();
 
         this.nicknameListener = new NicknameListener(this, config);
         this.nicknameListener.start();
@@ -298,6 +311,7 @@ public class CrabUtilitiesVelocity {
     public LoginStreakService getLoginStreakService() { return loginStreakService; }
     public LoginStreakPublisher getLoginStreakPublisher() { return loginStreakPublisher; }
     public PlayerSettingsService getPlayerSettingsService() { return playerSettingsService; }
+    public TagService getTagService() { return tagService; }
     public VanishManager getVanishManager() { return vanishManager; }
     public LiteBansInfractionService getLiteBansInfractionService() { return liteBansInfractionService; }
     public LuckPerms getLuckPerms() { return luckPerms; }
@@ -329,6 +343,9 @@ public class CrabUtilitiesVelocity {
             registeredPlayerDirectory.shutdown();
             registeredPlayerDirectory = null;
         }
+        TagService tags = tagService;
+        tagService = null;
+        if (tags != null) tags.shutdown();
         CallManager calls = callManager;
         callManager = null;
         if (calls != null) {

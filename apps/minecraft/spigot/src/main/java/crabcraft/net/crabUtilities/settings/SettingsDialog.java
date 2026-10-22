@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities.settings;
 
 import crabcraft.net.crabUtilities.CrabMessages;
+import crabcraft.net.crabUtilities.tags.TagsDialog;
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.dialog.DialogResponseView;
 import io.papermc.paper.registry.data.dialog.ActionButton;
@@ -49,13 +50,16 @@ public class SettingsDialog {
     private static final PhantomMode[] ORDER = { PhantomMode.ON, PhantomMode.SAFE, PhantomMode.OFF };
 
     private final PlayerSettingsService settingsService;
+    private final TagsDialog tags;
 
-    public SettingsDialog(PlayerSettingsService settingsService) {
+    public SettingsDialog(PlayerSettingsService settingsService, TagsDialog tags) {
         this.settingsService = settingsService;
+        this.tags = tags;
     }
 
     /** Builds a fresh dialog reflecting the player's current settings and shows it. */
     public void open(Player player) {
+        tags.dismiss(player);
         UUID uuid = player.getUniqueId();
         PlayerSettings current = settingsService.get(uuid);
 
@@ -90,14 +94,21 @@ public class SettingsDialog {
 
         Dialog dialog = Dialog.create(b -> b.empty()
                 .base(base)
-                .type(DialogType.confirmation(
+                .type(DialogType.multiAction(List.of(
                         ActionButton.create(
                                 mini(CrabMessages.ERROR_TAG + "Cancel"), null, 100, null),
+                        ActionButton.create(
+                                mini(CrabMessages.HIGHLIGHT_TAG + "Tags"),
+                                CrabMessages.text("Open your unlocked tags. Unsaved changes on this page will be discarded."),
+                                100, DialogAction.customClick((view, audience) -> {
+                                    if (audience == player) tags.open(player);
+                                }, ClickCallback.Options.builder().uses(1).build())),
                         ActionButton.create(
                                 mini(CrabMessages.SUCCESS_TAG + "Done"), null, 100,
                                 DialogAction.customClick(
                                         (view, audience) -> handleSubmit(uuid, view, audience),
-                                        ClickCallback.Options.builder().uses(1).build())))));
+                                        ClickCallback.Options.builder().uses(1).build()))),
+                        null, 3)));
 
         player.showDialog(dialog);
     }
