@@ -16,6 +16,7 @@ import java.time.Duration;
  * — register one expansion per Spigot, plugin name controls the prefix):
  * <ul>
  *   <li>{@code %crabutilities_afk%} — "yes" / "no".</li>
+ *   <li>{@code %crabutilities_tag%} — selected icon, or exactly an empty string.</li>
  *   <li>{@code %crabutilities_streak_current%} — live streak; 0 if lapsed.</li>
  *   <li>{@code %crabutilities_streak_pending%} — last recorded streak, even if it has now lapsed.</li>
  *   <li>{@code %crabutilities_streak_longest%} — all-time longest.</li>
@@ -70,6 +71,7 @@ public class LoginStreakExpansion extends PlaceholderExpansion {
                     ? "yes" : "no";
         }
         if (player == null) return "";
+        if (params.equals("tag")) return plugin.getTagPlaceholder(player.getUniqueId());
         if (!params.startsWith("streak_")) return null;
         String key = params.substring("streak_".length());
 

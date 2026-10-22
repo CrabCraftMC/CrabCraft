@@ -111,6 +111,12 @@ def regressionTests = [
                 'crabcraft.net.crabUtilities.velocity.db.LoginStreakLeaderboardEligibilityRegressionTest',
         updateDownloaderRegressionTest:
                 'crabcraft.net.crabUtilities.velocity.update.UpdateDownloaderRegressionTest',
+        tagServiceRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.tags.TagServiceRegressionTest',
+        tagCommandRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.tags.TagCommandRegressionTest',
+        tagBridgeProtocolRegressionTest:
+                'crabcraft.net.crabUtilities.velocity.tags.TagBridgeProtocolRegressionTest',
 ]
 
 regressionTests.each { taskName, testClass ->
@@ -133,17 +139,27 @@ tasks.register('eatingAwardDbIntegrationTest', JavaExec) {
     mainClass.set('crabcraft.net.crabUtilities.velocity.awards.EatingAwardDbIntegrationTest')
 }
 
+tasks.register('tagDbIntegrationTest', JavaExec) {
+    group = 'verification'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass.set('crabcraft.net.crabUtilities.velocity.db.TagDbIntegrationTest')
+    environment 'CRABCRAFT_TEST_REPOSITORY_ROOT', rootDir.parentFile.parentFile.absolutePath
+}
+
 tasks.named('check') {
     dependsOn regressionTests.keySet()
 }
 
 tasks.build.dependsOn(tasks.shadowJar)
 
-// Bundle the single source-of-truth award seed file into the plugin JAR
-// so the plugin can populate an empty awards table without requiring
-// 'bun run seed:awards' to have been run first.
+// Bundle the shared award and tag catalogues so the proxy can initialise
+// their definitions before starting runtime consumers.
 processResources {
     from(file("${rootDir}/../../packages/db/seeds/awards.json")) {
+        into "crabcraft"
+    }
+    from(file("${rootDir}/../../packages/db/seeds/tags.json")) {
         into "crabcraft"
     }
 }

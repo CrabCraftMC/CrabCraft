@@ -30,7 +30,15 @@ export async function consumeHalloweenActions(redis: Redis) {
             const event = parseHalloweenAction(fields);
             if (event) {
               const completion = await recordHalloweenAction(event, id);
-              if (completion) await redis.publish("crabcraft:halloween:completions", JSON.stringify(completion));
+              if (completion?.tagAwarded) {
+                try {
+                  await redis.publish("crabcraft:tags:invalidate", event.minecraftUuid);
+                } catch (error) {
+                  // Ownership is already committed; periodic proxy refresh repairs a missed notification.
+                  logger.warn(`Tag cache invalidation failed: ${(error as Error).message}`);
+                }
+              }
+              if (completion?.task) await redis.publish("crabcraft:halloween:completions", JSON.stringify(completion));
             } else logger.warn(`Ignoring malformed Halloween action ${id}`);
             // Only remove actions after their PostgreSQL transaction commits.
             await redis.multi().xack(STREAM, GROUP, id).xdel(STREAM, id).exec();

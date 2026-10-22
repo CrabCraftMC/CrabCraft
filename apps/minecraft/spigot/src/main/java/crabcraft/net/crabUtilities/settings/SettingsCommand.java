@@ -1,6 +1,7 @@
 package crabcraft.net.crabUtilities.settings;
 
 import crabcraft.net.crabUtilities.CrabMessages;
+import crabcraft.net.crabUtilities.tags.TagsDialog;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -31,22 +32,31 @@ import java.util.stream.Collectors;
 public class SettingsCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS =
-            List.of("phantoms", "mentions", "messages", "locatorbar", "bingo", "coordinatehud");
+            List.of("phantoms", "mentions", "messages", "locatorbar", "bingo", "coordinatehud", "tags");
     private static final List<String> PHANTOM_VALUES = List.of("on", "off", "safe");
     private static final List<String> TOGGLE_VALUES = List.of("on", "off");
 
     private final PlayerSettingsService settingsService;
     private final SettingsDialog dialog;
+    private final TagsDialog tags;
 
-    public SettingsCommand(PlayerSettingsService settingsService, SettingsDialog dialog) {
+    public SettingsCommand(PlayerSettingsService settingsService, SettingsDialog dialog, TagsDialog tags) {
         this.settingsService = settingsService;
         this.dialog = dialog;
+        this.tags = tags;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(CrabMessages.error("Only players can use /settings."));
+            return true;
+        }
+
+        // Tags have their own authoritative load and do not depend on preference Redis.
+        if (args.length > 0 && args[0].equalsIgnoreCase("tags")) {
+            if (args.length == 1) tags.open(player);
+            else player.sendMessage(CrabMessages.error("Usage: /settings tags"));
             return true;
         }
 
@@ -82,7 +92,7 @@ public class SettingsCommand implements CommandExecutor, TabCompleter {
                     settingsService.isCoordinateHudEnabled(uuid),
                     value -> settingsService.setCoordinateHud(uuid, value));
             default -> player.sendMessage(CrabMessages.error(
-                    "Usage: /settings [phantoms|mentions|messages|locatorbar|bingo|coordinatehud] ..."));
+                    "Usage: /settings [phantoms|mentions|messages|locatorbar|bingo|coordinatehud|tags] ..."));
         }
         return true;
     }
