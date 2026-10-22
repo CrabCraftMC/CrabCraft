@@ -1,7 +1,6 @@
 package crabcraft.net.crabUtilities.chat;
 
 import crabcraft.net.crabUtilities.NicknameComponentResolver;
-import crabcraft.net.crabUtilities.VanishStatus;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -22,6 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -42,14 +42,16 @@ public class MentionProcessor {
     private final String highlightFormat;
     private final MiniMessage miniMessage;
     private final Plugin essentialsPlugin;
+    private final Predicate<Player> isVanished;
 
     public MentionProcessor(boolean enabled, String prefix, String highlightFormat,
-                            MiniMessage miniMessage, Plugin essentialsPlugin) {
+                            MiniMessage miniMessage, Plugin essentialsPlugin, Predicate<Player> isVanished) {
         this.enabled = enabled;
         this.prefix = prefix;
         this.highlightFormat = highlightFormat;
         this.miniMessage = miniMessage;
         this.essentialsPlugin = essentialsPlugin;
+        this.isVanished = isVanished;
     }
 
     /**
@@ -78,7 +80,8 @@ public class MentionProcessor {
             return new Result(input, new HashSet<>());
         }
 
-        AliasIndex aliases = aliasIndex(Bukkit.getOnlinePlayers(), essentialsPlugin);
+        AliasIndex aliases = aliasIndex(Bukkit.getOnlinePlayers().stream()
+                .filter(isVanished.negate()).toList(), essentialsPlugin);
         if (aliases.aliases().isEmpty()) {
             return new Result(input, new HashSet<>());
         }
@@ -108,7 +111,6 @@ public class MentionProcessor {
         PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
         List<MentionIdentity> identities = new ArrayList<>();
         for (Player player : players) {
-            if (VanishStatus.isVanished(essentialsPlugin, player)) continue;
             Component nickname = NicknameComponentResolver.forPlayer(essentialsPlugin, player);
             String nicknameText = nickname == null ? null : plain.serialize(nickname).trim();
             identities.add(new MentionIdentity(

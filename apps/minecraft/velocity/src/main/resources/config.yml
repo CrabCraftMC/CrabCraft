@@ -60,9 +60,9 @@ private-messages:
 join-leave-messages:
   # Servers that should NOT trigger join/leave/swap messages.
   ignored-servers: []
-  # Connections made through these hostnames are automatically vanished with
-  # EssentialsX and do not announce their initial join (or matching leave).
-  # This is not an access-control mechanism.
+  # Staff connecting through these hostnames are automatically vanished and do
+  # not announce their initial join (or matching leave). Requires permission
+  # crabutilities.vanish or crabutilities.staffchat.
   silent-join-hosts:
     - "mods.crabcraft.net"
   # Placeholders: <name>, <username>
