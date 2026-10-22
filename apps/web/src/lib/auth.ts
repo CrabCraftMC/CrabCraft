@@ -49,6 +49,7 @@ const {
   useSecureCookies: process.env.NODE_ENV === "production",
   providers: [
     Discord({
+      issuer: "https://discord.com",
       clientId: process.env.AUTH_DISCORD_ID!,
       clientSecret: process.env.AUTH_DISCORD_SECRET!,
       authorization:
