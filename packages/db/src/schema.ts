@@ -497,6 +497,8 @@ export const playerAlts = pgTable(
       .references(() => players.discord_id),
     minecraft_uuid: text("minecraft_uuid").notNull().unique(),
     minecraft_username: text("minecraft_username").notNull(),
+    nickname: text("nickname"),
+    nickname_raw: text("nickname_raw"),
     created_at: integer("created_at")
       .notNull()
       .$defaultFn(() => Math.floor(Date.now() / 1000)),

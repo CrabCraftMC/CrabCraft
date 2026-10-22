@@ -16,8 +16,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.OwnableEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.bukkit.Bukkit;
-import org.bukkit.plugin.Plugin;
 import crabcraft.net.crabUtilities.jade.protocol.JadeProtocol;
 import crabcraft.net.crabUtilities.jade.protocol.accessor.EntityAccessor;
 import crabcraft.net.crabUtilities.jade.protocol.provider.StreamServerDataProvider;
@@ -60,9 +58,8 @@ public enum AnimalOwnerProvider implements StreamServerDataProvider<EntityAccess
 
     @Nullable
     private static Component lookupNickname(@Nullable UUID uuid) {
-        Plugin essentials = Bukkit.getPluginManager().getPlugin("Essentials");
         net.kyori.adventure.text.Component nickname =
-                NicknameComponentResolver.forUniqueId(essentials, uuid);
+                NicknameComponentResolver.forUniqueId(uuid);
         return nickname == null ? null : PaperAdventure.asVanilla(nickname);
     }
 

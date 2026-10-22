@@ -92,6 +92,9 @@ and Velocity proxy. Some of its more distinctive features are:
 The Spigot/Paper and Velocity artefacts are built together as
 `CrabUtilities.jar` and `CrabUtilities-Velocity.jar`.
 
+See the [EssentialsX replacement guide](docs/essentials-replacements.md) for
+nickname, game-mode, inventory and AFK commands, permissions and migration settings.
+
 ### A Discord bot that runs the community
 
 The Discord bot is more than a command collection. It coordinates the parts of

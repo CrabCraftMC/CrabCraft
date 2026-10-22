@@ -8,6 +8,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public class PostgresStatsWriter {
 
@@ -32,6 +35,8 @@ public class PostgresStatsWriter {
             return new NicknameLoadResult(NicknameLoadStatus.FAILED, null);
         }
     }
+
+    public record NicknamePlayer(UUID uuid, String username) {}
 
     private final HikariDataSource dataSource;
     private final Logger logger;
@@ -181,12 +186,12 @@ public class PostgresStatsWriter {
     }
 
     /**
-     * Updates player info (username + nickname) by minecraft_uuid.
+     * Updates player account information and login time by minecraft_uuid.
      * Only updates existing players — no-op if UUID not in DB.
      */
-    public boolean upsertPlayer(String uuid, String username, String nickname, String nicknameRaw) {
+    public boolean upsertPlayer(String uuid, String username) {
         String selectSql = "SELECT last_mc_login_at FROM players WHERE minecraft_uuid = ? FOR UPDATE";
-        String updateSql = "UPDATE players SET minecraft_username = ?, nickname = ?, nickname_raw = ?, " +
+        String updateSql = "UPDATE players SET minecraft_username = ?, " +
                 "updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER, " +
                 "last_mc_login_at = EXTRACT(EPOCH FROM NOW())::INTEGER " +
                 "WHERE minecraft_uuid = ?";
@@ -208,9 +213,7 @@ public class PostgresStatsWriter {
 
                 try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
                     stmt.setString(1, username);
-                    stmt.setString(2, nickname);
-                    stmt.setString(3, nicknameRaw);
-                    stmt.setString(4, uuid);
+                    stmt.setString(2, uuid);
                     stmt.executeUpdate();
                 }
                 conn.commit();
@@ -301,16 +304,66 @@ public class PostgresStatsWriter {
     /**
      * Updates just the nickname for a player by minecraft_uuid.
      */
-    public void updateNickname(String uuid, String nickname, String nicknameRaw) {
-        String sql = "UPDATE players SET nickname = ?, nickname_raw = ?, updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER WHERE minecraft_uuid = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, nickname);
-            stmt.setString(2, nicknameRaw);
-            stmt.setString(3, uuid);
-            stmt.executeUpdate();
+    public boolean updateNickname(String uuid, String nickname, String nicknameRaw) {
+        try (Connection conn = dataSource.getConnection()) {
+            for (String table : List.of("players", "player_alts")) {
+                String updatedAt = table.equals("players")
+                        ? ", updated_at = EXTRACT(EPOCH FROM NOW())::INTEGER" : "";
+                String sql = "UPDATE " + table + " SET nickname = ?, nickname_raw = ?" + updatedAt
+                        + " WHERE minecraft_uuid = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, nickname);
+                    stmt.setString(2, nicknameRaw);
+                    stmt.setString(3, uuid);
+                    if (stmt.executeUpdate() > 0) return true;
+                }
+            }
+            return false;
         } catch (SQLException e) {
             logger.error("Failed to update nickname for {}", uuid, e);
+            return false;
+        }
+    }
+
+    public NicknamePlayer findNicknamePlayer(String username) {
+        String sql = """
+                SELECT minecraft_uuid, minecraft_username FROM (
+                    SELECT minecraft_uuid, minecraft_username FROM players
+                    UNION
+                    SELECT minecraft_uuid, minecraft_username FROM player_alts
+                ) registered
+                WHERE LOWER(minecraft_username) = LOWER(?) AND minecraft_uuid IS NOT NULL LIMIT 2
+                """;
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) return null;
+                NicknamePlayer player = new NicknamePlayer(
+                        UUID.fromString(rs.getString(1)), rs.getString(2));
+                return rs.next() ? null : player;
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to look up a nickname target", e);
+        }
+    }
+
+    public List<String> nicknamePlayerNames() {
+        String sql = """
+                SELECT minecraft_username FROM players
+                WHERE minecraft_uuid IS NOT NULL AND minecraft_username IS NOT NULL
+                UNION
+                SELECT minecraft_username FROM player_alts
+                ORDER BY minecraft_username
+                """;
+        List<String> names = new ArrayList<>();
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) names.add(rs.getString(1));
+            return names;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to load registered nickname targets", e);
         }
     }
 
@@ -319,10 +372,16 @@ public class PostgresStatsWriter {
      * missing nickname distinct from a database failure.
      */
     public NicknameLoadResult loadRawNickname(String uuid) {
-        String sql = "SELECT nickname_raw FROM players WHERE minecraft_uuid = ?";
+        String sql = """
+                SELECT COALESCE(nickname_raw, nickname) FROM players WHERE minecraft_uuid = ?
+                UNION ALL
+                SELECT COALESCE(nickname_raw, nickname) FROM player_alts WHERE minecraft_uuid = ?
+                LIMIT 1
+                """;
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, uuid);
+            stmt.setString(2, uuid);
             try (java.sql.ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     String raw = rs.getString(1);

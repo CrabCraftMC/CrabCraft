@@ -1,8 +1,11 @@
 package crabcraft.net.crabUtilities.velocity;
 
 import crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter;
+import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.permission.Tristate;
 import net.kyori.adventure.text.Component;
 
+import java.lang.reflect.Proxy;
 import java.util.UUID;
 
 final class NicknameRegressionTest {
@@ -12,7 +15,8 @@ final class NicknameRegressionTest {
         distinguishesUnknownFromLoadedEmptyState();
         rejectsStaleCacheGenerations();
         doesNotCommitFailedDatabaseLoads();
-        reconcilesAtomicPublicationResult();
+        validatesVisibleNicknameLengthAndFormatting();
+        separatesSelfAndModeratorPermissions();
     }
 
     private static void parsesSupportedNicknameFormatsWithoutInteractiveTags() {
@@ -105,35 +109,33 @@ final class NicknameRegressionTest {
                 "absent database nickname was not recorded as loaded empty state");
     }
 
-    private static void reconcilesAtomicPublicationResult() {
-        NicknameCache cache = new NicknameCache();
-        UUID id = UUID.randomUUID();
-        NicknameCache.Snapshot loading = cache.beginLoad(id);
-        check(cache.commitIfVersion(id, loading.version(), "<red>Database</red>"),
-                "database seed setup did not commit");
-        NicknameCache.Snapshot proposed = cache.snapshot(id);
+    private static void validatesVisibleNicknameLengthAndFormatting() {
+        check(NickCommand.isValidNickname("<gradient:#ff0000:#0000ff>Crabby</gradient>"),
+                "a styled nickname was rejected");
+        check(NickCommand.isValidNickname("&#12Ab34Crab"), "a legacy hex nickname was rejected");
+        check(NickCommand.isValidNickname("🦀".repeat(32)), "visible Unicode characters counted as UTF-16 units");
+        for (String invalid : new String[]{"", "<red></red>", "a".repeat(33), "Crab Craft", "Crab\nCraft", "\u200b"}) {
+            check(!NickCommand.isValidNickname(invalid), "an invalid nickname was accepted: " + invalid);
+        }
+    }
 
-        check(NicknameListener.reconcilePublishedNickname(
-                        cache, id, proposed.version(), proposed.rawNickname(), "<green>Live</green>"),
-                "existing Redis nickname did not supersede the database seed");
-        check("<green>Live</green>".equals(cache.getRawNickname(id)),
-                "actual Redis nickname was not adopted locally");
+    private static void separatesSelfAndModeratorPermissions() {
+        CommandSource player = source(Tristate.UNDEFINED, false);
+        check(NickCommand.canChange(player, false), "ordinary players could not set their own nickname");
+        check(!NickCommand.canChange(player, true), "ordinary players could change another nickname");
+        CommandSource denied = source(Tristate.FALSE, false);
+        check(!NickCommand.canChange(denied, false), "an explicit self-nickname denial was ignored");
+        check(NickCommand.canChange(source(Tristate.UNDEFINED, true), true),
+                "the moderator permission did not allow forcing a nickname");
+    }
 
-        NicknameCache.Snapshot live = cache.snapshot(id);
-        cache.setNickname(id, "<aqua>Newer</aqua>");
-        check(!NicknameListener.reconcilePublishedNickname(
-                        cache, id, live.version(), live.rawNickname(), "<yellow>Redis</yellow>"),
-                "stale Redis result replaced a newer local nickname");
-        check("<aqua>Newer</aqua>".equals(cache.getRawNickname(id)),
-                "newer local nickname was not preserved");
-
-        NicknameCache.Snapshot newer = cache.snapshot(id);
-        check(NicknameListener.reconcilePublishedNickname(
-                        cache, id, newer.version(), newer.rawNickname(), ""),
-                "existing Redis clear tombstone was not reconciled");
-        check(cache.isLoaded(id) && cache.getRawNickname(id) == null
-                        && "".equals(cache.snapshot(id).rawNickname()),
-                "Redis clear tombstone was not preserved locally");
+    private static CommandSource source(Tristate permission, boolean others) {
+        return (CommandSource) Proxy.newProxyInstance(CommandSource.class.getClassLoader(),
+                new Class<?>[]{CommandSource.class}, (proxy, method, arguments) -> switch (method.getName()) {
+                    case "getPermissionValue" -> permission;
+                    case "hasPermission" -> others;
+                    default -> throw new AssertionError("unexpected permission query: " + method.getName());
+                });
     }
 
     private static void checkPlain(String raw, String expected) {

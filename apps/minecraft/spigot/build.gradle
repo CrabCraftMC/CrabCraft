@@ -91,6 +91,12 @@ tasks {
 }
 
 def regressionTests = [
+    gameModeCommandRegressionTest: 'crabcraft.net.crabUtilities.gamemode.GameModeCommandRegressionTest',
+    afkRegressionTest: 'crabcraft.net.crabUtilities.afk.AfkRegressionTest',
+    registeredPlayerDirectoryRegressionTest: 'crabcraft.net.crabUtilities.inventory.RegisteredPlayerDirectoryRegressionTest',
+    offlinePlayerInventoryStoreRegressionTest: 'crabcraft.net.crabUtilities.inventory.OfflinePlayerInventoryStoreRegressionTest',
+    inspectionContainerRegressionTest: 'crabcraft.net.crabUtilities.inventory.InspectionContainerRegressionTest',
+    inventoryInspectionManagerRegressionTest: 'crabcraft.net.crabUtilities.inventory.InventoryInspectionManagerRegressionTest',
     voiceRelayRegressionTest: 'crabcraft.net.crabUtilities.voicechat.VoiceRelayRegressionTest',
     rosterLifecycleRegressionTest: 'crabcraft.net.crabUtilities.voicechat.RosterLifecycleRegressionTest',
     loginStreakCacheRegressionTest: 'crabcraft.net.crabUtilities.LoginStreakCacheRegressionTest',

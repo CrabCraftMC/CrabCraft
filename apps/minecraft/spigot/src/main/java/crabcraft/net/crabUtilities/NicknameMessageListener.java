@@ -42,7 +42,7 @@ public class NicknameMessageListener implements Listener {
 
             private ResolvedNickname resolve(Player player) {
                 if (player == null) return null;
-                Component nickname = NicknameComponentResolver.forPlayer(plugin.getEssentials(), player);
+                Component nickname = NicknameComponentResolver.forPlayer(player);
                 return nickname == null ? null : new ResolvedNickname(player.getName(), nickname);
             }
         });

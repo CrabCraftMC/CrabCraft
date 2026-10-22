@@ -2,6 +2,9 @@ package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.accurateplacement.AccurateBlockPlacementManager;
 import crabcraft.net.crabUtilities.appleskin.AppleSkinIntegration;
+import crabcraft.net.crabUtilities.afk.AfkManager;
+import crabcraft.net.crabUtilities.gamemode.GameModeCommand;
+import crabcraft.net.crabUtilities.inventory.InventoryInspectionManager;
 import crabcraft.net.crabUtilities.awards.EatingAwardTracker;
 import crabcraft.net.crabUtilities.awards.HarvestAwardTracker;
 import crabcraft.net.crabUtilities.awards.SuspiciousBrushTracker;
@@ -80,6 +83,8 @@ public final class CrabUtilities extends JavaPlugin {
     private RestrictedAreaListener restrictedAreaListener;
     private PaperVanishManager vanishManager;
     private ModerationToolsManager moderationToolsManager;
+    private AfkManager afkManager;
+    private InventoryInspectionManager inventoryInspectionManager;
 
     @Override
     public void onEnable() {
@@ -126,19 +131,11 @@ public final class CrabUtilities extends JavaPlugin {
 
         // Event listeners
         Bukkit.getPluginManager().registerEvents(new NicknameMessageListener(this), this);
-        if (essentials != null) {
-            this.nicknameSync = new NicknameSync(this);
-            Bukkit.getPluginManager().registerEvents(nicknameSync, this);
-            nicknameSync.start();
-        } else {
-            getLogger().info("EssentialsX not detected — nickname Redis sync disabled.");
-        }
+        this.nicknameSync = new NicknameSync(this);
+        Bukkit.getPluginManager().registerEvents(nicknameSync, this);
+        nicknameSync.start();
         this.mentionAutocompleteListener = new MentionAutocompleteListener(this);
         Bukkit.getPluginManager().registerEvents(mentionAutocompleteListener, this);
-        if (essentials != null) {
-            Bukkit.getPluginManager().registerEvents(
-                    new EssentialsMentionAutocompleteListener(this, mentionAutocompleteListener), this);
-        }
         mentionAutocompleteListener.refreshAll();
 
         this.restrictedAreaListener = new RestrictedAreaListener(this);
@@ -213,6 +210,35 @@ public final class CrabUtilities extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(spectatorBackCommand, this);
         getCommand("specback").setExecutor(spectatorBackCommand);
 
+        GameModeCommand gameModeCommand = new GameModeCommand();
+        for (String name : List.of("gamemode", "gmc", "gms", "gmsp", "gma")) {
+            getCommand(name).setExecutor(gameModeCommand);
+            getCommand(name).setTabCompleter(gameModeCommand);
+        }
+
+        this.inventoryInspectionManager = new InventoryInspectionManager(this);
+        inventoryInspectionManager.start();
+        for (String name : List.of("invsee", "echest")) {
+            getCommand(name).setExecutor(inventoryInspectionManager);
+            getCommand(name).setTabCompleter(inventoryInspectionManager);
+        }
+
+        this.afkManager = new AfkManager(this, player -> {
+            var nickname = NicknameComponentResolver.forPlayer(player);
+            return nickname == null ? player.name() : nickname;
+        });
+        afkManager.start();
+        getCommand("afk").setExecutor(afkManager);
+
+        // Own the replacement labels while EssentialsX is still installed.
+        for (String name : List.of("gamemode", "gmc", "gms", "gmsp", "gma", "invsee", "echest", "afk")) {
+            var command = getCommand(name);
+            Bukkit.getCommandMap().getKnownCommands().put(name, command);
+        }
+        Map.of("gm", "gamemode", "creative", "gmc", "survival", "gms",
+                "spectator", "gmsp", "adventure", "gma", "enderchest", "echest", "ec", "echest")
+                .forEach((alias, name) -> Bukkit.getCommandMap().getKnownCommands().put(alias, getCommand(name)));
+
         getCommand("portalcoords").setExecutor(new CoordinateHelperCommand());
 
         ModelCommand modelCommand = ModelCommand.create(this);
@@ -224,7 +250,7 @@ public final class CrabUtilities extends JavaPlugin {
         // Private and staff chat enter through Paper so InteractiveChat, emoji
         // plugins and other local processors see them before Velocity routes
         // them across the network.
-        this.chatBridge = new PaperChatBridge(this);
+        this.chatBridge = new PaperChatBridge(this, afkManager::recordActivity);
         chatBridge.start();
 
         startStatsPushTask();
@@ -287,10 +313,6 @@ public final class CrabUtilities extends JavaPlugin {
         }
 
         getLogger().info("CrabUtilities enabled. EssentialsX present: " + (essentials != null));
-    }
-
-    public Plugin getEssentials() {
-        return essentials;
     }
 
     public boolean isVanished(org.bukkit.entity.Player player) {
@@ -536,7 +558,7 @@ public final class CrabUtilities extends JavaPlugin {
     private void registerLoginStreakExpansion() {
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             try {
-                this.loginStreakExpansion = new LoginStreakExpansion(this, loginStreakCache);
+                this.loginStreakExpansion = new LoginStreakExpansion(this, loginStreakCache, afkManager);
                 if (loginStreakExpansion.register()) {
                     getLogger().info("Registered PlaceholderAPI expansion 'crabutilities'");
                 } else {
@@ -546,7 +568,7 @@ public final class CrabUtilities extends JavaPlugin {
                 getLogger().warning("PlaceholderAPI present but classes not visible: " + e.getMessage());
             }
         } else {
-            getLogger().info("PlaceholderAPI not detected — streak placeholders disabled.");
+            getLogger().info("PlaceholderAPI not detected — CrabUtilities placeholders disabled.");
         }
     }
 
@@ -768,6 +790,14 @@ public final class CrabUtilities extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (inventoryInspectionManager != null) {
+            inventoryInspectionManager.shutdown();
+            inventoryInspectionManager = null;
+        }
+        if (afkManager != null) {
+            afkManager.shutdown();
+            afkManager = null;
+        }
         if (vanishManager != null) {
             vanishManager.shutdown();
             vanishManager = null;

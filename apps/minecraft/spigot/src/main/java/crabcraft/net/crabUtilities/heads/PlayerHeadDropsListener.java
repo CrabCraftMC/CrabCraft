@@ -43,11 +43,11 @@ public class PlayerHeadDropsListener implements Listener {
             return;
         }
         meta.setOwningPlayer(victim);
-        final Component victimName = NicknameComponentResolver.forPlayer(this.plugin.getEssentials(), victim);
+        final Component victimName = NicknameComponentResolver.forPlayer(victim);
         meta.displayName((victimName != null ? victimName : Component.text(victim.getName(), NamedTextColor.GOLD))
                 .append(Component.text("'s Head", NamedTextColor.GOLD))
                 .decoration(TextDecoration.ITALIC, false));
-        final Component killerName = NicknameComponentResolver.forPlayer(this.plugin.getEssentials(), killer);
+        final Component killerName = NicknameComponentResolver.forPlayer(killer);
         meta.lore(List.of(Component.text("Killed by ", NamedTextColor.GRAY)
                 .append(killerName != null ? killerName : Component.text(killer.getName(), NamedTextColor.GRAY))
                 .decoration(TextDecoration.ITALIC, false),

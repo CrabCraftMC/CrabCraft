@@ -7,26 +7,27 @@ import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Resolves an EssentialsX nickname into a styled {@link Component}, honouring
+ * Resolves a stored nickname into a styled {@link Component}, honouring
  * both MiniMessage-style nicks (e.g. {@code <#6dd5ed>} or gradients) and legacy
  * {@code &}-code nicks including hex ({@code &#RRGGBB}, {@code &x&R&R...} and
  * {@code §x§...}).
  *
  * <p>Shared by chat formatting and death/advancement rewriting so they all
- * render colours identically. {@code player.displayName()} does not reliably
- * carry the EssentialsX nick (especially hex) on this server, so anything that
- * needs the coloured nick must reconstruct it from the raw EssentialsX value.
+ * render colours identically. Redis supplies the authoritative raw nicknames,
+ * including offline players, without requiring EssentialsX.
  */
 public final class NicknameComponentResolver {
 
+    private static final Map<UUID, Component> NICKNAMES = new ConcurrentHashMap<>();
     private static final Pattern AMP_HEX_PATTERN = Pattern.compile("&[#]([0-9a-fA-F]{6})");
 
     /** Legacy serializer supporting &-codes and hex (both &#RRGGBB and &x&R&R&G&G&B&B). */
@@ -49,34 +50,33 @@ public final class NicknameComponentResolver {
     private NicknameComponentResolver() {
     }
 
-    /**
-     * Returns the player's EssentialsX nick as a styled component, or
-     * {@code null} when EssentialsX is absent or the player has no nick set
-     * (callers should fall back to a plain name in that case).
-     */
-    public static Component forPlayer(Plugin essentialsPlugin, Player player) {
-        if (essentialsPlugin == null) {
-            return null;
-        }
-        return EssentialsNicknameResolver.forPlayer(essentialsPlugin, player);
+    /** Returns the cached styled nickname, or {@code null} when no nickname is set. */
+    public static Component forPlayer(Player player) {
+        return forUniqueId(player.getUniqueId());
     }
 
-    /** Resolves an EssentialsX user by UUID, including offline users. */
-    public static Component forUniqueId(Plugin essentialsPlugin, UUID uuid) {
-        if (essentialsPlugin == null || uuid == null) {
-            return null;
-        }
-        return EssentialsNicknameResolver.forUniqueId(essentialsPlugin, uuid);
+    /** Resolves cached nicknames for both online and offline players. */
+    public static Component forUniqueId(UUID uuid) {
+        return uuid == null ? null : NICKNAMES.get(uuid);
     }
 
     /** Returns the player's plain nickname, falling back to their account name. */
-    public static String plainNicknameOrName(Plugin essentialsPlugin, Player player) {
-        String nickname = plain(forPlayer(essentialsPlugin, player));
+    public static String plainNicknameOrName(Player player) {
+        String nickname = plain(forPlayer(player));
         return nickname == null ? player.getName() : nickname;
     }
 
+    static void cacheNickname(UUID uuid, String raw) {
+        Component nickname = fromRawNick(raw);
+        if (nickname == null) {
+            NICKNAMES.remove(uuid);
+        } else {
+            NICKNAMES.put(uuid, nickname);
+        }
+    }
+
     /**
-     * Parses a raw EssentialsX nick string into a styled component, or
+     * Parses a raw stored nickname string into a styled component, or
      * {@code null} when the nick is missing/blank.
      */
     public static Component fromRawNick(String raw) {

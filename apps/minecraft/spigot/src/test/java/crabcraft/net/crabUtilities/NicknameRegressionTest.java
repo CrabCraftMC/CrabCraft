@@ -2,16 +2,12 @@ package crabcraft.net.crabUtilities;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentIteratorType;
 import net.kyori.adventure.text.ComponentLike;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,58 +19,11 @@ final class NicknameRegressionTest {
     private static final UUID KILLER_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
     public static void main(String[] args) {
-        check(!NicknameSync.hasAuthoritativeRedisValue(null),
-                "a missing Redis field was treated as an authoritative clear");
-        check(NicknameSync.hasAuthoritativeRedisValue(""),
-                "the explicit empty-string clear marker was ignored");
-
         String raw = "<gradient:#ff0000:#0000ff>Crabby</gradient>";
-        Component decorated = NicknameSync.decoratedNickname(Component.text("[" + raw + "]"), raw);
-        String plain = PLAIN.serialize(decorated);
-        check(plain.equals("[Crabby]"),
-                "MiniMessage tags leaked into the Essentials display name: " + plain);
-        Component afk = NicknameSync.decoratedNickname(Component.text("[AFK] " + raw), raw);
-        check(PLAIN.serialize(afk).equals("[AFK] Crabby"),
-                "AFK display refresh reintroduced MiniMessage tags");
-        verifyLegacyDisplayRepair();
-
         verifyAdvancement(Component.text("Crabby"), "simple");
         verifyAdvancement(NicknameComponentResolver.fromRawNick(raw), "gradient");
         verifyTwoPlayerDeath();
         verifySuffixPreservation();
-    }
-
-    private static void verifyLegacyDisplayRepair() {
-        Component prefix = Component.text("[VIP] ");
-        Component suffix = Component.text("!");
-        Component visibleDisplay = Component.empty()
-                .append(prefix)
-                .append(Component.text("Crabby"))
-                .append(suffix);
-        for (String raw : List.of("&aCrabby", "§aCrabby")) {
-            Component repaired = NicknameSync.decoratedNickname(visibleDisplay, raw);
-            checkPlain(repaired, "[VIP] Crabby!",
-                    "legacy component display lost its prefix or suffix");
-            check(hasStyledText(repaired, "Crabby", NamedTextColor.GREEN),
-                    "legacy component display did not apply the parsed nickname for " + raw);
-            check(repaired.children().get(0).equals(prefix)
-                            && repaired.children().get(2).equals(suffix),
-                    "legacy component display changed its prefix or suffix component");
-        }
-
-        Component afkPrefix = Component.text("[AFK] ");
-        Component shortDisplay = Component.empty()
-                .append(afkPrefix)
-                .append(Component.text("A"))
-                .append(suffix);
-        Component shortRepair = NicknameSync.decoratedNickname(shortDisplay, "&aA");
-        checkPlain(shortRepair, "[AFK] A!",
-                "short nickname repair changed matching prefix letters");
-        check(shortRepair.children().get(0).equals(afkPrefix)
-                        && shortRepair.children().get(2).equals(suffix),
-                "short nickname repair replaced part of the AFK prefix or suffix");
-        check(hasStyledText(shortRepair, "A", NamedTextColor.GREEN),
-                "short visible nickname component was not repaired");
     }
 
     private static void verifyAdvancement(Component nickname, String label) {
@@ -177,17 +126,6 @@ final class NicknameRegressionTest {
     private static void checkPlain(Component component, String expected, String message) {
         String actual = PLAIN.serialize(component);
         check(actual.equals(expected), message + ": " + actual);
-    }
-
-    private static boolean hasStyledText(Component component, String text, NamedTextColor color) {
-        for (Component child : component.iterable(ComponentIteratorType.DEPTH_FIRST)) {
-            if (child instanceof TextComponent textComponent
-                    && textComponent.content().equals(text)
-                    && color.equals(child.color())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static void checkOnce(String value, String nickname, String label) {

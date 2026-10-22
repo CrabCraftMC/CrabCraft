@@ -8,7 +8,6 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,16 +40,14 @@ public class MentionProcessor {
     private final String prefix;
     private final String highlightFormat;
     private final MiniMessage miniMessage;
-    private final Plugin essentialsPlugin;
     private final Predicate<Player> isVanished;
 
     public MentionProcessor(boolean enabled, String prefix, String highlightFormat,
-                            MiniMessage miniMessage, Plugin essentialsPlugin, Predicate<Player> isVanished) {
+                            MiniMessage miniMessage, Predicate<Player> isVanished) {
         this.enabled = enabled;
         this.prefix = prefix;
         this.highlightFormat = highlightFormat;
         this.miniMessage = miniMessage;
-        this.essentialsPlugin = essentialsPlugin;
         this.isVanished = isVanished;
     }
 
@@ -81,7 +78,7 @@ public class MentionProcessor {
         }
 
         AliasIndex aliases = aliasIndex(Bukkit.getOnlinePlayers().stream()
-                .filter(isVanished.negate()).toList(), essentialsPlugin);
+                .filter(isVanished.negate()).toList());
         if (aliases.aliases().isEmpty()) {
             return new Result(input, new HashSet<>());
         }
@@ -107,11 +104,11 @@ public class MentionProcessor {
         return new Result(message, mentioned);
     }
 
-    static AliasIndex aliasIndex(Iterable<? extends Player> players, Plugin essentialsPlugin) {
+    static AliasIndex aliasIndex(Iterable<? extends Player> players) {
         PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
         List<MentionIdentity> identities = new ArrayList<>();
         for (Player player : players) {
-            Component nickname = NicknameComponentResolver.forPlayer(essentialsPlugin, player);
+            Component nickname = NicknameComponentResolver.forPlayer(player);
             String nicknameText = nickname == null ? null : plain.serialize(nickname).trim();
             identities.add(new MentionIdentity(
                     player.getUniqueId(), player.getName(),

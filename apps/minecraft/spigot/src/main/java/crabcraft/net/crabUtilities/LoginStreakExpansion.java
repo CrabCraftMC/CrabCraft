@@ -1,5 +1,6 @@
 package crabcraft.net.crabUtilities;
 
+import crabcraft.net.crabUtilities.afk.AfkManager;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
@@ -8,13 +9,13 @@ import org.jetbrains.annotations.Nullable;
 import java.time.Duration;
 
 /**
- * PlaceholderAPI bridge for the login streak data Velocity broadcasts
- * over Redis. All values are read from {@link LoginStreakCache}, so
- * placeholder rendering is a single map lookup with no I/O.
+ * PlaceholderAPI bridge for cosmetic AFK state and the login streak data
+ * Velocity broadcasts over Redis. Values use in-memory lookups with no I/O.
  *
  * <p>Supported placeholders (under the {@code crabutilities} identifier
  * — register one expansion per Spigot, plugin name controls the prefix):
  * <ul>
+ *   <li>{@code %crabutilities_afk%} — "yes" / "no".</li>
  *   <li>{@code %crabutilities_streak_current%} — live streak; 0 if lapsed.</li>
  *   <li>{@code %crabutilities_streak_pending%} — last recorded streak, even if it has now lapsed.</li>
  *   <li>{@code %crabutilities_streak_longest%} — all-time longest.</li>
@@ -30,10 +31,16 @@ public class LoginStreakExpansion extends PlaceholderExpansion {
 
     private final CrabUtilities plugin;
     private final LoginStreakCache cache;
+    private final AfkManager afkManager;
 
     public LoginStreakExpansion(CrabUtilities plugin, LoginStreakCache cache) {
+        this(plugin, cache, null);
+    }
+
+    public LoginStreakExpansion(CrabUtilities plugin, LoginStreakCache cache, AfkManager afkManager) {
         this.plugin = plugin;
         this.cache = cache;
+        this.afkManager = afkManager;
     }
 
     @Override
@@ -58,11 +65,15 @@ public class LoginStreakExpansion extends PlaceholderExpansion {
 
     @Override
     public @Nullable String onRequest(OfflinePlayer player, @NotNull String params) {
+        if (params.equalsIgnoreCase("afk")) {
+            return player != null && afkManager != null && afkManager.isAfk(player.getUniqueId())
+                    ? "yes" : "no";
+        }
         if (player == null) return "";
         if (!params.startsWith("streak_")) return null;
         String key = params.substring("streak_".length());
 
-        LoginStreakCache.StreakSnapshot snap = cache.get(player.getUniqueId());
+        LoginStreakCache.StreakSnapshot snap = cache == null ? null : cache.get(player.getUniqueId());
         long now = System.currentTimeMillis() / 1000L;
 
         // Re-derive liveness from expires_at on every request: the cached
