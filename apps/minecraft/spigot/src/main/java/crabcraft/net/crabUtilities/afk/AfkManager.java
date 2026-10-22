@@ -2,7 +2,6 @@ package crabcraft.net.crabUtilities.afk;
 
 import crabcraft.net.crabUtilities.CrabMessages;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.text.Component;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -31,19 +30,16 @@ import org.jetbrains.annotations.NotNull;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
-import java.util.function.Function;
 
 /** Cosmetic AFK status; never changes damage, movement, sleep or other gameplay. */
 public final class AfkManager implements Listener, CommandExecutor {
 
     private final Plugin plugin;
-    private final Function<Player, Component> displayName;
     private final AfkTracker tracker = new AfkTracker(Duration.ofMinutes(5).toNanos());
     private BukkitTask idleTask;
 
-    public AfkManager(Plugin plugin, Function<Player, Component> displayName) {
+    public AfkManager(Plugin plugin) {
         this.plugin = plugin;
-        this.displayName = displayName;
     }
 
     public void start() {
@@ -84,29 +80,20 @@ public final class AfkManager implements Listener, CommandExecutor {
             sender.sendMessage(CrabMessages.error("Usage: /afk"));
             return true;
         }
-        announce(player, tracker.toggle(player.getUniqueId(), System.nanoTime()));
+        tracker.toggle(player.getUniqueId(), System.nanoTime());
         return true;
     }
 
     private void checkIdle() {
         long now = System.nanoTime();
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            if (tracker.markIdle(player.getUniqueId(), now)) announce(player, true);
+            tracker.markIdle(player.getUniqueId(), now);
         }
     }
 
     /** Records accepted activity on the server thread, including messages handled by the chat bridge. */
     public void recordActivity(Player player) {
-        if (tracker.recordActivity(player.getUniqueId(), System.nanoTime())) announce(player, false);
-    }
-
-    private void announce(Player player, boolean afk) {
-        Component message = Component.empty().append(displayName.apply(player))
-                .append(CrabMessages.muted(afk ? " is now AFK." : " is no longer AFK."));
-        for (Player viewer : plugin.getServer().getOnlinePlayers()) {
-            if (viewer.canSee(player)) viewer.sendMessage(message);
-        }
-        plugin.getServer().getConsoleSender().sendMessage(message);
+        tracker.recordActivity(player.getUniqueId(), System.nanoTime());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

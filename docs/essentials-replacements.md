@@ -45,7 +45,7 @@ If the player file changes externally, pending edits are written to a separate f
 
 ## AFK
 
-`/afk` toggles cosmetic AFK status and requires `crabutilities.afk`, allowed by default. Players become AFK after five minutes without activity. Movement, looking around, chat, commands and interactions clear AFK. Announcements use the nickname and respect player visibility.
+`/afk` toggles cosmetic AFK status and requires `crabutilities.afk`, allowed by default. Players become AFK after five minutes without activity. Movement, looking around, chat, commands and interactions clear AFK. AFK status changes are silent, with no chat or console announcements.
 
 With PlaceholderAPI installed, `%crabutilities_afk%` returns `yes` or `no`. This uses the existing `crabutilities` expansion alongside the login-streak placeholders. AFK does not change damage, invulnerability, collisions or other gameplay.
 

@@ -33,10 +33,10 @@ final class AfkRegressionTest {
         check(!tracker.markIdle(PLAYER, FIVE_MINUTES - 1L), "AFK began before five idle minutes");
         check(tracker.markIdle(PLAYER, FIVE_MINUTES), "AFK did not begin after five idle minutes");
         check(tracker.isAfk(PLAYER), "the placeholder state did not reflect automatic AFK");
-        check(!tracker.markIdle(PLAYER, FIVE_MINUTES + 1L), "idle polling repeated the announcement");
+        check(!tracker.markIdle(PLAYER, FIVE_MINUTES + 1L), "idle polling repeated the AFK transition");
         check(tracker.recordActivity(PLAYER, FIVE_MINUTES + 2L), "activity did not clear automatic AFK");
         check(!tracker.isAfk(PLAYER), "AFK stayed set after activity");
-        check(!tracker.recordActivity(PLAYER, FIVE_MINUTES + 3L), "ordinary activity announced a return");
+        check(!tracker.recordActivity(PLAYER, FIVE_MINUTES + 3L), "ordinary activity reported an AFK transition");
         check(!tracker.markIdle(PLAYER, 2L * FIVE_MINUTES), "activity did not restart the idle timeout");
 
         check(tracker.toggle(PLAYER, 2L * FIVE_MINUTES), "manual /afk did not enable AFK");
@@ -66,6 +66,21 @@ final class AfkRegressionTest {
         serverField.setAccessible(true);
         Object previousServer = serverField.get(null);
         try {
+            BridgeFixture silent = new BridgeFixture();
+            silent.tracker.add(PLAYER, System.nanoTime());
+            silent.manager.onCommand(silent.player, null, "afk", new String[0]);
+            check(silent.manager.isAfk(PLAYER), "/afk did not enable AFK silently");
+            silent.manager.onCommand(silent.player, null, "afk", new String[0]);
+            check(!silent.manager.isAfk(PLAYER), "/afk did not disable AFK silently");
+            silent.tracker.add(PLAYER, System.nanoTime() - FIVE_MINUTES);
+            var checkIdle = AfkManager.class.getDeclaredMethod("checkIdle");
+            checkIdle.setAccessible(true);
+            checkIdle.invoke(silent.manager);
+            check(silent.manager.isAfk(PLAYER), "idle polling did not enable AFK silently");
+            silent.manager.recordActivity(silent.player);
+            check(!silent.manager.isAfk(PLAYER), "activity did not clear AFK silently");
+            check(silent.messages == 0, "AFK transitions sent chat or console announcements");
+
             for (boolean manual : List.of(false, true)) {
                 for (String command : List.of("/msg Alex hello", "/r hello", "/sc hello")) {
                     BridgeFixture fixture = new BridgeFixture();
@@ -153,13 +168,17 @@ final class AfkRegressionTest {
         boolean online = true;
         int sent;
         int activities;
+        int messages;
 
         BridgeFixture() throws ReflectiveOperationException {
             player = proxy(Player.class, (object, method, args) -> switch (method.getName()) {
                 case "getUniqueId" -> PLAYER;
                 case "hasPermission" -> staffPermission;
                 case "isOnline" -> online;
-                case "canSee" -> true;
+                case "sendMessage" -> {
+                    messages++;
+                    yield null;
+                }
                 case "sendPluginMessage" -> {
                     check(primaryThread, "bridge payload was sent off the main thread");
                     sent++;
@@ -171,7 +190,10 @@ final class AfkRegressionTest {
                 if (method.getName().equals("runTask")) tasks.add((Runnable) args[1]);
                 return null;
             });
-            ConsoleCommandSender console = proxy(ConsoleCommandSender.class, (object, method, args) -> null);
+            ConsoleCommandSender console = proxy(ConsoleCommandSender.class, (object, method, args) -> {
+                if (method.getName().equals("sendMessage")) messages++;
+                return null;
+            });
             Server server = proxy(Server.class, (object, method, args) -> switch (method.getName()) {
                 case "isPrimaryThread" -> primaryThread;
                 case "getScheduler" -> scheduler;
@@ -184,7 +206,7 @@ final class AfkRegressionTest {
             serverField.set(null, server);
             Plugin plugin = proxy(Plugin.class, (object, method, args) ->
                     method.getName().equals("getServer") ? server : null);
-            manager = new AfkManager(plugin, ignored -> Component.text("Crabby"));
+            manager = new AfkManager(plugin);
             var trackerField = AfkManager.class.getDeclaredField("tracker");
             trackerField.setAccessible(true);
             tracker = (AfkTracker) trackerField.get(manager);
@@ -227,6 +249,7 @@ final class AfkRegressionTest {
 
         void checkReturned(String label) {
             check(!manager.isAfk(PLAYER), label + " did not clear AFK");
+            check(messages == 0, label + " sent an AFK announcement");
             check(!tracker.markIdle(PLAYER, beforeSend + FIVE_MINUTES - 1L),
                     label + " did not restart the five-minute idle timeout");
         }

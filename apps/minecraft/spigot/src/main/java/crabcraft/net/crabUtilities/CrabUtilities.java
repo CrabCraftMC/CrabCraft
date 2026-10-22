@@ -228,10 +228,7 @@ public final class CrabUtilities extends JavaPlugin {
             getCommand(name).setTabCompleter(inventoryInspectionManager);
         }
 
-        this.afkManager = new AfkManager(this, player -> {
-            var nickname = NicknameComponentResolver.forPlayer(player);
-            return nickname == null ? player.name() : nickname;
-        });
+        this.afkManager = new AfkManager(this);
         afkManager.start();
         getCommand("afk").setExecutor(afkManager);
 
