@@ -19,6 +19,7 @@ import org.bukkit.plugin.messaging.PluginMessageListener;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Lets Paper own local chat processing while Velocity remains authoritative
@@ -30,10 +31,12 @@ public final class PaperChatBridge implements Listener, PluginMessageListener {
     private static final GsonComponentSerializer GSON = GsonComponentSerializer.gson();
 
     private final CrabUtilities plugin;
+    private final Consumer<Player> activityRecorder;
     private final Set<UUID> staffChatDisabled = ConcurrentHashMap.newKeySet();
 
-    public PaperChatBridge(CrabUtilities plugin) {
+    public PaperChatBridge(CrabUtilities plugin, Consumer<Player> activityRecorder) {
         this.plugin = plugin;
+        this.activityRecorder = activityRecorder;
     }
 
     public void start() {
@@ -173,7 +176,9 @@ public final class PaperChatBridge implements Listener, PluginMessageListener {
                 plugin.getLogger().warning("Chat bridge send failed: " + e.getMessage());
                 player.sendMessage(Component.text(
                         "Network chat is temporarily unavailable.", NamedTextColor.RED));
+                return;
             }
+            activityRecorder.accept(player);
         });
     }
 

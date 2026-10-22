@@ -255,7 +255,7 @@ public final class CrabUtilities extends JavaPlugin {
         // Private and staff chat enter through Paper so InteractiveChat, emoji
         // plugins and other local processors see them before Velocity routes
         // them across the network.
-        this.chatBridge = new PaperChatBridge(this);
+        this.chatBridge = new PaperChatBridge(this, afkManager::recordActivity);
         chatBridge.start();
 
         startStatsPushTask();

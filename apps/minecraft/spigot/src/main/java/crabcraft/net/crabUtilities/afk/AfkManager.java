@@ -95,7 +95,8 @@ public final class AfkManager implements Listener, CommandExecutor {
         }
     }
 
-    private void activity(Player player) {
+    /** Records accepted activity on the server thread, including messages handled by the chat bridge. */
+    public void recordActivity(Player player) {
         if (tracker.recordActivity(player.getUniqueId(), System.nanoTime())) announce(player, false);
     }
 
@@ -120,12 +121,12 @@ public final class AfkManager implements Listener, CommandExecutor {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
-        if (event.hasChangedPosition() || event.hasChangedOrientation()) activity(event.getPlayer());
+        if (event.hasChangedPosition() || event.hasChangedOrientation()) recordActivity(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onCommand(PlayerCommandPreprocessEvent event) {
-        if (!isAfkCommand(event.getMessage())) activity(event.getPlayer());
+        if (!isAfkCommand(event.getMessage())) recordActivity(event.getPlayer());
     }
 
     static boolean isAfkCommand(String message) {
@@ -136,56 +137,56 @@ public final class AfkManager implements Listener, CommandExecutor {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
         if (!event.isAsynchronous()) {
-            activity(event.getPlayer());
+            recordActivity(event.getPlayer());
             return;
         }
         plugin.getServer().getScheduler().runTask(plugin, () -> {
-            if (event.getPlayer().isOnline()) activity(event.getPlayer());
+            if (event.getPlayer().isOnline()) recordActivity(event.getPlayer());
         });
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
-        activity(event.getPlayer());
+        recordActivity(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onInteractEntity(PlayerInteractEntityEvent event) {
-        activity(event.getPlayer());
+        recordActivity(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
-        activity(event.getPlayer());
+        recordActivity(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
-        activity(event.getPlayer());
+        recordActivity(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getWhoClicked() instanceof Player player) activity(player);
+        if (event.getWhoClicked() instanceof Player player) recordActivity(player);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (event.getWhoClicked() instanceof Player player) activity(player);
+        if (event.getWhoClicked() instanceof Player player) recordActivity(player);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onHeldItem(PlayerItemHeldEvent event) {
-        activity(event.getPlayer());
+        recordActivity(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onSwapHands(PlayerSwapHandItemsEvent event) {
-        activity(event.getPlayer());
+        recordActivity(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDropItem(PlayerDropItemEvent event) {
-        activity(event.getPlayer());
+        recordActivity(event.getPlayer());
     }
 }
