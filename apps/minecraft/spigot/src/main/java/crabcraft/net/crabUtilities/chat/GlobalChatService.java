@@ -236,10 +236,8 @@ public class GlobalChatService {
             }
 
             String username = player.getName();
-            // Resolve the nick from EssentialsX directly: player.displayName() does
-            // not reliably carry the nick's colours (especially hex) on this server.
-            // Fall back to the vanilla display name when no nick is set.
-            Component displayName = NicknameComponentResolver.forPlayer(plugin.getEssentials(), player);
+            // Use the authoritative cached nickname with its stored colours.
+            Component displayName = NicknameComponentResolver.forPlayer(player);
             if (displayName == null) {
                 displayName = player.displayName();
             }

@@ -95,8 +95,8 @@ public class ConnectionListener {
             settingsService.onLogin(player.getUniqueId());
         }
 
-        // Seed the authoritative nickname from Redis/database into the proxy
-        // cache so backends never need to report local EssentialsX state.
+        // Seed the authoritative nickname from PostgreSQL into the proxy
+        // cache so backends receive the same database-backed display name.
         ensureNicknameSeed(player);
 
         // Start tracking cumulative online time for today's streak credit.
@@ -471,10 +471,8 @@ public class ConnectionListener {
             // Order matters: must run after hasJoinedBefore captured the
             // boolean above, otherwise the player would record their own
             // first login as a prior visit.
-            String plain = plugin.getNicknameCache().getPlainNickname(playerId);
-            String raw = plugin.getNicknameCache().getRawNickname(playerId);
             boolean leaderboardReactivated = plugin.getPgWriter()
-                    .upsertPlayer(playerUuid, playerName, plain, raw);
+                    .upsertPlayer(playerUuid, playerName);
             if (leaderboardReactivated && plugin.getAwardDbWriter() != null) {
                 plugin.getAwardDbWriter().recomputeAllMedals();
                 plugin.getLogger().info(
@@ -557,21 +555,21 @@ public class ConnectionListener {
                 return;
             }
 
-            NicknameListener listener = plugin.getNicknameListener();
-            if (listener != null) {
-                String redisRaw = listener.loadRawNickname(id);
-                if (redisRaw != null) {
-                    if (player.isActive() && cache.commitIfVersion(id, started.version(), redisRaw)) {
-                        listener.persist(id);
-                    }
-                    return;
-                }
-            }
-
             var result = plugin.getPgWriter().loadRawNickname(id.toString());
             if (!player.isActive()) return;
             if (commitNicknameLoad(cache, id, started.version(), result)) {
                 publishNicknameToBackends(player);
+                return;
+            }
+
+            // A database outage must not clear the last known Redis nickname.
+            NicknameListener listener = plugin.getNicknameListener();
+            if (listener != null && result.status()
+                    == crabcraft.net.crabUtilities.velocity.db.PostgresStatsWriter.NicknameLoadStatus.FAILED) {
+                String redisRaw = listener.loadRawNickname(id);
+                if (redisRaw != null && player.isActive()) {
+                    cache.commitIfVersion(id, started.version(), redisRaw);
+                }
             }
         } finally {
             if (!player.isActive() && !started.loaded()) {

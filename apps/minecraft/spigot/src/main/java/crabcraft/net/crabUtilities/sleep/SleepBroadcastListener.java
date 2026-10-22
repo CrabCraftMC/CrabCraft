@@ -117,8 +117,7 @@ public class SleepBroadcastListener implements Listener {
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             List<Component> visibleNames = new ArrayList<>();
             for (Player sleeper : PlayerVisibility.visibleTo(viewer, sleepers)) {
-                Component nickname = NicknameComponentResolver.forPlayer(
-                        plugin.getEssentials(), sleeper);
+                Component nickname = NicknameComponentResolver.forPlayer(sleeper);
                 visibleNames.add(nickname != null
                         ? nickname : Component.text(sleeper.getName()));
             }

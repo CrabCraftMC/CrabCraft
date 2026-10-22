@@ -109,7 +109,7 @@ public class MentionProcessor {
         List<MentionIdentity> identities = new ArrayList<>();
         for (Player player : players) {
             if (VanishStatus.isVanished(essentialsPlugin, player)) continue;
-            Component nickname = NicknameComponentResolver.forPlayer(essentialsPlugin, player);
+            Component nickname = NicknameComponentResolver.forPlayer(player);
             String nicknameText = nickname == null ? null : plain.serialize(nickname).trim();
             identities.add(new MentionIdentity(
                     player.getUniqueId(), player.getName(),

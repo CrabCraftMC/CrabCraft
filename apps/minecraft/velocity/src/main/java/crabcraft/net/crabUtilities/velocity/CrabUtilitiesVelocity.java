@@ -74,6 +74,7 @@ public class CrabUtilitiesVelocity {
     private WebServer webServer;
     private NicknameCache nicknameCache;
     private NicknameListener nicknameListener;
+    private RegisteredPlayerDirectory registeredPlayerDirectory;
     private PendingJoinManager pendingJoinManager;
     private DiscordWebhook discordWebhook;
     private StatsPushSubscriber statsPushSubscriber;
@@ -138,6 +139,7 @@ public class CrabUtilitiesVelocity {
         SocialSpyCommand.register(this);
         ReloadCommand.register(this);
         CallCommand.register(this);
+        NickCommand.register(this);
 
         this.connectionListener = new ConnectionListener(this);
         server.getEventManager().register(this, connectionListener);
@@ -242,6 +244,9 @@ public class CrabUtilitiesVelocity {
         this.nicknameListener.start();
         server.getEventManager().register(this, nicknameListener);
 
+        this.registeredPlayerDirectory = new RegisteredPlayerDirectory(this);
+        this.registeredPlayerDirectory.start();
+
         this.statsPushSubscriber = new StatsPushSubscriber(this, config, logger);
         this.statsPushSubscriber.start();
 
@@ -320,6 +325,10 @@ public class CrabUtilitiesVelocity {
     }
 
     private void stopRuntimeConsumers() {
+        if (registeredPlayerDirectory != null) {
+            registeredPlayerDirectory.shutdown();
+            registeredPlayerDirectory = null;
+        }
         CallManager calls = callManager;
         callManager = null;
         if (calls != null) {

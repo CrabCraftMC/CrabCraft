@@ -13,6 +13,39 @@ softdepend:
   - BlueMap
   - Nexo
 commands:
+  gamemode:
+    description: Change your game mode or another player's game mode.
+    usage: /gamemode <creative|survival|spectator|adventure> [player]
+    aliases: [gm]
+  gmc:
+    description: Switch to creative mode.
+    usage: /gmc [player]
+    aliases: [creative]
+  gms:
+    description: Switch to survival mode.
+    usage: /gms [player]
+    aliases: [survival]
+  gmsp:
+    description: Switch to spectator mode.
+    usage: /gmsp [player]
+    aliases: [spectator]
+  gma:
+    description: Switch to adventure mode.
+    usage: /gma [player]
+    aliases: [adventure]
+  invsee:
+    description: Inspect a player's inventory, armour and offhand.
+    usage: /invsee <player>
+    permission: crabutilities.invsee
+  echest:
+    description: Open your own or another player's ender chest.
+    usage: /echest [player]
+    aliases: [enderchest, ec]
+    permission: crabutilities.echest
+  afk:
+    description: Toggle your cosmetic AFK status.
+    usage: /afk
+    permission: crabutilities.afk
   halloween:
     description: Show the Halloween tasks and your progress.
     usage: /halloween
@@ -60,6 +93,39 @@ commands:
     usage: /staffvc
     permission: crabutilities.staffvc
 permissions:
+  crabutilities.gamemode.creative:
+    description: Switch to creative mode.
+    default: op
+  crabutilities.gamemode.survival:
+    description: Switch to survival mode.
+    default: op
+  crabutilities.gamemode.spectator:
+    description: Switch to spectator mode.
+    default: op
+  crabutilities.gamemode.adventure:
+    description: Switch to adventure mode.
+    default: op
+  crabutilities.gamemode.others:
+    description: Change another player's game mode, subject to the mode's permission.
+    default: op
+  crabutilities.invsee:
+    description: View online or offline player inventories on this backend.
+    default: op
+  crabutilities.invsee.modify:
+    description: Modify inspected inventories, including armour and offhand.
+    default: op
+  crabutilities.echest:
+    description: Open your own ender chest.
+    default: true
+  crabutilities.echest.others:
+    description: View online or offline ender chests on this backend.
+    default: op
+  crabutilities.echest.modify:
+    description: Modify another player's ender chest.
+    default: op
+  crabutilities.afk:
+    description: Toggle your cosmetic AFK status.
+    default: true
   crabutilities.staffvc:
     description: Join the hidden, isolated staff voice-chat group.
     default: op

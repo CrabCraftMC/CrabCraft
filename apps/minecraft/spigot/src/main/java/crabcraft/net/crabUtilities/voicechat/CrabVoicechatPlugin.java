@@ -598,7 +598,7 @@ public class CrabVoicechatPlugin implements VoicechatPlugin {
 
     private String voicechatName(Player player) {
         return safeRosterName(
-                NicknameComponentResolver.plainNicknameOrName(plugin.getEssentials(), player),
+                NicknameComponentResolver.plainNicknameOrName(player),
                 player.getName());
     }
 
