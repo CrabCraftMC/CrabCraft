@@ -30,7 +30,7 @@ ENV GALLERY_MEDIA_BASE_URL=${GALLERY_MEDIA_BASE_URL}
 WORKDIR /app/apps/web
 RUN bun run build
 
-FROM infisical/cli:0.43.114 AS infisical
+FROM infisical/cli:0.43.121 AS infisical
 
 # Stage 3: Production runtime
 FROM node:22-alpine AS runner
