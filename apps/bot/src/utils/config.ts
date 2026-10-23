@@ -27,6 +27,7 @@ interface IdConfig {
     bingoStream?: string;
     bingoGroup?: string;
     bingoActiveCardKey?: string;
+    staffChatChannel?: string;
   };
   channels: {
     applicationCategory: string;
@@ -37,6 +38,7 @@ interface IdConfig {
     starboard?: string;
     counting?: string;
     bingo?: string;
+    staffChat?: string;
     ticketCategory: string;
   };
   gallery?: {
@@ -192,6 +194,7 @@ interface IConfig {
   BINGO_REDIS_STREAM: string;
   BINGO_REDIS_GROUP: string;
   BINGO_ACTIVE_CARD_KEY: string;
+  STAFF_CHAT_REDIS_CHANNEL: string;
   APPLICATION_CATEGORY_ID: string;
   LOG_CHANNEL_ID: string;
   TICKET_LOG_CHANNEL_ID: string;
@@ -200,6 +203,7 @@ interface IConfig {
   STARBOARD_CHANNEL_ID: string;
   COUNTING_CHANNEL_ID: string;
   BINGO_CHANNEL_ID: string;
+  STAFF_CHAT_CHANNEL_ID: string;
   BINGO_LINE_ROLE_ID: string;
   BINGO_BLACKOUT_ROLE_ID: string;
   BINGO_PING_ROLE_ID: string;
@@ -252,6 +256,7 @@ const config: IConfig = {
   BINGO_REDIS_STREAM: ids.redis?.bingoStream ?? "crabcraft:bingo:completions",
   BINGO_REDIS_GROUP: ids.redis?.bingoGroup ?? "crabcraft-bot-bingo",
   BINGO_ACTIVE_CARD_KEY: ids.redis?.bingoActiveCardKey ?? "crabcraft:bingo:active-card",
+  STAFF_CHAT_REDIS_CHANNEL: ids.redis?.staffChatChannel ?? "crabutilities:staffchat",
   APPLICATION_CATEGORY_ID: ids.channels.applicationCategory,
   LOG_CHANNEL_ID: ids.channels.log,
   // Ticket transcripts go here; falls back to the general log channel if unset.
@@ -261,6 +266,7 @@ const config: IConfig = {
   STARBOARD_CHANNEL_ID: ids.channels.starboard ?? "",
   COUNTING_CHANNEL_ID: ids.channels.counting ?? "",
   BINGO_CHANNEL_ID: ids.channels.bingo ?? "",
+  STAFF_CHAT_CHANNEL_ID: ids.channels.staffChat?.trim() ?? "",
   BINGO_LINE_ROLE_ID: ids.roles.bingoLine ?? "",
   BINGO_BLACKOUT_ROLE_ID: ids.roles.bingoBlackout ?? "",
   BINGO_PING_ROLE_ID: ids.roles.bingoPing ?? "",
