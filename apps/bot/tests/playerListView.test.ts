@@ -34,6 +34,27 @@ test("parses legacy nickname formatting without rendering format codes", () => {
   ]);
 });
 
+test("parses ampersand hex nicknames without rendering colour codes", () => {
+  expect(parseMinecraftText("&l&#FaF216G&#12Ab34o")).toEqual([
+    {
+      text: "G",
+      color: "#faf216",
+      bold: false,
+      underline: false,
+      strikethrough: false,
+      italic: false,
+    },
+    {
+      text: "o",
+      color: "#12ab34",
+      bold: false,
+      underline: false,
+      strikethrough: false,
+      italic: false,
+    },
+  ]);
+});
+
 function player(username: string, server: string) {
   return {
     username,

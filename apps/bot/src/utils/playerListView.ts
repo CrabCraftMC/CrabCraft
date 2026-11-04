@@ -690,6 +690,17 @@ function applyLegacyFormat(raw: string, index: number, style: Omit<TextSegment, 
 
   const marker = raw[index];
   const code = raw[index + 1]?.toLowerCase();
+  if (marker === "&" && code === "#") {
+    const hex = raw.slice(index + 2).match(/^[0-9a-f]{6}/i)?.[0];
+    if (!hex) return index;
+    style.color = `#${hex.toLowerCase()}`;
+    style.bold = false;
+    style.underline = false;
+    style.strikethrough = false;
+    style.italic = false;
+    return index + 8;
+  }
+
   if (code === "x" && index + 13 < raw.length) {
     let hex = "";
     for (let j = 0; j < 6; j++) {
@@ -813,6 +824,9 @@ function legacyFormatEnd(raw: string, index: number) {
   if (raw[index] !== "§" && raw[index] !== "&") return index;
   const marker = raw[index];
   const code = raw[index + 1]?.toLowerCase();
+  if (marker === "&" && code === "#" && /^[0-9a-f]{6}/i.test(raw.slice(index + 2))) {
+    return index + 8;
+  }
   if (code === "x" && index + 13 < raw.length) {
     for (let j = 0; j < 6; j++) {
       if (raw[index + 2 + j * 2] !== marker || !/[0-9a-f]/i.test(raw[index + 3 + j * 2])) {
