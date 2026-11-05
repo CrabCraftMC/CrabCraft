@@ -2,6 +2,9 @@ package crabcraft.net.crabUtilities;
 
 import crabcraft.net.crabUtilities.afk.AfkManager;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -9,12 +12,14 @@ import org.jetbrains.annotations.Nullable;
 import java.time.Duration;
 
 /**
- * PlaceholderAPI bridge for cosmetic AFK state and the login streak data
+ * PlaceholderAPI bridge for nicknames, cosmetic AFK state and the login streak data
  * Velocity broadcasts over Redis. Values use in-memory lookups with no I/O.
  *
  * <p>Supported placeholders (under the {@code crabutilities} identifier
  * — register one expansion per Spigot, plugin name controls the prefix):
  * <ul>
+ *   <li>{@code %crabutilities_nickname%} — styled nickname, falling back to the account name.</li>
+ *   <li>{@code %crabutilities_nickname_stripped%} — plain nickname, falling back to the account name.</li>
  *   <li>{@code %crabutilities_afk%} — "yes" / "no".</li>
  *   <li>{@code %crabutilities_tag%} — selected icon, or exactly an empty string.</li>
  *   <li>{@code %crabutilities_streak_current%} — live streak; 0 if lapsed.</li>
@@ -29,6 +34,12 @@ import java.time.Duration;
  * </ul>
  */
 public class LoginStreakExpansion extends PlaceholderExpansion {
+
+    private static final LegacyComponentSerializer NICKNAME_SERIALIZER = LegacyComponentSerializer.builder()
+            .character('§')
+            .hexColors()
+            .useUnusualXRepeatedCharacterHexFormat()
+            .build();
 
     private final CrabUtilities plugin;
     private final LoginStreakCache cache;
@@ -71,6 +82,16 @@ public class LoginStreakExpansion extends PlaceholderExpansion {
                     ? "yes" : "no";
         }
         if (player == null) return "";
+        if (params.equals("nickname") || params.equals("nickname_stripped")) {
+            Component nickname = NicknameComponentResolver.forUniqueId(player.getUniqueId());
+            if (nickname != null) {
+                return params.equals("nickname_stripped")
+                        ? PlainTextComponentSerializer.plainText().serialize(nickname)
+                        : NICKNAME_SERIALIZER.serialize(nickname);
+            }
+            String name = player.getName();
+            return name == null ? "" : name;
+        }
         if (params.equals("tag")) return plugin.getTagPlaceholder(player.getUniqueId());
         if (!params.startsWith("streak_")) return null;
         String key = params.substring("streak_".length());
