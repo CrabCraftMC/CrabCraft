@@ -57,6 +57,7 @@ dependencies {
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     testImplementation("de.maxhenkel.voicechat:voicechat-api:2.6.13")
     compileOnly("me.clip:placeholderapi:2.11.6")
+    testCompileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("de.bluecolored:bluemap-api:2.7.7")
     compileOnly("com.github.retrooper:packetevents-spigot:2.14.0")
     testCompileOnly("com.github.retrooper:packetevents-spigot:2.14.0")
@@ -118,6 +119,7 @@ def regressionTests = [
     xaeroLifecycleRegressionTest: 'crabcraft.net.crabUtilities.xaero.XaeroLifecycleRegressionTest',
     nicknameMessagesRegressionTest: 'crabcraft.net.crabUtilities.sleep.NicknameMessagesRegressionTest',
     nicknameRegressionTest: 'crabcraft.net.crabUtilities.NicknameRegressionTest',
+    nicknamePlaceholderRegressionTest: 'crabcraft.net.crabUtilities.NicknamePlaceholderRegressionTest',
     nicknameSoftDependencyRegressionTest: 'crabcraft.net.crabUtilities.NicknameSoftDependencyRegressionTest',
     playerVisibilityRegressionTest: 'crabcraft.net.crabUtilities.PlayerVisibilityRegressionTest',
     paperVanishRegressionTest: 'crabcraft.net.crabUtilities.PaperVanishRegressionTest',

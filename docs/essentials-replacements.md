@@ -12,6 +12,10 @@ Install the updated CrabUtilities JARs on Velocity and each Paper backend. Nickn
 
 PostgreSQL is authoritative. A failed database write leaves the previous nickname intact; failed Redis publication is retried after the database save succeeds.
 
+With PlaceholderAPI installed on a Paper backend, `%crabutilities_nickname%` returns the cached nickname with colours and decorations, including hex colours and MiniMessage gradients, encoded as legacy `§` codes (`§x§R§R§G§G§B§B` for hex colours). It falls back to the account name when no nickname is cached, or an empty string when neither is available. Offline players use the same Redis-fed cache. This belongs to the built-in `crabutilities` expansion; no separate expansion download is needed. Use it in plugin formats in place of `%essentials_nickname%`.
+
+Use `%crabutilities_nickname_stripped%` for the plain nickname without colours or formatting. It uses the same cache and account-name fallback.
+
 ## Game modes
 
 | Mode | Commands | Required permission |
