@@ -54,18 +54,38 @@ export function parseMinecraftColors(raw: string): ColorSegment[] {
     }
   };
 
+  const setColor = (color: string | undefined) => {
+    pushSegment();
+    currentColor = color;
+    bold = false;
+    italic = false;
+    underline = false;
+    strikethrough = false;
+    obfuscated = false;
+  };
+
   let i = 0;
   while (i < raw.length) {
-    if (raw[i] === "\u00a7" && i + 1 < raw.length) {
+    const marker = raw[i];
+    if ((marker === "\u00a7" || marker === "&") && i + 1 < raw.length) {
       const code = raw[i + 1].toLowerCase();
 
+      if (marker === "&" && code === "#") {
+        const hex = raw.slice(i + 2, i + 8);
+        if (/^[0-9a-f]{6}$/i.test(hex)) {
+          setColor(`#${hex.toUpperCase()}`);
+          i += 8;
+          continue;
+        }
+      }
+
       if (code === "x" && i + 13 < raw.length) {
-        // Hex color: §x§R§R§G§G§B§B
+        // Hex colour: §x§R§R§G§G§B§B or &x&R&R&G&G&B&B
         let hex = "#";
         let valid = true;
         for (let j = 0; j < 6; j++) {
           const sectionIdx = i + 2 + j * 2;
-          if (raw[sectionIdx] === "\u00a7") {
+          if (raw[sectionIdx] === marker && /^[0-9a-f]$/i.test(raw[sectionIdx + 1])) {
             hex += raw[sectionIdx + 1];
           } else {
             valid = false;
@@ -73,16 +93,14 @@ export function parseMinecraftColors(raw: string): ColorSegment[] {
           }
         }
         if (valid) {
-          pushSegment();
-          currentColor = hex.toUpperCase();
+          setColor(hex.toUpperCase());
           i += 14; // skip §x + 6×(§digit)
           continue;
         }
       }
 
       if (STANDARD_COLORS[code]) {
-        pushSegment();
-        currentColor = STANDARD_COLORS[code];
+        setColor(STANDARD_COLORS[code]);
         i += 2;
         continue;
       }
@@ -114,20 +132,16 @@ export function parseMinecraftColors(raw: string): ColorSegment[] {
           i += 2;
           continue;
         case "r":
-          pushSegment();
-          currentColor = undefined;
-          bold = false;
-          italic = false;
-          underline = false;
-          strikethrough = false;
-          obfuscated = false;
+          setColor(undefined);
           i += 2;
           continue;
       }
 
-      // Unknown code — skip
-      i += 2;
-      continue;
+      // Skip unknown section codes, but preserve literal ampersands.
+      if (marker === "\u00a7") {
+        i += 2;
+        continue;
+      }
     }
 
     currentText += raw[i];
