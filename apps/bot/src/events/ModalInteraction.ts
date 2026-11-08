@@ -208,7 +208,7 @@ export default class ModalInteractionEvent extends Event {
         await interaction.editReply({
           components: [
             errorContainer(
-              "Your retry session has expired. Please start a new application.",
+              "Your saved application answers are unavailable. Please start a new application.",
             ),
           ],
           flags: MessageFlags.IsComponentsV2,

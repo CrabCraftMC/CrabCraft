@@ -1,6 +1,4 @@
 /** In-memory store for partial application data while the user retries their username. */
-import { RETRY_EXPIRY_MS } from "./constants.js";
-
 export interface FullAppData {
   type: "full";
   age: number;
@@ -9,31 +7,18 @@ export interface FullAppData {
   referralSource: string;
 }
 
-type RetryEntry = {
-  data: FullAppData;
-  timer: Timer;
-};
-
-const store = new Map<string, RetryEntry>();
+const store = new Map<string, FullAppData>();
 
 export function storeRetry(userId: string, data: FullAppData) {
-  clearRetry(userId);
-  const timer = setTimeout(() => store.delete(userId), RETRY_EXPIRY_MS);
-  store.set(userId, { data, timer });
+  store.set(userId, data);
 }
 
 export function getRetry(userId: string): FullAppData | null {
-  const entry = store.get(userId);
-  if (!entry) return null;
-  clearTimeout(entry.timer);
+  const data = store.get(userId) ?? null;
   store.delete(userId);
-  return entry.data;
+  return data;
 }
 
 export function clearRetry(userId: string) {
-  const entry = store.get(userId);
-  if (entry) {
-    clearTimeout(entry.timer);
-    store.delete(userId);
-  }
+  store.delete(userId);
 }
