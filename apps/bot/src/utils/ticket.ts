@@ -612,7 +612,7 @@ export function buildClosedNotice(
     .setAccentColor(resolveColor("DarkButNotBlack"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `### ${TICKET_CLOSED_EMOJI} 〉Ticket closed\nThis ticket was closed by ${closedByMention}. The channel is now read-only and will be automatically deleted <t:${deleteAtEpochSeconds}:R>.`,
+        `### ${TICKET_CLOSED_EMOJI} 〉Ticket closed\nThis ticket was closed by ${closedByMention}. Only moderators can now see this channel. It will be automatically deleted <t:${deleteAtEpochSeconds}:R>.`,
       ),
     );
 }
@@ -641,7 +641,7 @@ export function buildReopenedNotice(
     .setAccentColor(resolveColor("Green"))
     .addTextDisplayComponents((td) =>
       td.setContent(
-        `### Ticket reopened\nThis ticket was reopened by ${reopenedByMention}. The channel is no longer read-only.`,
+        `### Ticket reopened\nThis ticket was reopened by ${reopenedByMention}. Ticket participants can see and use the channel again.`,
       ),
     );
 }

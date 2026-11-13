@@ -1,8 +1,16 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import {
   ChannelType,
+  Collection,
   ComponentType,
+  GuildChannel,
+  MessageFlags,
+  OverwriteType,
+  PermissionFlagsBits,
+  PermissionOverwrites,
+  PermissionsBitField,
   RESTJSONErrorCodes,
+  type OverwriteResolvable,
 } from "discord.js";
 
 let ticket: {
@@ -83,24 +91,51 @@ const { cleanupExpiredTicket } = await import(
   "../src/utils/ticketCleanup.js"
 );
 
-function interaction(customId: string, components: Array<{ type: number }>) {
+const ticketAccess = [
+  PermissionFlagsBits.ViewChannel,
+  PermissionFlagsBits.SendMessages,
+  PermissionFlagsBits.ReadMessageHistory,
+];
+
+function interaction(customId: string, components: Array<{ type: number }> = []) {
   const sentMessage = { pin: mock(async () => {}) };
+  const client = { user: { id: "bot" } };
+  const guild = {
+    id: "everyone",
+    client,
+    roles: { everyone: { id: "everyone" } },
+    members: { me: { id: "bot" } },
+    channels: { fetch: mock(async () => null) },
+  };
+  const cache = new Collection<string, PermissionOverwrites>();
+  const replaceOverwrites = (overwrites: OverwriteResolvable[]) => {
+    cache.clear();
+    for (const overwrite of overwrites) {
+      const resolved = PermissionOverwrites.resolve(overwrite);
+      cache.set(resolved.id, new PermissionOverwrites(client as any, resolved, {} as any));
+    }
+  };
+  replaceOverwrites([
+    { id: "everyone", type: OverwriteType.Role, deny: [PermissionFlagsBits.ViewChannel] },
+    { id: "opener", type: OverwriteType.Member, allow: ticketAccess },
+    { id: "mod", type: OverwriteType.Role, allow: ticketAccess },
+  ]);
   return {
     isButton: () => true,
     customId,
     channelId: "chan-2",
     user: { bot: false, id: "closer", tag: "closer" },
     member: { roles: { cache: { has: () => true } } },
-    guild: {
-      roles: { everyone: { id: "everyone" } },
-      channels: { fetch: mock(async () => null) },
-    },
+    guild,
     deferUpdate: mock(async () => {
+      order.push("defer");
+    }),
+    deferReply: mock(async (_options: unknown) => {
       order.push("defer");
     }),
     reply: mock(async () => {}),
     followUp: mock(async () => {}),
-    editReply: mock(async () => {}),
+    editReply: mock(async (_options: unknown) => {}),
     message: {
       components,
       edit: mock(async () => {}),
@@ -108,7 +143,8 @@ function interaction(customId: string, components: Array<{ type: number }>) {
       delete: mock(async () => {}),
     },
     channel: {
-      guild: { roles: { everyone: { id: "everyone" } } },
+      client,
+      guild,
       messages: {
         fetch: mock(async () => []),
         fetchPins: mock(async () => ({ items: [], hasMore: false })),
@@ -116,14 +152,31 @@ function interaction(customId: string, components: Array<{ type: number }>) {
       name: "steve-general-0002",
       setName: mock(async () => {}),
       permissionOverwrites: {
-        cache: { values: () => [] },
-        edit: mock(async () => {}),
+        cache,
+        set: mock(async (overwrites: OverwriteResolvable[]) => {
+          replaceOverwrites(overwrites);
+        }),
       },
       send: mock(async () => sentMessage),
       delete: mock(async () => {}),
     },
     sentMessage,
   };
+}
+
+function permissionsFor(
+  channel: ReturnType<typeof interaction>["channel"],
+  memberId: string,
+  roleIds: string[] = [],
+) {
+  const roles = new Collection(
+    ["everyone", ...roleIds].map((id) => [id, { permissions: new PermissionsBitField(ticketAccess) }]),
+  );
+  return GuildChannel.prototype.memberPermissions.call(
+    { ...channel, overwritesFor: GuildChannel.prototype.overwritesFor },
+    { id: memberId, roles: { cache: roles } },
+    false,
+  );
 }
 
 function buttonData(payload: { components?: unknown[] }): any[] {
@@ -197,6 +250,126 @@ describe("ticket lifecycle controls", () => {
     ]);
   });
 
+  test.each(["general", "council"] as const)("closed %s tickets are visible only to moderators and the bot", async (category) => {
+    ticket.category = category;
+    const i = interaction("ticket_close:2");
+    await i.channel.permissionOverwrites.set([
+      ...i.channel.permissionOverwrites.cache.values(),
+      { id: "council", type: OverwriteType.Role, allow: ticketAccess },
+      { id: "invited", type: OverwriteType.Member, allow: ticketAccess },
+      { id: "other-role", type: OverwriteType.Role, allow: ticketAccess },
+      {
+        id: "bot",
+        type: OverwriteType.Member,
+        allow: [PermissionFlagsBits.ManageChannels],
+        deny: [PermissionFlagsBits.AttachFiles, PermissionFlagsBits.SendMessages],
+      },
+    ]);
+    i.channel.permissionOverwrites.set.mockClear();
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(i.channel.permissionOverwrites.set).toHaveBeenCalledTimes(1);
+    for (const [memberId, roles] of [
+      ["opener", []],
+      ["invited", []],
+      ["councillor", ["council"]],
+      ["other-member", ["other-role"]],
+      ["ordinary-member", []],
+    ] as Array<[string, string[]]>) {
+      expect(permissionsFor(i.channel, memberId, roles).has(PermissionFlagsBits.ViewChannel)).toBe(false);
+    }
+    const closedAccess = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory];
+    expect(permissionsFor(i.channel, "moderator", ["mod"]).has(closedAccess)).toBe(true);
+    expect(permissionsFor(i.channel, "opener", ["mod"]).has(closedAccess)).toBe(true);
+    expect(permissionsFor(i.channel, "bot").has(ticketAccess)).toBe(true);
+    expect(permissionsFor(i.channel, "bot").has(PermissionFlagsBits.ManageChannels)).toBe(true);
+    expect(permissionsFor(i.channel, "bot").has(PermissionFlagsBits.AttachFiles)).toBe(false);
+  });
+
+  test.each(["general", "council"] as const)("reopening a %s ticket restores its normal audience", async (category) => {
+    ticket.category = category;
+    const close = interaction("ticket_close:2");
+    await new ButtonInteractionEvent().execute(close as any);
+    ticket.status = "closed";
+    const reopen = interaction("ticket_reopen:2");
+    reopen.channel = close.channel;
+
+    await new ButtonInteractionEvent().execute(reopen as any);
+
+    expect(permissionsFor(reopen.channel, "opener").has(ticketAccess)).toBe(true);
+    expect(permissionsFor(reopen.channel, "moderator", ["mod"]).has(ticketAccess)).toBe(true);
+    expect(permissionsFor(reopen.channel, "councillor", ["council"]).has(PermissionFlagsBits.ViewChannel)).toBe(category === "council");
+    expect(permissionsFor(reopen.channel, "ordinary-member").has(PermissionFlagsBits.ViewChannel)).toBe(false);
+  });
+
+  test("Close finishes restricting access before exposing an immediately usable Delete", async () => {
+    closeTicket.mockImplementationOnce(async () => {
+      ticket.status = "closed";
+      return ticket;
+    });
+    const close = interaction("ticket_close:2");
+    const { promise: started, resolve: markStarted } = Promise.withResolvers<void>();
+    const { promise: hold, resolve: finish } = Promise.withResolvers<void>();
+    const applyPermissions = close.channel.permissionOverwrites.set.getMockImplementation()!;
+    close.channel.permissionOverwrites.set.mockImplementationOnce(async (overwrites) => {
+      markStarted();
+      await hold;
+      await applyPermissions(overwrites);
+    });
+
+    const closing = new ButtonInteractionEvent().execute(close as any);
+    try {
+      await Promise.race([
+        started,
+        closing.then(() => { throw new Error("Close finished without applying permissions"); }),
+      ]);
+      expect(close.channel.send).not.toHaveBeenCalled();
+    } finally {
+      finish();
+      await closing;
+    }
+
+    const deleteId = buttonIds(close.channel.send.mock.calls[0]![0] as any)
+      .find((id) => id.startsWith("ticket_delete:"));
+    expect(deleteId).toBe("ticket_delete:2");
+    const deleting = interaction(deleteId!);
+    deleting.channel = close.channel;
+    await new ButtonInteractionEvent().execute(deleting as any);
+    expect(close.channel.delete).toHaveBeenCalledTimes(1);
+    expect(deleteTicketRow).toHaveBeenCalledWith(2);
+  });
+
+  test("Delete shows progress while saving the transcript, then removes the channel", async () => {
+    ticket.status = "closed";
+    const i = interaction("ticket_delete:2");
+    const { promise: started, resolve: markStarted } = Promise.withResolvers<void>();
+    const { promise: hold, resolve: finish } = Promise.withResolvers<void>();
+    i.channel.messages.fetch.mockResolvedValueOnce(new Collection() as any);
+    i.guild.channels.fetch.mockResolvedValueOnce({
+      send: mock(async () => {
+        markStarted();
+        await hold;
+      }),
+    } as any);
+
+    const deleting = new ButtonInteractionEvent().execute(i as any);
+    try {
+      await Promise.race([
+        started,
+        deleting.then(() => { throw new Error("Delete finished without saving the transcript"); }),
+      ]);
+      expect(i.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+      expect(JSON.stringify(i.editReply.mock.calls)).toContain("Deleting ticket");
+      expect(i.channel.delete).not.toHaveBeenCalled();
+    } finally {
+      finish();
+      await deleting;
+    }
+    expect(i.channel.delete).toHaveBeenCalledTimes(1);
+    expect(deleteTicketRow).toHaveBeenCalledWith(2);
+  });
+
   test("reopen disables its closed notice controls", async () => {
     ticket.status = "closed";
     const i = interaction("ticket_reopen:2", [
@@ -241,28 +414,32 @@ describe("ticket lifecycle controls", () => {
     expect(i.message.edit).not.toHaveBeenCalled();
   });
 
-  test("close still posts its notice when an overwrite cannot be locked", async () => {
-    const actions: string[] = [];
+  test("failed close permissions roll back without exposing closed controls", async () => {
     const i = interaction("ticket_close:2", [
       { type: ComponentType.Container },
       { type: ComponentType.ActionRow },
     ]);
-    i.channel.permissionOverwrites.cache.values = () => [{ id: "member" }];
-    i.channel.send.mockImplementationOnce(async () => {
-      actions.push("notice");
-      return i.sentMessage;
-    });
-    i.channel.permissionOverwrites.edit.mockImplementationOnce(async () => {
-      actions.push("lock");
-      throw new Error("missing permission");
-    });
+    i.channel.permissionOverwrites.set.mockRejectedValueOnce(new Error("missing permission"));
 
     await new ButtonInteractionEvent().execute(i as any);
 
-    expect(actions).toEqual(["notice", "lock"]);
-    expect(i.channel.send).toHaveBeenCalledTimes(1);
-    expect(reopenTicket).not.toHaveBeenCalled();
+    expect(i.channel.send).not.toHaveBeenCalled();
+    expect(reopenTicket).toHaveBeenCalledWith(2);
+    expect(permissionsFor(i.channel, "opener").has(PermissionFlagsBits.ViewChannel)).toBe(true);
     expect(i.followUp).toHaveBeenCalledTimes(1);
+  });
+
+  test("failed close and rollback permissions report incomplete access restoration", async () => {
+    const i = interaction("ticket_close:2");
+    i.channel.permissionOverwrites.set
+      .mockRejectedValueOnce(new Error("close permissions failed"))
+      .mockRejectedValueOnce(new Error("rollback permissions failed"));
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(reopenTicket).toHaveBeenCalledWith(2);
+    expect(i.channel.send).not.toHaveBeenCalled();
+    expect(JSON.stringify(i.followUp.mock.calls)).toContain("permissions could not be restored");
   });
 
   test("a stale Close repairs missing Discord state", async () => {
@@ -373,12 +550,9 @@ describe("ticket lifecycle controls", () => {
       { type: ComponentType.Container },
       { type: ComponentType.ActionRow },
     ]);
-    reopenInteraction.channel.permissionOverwrites.cache.values = () => [
-      { id: "opener" },
-    ];
-    reopenInteraction.channel.permissionOverwrites.edit.mockImplementation(
-      async (_id: string, permissions: { SendMessages: boolean }) => {
-        lifecycleOrder.push(permissions.SendMessages ? "unlock" : "lock");
+    reopenInteraction.channel.permissionOverwrites.set.mockImplementation(
+      async (overwrites: OverwriteResolvable[]) => {
+        lifecycleOrder.push(overwrites.some((overwrite) => overwrite.id === "opener") ? "unlock" : "lock");
       },
     );
     const closeInteraction = interaction("ticket_close:2", [
@@ -420,13 +594,50 @@ describe("ticket lifecycle controls", () => {
     expect(i.followUp).toHaveBeenCalledTimes(1);
   });
 
+  test("a stale Reopen preserves invited members, roles and permission denies on an open ticket", async () => {
+    const i = interaction("ticket_reopen:2");
+    await i.channel.permissionOverwrites.set([
+      ...i.channel.permissionOverwrites.cache.values(),
+      {
+        id: "invited",
+        type: OverwriteType.Member,
+        allow: [...ticketAccess, PermissionFlagsBits.ManageMessages],
+        deny: [PermissionFlagsBits.AttachFiles],
+      },
+      {
+        id: "invited-role",
+        type: OverwriteType.Role,
+        allow: ticketAccess,
+        deny: [PermissionFlagsBits.MentionEveryone],
+      },
+      {
+        id: "restricted",
+        type: OverwriteType.Member,
+        deny: [PermissionFlagsBits.ViewChannel],
+      },
+    ]);
+    const originals = ["invited", "invited-role", "restricted"].map((id) =>
+      i.channel.permissionOverwrites.cache.get(id)!.toJSON(),
+    );
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(reopenTicket).not.toHaveBeenCalled();
+    for (const original of originals) {
+      expect(i.channel.permissionOverwrites.cache.get(original.id)?.toJSON()).toEqual(original);
+    }
+    expect(permissionsFor(i.channel, "invited").has(PermissionFlagsBits.ManageMessages)).toBe(true);
+    expect(permissionsFor(i.channel, "role-member", ["invited-role"]).has(PermissionFlagsBits.ViewChannel)).toBe(true);
+    expect(permissionsFor(i.channel, "restricted").has(PermissionFlagsBits.ViewChannel)).toBe(false);
+  });
+
   test("failed permission restore leaves the ticket closed", async () => {
     ticket.status = "closed";
     const i = interaction("ticket_reopen:2", [
       { type: ComponentType.Container },
       { type: ComponentType.ActionRow },
     ]);
-    i.channel.permissionOverwrites.edit.mockRejectedValueOnce(
+    i.channel.permissionOverwrites.set.mockRejectedValueOnce(
       new Error("missing permission"),
     );
 
@@ -444,10 +655,9 @@ describe("ticket lifecycle controls", () => {
       { type: ComponentType.Container },
       { type: ComponentType.ActionRow },
     ]);
-    i.channel.permissionOverwrites.cache.values = () => [{ id: "opener" }];
-    i.channel.permissionOverwrites.edit.mockImplementation(
-      async (_id: string, permissions: { SendMessages: boolean }) => {
-        permissionChanges.push(permissions.SendMessages);
+    i.channel.permissionOverwrites.set.mockImplementation(
+      async (overwrites: OverwriteResolvable[]) => {
+        permissionChanges.push(overwrites.some((overwrite) => overwrite.id === "opener"));
       },
     );
     reopenTicket.mockRejectedValueOnce(new Error("database unavailable"));
@@ -485,6 +695,36 @@ describe("ticket lifecycle controls", () => {
 
     expect(reopenTicket).toHaveBeenCalledWith(2);
     expect(i.followUp).toHaveBeenCalledTimes(1);
+    expect(permissionsFor(i.channel, "opener").has(PermissionFlagsBits.ViewChannel)).toBe(true);
+  });
+
+  test("failed closed notice restores a manually invited member's original permissions", async () => {
+    const i = interaction("ticket_close:2");
+    await i.channel.permissionOverwrites.set([
+      ...i.channel.permissionOverwrites.cache.values(),
+      {
+        id: "invited",
+        type: OverwriteType.Member,
+        allow: [...ticketAccess, PermissionFlagsBits.ManageMessages],
+        deny: [PermissionFlagsBits.AttachFiles],
+      },
+    ]);
+    const original = i.channel.permissionOverwrites.cache.get("invited")!.toJSON();
+    i.channel.permissionOverwrites.set.mockClear();
+    i.channel.send.mockImplementationOnce(async () => {
+      expect(permissionsFor(i.channel, "invited").has(PermissionFlagsBits.ViewChannel)).toBe(false);
+      throw new Error("closed notice failed");
+    });
+
+    await new ButtonInteractionEvent().execute(i as any);
+
+    expect(i.channel.permissionOverwrites.set).toHaveBeenCalledTimes(2);
+    expect(reopenTicket).toHaveBeenCalledWith(2);
+    expect(i.channel.permissionOverwrites.cache.get("invited")?.toJSON()).toEqual(original);
+    expect(permissionsFor(i.channel, "invited").has([
+      PermissionFlagsBits.ViewChannel,
+      PermissionFlagsBits.ManageMessages,
+    ])).toBe(true);
   });
 
   test("a stale Delete control cannot delete a reopened ticket", async () => {
@@ -533,7 +773,7 @@ describe("ticket lifecycle controls", () => {
 
     await new ButtonInteractionEvent().execute(i as any);
 
-    expect(i.deferUpdate).toHaveBeenCalledTimes(1);
+    expect(i.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(i.channel.delete).toHaveBeenCalledTimes(1);
     expect(deleteTicketRow).not.toHaveBeenCalled();
     expect(i.followUp).toHaveBeenCalledTimes(1);
