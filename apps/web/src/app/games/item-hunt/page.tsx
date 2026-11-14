@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Play Item Hunt, a free daily Minecraft item guessing game. Reveal up to six clues, identify the mystery item, and share your result.",
   alternates: {
-    canonical: "https://crabcraft.net/games/item-hunt",
+    canonical: "https://www.crabcraft.net/games/item-hunt",
   },
   openGraph: {
     title: "Item Hunt | Daily Minecraft Guessing Game",
     description:
       "Reveal up to six clues and identify today's mystery Minecraft item.",
-    url: "https://crabcraft.net/games/item-hunt",
+    url: "https://www.crabcraft.net/games/item-hunt",
     images: ["/logo.png"],
   },
   twitter: {
@@ -32,7 +32,7 @@ const jsonLd = {
   alternateName: "Minecraft Item Hunt",
   description:
     "A free daily Minecraft item guessing game with up to six clues.",
-  url: "https://crabcraft.net/games/item-hunt",
+  url: "https://www.crabcraft.net/games/item-hunt",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   browserRequirements: "Requires JavaScript",
@@ -45,7 +45,7 @@ const jsonLd = {
   publisher: {
     "@type": "Organization",
     name: "CrabCraft",
-    url: "https://crabcraft.net",
+    url: "https://www.crabcraft.net",
   },
 };
 

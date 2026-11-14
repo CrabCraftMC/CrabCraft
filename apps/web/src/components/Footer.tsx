@@ -1,6 +1,5 @@
 import Link from "next/link";
 import config from "@/data/site-config.json";
-import { PrivacySettingsButton } from "@/components/PrivacyConsent";
 
 const exploreLinks = [
   { name: "Home", url: "/" },
@@ -116,11 +115,6 @@ export default function Footer() {
                   <Link href="/privacy" className="text-sm text-gray-600 transition-colors hover:text-orange-500 dark:text-gray-400">
                     Privacy policy
                   </Link>
-                </li>
-                <li>
-                  <PrivacySettingsButton className="cursor-pointer text-left text-sm text-gray-600 transition-colors hover:text-orange-500 dark:text-gray-400">
-                    Privacy and cookie settings
-                  </PrivacySettingsButton>
                 </li>
               </ul>
             </nav>

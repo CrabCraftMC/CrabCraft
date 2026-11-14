@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `Wrapped Season ${season}`,
     description: `View your personalised CrabCraft Wrapped stats for Season ${season}.`,
     alternates: {
-      canonical: `https://crabcraft.net/wrapped/${season}`,
+      canonical: `https://www.crabcraft.net/wrapped/${season}`,
     },
   };
 }

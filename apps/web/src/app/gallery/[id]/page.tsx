@@ -21,7 +21,7 @@ import {
 import { galleryMediaUrl } from "@/data/gallery-media";
 import { playerDisplayName } from "@/lib/playerName";
 
-const SITE_URL = "https://crabcraft.net";
+const SITE_URL = "https://www.crabcraft.net";
 
 export const dynamic = "force-dynamic";
 export const unstable_dynamicStaleTime = 30;

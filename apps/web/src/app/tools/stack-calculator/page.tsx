@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Convert Minecraft item counts into stacks, shulker boxes, double chests, and split materials between builders — free online tool.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/stack-calculator",
+    canonical: "https://www.crabcraft.net/tools/stack-calculator",
   },
   openGraph: {
     title: "Minecraft Stack Calculator - CrabCraft",
     description:
       "Convert item counts into stacks, shulker boxes, double chests, and builder splits.",
-    url: "https://crabcraft.net/tools/stack-calculator",
+    url: "https://www.crabcraft.net/tools/stack-calculator",
     images: ["/logo.png"],
   },
   keywords: [
@@ -35,7 +35,7 @@ const jsonLd = {
   name: "Minecraft Stack Calculator",
   description:
     "Convert Minecraft item counts into stacks, shulker boxes, double chests, and builder splits.",
-  url: "https://crabcraft.net/tools/stack-calculator",
+  url: "https://www.crabcraft.net/tools/stack-calculator",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   offers: {

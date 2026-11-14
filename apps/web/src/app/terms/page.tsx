@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Terms",
   description: "The basics of using CrabCraft's website, Minecraft tools and community features.",
-  alternates: { canonical: "https://crabcraft.net/terms" },
+  alternates: { canonical: "https://www.crabcraft.net/terms" },
 };
 
 export default function TermsPage() {
@@ -46,9 +46,8 @@ export default function TermsPage() {
             availability for maintenance and security.
           </p>
           <p className="mt-3">
-            Google adverts appear only for signed-out visitors on the block gradient generator. Adverts and external
-            links lead to services with their own terms; an advert is not our endorsement.
-            Our <Link href="/privacy">privacy policy</Link> explains data use and your choices.
+            External links lead to services with their own terms.
+            Our <Link href="/privacy">privacy policy</Link> explains data use and your rights.
           </p>
         </section>
 

@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Calculate Minecraft beacon pyramid blocks, items, layers, and range — free online tool.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/beacon-calculator",
+    canonical: "https://www.crabcraft.net/tools/beacon-calculator",
   },
   openGraph: {
     title: "Minecraft Beacon Calculator - CrabCraft",
     description:
       "Calculate beacon pyramid blocks, items, layers, and range.",
-    url: "https://crabcraft.net/tools/beacon-calculator",
+    url: "https://www.crabcraft.net/tools/beacon-calculator",
     images: ["/logo.png"],
   },
   keywords: [
@@ -34,7 +34,7 @@ const jsonLd = {
   name: "Minecraft Beacon Calculator",
   description:
     "Calculate Minecraft beacon pyramid blocks, items, layers, and range.",
-  url: "https://crabcraft.net/tools/beacon-calculator",
+  url: "https://www.crabcraft.net/tools/beacon-calculator",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   offers: {

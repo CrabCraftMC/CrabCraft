@@ -10,13 +10,13 @@ export const metadata: Metadata = {
   description:
     "Plan compatible Minecraft enchantments for swords, spears, tools, bows, armor, tridents, maces, elytra, and fishing rods — free online tool.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/enchantment-planner",
+    canonical: "https://www.crabcraft.net/tools/enchantment-planner",
   },
   openGraph: {
     title: "Minecraft Enchantment Planner - CrabCraft",
     description:
       "Build compatible Minecraft enchantment loadouts with item icons, conflicts, max levels, and commands.",
-    url: "https://crabcraft.net/tools/enchantment-planner",
+    url: "https://www.crabcraft.net/tools/enchantment-planner",
     images: ["/logo.png"],
   },
   keywords: [
@@ -37,7 +37,7 @@ const jsonLd = {
   name: "Minecraft Enchantment Planner",
   description:
     "Plan compatible Minecraft enchantments for gear with conflicts, max levels, and commands.",
-  url: "https://crabcraft.net/tools/enchantment-planner",
+  url: "https://www.crabcraft.net/tools/enchantment-planner",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   offers: {

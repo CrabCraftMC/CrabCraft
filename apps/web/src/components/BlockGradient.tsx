@@ -20,6 +20,7 @@ import { generateGradientOptions, selectGradientBlocks, MAX_PALETTE_OPTIONS } fr
 import { createBlockGradientShareAction } from "@/app/tools/block-gradient/actions";
 import type { BlockGradientShareState } from "@/lib/blockGradientShare";
 import { trackUmamiEvent } from "@/lib/umami";
+import { BLOCK_GRADIENT_STORAGE_KEY as STORAGE_KEY, BLOCK_GRADIENT_LAYOUT_KEY } from "@/lib/blockGradientLayout";
 import {
   BLOCK_GRADIENT_PRESETS,
   isBlockAllowedForPresets,
@@ -29,7 +30,6 @@ import {
 
 const TEXTURE_BASE = "/textures/blocks";
 
-const STORAGE_KEY = "crabcraft-block-gradient";
 const BLOCK_IDS = new Set<string>(blocks.map((block) => block.id));
 
 interface GradientEndpoint {
@@ -84,26 +84,22 @@ function valueNoise2d(x: number, y: number, seed: number): number {
   return nx0 + (nx1 - nx0) * sy;
 }
 
-// Memoized so slider drags only re-render the wall cells whose block
-// actually changed, instead of all ~300 images per input event.
+// Memoised so slider drags only re-render the wall cells whose block
+// actually changed, rather than every image per input event.
 const WallCell = memo(function WallCell({
   block,
   cellKey,
   onCellClick,
-  fillCell = false,
 }: {
   block: BlockWithLab;
   cellKey: string;
   onCellClick: (block: BlockWithLab, cellKey: string, target: HTMLElement) => void;
-  fillCell?: boolean;
 }) {
   return (
     <img
       src={`${TEXTURE_BASE}/${block.texture}.png`}
       alt=""
-      className={`${
-        fillCell ? "h-full w-full" : "flex-1 min-w-0"
-      } cursor-pointer object-cover hover:brightness-125 transition-[filter] block-texture`}
+      className="h-full w-full cursor-pointer object-cover hover:brightness-125 transition-[filter] block-texture"
       style={{ aspectRatio: "1" }}
       onClick={(e) => {
         e.stopPropagation();
@@ -155,7 +151,7 @@ export default function BlockGradient({
   const [hydrated, setHydrated] = useState(false);
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
-  const [expandedWallBounds, setExpandedWallBounds] = useState({
+  const [previewWallBounds, setPreviewWallBounds] = useState({
     width: 0,
     height: 0,
   });
@@ -192,7 +188,11 @@ export default function BlockGradient({
 
   const presetMenuRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
-  const expandedWallAreaRef = useRef<HTMLDivElement>(null);
+  const previewWallAreaRef = useRef<HTMLDivElement>(null);
+  const toolRef = useRef<HTMLDivElement>(null);
+  const canCacheLayoutRef = useRef(false);
+  canCacheLayoutRef.current = !isPreviewExpanded && steps === deferredSteps &&
+    gradientLength === deferredGradientLength;
 
   // A shared recipe takes precedence over this browser's saved settings.
   useEffect(() => {
@@ -278,6 +278,46 @@ export default function BlockGradient({
     );
   }, [start, end, steps, randomness, gradientLength, paletteOption, blockPresets, excludedIds, hydrated]);
 
+  useEffect(() => {
+    const tool = toolRef.current;
+    if (!hydrated || !tool) return;
+    let cached: object | null = null;
+    const measure = () => {
+      cached = null;
+      if (!canCacheLayoutRef.current) return;
+      try {
+        cached = {
+          width: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          route: window.location.pathname + window.location.search,
+          settings: localStorage.getItem(STORAGE_KEY),
+          height: tool.getBoundingClientRect().height,
+        };
+      } catch { /* Storage may be unavailable. */ }
+    };
+    const persist = () => {
+      if (!cached || !canCacheLayoutRef.current) return;
+      try { sessionStorage.setItem(BLOCK_GRADIENT_LAYOUT_KEY, JSON.stringify(cached)); }
+      catch { /* A missing height cache must not interrupt the tool. */ }
+    };
+    const onPageHide = () => { measure(); persist(); };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(tool);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      persist();
+      observer.disconnect();
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (hydrated && steps === deferredSteps && gradientLength === deferredGradientLength) {
+      document.documentElement.style.removeProperty("--block-gradient-loading-height");
+    }
+  }, [hydrated, steps, deferredSteps, gradientLength, deferredGradientLength]);
+
   // Close wall popover on outside click
   useEffect(() => {
     if (!wallPopover) return;
@@ -312,21 +352,18 @@ export default function BlockGradient({
   }, [presetMenuOpen]);
 
   useEffect(() => {
-    if (!isPreviewExpanded || !expandedWallAreaRef.current) return;
+    if (!hydrated || !previewWallAreaRef.current) return;
 
-    const wallArea = expandedWallAreaRef.current;
-    const updateBounds = () => {
-      setExpandedWallBounds({
-        width: wallArea.clientWidth,
-        height: wallArea.clientHeight,
+    const wallArea = previewWallAreaRef.current;
+    const observer = new ResizeObserver(([entry]) => {
+      setPreviewWallBounds({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
       });
-    };
-
-    updateBounds();
-    const observer = new ResizeObserver(updateBounds);
+    });
     observer.observe(wallArea);
     return () => observer.disconnect();
-  }, [isPreviewExpanded]);
+  }, [hydrated, isPreviewExpanded]);
 
   // Pre-compute OkLAB values for all blocks
   const blocksWithLab = useMemo(() => {
@@ -488,8 +525,13 @@ export default function BlockGradient({
   }, [currentRecipeKey]);
 
   // Build the wall grid with per-cell randomness
-  const WALL_COLS = 10;
+  const BASE_WALL_COLS = 10;
   const WALL_ROWS = deferredGradientLength;
+  const fittedWallColumns = !isPreviewExpanded && previewWallBounds.height > 0
+    ? Math.max(BASE_WALL_COLS, Math.ceil(previewWallBounds.width * WALL_ROWS / previewWallBounds.height))
+    : BASE_WALL_COLS;
+  // A nearly collapsed viewport must not create thousands of invisible tiles.
+  const WALL_COLS = fittedWallColumns * WALL_ROWS <= 5_000 ? fittedWallColumns : BASE_WALL_COLS;
   const randFactor = deferredRandomness / 100;
 
   const wallGrid = useMemo(() => {
@@ -567,15 +609,15 @@ export default function BlockGradient({
   const verticalCellSize = Math.max(
     0,
     Math.min(
-      expandedWallBounds.width / WALL_COLS,
-      expandedWallBounds.height / WALL_ROWS,
+      previewWallBounds.width / WALL_COLS,
+      previewWallBounds.height / WALL_ROWS,
     ),
   );
   const horizontalCellSize = Math.max(
     0,
     Math.min(
-      expandedWallBounds.width / WALL_ROWS,
-      expandedWallBounds.height / WALL_COLS,
+      previewWallBounds.width / WALL_ROWS,
+      previewWallBounds.height / WALL_COLS,
     ),
   );
   const rotateExpandedWall = horizontalCellSize > verticalCellSize;
@@ -732,22 +774,12 @@ export default function BlockGradient({
     : visibleShareId;
 
   if (!hydrated) {
-    return <div className="min-h-screen" />;
+    return <div className="min-h-screen" style={{ minHeight: "var(--block-gradient-loading-height, 100vh)" }} />;
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-16">
+    <div ref={toolRef} style={{ minHeight: "var(--block-gradient-loading-height, 0px)" }}>
       <div className="container mx-auto px-4 max-w-6xl">
-        {/* Header */}
-        <div className="text-center mb-10 animate-in">
-          <h1 className="text-4xl lg:text-5xl font-bold text-orange-500 font-mc">
-            Block Gradient
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Create smooth Minecraft block gradients for building
-          </p>
-        </div>
-
         {/* Endpoint pickers */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-6 mb-6 items-center">
           {/* Start endpoint */}
@@ -1144,11 +1176,12 @@ export default function BlockGradient({
             cornerRadius={32}
             className={`${
               isPreviewExpanded
-                ? "flex flex-col"
+                ? ""
                 : "mt-6"
-            } bg-paper-2 shadow-sm animate-in overflow-hidden`}
+            } flex flex-col bg-paper-2 shadow-sm animate-in overflow-hidden`}
             style={{
               animationDelay: "0.25s",
+              maxHeight: `calc(100dvh - ${previewTopOffset + 16}px)`,
               height: isPreviewExpanded
                 ? `calc(100dvh - ${previewTopOffset + 16}px)`
                 : undefined,
@@ -1182,7 +1215,7 @@ export default function BlockGradient({
             </div>
             {isPreviewExpanded ? (
               <div
-                ref={expandedWallAreaRef}
+                ref={previewWallAreaRef}
                 className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4"
               >
                 <div
@@ -1200,25 +1233,36 @@ export default function BlockGradient({
                       block={block}
                       cellKey={cellKey}
                       onCellClick={handleWallCellClick}
-                      fillCell
                     />
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="relative">
-                {wallGrid.map((row, r) => (
-                  <div key={r} className="flex">
-                    {row.map((block, c) => (
+              <div
+                ref={previewWallAreaRef}
+                className="relative min-h-0 w-full shrink"
+                style={{ aspectRatio: `${BASE_WALL_COLS} / ${WALL_ROWS}` }}
+              >
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div
+                    className="grid overflow-hidden"
+                    style={{
+                      width: verticalCellSize * WALL_COLS,
+                      height: verticalCellSize * WALL_ROWS,
+                      gridTemplateColumns: `repeat(${WALL_COLS}, minmax(0, 1fr))`,
+                      gridTemplateRows: `repeat(${WALL_ROWS}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {wallGrid.flatMap((row, r) => row.map((block, c) => (
                       <WallCell
                         key={`${r}-${c}`}
                         block={block}
                         cellKey={`${r}-${c}`}
                         onCellClick={handleWallCellClick}
                       />
-                    ))}
+                    )))}
                   </div>
-                ))}
+                </div>
               </div>
             )}
             <div className={`${

@@ -4,7 +4,7 @@ import { searchUsers } from "@/lib/queries";
 
 export const revalidate = 3600;
 
-const BASE_URL = "https://crabcraft.net";
+const BASE_URL = "https://www.crabcraft.net";
 const MAX_GALLERY_SITEMAP_ENTRIES = 39_000;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

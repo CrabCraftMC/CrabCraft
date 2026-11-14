@@ -96,7 +96,7 @@ describe("block hunt", () => {
         elapsedMs: 83_000,
       }),
     ).toBe(
-      "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses · 01:23\nhttps://crabcraft.net/games/block-hunt",
+      "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses · 01:23\nhttps://www.crabcraft.net/games/block-hunt",
     );
   });
 
@@ -110,7 +110,7 @@ describe("block hunt", () => {
         elapsedMs: null,
       }),
     ).toBe(
-      "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses\nhttps://crabcraft.net/games/block-hunt",
+      "Block Hunt #8 ✅\nSolved on clue 4 of 6\n3 guesses\nhttps://www.crabcraft.net/games/block-hunt",
     );
   });
 
@@ -361,7 +361,7 @@ describe("block hunt", () => {
         elapsedMs: 42_000,
       }),
     ).toBe(
-      "Mob Hunt #8 ✅\nSolved on clue 3 of 6\n2 guesses · 00:42\nhttps://crabcraft.net/games/mob-hunt",
+      "Mob Hunt #8 ✅\nSolved on clue 3 of 6\n2 guesses · 00:42\nhttps://www.crabcraft.net/games/mob-hunt",
     );
   });
 

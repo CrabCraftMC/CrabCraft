@@ -84,7 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isUuid = identifier.includes("-") || identifier.length === 32;
   const canonical =
     isUuid && name !== identifier
-      ? `https://crabcraft.net/stats/${identifier}`
+      ? `https://www.crabcraft.net/stats/${identifier}`
       : undefined;
 
   return {
