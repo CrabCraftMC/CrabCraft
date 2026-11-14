@@ -8,7 +8,6 @@ import {
   interpolateOklab,
   colorDistance,
   interpolateOklabValues,
-  interpolateOklchValues,
   hexToRgb,
   srgbToOklab,
   oklabToSrgb,
@@ -16,7 +15,8 @@ import {
 } from "@/lib/colors";
 import { RotateCcw, ArrowLeftRight, ChevronDown, Check, Shuffle, Link2, Maximize2, Minimize2 } from "lucide-react";
 import blocks from "@/data/blocks.json";
-import { findClosestBlockAtRank } from "@/lib/blockGradient";
+import blockTextureContrast from "@/data/blockTextureContrast.json";
+import { generateGradientOptions, selectGradientBlocks, MAX_PALETTE_OPTIONS } from "@/lib/blockGradient";
 import { createBlockGradientShareAction } from "@/app/tools/block-gradient/actions";
 import type { BlockGradientShareState } from "@/lib/blockGradientShare";
 import { trackUmamiEvent } from "@/lib/umami";
@@ -30,7 +30,6 @@ import {
 const TEXTURE_BASE = "/textures/blocks";
 
 const STORAGE_KEY = "crabcraft-block-gradient";
-const MAX_PALETTE_OPTIONS = 5;
 const BLOCK_IDS = new Set<string>(blocks.map((block) => block.id));
 
 interface GradientEndpoint {
@@ -43,6 +42,7 @@ interface GradientEndpoint {
 
 type BlockWithLab = (typeof blocks)[number] & {
   lab: [number, number, number];
+  textureContrast: number;
 };
 
 function loadSaved() {
@@ -333,7 +333,11 @@ export default function BlockGradient({
     return blocks.map((block) => {
       const [r, g, b] = hexToRgb(block.color);
       const [L, a, bVal] = srgbToOklab(r, g, b);
-      return { ...block, lab: [L, a, bVal] as [number, number, number] };
+      return {
+        ...block,
+        lab: [L, a, bVal] as [number, number, number],
+        textureContrast: blockTextureContrast[block.texture as keyof typeof blockTextureContrast],
+      };
     });
   }, []);
 
@@ -405,97 +409,31 @@ export default function BlockGradient({
     [end.color]
   );
 
-  // Find closest block to an OkLAB color
-  const findClosest = useCallback(
-    (targetLab: [number, number, number], rank = 0): BlockWithLab => {
-      const fallbackBlock = blocksWithLab[0];
-      if (!fallbackBlock) {
-        throw new Error("No blocks are available for gradient matching");
-      }
-      const searchBlocks =
-        availableBlocks.length > 0
-          ? availableBlocks
-          : presetBlocksWithLab.length > 0
-            ? presetBlocksWithLab
-            : [fallbackBlock];
-      return findClosestBlockAtRank(targetLab, searchBlocks, rank);
-    },
-    [availableBlocks, presetBlocksWithLab, blocksWithLab]
-  );
-
-  // Discover all unique blocks along the gradient by oversampling. This is
-  // the expensive part (100 samples × nearest-match over the palette), and
-  // it is independent of the Blocks slider so drags never re-run it.
+  // Discover all five options in one matching pass per sample. Keep this
+  // independent of the Blocks slider so dragging it never re-runs the search.
   const uniqueGradientOptions = useMemo(() => {
+    const searchBlocks = availableBlocks.length > 0
+      ? availableBlocks
+      : presetBlocksWithLab.length > 0
+        ? presetBlocksWithLab
+        : blocksWithLab.slice(0, 1);
     const startBlock = start.blockId
       ? presetBlocksWithLab.find((b) => b.id === start.blockId)
-      : null;
+      : undefined;
     const endBlock = end.blockId
       ? presetBlocksWithLab.find((b) => b.id === end.blockId)
-      : null;
+      : undefined;
+    return generateGradientOptions(startLab, endLab, searchBlocks, startBlock, endBlock);
+  }, [startLab, endLab, availableBlocks, start.blockId, end.blockId, presetBlocksWithLab, blocksWithLab]);
 
-    const options: BlockWithLab[][] = [];
-    const signatures = new Set<string>();
-
-    for (let rank = 0; rank < MAX_PALETTE_OPTIONS; rank++) {
-      // Oversample at high resolution to discover all unique blocks.
-      const OVERSAMPLE = 100;
-      const oversampled: BlockWithLab[] = [];
-      for (let i = 0; i < OVERSAMPLE; i++) {
-        const t = i / (OVERSAMPLE - 1);
-        const lab = interpolateOklchValues(startLab, endLab, t);
-        oversampled.push(findClosest(lab, rank));
-      }
-
-      // Collapse repeated runs before preserving the chosen endpoints.
-      const sampled = oversampled.filter(
-        (block, i) => i === 0 || block.id !== oversampled[i - 1].id
-      );
-
-      // Ranked alternatives can briefly revisit a block. Keep each block only
-      // once while pinning explicitly selected endpoints to their positions.
-      const firstBlock = startBlock ?? sampled[0];
-      const lastBlock = endBlock ?? sampled[sampled.length - 1];
-      if (!firstBlock || !lastBlock) continue;
-
-      const usedIds = new Set([firstBlock.id, lastBlock.id]);
-      const middleBlocks = sampled.slice(1, -1).filter((block) => {
-        if (usedIds.has(block.id)) return false;
-        usedIds.add(block.id);
-        return true;
-      });
-      const pinnedUnique = [
-        firstBlock,
-        ...middleBlocks,
-        ...(lastBlock.id === firstBlock.id ? [] : [lastBlock]),
-      ];
-      const signature = pinnedUnique.map((block) => block.id).join("|");
-      if (!signatures.has(signature)) {
-        signatures.add(signature);
-        options.push(pinnedUnique);
-      }
-    }
-
-    return options;
-  }, [startLab, endLab, findClosest, start.blockId, end.blockId, presetBlocksWithLab]);
-
-  // Select `steps` blocks evenly from every unique option, then discard any
+  // Fit the requested number of blocks to the colour path, then discard any
   // options that become identical at the chosen display length.
   const displayGradientOptions = useMemo(() => {
     const options: BlockWithLab[][] = [];
     const signatures = new Set<string>();
 
     for (const unique of uniqueGradientOptions) {
-      let result = unique;
-      if (unique.length > deferredSteps) {
-        result = [];
-        for (let i = 0; i < deferredSteps; i++) {
-          const idx = Math.round(
-            (i / (deferredSteps - 1)) * (unique.length - 1)
-          );
-          result.push(unique[idx]);
-        }
-      }
+      const result = selectGradientBlocks(unique, deferredSteps, startLab, endLab);
 
       const signature = result.map((block) => block.id).join("|");
       if (!signatures.has(signature)) {
@@ -505,7 +443,7 @@ export default function BlockGradient({
     }
 
     return options;
-  }, [uniqueGradientOptions, deferredSteps]);
+  }, [uniqueGradientOptions, deferredSteps, startLab, endLab]);
 
   const activePaletteOption = paletteOption % displayGradientOptions.length;
   const displayGradient = displayGradientOptions[activePaletteOption] ?? [];

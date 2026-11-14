@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Geist_Mono, Unbounded } from "next/font/google";
 import { auth, getAvatarUrl } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
@@ -7,6 +6,7 @@ import Footer from "@/components/Footer";
 import GridPattern from "@/components/GridPattern";
 import CommandMenu from "@/components/CommandMenu";
 import MascotJoin from "@/components/MascotJoin";
+import PrivacyConsentProvider from "@/components/PrivacyConsent";
 import "@/styles/globals.css";
 
 const unbounded = Unbounded({
@@ -110,6 +110,7 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${unbounded.variable} ${geistMono.variable} font-sans antialiased bg-paper transition-colors duration-200 relative`}>
+        <PrivacyConsentProvider>
         <div className="fixed inset-0 z-0 pointer-events-none">
           <GridPattern />
         </div>
@@ -121,15 +122,7 @@ export default async function RootLayout({
         <CommandMenu />
         {/* Only nudge signed-out visitors to join. Signed-in users already have. */}
         {!userData && <MascotJoin />}
-        {process.env.NODE_ENV === "production" && (
-          <Script
-            src="https://web.maxmoon.sh/script.js"
-            strategy="lazyOnload"
-            data-website-id="b47dfe1d-3ed3-49d8-948a-96776107f338"
-            data-domains="crabcraft.net,www.crabcraft.net"
-            data-performance="true"
-          />
-        )}
+        </PrivacyConsentProvider>
       </body>
     </html>
   );

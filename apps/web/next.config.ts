@@ -43,6 +43,13 @@ const nextConfig: NextConfig = {
         ? "'self' 'unsafe-inline' 'unsafe-eval' https://web.maxmoon.sh"
         : "'self' 'unsafe-inline' https://web.maxmoon.sh";
     const csp = `default-src 'self'; script-src ${scriptSrc}; img-src 'self' data: https://api.crabstudios.net https://cdn.discordapp.com ${galleryMediaUrl.origin} https://map.crabcraft.net https://mc-api.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.crabcraft.net https://web.maxmoon.sh; font-src 'self'; frame-ancestors 'none'`;
+    // Only this document can load Google advertising and its consent messages.
+    const advertisingOrigins = "https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com https://*.googleadservices.com https://*.googletagservices.com https://*.gstatic.com https://*.googleusercontent.com";
+    const advertisingCsp = csp
+      .replace(`script-src ${scriptSrc};`, `script-src ${scriptSrc} ${advertisingOrigins};`)
+      .replace("img-src 'self' data:", `img-src 'self' data: ${advertisingOrigins}`)
+      .replace("connect-src 'self'", `connect-src 'self' ${advertisingOrigins}`)
+      + `; frame-src 'self' ${advertisingOrigins}; object-src 'none'`;
     return [
       {
         source: "/:path*.webp",
@@ -72,6 +79,10 @@ const nextConfig: NextConfig = {
             value: csp,
           },
         ],
+      },
+      {
+        source: "/tools/block-gradient",
+        headers: [{ key: "Content-Security-Policy", value: advertisingCsp }],
       },
     ];
   },

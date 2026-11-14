@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { getBlockGradientShare } from "@crabcraft/db/queries/web";
+import BlockGradientAds from "@/components/BlockGradientAds";
+import { parseAdSenseConfig } from "@/lib/adsense";
+import { auth } from "@/lib/auth";
 import {
   BLOCK_GRADIENT_SHARE_ID_PATTERN,
   BLOCK_GRADIENT_SHARE_VERSION,
@@ -58,7 +61,7 @@ export default async function BlockGradientPage({
 }: {
   searchParams: Promise<{ share?: string | string[] }>;
 }) {
-  const { share: shareId } = await searchParams;
+  const [{ share: shareId }, session] = await Promise.all([searchParams, auth()]);
   let initialState = null;
 
   if (shareId !== undefined) {
@@ -77,16 +80,24 @@ export default async function BlockGradientPage({
     if (!initialState) notFound();
   }
 
+  const gradient = (
+    <BlockGradient
+      initialState={initialState}
+      initialShareId={typeof shareId === "string" ? shareId : null}
+    />
+  );
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <BlockGradient
-        initialState={initialState}
-        initialShareId={typeof shareId === "string" ? shareId : null}
-      />
+      {session?.user ? gradient : (
+        <BlockGradientAds config={parseAdSenseConfig(process.env)}>
+          {gradient}
+        </BlockGradientAds>
+      )}
     </>
   );
 }
