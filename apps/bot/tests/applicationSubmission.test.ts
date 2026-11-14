@@ -207,12 +207,12 @@ if (process.env.CRABCRAFT_TEST_APPLICATION_SUBMISSION_CHILD !== "1") {
   expect(underage.channel.send).toHaveBeenCalledWith(expect.objectContaining({ flags: MessageFlags.IsComponentsV2 }));
   expect(order.slice(-3)).toEqual(["sent", "delete-source", "delete-reply"]);
 
-  const expired = interaction("retry-application");
+  const missingRetry = interaction("retry-application");
   getRetry.mockReturnValueOnce(null);
-  await event.execute(expired as never);
+  await event.execute(missingRetry as never);
   expect(order).toEqual(["defer", "edit-reply"]);
-  expect(JSON.stringify(expired.editReply.mock.calls)).toContain("expired");
-  expect(expired.message.delete).not.toHaveBeenCalled();
+  expect(JSON.stringify(missingRetry.editReply.mock.calls)).toContain("saved application answers are unavailable");
+  expect(missingRetry.message.delete).not.toHaveBeenCalled();
 
   const edit = interaction("edit-application");
   const loadStarted = gate<void>();

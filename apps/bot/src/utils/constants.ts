@@ -1,6 +1,3 @@
-/** How long a retry session lasts before expiring (15 minutes). */
-export const RETRY_EXPIRY_MS = 15 * 60 * 1000;
-
 /** Delay before auto-deleting an application channel after accept/deny (12 hours). */
 export const CHANNEL_DELETE_DELAY_MS = 12 * 60 * 60 * 1000;
 
