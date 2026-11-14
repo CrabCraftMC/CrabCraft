@@ -3242,5 +3242,329 @@ export const ADDITIONAL_BLOCK_HUNT_PUZZLES =
         "text": "This smooth grey block forms the outer shell of amethyst geodes."
       }
     ]
+  },
+  {
+    "answer": "Poplar Log",
+    "texture": "poplar_log",
+    "clues": [
+      {
+        "kind": "world",
+        "label": "Habitat",
+        "text": "This natural building block forms the trunk of an Overworld tree."
+      },
+      {
+        "kind": "world",
+        "label": "Generation",
+        "text": "It occurs in standing trees and in fallen trunks within the same forest biome."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Processing",
+        "text": "Crafting it produces planks belonging to its own complete wood set."
+      },
+      {
+        "kind": "world",
+        "label": "Neighbours",
+        "text": "Shelf mushrooms can grow on the trees that supply this block."
+      },
+      {
+        "kind": "world",
+        "label": "Canopy",
+        "text": "Its tree can carry red, orange, or yellow leaves."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "This is the trunk block of the poplar trees found in the Dappled Forest."
+      }
+    ]
+  },
+  {
+    "answer": "Poplar Leaves",
+    "texture": "red_poplar_leaves",
+    "clues": [
+      {
+        "kind": "world",
+        "label": "Family",
+        "text": "This foliage has three visually different forms belonging to one tree species."
+      },
+      {
+        "kind": "world",
+        "label": "Habitat",
+        "text": "It grows in the Dappled Forest, a biome found near cold biomes."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Particles",
+        "text": "Each form releases falling particles matching its own colour."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Drops",
+        "text": "All three forms can drop the same kind of sapling."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Regrowth",
+        "text": "The sapling randomly chooses a canopy colour rather than inheriting the colour it came from."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "These red, orange, and yellow leaves form the canopy of a poplar tree."
+      }
+    ]
+  },
+  {
+    "answer": "Shelf Mushroom",
+    "texture": "shelf_mushroom",
+    "clues": [
+      {
+        "kind": "world",
+        "label": "Family",
+        "text": "This fungus occurs naturally in two different sizes."
+      },
+      {
+        "kind": "world",
+        "label": "Habitat",
+        "text": "It grows on standing and fallen poplar trees."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Growth",
+        "text": "Bone meal turns its small form into a larger one."
+      },
+      {
+        "kind": "destruction",
+        "label": "Harvest",
+        "text": "Breaking its large form yields two of the smaller items."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Movement",
+        "text": "Living entities make it produce a bouncing sound when they bounce on it."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "This slightly springy mushroom grows like a shelf from poplar trunks."
+      }
+    ]
+  },
+  {
+    "answer": "Red Shrub",
+    "texture": "red_shrub",
+    "clues": [
+      {
+        "kind": "world",
+        "label": "Family",
+        "text": "This is a decorative plant rather than a wood or stone building block."
+      },
+      {
+        "kind": "world",
+        "label": "Generation",
+        "text": "It naturally grows in small patches rather than forming a tree canopy."
+      },
+      {
+        "kind": "world",
+        "label": "Habitat",
+        "text": "Its natural home is the Dappled Forest."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Recycling",
+        "text": "A composter can turn this plant into progress towards bone meal."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Spreading",
+        "text": "Using bone meal on it grows another copy in a random adjacent space when possible."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "This reddish decorative shrub adds low vegetation beneath poplar trees."
+      }
+    ]
+  },
+  {
+    "answer": "Straw Bed",
+    "texture": "straw_bed",
+    "clues": [
+      {
+        "kind": "behaviour",
+        "label": "Purpose",
+        "text": "Using this block can let a player sleep through the night."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Spawn rule",
+        "text": "Sleeping here leaves the player's existing respawn point unchanged."
+      },
+      {
+        "kind": "world",
+        "label": "Recipe",
+        "text": "Three hay bales craft four copies of this block."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Lifetime",
+        "text": "A successful night's sleep destroys it after its single use."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Dimensions",
+        "text": "Trying to sleep on it in the Nether or the End destroys it rather than providing a night's rest."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "This disposable bed of straw is designed for a night spent away from home."
+      }
+    ]
+  },
+  {
+    "answer": "Wool Stairs",
+    "texture": "white_wool",
+    "clues": [
+      {
+        "kind": "world",
+        "label": "Family",
+        "text": "This stepped building piece comes in every colour available for wool."
+      },
+      {
+        "kind": "shape",
+        "label": "Placement",
+        "text": "Its orientation follows the same corner-forming rules as other stair blocks."
+      },
+      {
+        "kind": "world",
+        "label": "Material",
+        "text": "Its crafting material comes from a sheep-derived building block."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Vibrations",
+        "text": "It retains wool's ability to dampen vibrations."
+      },
+      {
+        "kind": "shape",
+        "label": "Profile",
+        "text": "Its stepped surface distinguishes it from the half-height piece made from the same soft material."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "These coloured wool steps provide a soft alternative to wooden or stone stairs."
+      }
+    ]
+  },
+  {
+    "answer": "Wool Slab",
+    "texture": "white_wool",
+    "clues": [
+      {
+        "kind": "world",
+        "label": "Family",
+        "text": "This thin building piece has the same sixteen colour choices as its full-sized material."
+      },
+      {
+        "kind": "shape",
+        "label": "Placement",
+        "text": "A single copy can occupy the upper or lower half of a block space."
+      },
+      {
+        "kind": "world",
+        "label": "Material",
+        "text": "It is crafted from coloured wool rather than from planks or stone."
+      },
+      {
+        "kind": "behaviour",
+        "label": "Vibrations",
+        "text": "Its reduced height does not remove its ability to dampen vibrations."
+      },
+      {
+        "kind": "world",
+        "label": "Crafting use",
+        "text": "Three copies of the same colour craft a cushion."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "This half-height wool building piece also supplies the material for soft seating."
+      }
+    ]
+  },
+  {
+    "answer": "Concrete Stairs",
+    "texture": "white_concrete",
+    "clues": [
+      {
+        "kind": "world",
+        "label": "Family",
+        "text": "This shaped building block is available in the same sixteen colours as solid concrete."
+      },
+      {
+        "kind": "shape",
+        "label": "Profile",
+        "text": "Its shape provides a small staircase within a single block space."
+      },
+      {
+        "kind": "world",
+        "label": "Material",
+        "text": "Its recipes use hardened concrete rather than concrete powder."
+      },
+      {
+        "kind": "world",
+        "label": "Stonecutting",
+        "text": "A stonecutter can turn a full block of its material into this stepped form."
+      },
+      {
+        "kind": "shape",
+        "label": "Corners",
+        "text": "Neighbouring copies can create inner and outer corners like other stairs."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "These concrete steps extend the solid-colour building palette beyond full cubes."
+      }
+    ]
+  },
+  {
+    "answer": "Concrete Slab",
+    "texture": "white_concrete",
+    "clues": [
+      {
+        "kind": "world",
+        "label": "Family",
+        "text": "This is a thinner member of a solid-colour building family."
+      },
+      {
+        "kind": "shape",
+        "label": "Height",
+        "text": "Its single form occupies half the height of a normal full block."
+      },
+      {
+        "kind": "world",
+        "label": "Obtaining",
+        "text": "It can be made from concrete using either crafting or a stonecutter."
+      },
+      {
+        "kind": "shape",
+        "label": "Stacking",
+        "text": "Two matching copies can share one block space to form a double version."
+      },
+      {
+        "kind": "world",
+        "label": "Colours",
+        "text": "Its sixteen colour variants match the palette of the full concrete blocks."
+      },
+      {
+        "kind": "world",
+        "label": "Identity",
+        "text": "This half-height concrete piece offers colourful floors and ceilings."
+      }
+    ]
   }
 ] as const satisfies readonly BlockHuntPuzzle[];

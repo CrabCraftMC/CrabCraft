@@ -64,7 +64,7 @@ const INITIAL_GAME: SavedGame = {
   timerEnabled: true,
 };
 
-const HUNT_STORAGE_VERSION = 8;
+const HUNT_STORAGE_VERSION = 9;
 
 function readSavedGame(key: string): SavedGame {
   try {
@@ -130,7 +130,7 @@ function HuntPreview({
       style={{
         width: size,
         height: size,
-        backgroundImage: `url(/textures/hunt/${kind}s.webp)`,
+        backgroundImage: `url(/textures/hunt/${kind}s.webp?v=${getHuntCatalogue(kind).sourceRevision})`,
         backgroundPosition: `${-column * HUNT_ATLAS_CELL_SIZE * scale}px ${-row * HUNT_ATLAS_CELL_SIZE * scale}px`,
         backgroundSize: `${HUNT_ATLAS_COLUMNS * HUNT_ATLAS_CELL_SIZE * scale}px auto`,
         backgroundRepeat: "no-repeat",

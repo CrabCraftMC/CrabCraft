@@ -84,6 +84,8 @@ const BLOCK_GROUPS: FunctionalGroup[] = [
   },
   { id: "carpet", name: "Carpet", representative: "White Carpet", members: colourMembers("Carpet") },
   { id: "concrete", name: "Concrete", representative: "White Concrete", members: colourMembers("Concrete") },
+  { id: "concrete-slab", name: "Concrete Slab", representative: "White Concrete Slab", members: colourMembers("Concrete Slab") },
+  { id: "concrete-stairs", name: "Concrete Stairs", representative: "White Concrete Stairs", members: colourMembers("Concrete Stairs") },
   {
     id: "concrete-powder",
     name: "Concrete Powder",
@@ -109,6 +111,12 @@ const BLOCK_GROUPS: FunctionalGroup[] = [
     members: colourMembers("Glazed Terracotta"),
   },
   {
+    id: "poplar-leaves",
+    name: "Poplar Leaves",
+    representative: "Red Poplar Leaves",
+    members: suffixedMembers(["Red", "Orange", "Yellow"], "Poplar Leaves"),
+  },
+  {
     id: "shulker-box",
     name: "Shulker Box",
     representative: "Shulker Box",
@@ -121,6 +129,8 @@ const BLOCK_GROUPS: FunctionalGroup[] = [
     members: new Set(["Terracotta", ...colourMembers("Terracotta")]),
   },
   { id: "wool", name: "Wool", representative: "White Wool", members: colourMembers("Wool") },
+  { id: "wool-slab", name: "Wool Slab", representative: "White Wool Slab", members: colourMembers("Wool Slab") },
+  { id: "wool-stairs", name: "Wool Stairs", representative: "White Wool Stairs", members: colourMembers("Wool Stairs") },
 ];
 
 const ITEM_GROUPS: FunctionalGroup[] = [
@@ -186,6 +196,7 @@ const ITEM_GROUPS: FunctionalGroup[] = [
       "Mangrove Boat",
       "Oak Boat",
       "Pale Oak Boat",
+      "Poplar Boat",
       "Spruce Boat",
     ]),
   },
@@ -203,6 +214,7 @@ const ITEM_GROUPS: FunctionalGroup[] = [
       "Mangrove Boat with Chest",
       "Oak Boat with Chest",
       "Pale Oak Boat with Chest",
+      "Poplar Boat with Chest",
       "Spruce Boat with Chest",
     ]),
   },
@@ -211,6 +223,12 @@ const ITEM_GROUPS: FunctionalGroup[] = [
     name: "Bundle",
     representative: "Bundle",
     members: new Set(["Bundle", ...colourMembers("Bundle")]),
+  },
+  {
+    id: "cushion",
+    name: "Cushion",
+    representative: "White Cushion",
+    members: colourMembers("Cushion"),
   },
   {
     id: "dye",
@@ -264,6 +282,11 @@ const NAME_ALIASES: Record<string, string[]> = {
   "Block of Quartz": ["Quartz Block"],
   "Hay Bale": ["Hay Block"],
   "Lapis Lazuli Ore": ["Lapis Ore"],
+  "Ocean Monument Map": ["Ocean Monument Explorer Map"],
+  "Swamp Hut Map": ["Swamp Hut Explorer Map"],
+  "Buried Trial Chambers Map": ["Trial Chambers Explorer Map"],
+  "Woodland Mansion Map": ["Woodland Mansion Explorer Map"],
+  "Jungle Pyramid Map": ["Jungle Pyramid Explorer Map"],
 };
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -387,9 +410,9 @@ function parseItems(content: string, blockNames: Set<string>): WikiEntry[] {
   return entries;
 }
 
-function parseMobs(content: string): WikiEntry[] {
+export function parseMobs(content: string): WikiEntry[] {
   const start = content.indexOf("=== Passive mobs ===");
-  const end = content.indexOf("=== Creators or education mobs ===");
+  const end = content.search(/^=== (?:Upcoming mobs|Creators or [Ee]ducation mobs) ===/m);
   if (start < 0 || end < 0) throw new Error("Minecraft Wiki mob list headings changed");
 
   const entries: WikiEntry[] = [];
@@ -605,4 +628,4 @@ async function main() {
   console.log(`Minecraft Java Edition ${version}, sourced from Minecraft Wiki.`);
 }
 
-main();
+if (import.meta.main) main();

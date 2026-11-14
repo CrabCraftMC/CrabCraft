@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import sharp from "sharp";
 import {
   BLOCK_HUNT_CLUES,
   BLOCK_HUNT_PUZZLES,
@@ -31,16 +32,16 @@ import {
 } from "../src/lib/huntCatalogue";
 
 describe("block hunt", () => {
-  test("includes 100 distinct daily puzzles with distinct clue wording", () => {
+  test("includes 109 distinct daily puzzles with distinct clue wording", () => {
     const answers = BLOCK_HUNT_PUZZLES.map((puzzle) => puzzle.answer);
     const clueTexts = BLOCK_HUNT_PUZZLES.flatMap((puzzle) =>
       puzzle.clues.map((clue) => clue.text),
     );
 
-    expect(BLOCK_HUNT_PUZZLES).toHaveLength(100);
-    expect(new Set(answers).size).toBe(100);
-    expect(clueTexts).toHaveLength(600);
-    expect(new Set(clueTexts).size).toBe(600);
+    expect(BLOCK_HUNT_PUZZLES).toHaveLength(109);
+    expect(new Set(answers).size).toBe(109);
+    expect(clueTexts).toHaveLength(654);
+    expect(new Set(clueTexts).size).toBe(654);
   });
 
   test("every puzzle has six clues, a texture, and a guessable answer", () => {
@@ -63,6 +64,8 @@ describe("block hunt", () => {
     expect(getBlockHuntBlock("Tinted Glass")?.name).toBe("Tinted Glass");
     expect(searchBlockHuntBlocks("red wool").map((block) => block.name)).toEqual([
       "Wool",
+      "Wool Slab",
+      "Wool Stairs",
     ]);
     expect(new Set(BLOCK_HUNT_BLOCKS.map((block) => block.name)).size).toBe(
       BLOCK_HUNT_BLOCKS.length,
@@ -120,7 +123,7 @@ describe("block hunt", () => {
 
     for (const kind of ["block", "item", "mob"] as const) {
       const catalogue = getHuntCatalogue(kind);
-      expect(catalogue.version).toBe("26.2");
+      expect(catalogue.version).toBe("26.3");
       expect(catalogue.source.startsWith("https://minecraft.wiki/w/")).toBeTrue();
       expect(catalogue.entries.length).toBeGreaterThan(minimumEntries[kind]);
       expect(new Set(catalogue.entries.map((entry) => entry.name)).size).toBe(
@@ -153,7 +156,7 @@ describe("block hunt", () => {
   });
 
   test("has six guessable clues for every item and mob puzzle", () => {
-    expect(getHuntPuzzleCount("item")).toBe(22);
+    expect(getHuntPuzzleCount("item")).toBe(24);
     expect(getHuntPuzzleCount("mob")).toBe(22);
 
     for (const kind of ["item", "mob"] as const) {
@@ -165,6 +168,100 @@ describe("block hunt", () => {
         expect(new Set(puzzle.clues.map((clue) => clue.text)).size).toBe(
           HUNT_CLUES,
         );
+      }
+    }
+  });
+
+  test("supports the new 26.3 blocks and keeps cosmetic variants grouped", () => {
+    const poplarBlocks = [
+      "Poplar Button", "Poplar Door", "Poplar Fence", "Poplar Fence Gate",
+      "Poplar Hanging Sign", "Poplar Log", "Poplar Planks", "Poplar Pressure Plate",
+      "Poplar Sapling", "Poplar Shelf", "Poplar Sign", "Poplar Slab", "Poplar Stairs",
+      "Poplar Trapdoor", "Poplar Wood", "Stripped Poplar Log", "Stripped Poplar Wood",
+    ];
+    for (const name of [...poplarBlocks, "Shelf Mushroom", "Red Shrub", "Straw Bed"]) {
+      expect(getHuntEntry("block", name)?.name).toBe(name);
+      expect(getHuntEntry("item", name)).toBeUndefined();
+    }
+
+    for (const colour of ["Red", "Orange", "Yellow"]) {
+      expect(getHuntEntry("block", `${colour} Poplar Leaves`)?.name).toBe("Poplar Leaves");
+    }
+
+    const colours = [
+      "White", "Orange", "Magenta", "Light Blue", "Yellow", "Lime", "Pink", "Gray",
+      "Light Gray", "Cyan", "Purple", "Blue", "Brown", "Green", "Red", "Black",
+    ];
+    for (const shape of ["Wool Stairs", "Wool Slab", "Concrete Stairs", "Concrete Slab"]) {
+      for (const colour of colours) {
+        expect(getHuntEntry("block", `${colour} ${shape}`)?.name).toBe(shape);
+        expect(getHuntEntry("item", `${colour} ${shape}`)).toBeUndefined();
+      }
+    }
+    for (const colour of colours) {
+      expect(getHuntEntry("item", `${colour} Cushion`)?.name).toBe("Cushion");
+      expect(getHuntEntry("block", `${colour} Cushion`)).toBeUndefined();
+    }
+    expect(getHuntEntry("item", "Poplar Boat")?.name).toBe("Boat");
+    expect(getHuntEntry("item", "Poplar Boat with Chest")?.name).toBe("Boat with Chest");
+  });
+
+  test("supports distinct explorer maps and their previous names", () => {
+    const maps = [
+      "Abandoned Camp Map", "Buried Ancient City Map", "Buried Mineshaft Map",
+      "Buried Treasure Map", "Buried Trial Chambers Map", "Desert Pyramid Map",
+      "Desert Village Map", "Jungle Pyramid Map", "Ocean Monument Map", "Plains Village Map",
+      "Savanna Village Map", "Snowy Village Map", "Swamp Hut Map", "Taiga Village Map",
+      "Warm Ocean Ruins Map", "Woodland Mansion Map",
+    ];
+    for (const name of maps) {
+      expect(getHuntEntry("item", name)?.name).toBe(name);
+    }
+    for (const name of ["Ocean Monument", "Swamp Hut", "Woodland Mansion", "Jungle Pyramid"]) {
+      expect(getHuntEntry("item", `${name} Explorer Map`)?.name).toBe(`${name} Map`);
+    }
+    expect(getHuntEntry("item", "Trial Chambers Explorer Map")?.name).toBe("Buried Trial Chambers Map");
+    expect(searchHuntEntries("item", "abandoned camp")[0]?.name).toBe("Abandoned Camp Map");
+  });
+
+  test("includes 26.3 content in the daily answer pools", () => {
+    const newBlocks = [
+      "Poplar Log", "Poplar Leaves", "Shelf Mushroom", "Red Shrub", "Straw Bed",
+      "Wool Stairs", "Wool Slab", "Concrete Stairs", "Concrete Slab",
+    ];
+    for (const answer of newBlocks) {
+      expect(BLOCK_HUNT_PUZZLES.some((puzzle) => puzzle.answer === answer)).toBeTrue();
+    }
+    for (const answer of ["Cushion", "Abandoned Camp Map"]) {
+      expect(ITEM_HUNT_PUZZLES.some((puzzle) => puzzle.answer === answer)).toBeTrue();
+    }
+    expect(getHuntCatalogue("mob").entries).toHaveLength(88);
+    expect(getHuntEntry("mob", "Cushion")).toBeUndefined();
+    expect(getHuntEntry("mob", "Blub")).toBeUndefined();
+    expect(getHuntEntry("mob", "Frostbite")).toBeUndefined();
+  });
+
+  test("every catalogue sprite has a visible preview in its atlas", async () => {
+    for (const kind of ["block", "item", "mob"] as const) {
+      const catalogue = getHuntCatalogue(kind);
+      const atlasPath = new URL(`../public/textures/hunt/${kind}s.webp`, import.meta.url).pathname;
+      const { data, info } = await sharp(atlasPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      expect(info.width).toBe(32 * 32);
+      expect(info.height).toBe(Math.ceil(catalogue.entries.length / 32) * 32);
+      for (const [index, entry] of catalogue.entries.entries()) {
+        expect(entry.sprite).toBe(index);
+        const left = (entry.sprite % 32) * 32;
+        const top = Math.floor(entry.sprite / 32) * 32;
+        let visible = false;
+        for (let y = top; y < top + 32 && !visible; y += 1) {
+          for (let x = left; x < left + 32; x += 1) {
+            if (data[(y * info.width + x) * info.channels + 3] > 0) {
+              visible = true;
+              break;
+            }
+          }
+        }
+        expect(visible, `${kind}: ${entry.name}`).toBeTrue();
       }
     }
   });

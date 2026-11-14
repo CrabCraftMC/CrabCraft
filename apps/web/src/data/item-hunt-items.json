@@ -1,49 +1,56 @@
 {
-  "version": "26.2",
+  "version": "26.3",
   "source": "https://minecraft.wiki/w/Item",
-  "sourceRevision": 3739092,
+  "sourceRevision": 3892168,
   "entries": [
+    {
+      "id": "abandoned-camp-map",
+      "name": "Abandoned Camp Map",
+      "aliases": [],
+      "article": "Abandoned Camp Map",
+      "sprite": 0
+    },
     {
       "id": "allay-spawn-egg",
       "name": "Allay Spawn Egg",
       "aliases": [],
       "article": "Allay Spawn Egg",
-      "sprite": 0
+      "sprite": 1
     },
     {
       "id": "amethyst-shard",
       "name": "Amethyst Shard",
       "aliases": [],
       "article": "Amethyst Shard",
-      "sprite": 1
+      "sprite": 2
     },
     {
       "id": "apple",
       "name": "Apple",
       "aliases": [],
       "article": "Apple",
-      "sprite": 2
+      "sprite": 3
     },
     {
       "id": "armadillo-scute",
       "name": "Armadillo Scute",
       "aliases": [],
       "article": "Armadillo Scute",
-      "sprite": 3
+      "sprite": 4
     },
     {
       "id": "armadillo-spawn-egg",
       "name": "Armadillo Spawn Egg",
       "aliases": [],
       "article": "Armadillo Spawn Egg",
-      "sprite": 4
+      "sprite": 5
     },
     {
       "id": "armor-stand",
       "name": "Armor Stand",
       "aliases": [],
       "article": "Armor Stand",
-      "sprite": 5
+      "sprite": 6
     },
     {
       "id": "armor-trim",
@@ -69,28 +76,28 @@
         "Wild Armor Trim"
       ],
       "article": "Bolt Armor Trim",
-      "sprite": 6
+      "sprite": 7
     },
     {
       "id": "arrow",
       "name": "Arrow",
       "aliases": [],
       "article": "Arrow",
-      "sprite": 7
+      "sprite": 8
     },
     {
       "id": "axolotl-spawn-egg",
       "name": "Axolotl Spawn Egg",
       "aliases": [],
       "article": "Axolotl Spawn Egg",
-      "sprite": 8
+      "sprite": 9
     },
     {
       "id": "baked-potato",
       "name": "Baked Potato",
       "aliases": [],
       "article": "Baked Potato",
-      "sprite": 9
+      "sprite": 10
     },
     {
       "id": "banner-pattern",
@@ -108,70 +115,70 @@
         "Thing Banner Pattern"
       ],
       "article": "Creeper Charge Banner Pattern",
-      "sprite": 10
+      "sprite": 11
     },
     {
       "id": "bat-spawn-egg",
       "name": "Bat Spawn Egg",
       "aliases": [],
       "article": "Bat Spawn Egg",
-      "sprite": 11
+      "sprite": 12
     },
     {
       "id": "bee-spawn-egg",
       "name": "Bee Spawn Egg",
       "aliases": [],
       "article": "Bee Spawn Egg",
-      "sprite": 12
+      "sprite": 13
     },
     {
       "id": "beetroot",
       "name": "Beetroot",
       "aliases": [],
       "article": "Beetroot",
-      "sprite": 13
+      "sprite": 14
     },
     {
       "id": "beetroot-seeds",
       "name": "Beetroot Seeds",
       "aliases": [],
       "article": "Beetroot Seeds",
-      "sprite": 14
+      "sprite": 15
     },
     {
       "id": "beetroot-soup",
       "name": "Beetroot Soup",
       "aliases": [],
       "article": "Beetroot Soup",
-      "sprite": 15
+      "sprite": 16
     },
     {
       "id": "blaze-powder",
       "name": "Blaze Powder",
       "aliases": [],
       "article": "Blaze Powder",
-      "sprite": 16
+      "sprite": 17
     },
     {
       "id": "blaze-rod",
       "name": "Blaze Rod",
       "aliases": [],
       "article": "Blaze Rod",
-      "sprite": 17
+      "sprite": 18
     },
     {
       "id": "blaze-spawn-egg",
       "name": "Blaze Spawn Egg",
       "aliases": [],
       "article": "Blaze Spawn Egg",
-      "sprite": 18
+      "sprite": 19
     },
     {
       "id": "blue-egg",
       "name": "Blue Egg",
       "aliases": [],
       "article": "Blue Egg",
-      "sprite": 19
+      "sprite": 20
     },
     {
       "id": "boat",
@@ -186,10 +193,11 @@
         "Mangrove Boat",
         "Oak Boat",
         "Pale Oak Boat",
+        "Poplar Boat",
         "Spruce Boat"
       ],
       "article": "Oak Boat",
-      "sprite": 20
+      "sprite": 21
     },
     {
       "id": "boat-with-chest",
@@ -204,164 +212,165 @@
         "Mangrove Boat with Chest",
         "Oak Boat with Chest",
         "Pale Oak Boat with Chest",
+        "Poplar Boat with Chest",
         "Spruce Boat with Chest"
       ],
       "article": "Oak Boat with Chest",
-      "sprite": 21
+      "sprite": 22
     },
     {
       "id": "bogged-spawn-egg",
       "name": "Bogged Spawn Egg",
       "aliases": [],
       "article": "Bogged Spawn Egg",
-      "sprite": 22
+      "sprite": 23
     },
     {
       "id": "bone",
       "name": "Bone",
       "aliases": [],
       "article": "Bone",
-      "sprite": 23
+      "sprite": 24
     },
     {
       "id": "bone-meal",
       "name": "Bone Meal",
       "aliases": [],
       "article": "Bone Meal",
-      "sprite": 24
+      "sprite": 25
     },
     {
       "id": "book",
       "name": "Book",
       "aliases": [],
       "article": "Book",
-      "sprite": 25
+      "sprite": 26
     },
     {
       "id": "book-and-quill",
       "name": "Book and Quill",
       "aliases": [],
       "article": "Book and Quill",
-      "sprite": 26
+      "sprite": 27
     },
     {
       "id": "bottle-o-enchanting",
       "name": "Bottle o' Enchanting",
       "aliases": [],
       "article": "Bottle o' Enchanting",
-      "sprite": 27
+      "sprite": 28
     },
     {
       "id": "bow",
       "name": "Bow",
       "aliases": [],
       "article": "Bow",
-      "sprite": 28
+      "sprite": 29
     },
     {
       "id": "bowl",
       "name": "Bowl",
       "aliases": [],
       "article": "Bowl",
-      "sprite": 29
+      "sprite": 30
     },
     {
       "id": "bread",
       "name": "Bread",
       "aliases": [],
       "article": "Bread",
-      "sprite": 30
+      "sprite": 31
     },
     {
       "id": "breeze-rod",
       "name": "Breeze Rod",
       "aliases": [],
       "article": "Breeze Rod",
-      "sprite": 31
+      "sprite": 32
     },
     {
       "id": "breeze-spawn-egg",
       "name": "Breeze Spawn Egg",
       "aliases": [],
       "article": "Breeze Spawn Egg",
-      "sprite": 32
+      "sprite": 33
     },
     {
       "id": "brick",
       "name": "Brick",
       "aliases": [],
       "article": "Brick",
-      "sprite": 33
+      "sprite": 34
     },
     {
       "id": "brown-egg",
       "name": "Brown Egg",
       "aliases": [],
       "article": "Brown Egg",
-      "sprite": 34
+      "sprite": 35
     },
     {
       "id": "brush",
       "name": "Brush",
       "aliases": [],
       "article": "Brush",
-      "sprite": 35
+      "sprite": 36
     },
     {
       "id": "bucket",
       "name": "Bucket",
       "aliases": [],
       "article": "Bucket",
-      "sprite": 36
+      "sprite": 37
     },
     {
       "id": "bucket-of-axolotl",
       "name": "Bucket of Axolotl",
       "aliases": [],
       "article": "Bucket of Axolotl",
-      "sprite": 37
+      "sprite": 38
     },
     {
       "id": "bucket-of-cod",
       "name": "Bucket of Cod",
       "aliases": [],
       "article": "Bucket of Cod",
-      "sprite": 38
+      "sprite": 39
     },
     {
       "id": "bucket-of-pufferfish",
       "name": "Bucket of Pufferfish",
       "aliases": [],
       "article": "Bucket of Pufferfish",
-      "sprite": 39
+      "sprite": 40
     },
     {
       "id": "bucket-of-salmon",
       "name": "Bucket of Salmon",
       "aliases": [],
       "article": "Bucket of Salmon",
-      "sprite": 40
+      "sprite": 41
     },
     {
       "id": "bucket-of-sulfur-cube",
       "name": "Bucket of Sulfur Cube",
       "aliases": [],
       "article": "Bucket of Sulfur Cube",
-      "sprite": 41
+      "sprite": 42
     },
     {
       "id": "bucket-of-tadpole",
       "name": "Bucket of Tadpole",
       "aliases": [],
       "article": "Bucket of Tadpole",
-      "sprite": 42
+      "sprite": 43
     },
     {
       "id": "bucket-of-tropical-fish",
       "name": "Bucket of Tropical Fish",
       "aliases": [],
       "article": "Bucket of Tropical Fish",
-      "sprite": 43
+      "sprite": 44
     },
     {
       "id": "bundle",
@@ -385,455 +394,523 @@
         "Yellow Bundle"
       ],
       "article": "Bundle",
-      "sprite": 44
+      "sprite": 45
+    },
+    {
+      "id": "buried-ancient-city-map",
+      "name": "Buried Ancient City Map",
+      "aliases": [],
+      "article": "Buried Ancient City Map",
+      "sprite": 46
+    },
+    {
+      "id": "buried-mineshaft-map",
+      "name": "Buried Mineshaft Map",
+      "aliases": [],
+      "article": "Buried Mineshaft Map",
+      "sprite": 47
+    },
+    {
+      "id": "buried-treasure-map",
+      "name": "Buried Treasure Map",
+      "aliases": [],
+      "article": "Buried Treasure Map",
+      "sprite": 48
+    },
+    {
+      "id": "buried-trial-chambers-map",
+      "name": "Buried Trial Chambers Map",
+      "aliases": [
+        "Trial Chambers Explorer Map"
+      ],
+      "article": "Buried Trial Chambers Map",
+      "sprite": 49
     },
     {
       "id": "camel-husk-spawn-egg",
       "name": "Camel Husk Spawn Egg",
       "aliases": [],
       "article": "Camel Husk Spawn Egg",
-      "sprite": 45
+      "sprite": 50
     },
     {
       "id": "camel-spawn-egg",
       "name": "Camel Spawn Egg",
       "aliases": [],
       "article": "Camel Spawn Egg",
-      "sprite": 46
+      "sprite": 51
     },
     {
       "id": "carrot-on-a-stick",
       "name": "Carrot on a Stick",
       "aliases": [],
       "article": "Carrot on a Stick",
-      "sprite": 47
+      "sprite": 52
     },
     {
       "id": "cat-spawn-egg",
       "name": "Cat Spawn Egg",
       "aliases": [],
       "article": "Cat Spawn Egg",
-      "sprite": 48
+      "sprite": 53
     },
     {
       "id": "cave-spider-spawn-egg",
       "name": "Cave Spider Spawn Egg",
       "aliases": [],
       "article": "Cave Spider Spawn Egg",
-      "sprite": 49
+      "sprite": 54
     },
     {
       "id": "chainmail-boots",
       "name": "Chainmail Boots",
       "aliases": [],
       "article": "Chainmail Boots",
-      "sprite": 50
+      "sprite": 55
     },
     {
       "id": "chainmail-chestplate",
       "name": "Chainmail Chestplate",
       "aliases": [],
       "article": "Chainmail Chestplate",
-      "sprite": 51
+      "sprite": 56
     },
     {
       "id": "chainmail-helmet",
       "name": "Chainmail Helmet",
       "aliases": [],
       "article": "Chainmail Helmet",
-      "sprite": 52
+      "sprite": 57
     },
     {
       "id": "chainmail-leggings",
       "name": "Chainmail Leggings",
       "aliases": [],
       "article": "Chainmail Leggings",
-      "sprite": 53
+      "sprite": 58
     },
     {
       "id": "charcoal",
       "name": "Charcoal",
       "aliases": [],
       "article": "Charcoal",
-      "sprite": 54
+      "sprite": 59
     },
     {
       "id": "chicken-spawn-egg",
       "name": "Chicken Spawn Egg",
       "aliases": [],
       "article": "Chicken Spawn Egg",
-      "sprite": 55
+      "sprite": 60
     },
     {
       "id": "chorus-fruit",
       "name": "Chorus Fruit",
       "aliases": [],
       "article": "Chorus Fruit",
-      "sprite": 56
+      "sprite": 61
     },
     {
       "id": "clay-ball",
       "name": "Clay Ball",
       "aliases": [],
       "article": "Clay Ball",
-      "sprite": 57
+      "sprite": 62
     },
     {
       "id": "clock",
       "name": "Clock",
       "aliases": [],
       "article": "Clock",
-      "sprite": 58
+      "sprite": 63
     },
     {
       "id": "coal",
       "name": "Coal",
       "aliases": [],
       "article": "Coal",
-      "sprite": 59
+      "sprite": 64
     },
     {
       "id": "cocoa-beans",
       "name": "Cocoa Beans",
       "aliases": [],
       "article": "Cocoa Beans",
-      "sprite": 60
+      "sprite": 65
     },
     {
       "id": "cod-spawn-egg",
       "name": "Cod Spawn Egg",
       "aliases": [],
       "article": "Cod Spawn Egg",
-      "sprite": 61
+      "sprite": 66
     },
     {
       "id": "compass",
       "name": "Compass",
       "aliases": [],
       "article": "Compass",
-      "sprite": 62
+      "sprite": 67
     },
     {
       "id": "cooked-chicken",
       "name": "Cooked Chicken",
       "aliases": [],
       "article": "Cooked Chicken",
-      "sprite": 63
+      "sprite": 68
     },
     {
       "id": "cooked-cod",
       "name": "Cooked Cod",
       "aliases": [],
       "article": "Cooked Cod",
-      "sprite": 64
+      "sprite": 69
     },
     {
       "id": "cooked-mutton",
       "name": "Cooked Mutton",
       "aliases": [],
       "article": "Cooked Mutton",
-      "sprite": 65
+      "sprite": 70
     },
     {
       "id": "cooked-porkchop",
       "name": "Cooked Porkchop",
       "aliases": [],
       "article": "Cooked Porkchop",
-      "sprite": 66
+      "sprite": 71
     },
     {
       "id": "cooked-rabbit",
       "name": "Cooked Rabbit",
       "aliases": [],
       "article": "Cooked Rabbit",
-      "sprite": 67
+      "sprite": 72
     },
     {
       "id": "cooked-salmon",
       "name": "Cooked Salmon",
       "aliases": [],
       "article": "Cooked Salmon",
-      "sprite": 68
+      "sprite": 73
     },
     {
       "id": "cookie",
       "name": "Cookie",
       "aliases": [],
       "article": "Cookie",
-      "sprite": 69
+      "sprite": 74
     },
     {
       "id": "copper-axe",
       "name": "Copper Axe",
       "aliases": [],
       "article": "Copper Axe",
-      "sprite": 70
+      "sprite": 75
     },
     {
       "id": "copper-boots",
       "name": "Copper Boots",
       "aliases": [],
       "article": "Copper Boots",
-      "sprite": 71
+      "sprite": 76
     },
     {
       "id": "copper-chestplate",
       "name": "Copper Chestplate",
       "aliases": [],
       "article": "Copper Chestplate",
-      "sprite": 72
+      "sprite": 77
     },
     {
       "id": "copper-golem-spawn-egg",
       "name": "Copper Golem Spawn Egg",
       "aliases": [],
       "article": "Copper Golem Spawn Egg",
-      "sprite": 73
+      "sprite": 78
     },
     {
       "id": "copper-helmet",
       "name": "Copper Helmet",
       "aliases": [],
       "article": "Copper Helmet",
-      "sprite": 74
+      "sprite": 79
     },
     {
       "id": "copper-hoe",
       "name": "Copper Hoe",
       "aliases": [],
       "article": "Copper Hoe",
-      "sprite": 75
+      "sprite": 80
     },
     {
       "id": "copper-horse-armor",
       "name": "Copper Horse Armor",
       "aliases": [],
       "article": "Copper Horse Armor",
-      "sprite": 76
+      "sprite": 81
     },
     {
       "id": "copper-ingot",
       "name": "Copper Ingot",
       "aliases": [],
       "article": "Copper Ingot",
-      "sprite": 77
+      "sprite": 82
     },
     {
       "id": "copper-leggings",
       "name": "Copper Leggings",
       "aliases": [],
       "article": "Copper Leggings",
-      "sprite": 78
+      "sprite": 83
     },
     {
       "id": "copper-nautilus-armor",
       "name": "Copper Nautilus Armor",
       "aliases": [],
       "article": "Copper Nautilus Armor",
-      "sprite": 79
+      "sprite": 84
     },
     {
       "id": "copper-nugget",
       "name": "Copper Nugget",
       "aliases": [],
       "article": "Copper Nugget",
-      "sprite": 80
+      "sprite": 85
     },
     {
       "id": "copper-pickaxe",
       "name": "Copper Pickaxe",
       "aliases": [],
       "article": "Copper Pickaxe",
-      "sprite": 81
+      "sprite": 86
     },
     {
       "id": "copper-shovel",
       "name": "Copper Shovel",
       "aliases": [],
       "article": "Copper Shovel",
-      "sprite": 82
+      "sprite": 87
     },
     {
       "id": "copper-spear",
       "name": "Copper Spear",
       "aliases": [],
       "article": "Copper Spear",
-      "sprite": 83
+      "sprite": 88
     },
     {
       "id": "copper-sword",
       "name": "Copper Sword",
       "aliases": [],
       "article": "Copper Sword",
-      "sprite": 84
+      "sprite": 89
     },
     {
       "id": "cow-spawn-egg",
       "name": "Cow Spawn Egg",
       "aliases": [],
       "article": "Cow Spawn Egg",
-      "sprite": 85
+      "sprite": 90
     },
     {
       "id": "creaking-spawn-egg",
       "name": "Creaking Spawn Egg",
       "aliases": [],
       "article": "Creaking Spawn Egg",
-      "sprite": 86
+      "sprite": 91
     },
     {
       "id": "creeper-spawn-egg",
       "name": "Creeper Spawn Egg",
       "aliases": [],
       "article": "Creeper Spawn Egg",
-      "sprite": 87
+      "sprite": 92
     },
     {
       "id": "crossbow",
       "name": "Crossbow",
       "aliases": [],
       "article": "Crossbow",
-      "sprite": 88
+      "sprite": 93
+    },
+    {
+      "id": "cushion",
+      "name": "Cushion",
+      "aliases": [
+        "Black Cushion",
+        "Blue Cushion",
+        "Brown Cushion",
+        "Cyan Cushion",
+        "Gray Cushion",
+        "Green Cushion",
+        "Light Blue Cushion",
+        "Light Gray Cushion",
+        "Lime Cushion",
+        "Magenta Cushion",
+        "Orange Cushion",
+        "Pink Cushion",
+        "Purple Cushion",
+        "Red Cushion",
+        "White Cushion",
+        "Yellow Cushion"
+      ],
+      "article": "White Cushion",
+      "sprite": 94
     },
     {
       "id": "debug-stick",
       "name": "Debug Stick",
       "aliases": [],
       "article": "Debug Stick",
-      "sprite": 89
+      "sprite": 95
+    },
+    {
+      "id": "desert-pyramid-map",
+      "name": "Desert Pyramid Map",
+      "aliases": [],
+      "article": "Desert Pyramid Map",
+      "sprite": 96
+    },
+    {
+      "id": "desert-village-map",
+      "name": "Desert Village Map",
+      "aliases": [],
+      "article": "Desert Village Map",
+      "sprite": 97
     },
     {
       "id": "diamond",
       "name": "Diamond",
       "aliases": [],
       "article": "Diamond",
-      "sprite": 90
+      "sprite": 98
     },
     {
       "id": "diamond-axe",
       "name": "Diamond Axe",
       "aliases": [],
       "article": "Diamond Axe",
-      "sprite": 91
+      "sprite": 99
     },
     {
       "id": "diamond-boots",
       "name": "Diamond Boots",
       "aliases": [],
       "article": "Diamond Boots",
-      "sprite": 92
+      "sprite": 100
     },
     {
       "id": "diamond-chestplate",
       "name": "Diamond Chestplate",
       "aliases": [],
       "article": "Diamond Chestplate",
-      "sprite": 93
+      "sprite": 101
     },
     {
       "id": "diamond-helmet",
       "name": "Diamond Helmet",
       "aliases": [],
       "article": "Diamond Helmet",
-      "sprite": 94
+      "sprite": 102
     },
     {
       "id": "diamond-hoe",
       "name": "Diamond Hoe",
       "aliases": [],
       "article": "Diamond Hoe",
-      "sprite": 95
+      "sprite": 103
     },
     {
       "id": "diamond-horse-armor",
       "name": "Diamond Horse Armor",
       "aliases": [],
       "article": "Diamond Horse Armor",
-      "sprite": 96
+      "sprite": 104
     },
     {
       "id": "diamond-leggings",
       "name": "Diamond Leggings",
       "aliases": [],
       "article": "Diamond Leggings",
-      "sprite": 97
+      "sprite": 105
     },
     {
       "id": "diamond-nautilus-armor",
       "name": "Diamond Nautilus Armor",
       "aliases": [],
       "article": "Diamond Nautilus Armor",
-      "sprite": 98
+      "sprite": 106
     },
     {
       "id": "diamond-pickaxe",
       "name": "Diamond Pickaxe",
       "aliases": [],
       "article": "Diamond Pickaxe",
-      "sprite": 99
+      "sprite": 107
     },
     {
       "id": "diamond-shovel",
       "name": "Diamond Shovel",
       "aliases": [],
       "article": "Diamond Shovel",
-      "sprite": 100
+      "sprite": 108
     },
     {
       "id": "diamond-spear",
       "name": "Diamond Spear",
       "aliases": [],
       "article": "Diamond Spear",
-      "sprite": 101
+      "sprite": 109
     },
     {
       "id": "diamond-sword",
       "name": "Diamond Sword",
       "aliases": [],
       "article": "Diamond Sword",
-      "sprite": 102
+      "sprite": 110
     },
     {
       "id": "disc-fragment",
       "name": "Disc Fragment",
       "aliases": [],
       "article": "Disc Fragment",
-      "sprite": 103
+      "sprite": 111
     },
     {
       "id": "dolphin-spawn-egg",
       "name": "Dolphin Spawn Egg",
       "aliases": [],
       "article": "Dolphin Spawn Egg",
-      "sprite": 104
+      "sprite": 112
     },
     {
       "id": "donkey-spawn-egg",
       "name": "Donkey Spawn Egg",
       "aliases": [],
       "article": "Donkey Spawn Egg",
-      "sprite": 105
+      "sprite": 113
     },
     {
       "id": "dragon-s-breath",
       "name": "Dragon's Breath",
       "aliases": [],
       "article": "Dragon's Breath",
-      "sprite": 106
+      "sprite": 114
     },
     {
       "id": "dried-kelp",
       "name": "Dried Kelp",
       "aliases": [],
       "article": "Dried Kelp",
-      "sprite": 107
+      "sprite": 115
     },
     {
       "id": "drowned-spawn-egg",
       "name": "Drowned Spawn Egg",
       "aliases": [],
       "article": "Drowned Spawn Egg",
-      "sprite": 108
+      "sprite": 116
     },
     {
       "id": "dye",
@@ -857,385 +934,385 @@
         "Yellow Dye"
       ],
       "article": "White Dye",
-      "sprite": 109
+      "sprite": 117
     },
     {
       "id": "echo-shard",
       "name": "Echo Shard",
       "aliases": [],
       "article": "Echo Shard",
-      "sprite": 110
+      "sprite": 118
     },
     {
       "id": "egg",
       "name": "Egg",
       "aliases": [],
       "article": "Egg",
-      "sprite": 111
+      "sprite": 119
     },
     {
       "id": "elder-guardian-spawn-egg",
       "name": "Elder Guardian Spawn Egg",
       "aliases": [],
       "article": "Elder Guardian Spawn Egg",
-      "sprite": 112
+      "sprite": 120
     },
     {
       "id": "elytra",
       "name": "Elytra",
       "aliases": [],
       "article": "Elytra",
-      "sprite": 113
+      "sprite": 121
     },
     {
       "id": "emerald",
       "name": "Emerald",
       "aliases": [],
       "article": "Emerald",
-      "sprite": 114
+      "sprite": 122
     },
     {
       "id": "empty-map",
       "name": "Empty Map",
       "aliases": [],
       "article": "Empty Map",
-      "sprite": 115
+      "sprite": 123
     },
     {
       "id": "enchanted-book",
       "name": "Enchanted Book",
       "aliases": [],
       "article": "Enchanted Book",
-      "sprite": 116
+      "sprite": 124
     },
     {
       "id": "enchanted-golden-apple",
       "name": "Enchanted Golden Apple",
       "aliases": [],
       "article": "Enchanted Golden Apple",
-      "sprite": 117
+      "sprite": 125
     },
     {
       "id": "end-crystal",
       "name": "End Crystal",
       "aliases": [],
       "article": "End Crystal",
-      "sprite": 118
+      "sprite": 126
     },
     {
       "id": "ender-dragon-spawn-egg",
       "name": "Ender Dragon Spawn Egg",
       "aliases": [],
       "article": "Ender Dragon Spawn Egg",
-      "sprite": 119
+      "sprite": 127
     },
     {
       "id": "ender-pearl",
       "name": "Ender Pearl",
       "aliases": [],
       "article": "Ender Pearl",
-      "sprite": 120
+      "sprite": 128
     },
     {
       "id": "enderman-spawn-egg",
       "name": "Enderman Spawn Egg",
       "aliases": [],
       "article": "Enderman Spawn Egg",
-      "sprite": 121
+      "sprite": 129
     },
     {
       "id": "endermite-spawn-egg",
       "name": "Endermite Spawn Egg",
       "aliases": [],
       "article": "Endermite Spawn Egg",
-      "sprite": 122
+      "sprite": 130
     },
     {
       "id": "evoker-spawn-egg",
       "name": "Evoker Spawn Egg",
       "aliases": [],
       "article": "Evoker Spawn Egg",
-      "sprite": 123
+      "sprite": 131
     },
     {
       "id": "eye-of-ender",
       "name": "Eye of Ender",
       "aliases": [],
       "article": "Eye of Ender",
-      "sprite": 124
+      "sprite": 132
     },
     {
       "id": "feather",
       "name": "Feather",
       "aliases": [],
       "article": "Feather",
-      "sprite": 125
+      "sprite": 133
     },
     {
       "id": "fermented-spider-eye",
       "name": "Fermented Spider Eye",
       "aliases": [],
       "article": "Fermented Spider Eye",
-      "sprite": 126
+      "sprite": 134
     },
     {
       "id": "fire-charge",
       "name": "Fire Charge",
       "aliases": [],
       "article": "Fire Charge",
-      "sprite": 127
+      "sprite": 135
     },
     {
       "id": "firework-rocket",
       "name": "Firework Rocket",
       "aliases": [],
       "article": "Firework Rocket",
-      "sprite": 128
+      "sprite": 136
     },
     {
       "id": "firework-star",
       "name": "Firework Star",
       "aliases": [],
       "article": "Firework Star",
-      "sprite": 129
+      "sprite": 137
     },
     {
       "id": "fishing-rod",
       "name": "Fishing Rod",
       "aliases": [],
       "article": "Fishing Rod",
-      "sprite": 130
+      "sprite": 138
     },
     {
       "id": "flint",
       "name": "Flint",
       "aliases": [],
       "article": "Flint",
-      "sprite": 131
+      "sprite": 139
     },
     {
       "id": "flint-and-steel",
       "name": "Flint and Steel",
       "aliases": [],
       "article": "Flint and Steel",
-      "sprite": 132
+      "sprite": 140
     },
     {
       "id": "fox-spawn-egg",
       "name": "Fox Spawn Egg",
       "aliases": [],
       "article": "Fox Spawn Egg",
-      "sprite": 133
+      "sprite": 141
     },
     {
       "id": "frog-spawn-egg",
       "name": "Frog Spawn Egg",
       "aliases": [],
       "article": "Frog Spawn Egg",
-      "sprite": 134
+      "sprite": 142
     },
     {
       "id": "ghast-spawn-egg",
       "name": "Ghast Spawn Egg",
       "aliases": [],
       "article": "Ghast Spawn Egg",
-      "sprite": 135
+      "sprite": 143
     },
     {
       "id": "ghast-tear",
       "name": "Ghast Tear",
       "aliases": [],
       "article": "Ghast Tear",
-      "sprite": 136
+      "sprite": 144
     },
     {
       "id": "glass-bottle",
       "name": "Glass Bottle",
       "aliases": [],
       "article": "Glass Bottle",
-      "sprite": 137
+      "sprite": 145
     },
     {
       "id": "glistering-melon-slice",
       "name": "Glistering Melon Slice",
       "aliases": [],
       "article": "Glistering Melon Slice",
-      "sprite": 138
+      "sprite": 146
     },
     {
       "id": "glow-berries",
       "name": "Glow Berries",
       "aliases": [],
       "article": "Glow Berries",
-      "sprite": 139
+      "sprite": 147
     },
     {
       "id": "glow-ink-sac",
       "name": "Glow Ink Sac",
       "aliases": [],
       "article": "Glow Ink Sac",
-      "sprite": 140
+      "sprite": 148
     },
     {
       "id": "glow-squid-spawn-egg",
       "name": "Glow Squid Spawn Egg",
       "aliases": [],
       "article": "Glow Squid Spawn Egg",
-      "sprite": 141
+      "sprite": 149
     },
     {
       "id": "glowstone-dust",
       "name": "Glowstone Dust",
       "aliases": [],
       "article": "Glowstone Dust",
-      "sprite": 142
+      "sprite": 150
     },
     {
       "id": "goat-horn",
       "name": "Goat Horn",
       "aliases": [],
       "article": "Goat Horn",
-      "sprite": 143
+      "sprite": 151
     },
     {
       "id": "goat-spawn-egg",
       "name": "Goat Spawn Egg",
       "aliases": [],
       "article": "Goat Spawn Egg",
-      "sprite": 144
+      "sprite": 152
     },
     {
       "id": "gold-ingot",
       "name": "Gold Ingot",
       "aliases": [],
       "article": "Gold Ingot",
-      "sprite": 145
+      "sprite": 153
     },
     {
       "id": "gold-nugget",
       "name": "Gold Nugget",
       "aliases": [],
       "article": "Gold Nugget",
-      "sprite": 146
+      "sprite": 154
     },
     {
       "id": "golden-apple",
       "name": "Golden Apple",
       "aliases": [],
       "article": "Golden Apple",
-      "sprite": 147
+      "sprite": 155
     },
     {
       "id": "golden-axe",
       "name": "Golden Axe",
       "aliases": [],
       "article": "Golden Axe",
-      "sprite": 148
+      "sprite": 156
     },
     {
       "id": "golden-boots",
       "name": "Golden Boots",
       "aliases": [],
       "article": "Golden Boots",
-      "sprite": 149
+      "sprite": 157
     },
     {
       "id": "golden-carrot",
       "name": "Golden Carrot",
       "aliases": [],
       "article": "Golden Carrot",
-      "sprite": 150
+      "sprite": 158
     },
     {
       "id": "golden-chestplate",
       "name": "Golden Chestplate",
       "aliases": [],
       "article": "Golden Chestplate",
-      "sprite": 151
+      "sprite": 159
     },
     {
       "id": "golden-helmet",
       "name": "Golden Helmet",
       "aliases": [],
       "article": "Golden Helmet",
-      "sprite": 152
+      "sprite": 160
     },
     {
       "id": "golden-hoe",
       "name": "Golden Hoe",
       "aliases": [],
       "article": "Golden Hoe",
-      "sprite": 153
+      "sprite": 161
     },
     {
       "id": "golden-horse-armor",
       "name": "Golden Horse Armor",
       "aliases": [],
       "article": "Golden Horse Armor",
-      "sprite": 154
+      "sprite": 162
     },
     {
       "id": "golden-leggings",
       "name": "Golden Leggings",
       "aliases": [],
       "article": "Golden Leggings",
-      "sprite": 155
+      "sprite": 163
     },
     {
       "id": "golden-nautilus-armor",
       "name": "Golden Nautilus Armor",
       "aliases": [],
       "article": "Golden Nautilus Armor",
-      "sprite": 156
+      "sprite": 164
     },
     {
       "id": "golden-pickaxe",
       "name": "Golden Pickaxe",
       "aliases": [],
       "article": "Golden Pickaxe",
-      "sprite": 157
+      "sprite": 165
     },
     {
       "id": "golden-shovel",
       "name": "Golden Shovel",
       "aliases": [],
       "article": "Golden Shovel",
-      "sprite": 158
+      "sprite": 166
     },
     {
       "id": "golden-spear",
       "name": "Golden Spear",
       "aliases": [],
       "article": "Golden Spear",
-      "sprite": 159
+      "sprite": 167
     },
     {
       "id": "golden-sword",
       "name": "Golden Sword",
       "aliases": [],
       "article": "Golden Sword",
-      "sprite": 160
+      "sprite": 168
     },
     {
       "id": "guardian-spawn-egg",
       "name": "Guardian Spawn Egg",
       "aliases": [],
       "article": "Guardian Spawn Egg",
-      "sprite": 161
+      "sprite": 169
     },
     {
       "id": "gunpowder",
       "name": "Gunpowder",
       "aliases": [],
       "article": "Gunpowder",
-      "sprite": 162
+      "sprite": 170
     },
     {
       "id": "happy-ghast-spawn-egg",
       "name": "Happy Ghast Spawn Egg",
       "aliases": [],
       "article": "Happy Ghast Spawn Egg",
-      "sprite": 163
+      "sprite": 171
     },
     {
       "id": "harness",
@@ -1259,798 +1336,823 @@
         "Yellow Harness"
       ],
       "article": "White Harness",
-      "sprite": 164
+      "sprite": 172
     },
     {
       "id": "heart-of-the-sea",
       "name": "Heart of the Sea",
       "aliases": [],
       "article": "Heart of the Sea",
-      "sprite": 165
+      "sprite": 173
     },
     {
       "id": "hoglin-spawn-egg",
       "name": "Hoglin Spawn Egg",
       "aliases": [],
       "article": "Hoglin Spawn Egg",
-      "sprite": 166
+      "sprite": 174
     },
     {
       "id": "honey-bottle",
       "name": "Honey Bottle",
       "aliases": [],
       "article": "Honey Bottle",
-      "sprite": 167
+      "sprite": 175
     },
     {
       "id": "honeycomb",
       "name": "Honeycomb",
       "aliases": [],
       "article": "Honeycomb",
-      "sprite": 168
+      "sprite": 176
     },
     {
       "id": "horse-spawn-egg",
       "name": "Horse Spawn Egg",
       "aliases": [],
       "article": "Horse Spawn Egg",
-      "sprite": 169
+      "sprite": 177
     },
     {
       "id": "husk-spawn-egg",
       "name": "Husk Spawn Egg",
       "aliases": [],
       "article": "Husk Spawn Egg",
-      "sprite": 170
+      "sprite": 178
     },
     {
       "id": "ink-sac",
       "name": "Ink Sac",
       "aliases": [],
       "article": "Ink Sac",
-      "sprite": 171
+      "sprite": 179
     },
     {
       "id": "iron-axe",
       "name": "Iron Axe",
       "aliases": [],
       "article": "Iron Axe",
-      "sprite": 172
+      "sprite": 180
     },
     {
       "id": "iron-boots",
       "name": "Iron Boots",
       "aliases": [],
       "article": "Iron Boots",
-      "sprite": 173
+      "sprite": 181
     },
     {
       "id": "iron-chestplate",
       "name": "Iron Chestplate",
       "aliases": [],
       "article": "Iron Chestplate",
-      "sprite": 174
+      "sprite": 182
     },
     {
       "id": "iron-golem-spawn-egg",
       "name": "Iron Golem Spawn Egg",
       "aliases": [],
       "article": "Iron Golem Spawn Egg",
-      "sprite": 175
+      "sprite": 183
     },
     {
       "id": "iron-helmet",
       "name": "Iron Helmet",
       "aliases": [],
       "article": "Iron Helmet",
-      "sprite": 176
+      "sprite": 184
     },
     {
       "id": "iron-hoe",
       "name": "Iron Hoe",
       "aliases": [],
       "article": "Iron Hoe",
-      "sprite": 177
+      "sprite": 185
     },
     {
       "id": "iron-horse-armor",
       "name": "Iron Horse Armor",
       "aliases": [],
       "article": "Iron Horse Armor",
-      "sprite": 178
+      "sprite": 186
     },
     {
       "id": "iron-ingot",
       "name": "Iron Ingot",
       "aliases": [],
       "article": "Iron Ingot",
-      "sprite": 179
+      "sprite": 187
     },
     {
       "id": "iron-leggings",
       "name": "Iron Leggings",
       "aliases": [],
       "article": "Iron Leggings",
-      "sprite": 180
+      "sprite": 188
     },
     {
       "id": "iron-nautilus-armor",
       "name": "Iron Nautilus Armor",
       "aliases": [],
       "article": "Iron Nautilus Armor",
-      "sprite": 181
+      "sprite": 189
     },
     {
       "id": "iron-nugget",
       "name": "Iron Nugget",
       "aliases": [],
       "article": "Iron Nugget",
-      "sprite": 182
+      "sprite": 190
     },
     {
       "id": "iron-pickaxe",
       "name": "Iron Pickaxe",
       "aliases": [],
       "article": "Iron Pickaxe",
-      "sprite": 183
+      "sprite": 191
     },
     {
       "id": "iron-shovel",
       "name": "Iron Shovel",
       "aliases": [],
       "article": "Iron Shovel",
-      "sprite": 184
+      "sprite": 192
     },
     {
       "id": "iron-spear",
       "name": "Iron Spear",
       "aliases": [],
       "article": "Iron Spear",
-      "sprite": 185
+      "sprite": 193
     },
     {
       "id": "iron-sword",
       "name": "Iron Sword",
       "aliases": [],
       "article": "Iron Sword",
-      "sprite": 186
+      "sprite": 194
+    },
+    {
+      "id": "jungle-pyramid-map",
+      "name": "Jungle Pyramid Map",
+      "aliases": [
+        "Jungle Pyramid Explorer Map"
+      ],
+      "article": "Jungle Pyramid Map",
+      "sprite": 195
     },
     {
       "id": "knowledge-book",
       "name": "Knowledge Book",
       "aliases": [],
       "article": "Knowledge Book",
-      "sprite": 187
+      "sprite": 196
     },
     {
       "id": "lapis-lazuli",
       "name": "Lapis Lazuli",
       "aliases": [],
       "article": "Lapis Lazuli",
-      "sprite": 188
+      "sprite": 197
     },
     {
       "id": "lava-bucket",
       "name": "Lava Bucket",
       "aliases": [],
       "article": "Lava Bucket",
-      "sprite": 189
+      "sprite": 198
     },
     {
       "id": "lead",
       "name": "Lead",
       "aliases": [],
       "article": "Lead",
-      "sprite": 190
+      "sprite": 199
     },
     {
       "id": "leather",
       "name": "Leather",
       "aliases": [],
       "article": "Leather",
-      "sprite": 191
+      "sprite": 200
     },
     {
       "id": "leather-boots",
       "name": "Leather Boots",
       "aliases": [],
       "article": "Leather Boots",
-      "sprite": 192
+      "sprite": 201
     },
     {
       "id": "leather-cap",
       "name": "Leather Cap",
       "aliases": [],
       "article": "Leather Cap",
-      "sprite": 193
+      "sprite": 202
     },
     {
       "id": "leather-horse-armor",
       "name": "Leather Horse Armor",
       "aliases": [],
       "article": "Leather Horse Armor",
-      "sprite": 194
+      "sprite": 203
     },
     {
       "id": "leather-pants",
       "name": "Leather Pants",
       "aliases": [],
       "article": "Leather Pants",
-      "sprite": 195
+      "sprite": 204
     },
     {
       "id": "leather-tunic",
       "name": "Leather Tunic",
       "aliases": [],
       "article": "Leather Tunic",
-      "sprite": 196
+      "sprite": 205
     },
     {
       "id": "lingering-potion",
       "name": "Lingering Potion",
       "aliases": [],
       "article": "Lingering Potion",
-      "sprite": 197
+      "sprite": 206
     },
     {
       "id": "llama-spawn-egg",
       "name": "Llama Spawn Egg",
       "aliases": [],
       "article": "Llama Spawn Egg",
-      "sprite": 198
+      "sprite": 207
     },
     {
       "id": "lodestone-compass",
       "name": "Lodestone Compass",
       "aliases": [],
       "article": "Lodestone Compass",
-      "sprite": 199
+      "sprite": 208
     },
     {
       "id": "mace",
       "name": "Mace",
       "aliases": [],
       "article": "Mace",
-      "sprite": 200
+      "sprite": 209
     },
     {
       "id": "magma-cream",
       "name": "Magma Cream",
       "aliases": [],
       "article": "Magma Cream",
-      "sprite": 201
+      "sprite": 210
     },
     {
       "id": "magma-cube-spawn-egg",
       "name": "Magma Cube Spawn Egg",
       "aliases": [],
       "article": "Magma Cube Spawn Egg",
-      "sprite": 202
+      "sprite": 211
     },
     {
       "id": "map",
       "name": "Map",
       "aliases": [],
       "article": "Map",
-      "sprite": 203
+      "sprite": 212
     },
     {
       "id": "melon-seeds",
       "name": "Melon Seeds",
       "aliases": [],
       "article": "Melon Seeds",
-      "sprite": 204
+      "sprite": 213
     },
     {
       "id": "melon-slice",
       "name": "Melon Slice",
       "aliases": [],
       "article": "Melon Slice",
-      "sprite": 205
+      "sprite": 214
     },
     {
       "id": "milk-bucket",
       "name": "Milk Bucket",
       "aliases": [],
       "article": "Milk Bucket",
-      "sprite": 206
+      "sprite": 215
     },
     {
       "id": "minecart",
       "name": "Minecart",
       "aliases": [],
       "article": "Minecart",
-      "sprite": 207
+      "sprite": 216
     },
     {
       "id": "minecart-with-chest",
       "name": "Minecart with Chest",
       "aliases": [],
       "article": "Minecart with Chest",
-      "sprite": 208
+      "sprite": 217
     },
     {
       "id": "minecart-with-command-block",
       "name": "Minecart with Command Block",
       "aliases": [],
       "article": "Minecart with Command Block",
-      "sprite": 209
+      "sprite": 218
     },
     {
       "id": "minecart-with-furnace",
       "name": "Minecart with Furnace",
       "aliases": [],
       "article": "Minecart with Furnace",
-      "sprite": 210
+      "sprite": 219
     },
     {
       "id": "minecart-with-hopper",
       "name": "Minecart with Hopper",
       "aliases": [],
       "article": "Minecart with Hopper",
-      "sprite": 211
+      "sprite": 220
     },
     {
       "id": "minecart-with-tnt",
       "name": "Minecart with TNT",
       "aliases": [],
       "article": "Minecart with TNT",
-      "sprite": 212
+      "sprite": 221
     },
     {
       "id": "mooshroom-spawn-egg",
       "name": "Mooshroom Spawn Egg",
       "aliases": [],
       "article": "Mooshroom Spawn Egg",
-      "sprite": 213
+      "sprite": 222
     },
     {
       "id": "mule-spawn-egg",
       "name": "Mule Spawn Egg",
       "aliases": [],
       "article": "Mule Spawn Egg",
-      "sprite": 214
+      "sprite": 223
     },
     {
       "id": "mushroom-stew",
       "name": "Mushroom Stew",
       "aliases": [],
       "article": "Mushroom Stew",
-      "sprite": 215
+      "sprite": 224
     },
     {
       "id": "music-disc-11",
       "name": "Music Disc (11)",
       "aliases": [],
       "article": "Music Disc (11)",
-      "sprite": 216
+      "sprite": 225
     },
     {
       "id": "music-disc-13",
       "name": "Music Disc (13)",
       "aliases": [],
       "article": "Music Disc (13)",
-      "sprite": 217
+      "sprite": 226
     },
     {
       "id": "music-disc-5",
       "name": "Music Disc (5)",
       "aliases": [],
       "article": "Music Disc (5)",
-      "sprite": 218
+      "sprite": 227
     },
     {
       "id": "music-disc-blocks",
       "name": "Music Disc (blocks)",
       "aliases": [],
       "article": "Music Disc (blocks)",
-      "sprite": 219
+      "sprite": 228
     },
     {
       "id": "music-disc-bounce",
       "name": "Music Disc (Bounce)",
       "aliases": [],
       "article": "Music Disc (Bounce)",
-      "sprite": 220
+      "sprite": 229
     },
     {
       "id": "music-disc-cat",
       "name": "Music Disc (cat)",
       "aliases": [],
       "article": "Music Disc (cat)",
-      "sprite": 221
+      "sprite": 230
     },
     {
       "id": "music-disc-chirp",
       "name": "Music Disc (chirp)",
       "aliases": [],
       "article": "Music Disc (chirp)",
-      "sprite": 222
+      "sprite": 231
     },
     {
       "id": "music-disc-creator-music-box",
       "name": "Music Disc (Creator (Music Box))",
       "aliases": [],
       "article": "Music Disc (Creator (Music Box))",
-      "sprite": 223
+      "sprite": 232
     },
     {
       "id": "music-disc-creator",
       "name": "Music Disc (Creator)",
       "aliases": [],
       "article": "Music Disc (Creator)",
-      "sprite": 224
+      "sprite": 233
     },
     {
       "id": "music-disc-far",
       "name": "Music Disc (far)",
       "aliases": [],
       "article": "Music Disc (far)",
-      "sprite": 225
+      "sprite": 234
     },
     {
       "id": "music-disc-lava-chicken",
       "name": "Music Disc (Lava Chicken)",
       "aliases": [],
       "article": "Music Disc (Lava Chicken)",
-      "sprite": 226
+      "sprite": 235
     },
     {
       "id": "music-disc-mall",
       "name": "Music Disc (mall)",
       "aliases": [],
       "article": "Music Disc (mall)",
-      "sprite": 227
+      "sprite": 236
     },
     {
       "id": "music-disc-mellohi",
       "name": "Music Disc (mellohi)",
       "aliases": [],
       "article": "Music Disc (mellohi)",
-      "sprite": 228
+      "sprite": 237
     },
     {
       "id": "music-disc-otherside",
       "name": "Music Disc (otherside)",
       "aliases": [],
       "article": "Music Disc (otherside)",
-      "sprite": 229
+      "sprite": 238
     },
     {
       "id": "music-disc-pigstep",
       "name": "Music Disc (Pigstep)",
       "aliases": [],
       "article": "Music Disc (Pigstep)",
-      "sprite": 230
+      "sprite": 239
     },
     {
       "id": "music-disc-precipice",
       "name": "Music Disc (Precipice)",
       "aliases": [],
       "article": "Music Disc (Precipice)",
-      "sprite": 231
+      "sprite": 240
     },
     {
       "id": "music-disc-relic",
       "name": "Music Disc (Relic)",
       "aliases": [],
       "article": "Music Disc (Relic)",
-      "sprite": 232
+      "sprite": 241
     },
     {
       "id": "music-disc-stal",
       "name": "Music Disc (stal)",
       "aliases": [],
       "article": "Music Disc (stal)",
-      "sprite": 233
+      "sprite": 242
     },
     {
       "id": "music-disc-strad",
       "name": "Music Disc (strad)",
       "aliases": [],
       "article": "Music Disc (strad)",
-      "sprite": 234
+      "sprite": 243
     },
     {
       "id": "music-disc-tears",
       "name": "Music Disc (Tears)",
       "aliases": [],
       "article": "Music Disc (Tears)",
-      "sprite": 235
+      "sprite": 244
     },
     {
       "id": "music-disc-wait",
       "name": "Music Disc (wait)",
       "aliases": [],
       "article": "Music Disc (wait)",
-      "sprite": 236
+      "sprite": 245
     },
     {
       "id": "music-disc-ward",
       "name": "Music Disc (ward)",
       "aliases": [],
       "article": "Music Disc (ward)",
-      "sprite": 237
+      "sprite": 246
     },
     {
       "id": "name-tag",
       "name": "Name Tag",
       "aliases": [],
       "article": "Name Tag",
-      "sprite": 238
+      "sprite": 247
     },
     {
       "id": "nautilus-shell",
       "name": "Nautilus Shell",
       "aliases": [],
       "article": "Nautilus Shell",
-      "sprite": 239
+      "sprite": 248
     },
     {
       "id": "nautilus-spawn-egg",
       "name": "Nautilus Spawn Egg",
       "aliases": [],
       "article": "Nautilus Spawn Egg",
-      "sprite": 240
+      "sprite": 249
     },
     {
       "id": "nether-brick",
       "name": "Nether Brick",
       "aliases": [],
       "article": "Nether Brick",
-      "sprite": 241
+      "sprite": 250
     },
     {
       "id": "nether-quartz",
       "name": "Nether Quartz",
       "aliases": [],
       "article": "Nether Quartz",
-      "sprite": 242
+      "sprite": 251
     },
     {
       "id": "nether-star",
       "name": "Nether Star",
       "aliases": [],
       "article": "Nether Star",
-      "sprite": 243
+      "sprite": 252
     },
     {
       "id": "netherite-axe",
       "name": "Netherite Axe",
       "aliases": [],
       "article": "Netherite Axe",
-      "sprite": 244
+      "sprite": 253
     },
     {
       "id": "netherite-boots",
       "name": "Netherite Boots",
       "aliases": [],
       "article": "Netherite Boots",
-      "sprite": 245
+      "sprite": 254
     },
     {
       "id": "netherite-chestplate",
       "name": "Netherite Chestplate",
       "aliases": [],
       "article": "Netherite Chestplate",
-      "sprite": 246
+      "sprite": 255
     },
     {
       "id": "netherite-helmet",
       "name": "Netherite Helmet",
       "aliases": [],
       "article": "Netherite Helmet",
-      "sprite": 247
+      "sprite": 256
     },
     {
       "id": "netherite-hoe",
       "name": "Netherite Hoe",
       "aliases": [],
       "article": "Netherite Hoe",
-      "sprite": 248
+      "sprite": 257
     },
     {
       "id": "netherite-horse-armor",
       "name": "Netherite Horse Armor",
       "aliases": [],
       "article": "Netherite Horse Armor",
-      "sprite": 249
+      "sprite": 258
     },
     {
       "id": "netherite-ingot",
       "name": "Netherite Ingot",
       "aliases": [],
       "article": "Netherite Ingot",
-      "sprite": 250
+      "sprite": 259
     },
     {
       "id": "netherite-leggings",
       "name": "Netherite Leggings",
       "aliases": [],
       "article": "Netherite Leggings",
-      "sprite": 251
+      "sprite": 260
     },
     {
       "id": "netherite-nautilus-armor",
       "name": "Netherite Nautilus Armor",
       "aliases": [],
       "article": "Netherite Nautilus Armor",
-      "sprite": 252
+      "sprite": 261
     },
     {
       "id": "netherite-pickaxe",
       "name": "Netherite Pickaxe",
       "aliases": [],
       "article": "Netherite Pickaxe",
-      "sprite": 253
+      "sprite": 262
     },
     {
       "id": "netherite-scrap",
       "name": "Netherite Scrap",
       "aliases": [],
       "article": "Netherite Scrap",
-      "sprite": 254
+      "sprite": 263
     },
     {
       "id": "netherite-shovel",
       "name": "Netherite Shovel",
       "aliases": [],
       "article": "Netherite Shovel",
-      "sprite": 255
+      "sprite": 264
     },
     {
       "id": "netherite-spear",
       "name": "Netherite Spear",
       "aliases": [],
       "article": "Netherite Spear",
-      "sprite": 256
+      "sprite": 265
     },
     {
       "id": "netherite-sword",
       "name": "Netherite Sword",
       "aliases": [],
       "article": "Netherite Sword",
-      "sprite": 257
+      "sprite": 266
     },
     {
       "id": "netherite-upgrade",
       "name": "Netherite Upgrade",
       "aliases": [],
       "article": "Netherite Upgrade",
-      "sprite": 258
+      "sprite": 267
+    },
+    {
+      "id": "ocean-monument-map",
+      "name": "Ocean Monument Map",
+      "aliases": [
+        "Ocean Monument Explorer Map"
+      ],
+      "article": "Ocean Monument Map",
+      "sprite": 268
     },
     {
       "id": "ocelot-spawn-egg",
       "name": "Ocelot Spawn Egg",
       "aliases": [],
       "article": "Ocelot Spawn Egg",
-      "sprite": 259
+      "sprite": 269
     },
     {
       "id": "ominous-bottle",
       "name": "Ominous Bottle",
       "aliases": [],
       "article": "Ominous Bottle",
-      "sprite": 260
+      "sprite": 270
     },
     {
       "id": "ominous-trial-key",
       "name": "Ominous Trial Key",
       "aliases": [],
       "article": "Ominous Trial Key",
-      "sprite": 261
+      "sprite": 271
     },
     {
       "id": "painting",
       "name": "Painting",
       "aliases": [],
       "article": "Painting",
-      "sprite": 262
+      "sprite": 272
     },
     {
       "id": "panda-spawn-egg",
       "name": "Panda Spawn Egg",
       "aliases": [],
       "article": "Panda Spawn Egg",
-      "sprite": 263
+      "sprite": 273
     },
     {
       "id": "paper",
       "name": "Paper",
       "aliases": [],
       "article": "Paper",
-      "sprite": 264
+      "sprite": 274
     },
     {
       "id": "parched-spawn-egg",
       "name": "Parched Spawn Egg",
       "aliases": [],
       "article": "Parched Spawn Egg",
-      "sprite": 265
+      "sprite": 275
     },
     {
       "id": "parrot-spawn-egg",
       "name": "Parrot Spawn Egg",
       "aliases": [],
       "article": "Parrot Spawn Egg",
-      "sprite": 266
+      "sprite": 276
     },
     {
       "id": "phantom-membrane",
       "name": "Phantom Membrane",
       "aliases": [],
       "article": "Phantom Membrane",
-      "sprite": 267
+      "sprite": 277
     },
     {
       "id": "phantom-spawn-egg",
       "name": "Phantom Spawn Egg",
       "aliases": [],
       "article": "Phantom Spawn Egg",
-      "sprite": 268
+      "sprite": 278
     },
     {
       "id": "pig-spawn-egg",
       "name": "Pig Spawn Egg",
       "aliases": [],
       "article": "Pig Spawn Egg",
-      "sprite": 269
+      "sprite": 279
     },
     {
       "id": "piglin-brute-spawn-egg",
       "name": "Piglin Brute Spawn Egg",
       "aliases": [],
       "article": "Piglin Brute Spawn Egg",
-      "sprite": 270
+      "sprite": 280
     },
     {
       "id": "piglin-spawn-egg",
       "name": "Piglin Spawn Egg",
       "aliases": [],
       "article": "Piglin Spawn Egg",
-      "sprite": 271
+      "sprite": 281
     },
     {
       "id": "pillager-spawn-egg",
       "name": "Pillager Spawn Egg",
       "aliases": [],
       "article": "Pillager Spawn Egg",
-      "sprite": 272
+      "sprite": 282
     },
     {
       "id": "pitcher-pod",
       "name": "Pitcher Pod",
       "aliases": [],
       "article": "Pitcher Pod",
-      "sprite": 273
+      "sprite": 283
+    },
+    {
+      "id": "plains-village-map",
+      "name": "Plains Village Map",
+      "aliases": [],
+      "article": "Plains Village Map",
+      "sprite": 284
     },
     {
       "id": "poisonous-potato",
       "name": "Poisonous Potato",
       "aliases": [],
       "article": "Poisonous Potato",
-      "sprite": 274
+      "sprite": 285
     },
     {
       "id": "polar-bear-spawn-egg",
       "name": "Polar Bear Spawn Egg",
       "aliases": [],
       "article": "Polar Bear Spawn Egg",
-      "sprite": 275
+      "sprite": 286
     },
     {
       "id": "popped-chorus-fruit",
       "name": "Popped Chorus Fruit",
       "aliases": [],
       "article": "Popped Chorus Fruit",
-      "sprite": 276
+      "sprite": 287
     },
     {
       "id": "potion",
       "name": "Potion",
       "aliases": [],
       "article": "Potion",
-      "sprite": 277
+      "sprite": 288
     },
     {
       "id": "pottery-sherd",
@@ -2081,735 +2183,774 @@
         "Snort Pottery Sherd"
       ],
       "article": "Angler Pottery Sherd",
-      "sprite": 278
+      "sprite": 289
     },
     {
       "id": "powder-snow-bucket",
       "name": "Powder Snow Bucket",
       "aliases": [],
       "article": "Powder Snow Bucket",
-      "sprite": 279
+      "sprite": 290
     },
     {
       "id": "prismarine-crystals",
       "name": "Prismarine Crystals",
       "aliases": [],
       "article": "Prismarine Crystals",
-      "sprite": 280
+      "sprite": 291
     },
     {
       "id": "prismarine-shard",
       "name": "Prismarine Shard",
       "aliases": [],
       "article": "Prismarine Shard",
-      "sprite": 281
+      "sprite": 292
     },
     {
       "id": "pufferfish",
       "name": "Pufferfish",
       "aliases": [],
       "article": "Pufferfish",
-      "sprite": 282
+      "sprite": 293
     },
     {
       "id": "pufferfish-spawn-egg",
       "name": "Pufferfish Spawn Egg",
       "aliases": [],
       "article": "Pufferfish Spawn Egg",
-      "sprite": 283
+      "sprite": 294
     },
     {
       "id": "pumpkin-pie",
       "name": "Pumpkin Pie",
       "aliases": [],
       "article": "Pumpkin Pie",
-      "sprite": 284
+      "sprite": 295
     },
     {
       "id": "pumpkin-seeds",
       "name": "Pumpkin Seeds",
       "aliases": [],
       "article": "Pumpkin Seeds",
-      "sprite": 285
+      "sprite": 296
     },
     {
       "id": "rabbit-hide",
       "name": "Rabbit Hide",
       "aliases": [],
       "article": "Rabbit Hide",
-      "sprite": 286
+      "sprite": 297
     },
     {
       "id": "rabbit-spawn-egg",
       "name": "Rabbit Spawn Egg",
       "aliases": [],
       "article": "Rabbit Spawn Egg",
-      "sprite": 287
+      "sprite": 298
     },
     {
       "id": "rabbit-stew",
       "name": "Rabbit Stew",
       "aliases": [],
       "article": "Rabbit Stew",
-      "sprite": 288
+      "sprite": 299
     },
     {
       "id": "rabbit-s-foot",
       "name": "Rabbit's Foot",
       "aliases": [],
       "article": "Rabbit's Foot",
-      "sprite": 289
+      "sprite": 300
     },
     {
       "id": "ravager-spawn-egg",
       "name": "Ravager Spawn Egg",
       "aliases": [],
       "article": "Ravager Spawn Egg",
-      "sprite": 290
+      "sprite": 301
     },
     {
       "id": "raw-beef",
       "name": "Raw Beef",
       "aliases": [],
       "article": "Raw Beef",
-      "sprite": 291
+      "sprite": 302
     },
     {
       "id": "raw-chicken",
       "name": "Raw Chicken",
       "aliases": [],
       "article": "Raw Chicken",
-      "sprite": 292
+      "sprite": 303
     },
     {
       "id": "raw-cod",
       "name": "Raw Cod",
       "aliases": [],
       "article": "Raw Cod",
-      "sprite": 293
+      "sprite": 304
     },
     {
       "id": "raw-copper",
       "name": "Raw Copper",
       "aliases": [],
       "article": "Raw Copper",
-      "sprite": 294
+      "sprite": 305
     },
     {
       "id": "raw-gold",
       "name": "Raw Gold",
       "aliases": [],
       "article": "Raw Gold",
-      "sprite": 295
+      "sprite": 306
     },
     {
       "id": "raw-iron",
       "name": "Raw Iron",
       "aliases": [],
       "article": "Raw Iron",
-      "sprite": 296
+      "sprite": 307
     },
     {
       "id": "raw-mutton",
       "name": "Raw Mutton",
       "aliases": [],
       "article": "Raw Mutton",
-      "sprite": 297
+      "sprite": 308
     },
     {
       "id": "raw-porkchop",
       "name": "Raw Porkchop",
       "aliases": [],
       "article": "Raw Porkchop",
-      "sprite": 298
+      "sprite": 309
     },
     {
       "id": "raw-rabbit",
       "name": "Raw Rabbit",
       "aliases": [],
       "article": "Raw Rabbit",
-      "sprite": 299
+      "sprite": 310
     },
     {
       "id": "raw-salmon",
       "name": "Raw Salmon",
       "aliases": [],
       "article": "Raw Salmon",
-      "sprite": 300
+      "sprite": 311
     },
     {
       "id": "recovery-compass",
       "name": "Recovery Compass",
       "aliases": [],
       "article": "Recovery Compass",
-      "sprite": 301
+      "sprite": 312
     },
     {
       "id": "redstone-dust",
       "name": "Redstone Dust",
       "aliases": [],
       "article": "Redstone Dust",
-      "sprite": 302
+      "sprite": 313
     },
     {
       "id": "resin-brick",
       "name": "Resin Brick",
       "aliases": [],
       "article": "Resin Brick",
-      "sprite": 303
+      "sprite": 314
     },
     {
       "id": "rotten-flesh",
       "name": "Rotten Flesh",
       "aliases": [],
       "article": "Rotten Flesh",
-      "sprite": 304
+      "sprite": 315
     },
     {
       "id": "saddle",
       "name": "Saddle",
       "aliases": [],
       "article": "Saddle",
-      "sprite": 305
+      "sprite": 316
     },
     {
       "id": "salmon-spawn-egg",
       "name": "Salmon Spawn Egg",
       "aliases": [],
       "article": "Salmon Spawn Egg",
-      "sprite": 306
+      "sprite": 317
+    },
+    {
+      "id": "savanna-village-map",
+      "name": "Savanna Village Map",
+      "aliases": [],
+      "article": "Savanna Village Map",
+      "sprite": 318
     },
     {
       "id": "shears",
       "name": "Shears",
       "aliases": [],
       "article": "Shears",
-      "sprite": 307
+      "sprite": 319
     },
     {
       "id": "sheep-spawn-egg",
       "name": "Sheep Spawn Egg",
       "aliases": [],
       "article": "Sheep Spawn Egg",
-      "sprite": 308
-    },
-    {
-      "id": "shelf-mushroom",
-      "name": "Shelf Mushroom",
-      "aliases": [],
-      "article": "Shelf Mushroom",
-      "sprite": 309
+      "sprite": 320
     },
     {
       "id": "shield",
       "name": "Shield",
       "aliases": [],
       "article": "Shield",
-      "sprite": 310
+      "sprite": 321
     },
     {
       "id": "shulker-shell",
       "name": "Shulker Shell",
       "aliases": [],
       "article": "Shulker Shell",
-      "sprite": 311
+      "sprite": 322
     },
     {
       "id": "shulker-spawn-egg",
       "name": "Shulker Spawn Egg",
       "aliases": [],
       "article": "Shulker Spawn Egg",
-      "sprite": 312
+      "sprite": 323
     },
     {
       "id": "silverfish-spawn-egg",
       "name": "Silverfish Spawn Egg",
       "aliases": [],
       "article": "Silverfish Spawn Egg",
-      "sprite": 313
+      "sprite": 324
     },
     {
       "id": "skeleton-horse-spawn-egg",
       "name": "Skeleton Horse Spawn Egg",
       "aliases": [],
       "article": "Skeleton Horse Spawn Egg",
-      "sprite": 314
+      "sprite": 325
     },
     {
       "id": "skeleton-spawn-egg",
       "name": "Skeleton Spawn Egg",
       "aliases": [],
       "article": "Skeleton Spawn Egg",
-      "sprite": 315
+      "sprite": 326
     },
     {
       "id": "slime-spawn-egg",
       "name": "Slime Spawn Egg",
       "aliases": [],
       "article": "Slime Spawn Egg",
-      "sprite": 316
+      "sprite": 327
     },
     {
       "id": "slimeball",
       "name": "Slimeball",
       "aliases": [],
       "article": "Slimeball",
-      "sprite": 317
+      "sprite": 328
     },
     {
       "id": "sniffer-spawn-egg",
       "name": "Sniffer Spawn Egg",
       "aliases": [],
       "article": "Sniffer Spawn Egg",
-      "sprite": 318
+      "sprite": 329
     },
     {
       "id": "snow-golem-spawn-egg",
       "name": "Snow Golem Spawn Egg",
       "aliases": [],
       "article": "Snow Golem Spawn Egg",
-      "sprite": 319
+      "sprite": 330
     },
     {
       "id": "snowball",
       "name": "Snowball",
       "aliases": [],
       "article": "Snowball",
-      "sprite": 320
+      "sprite": 331
+    },
+    {
+      "id": "snowy-village-map",
+      "name": "Snowy Village Map",
+      "aliases": [],
+      "article": "Snowy Village Map",
+      "sprite": 332
     },
     {
       "id": "spectral-arrow",
       "name": "Spectral Arrow",
       "aliases": [],
       "article": "Spectral Arrow",
-      "sprite": 321
+      "sprite": 333
     },
     {
       "id": "spider-eye",
       "name": "Spider Eye",
       "aliases": [],
       "article": "Spider Eye",
-      "sprite": 322
+      "sprite": 334
     },
     {
       "id": "spider-spawn-egg",
       "name": "Spider Spawn Egg",
       "aliases": [],
       "article": "Spider Spawn Egg",
-      "sprite": 323
+      "sprite": 335
     },
     {
       "id": "splash-potion",
       "name": "Splash Potion",
       "aliases": [],
       "article": "Splash Potion",
-      "sprite": 324
+      "sprite": 336
     },
     {
       "id": "spyglass",
       "name": "Spyglass",
       "aliases": [],
       "article": "Spyglass",
-      "sprite": 325
+      "sprite": 337
     },
     {
       "id": "squid-spawn-egg",
       "name": "Squid Spawn Egg",
       "aliases": [],
       "article": "Squid Spawn Egg",
-      "sprite": 326
+      "sprite": 338
     },
     {
       "id": "steak",
       "name": "Steak",
       "aliases": [],
       "article": "Steak",
-      "sprite": 327
+      "sprite": 339
     },
     {
       "id": "stick",
       "name": "Stick",
       "aliases": [],
       "article": "Stick",
-      "sprite": 328
+      "sprite": 340
     },
     {
       "id": "stone-axe",
       "name": "Stone Axe",
       "aliases": [],
       "article": "Stone Axe",
-      "sprite": 329
+      "sprite": 341
     },
     {
       "id": "stone-hoe",
       "name": "Stone Hoe",
       "aliases": [],
       "article": "Stone Hoe",
-      "sprite": 330
+      "sprite": 342
     },
     {
       "id": "stone-pickaxe",
       "name": "Stone Pickaxe",
       "aliases": [],
       "article": "Stone Pickaxe",
-      "sprite": 331
+      "sprite": 343
     },
     {
       "id": "stone-shovel",
       "name": "Stone Shovel",
       "aliases": [],
       "article": "Stone Shovel",
-      "sprite": 332
+      "sprite": 344
     },
     {
       "id": "stone-spear",
       "name": "Stone Spear",
       "aliases": [],
       "article": "Stone Spear",
-      "sprite": 333
+      "sprite": 345
     },
     {
       "id": "stone-sword",
       "name": "Stone Sword",
       "aliases": [],
       "article": "Stone Sword",
-      "sprite": 334
+      "sprite": 346
     },
     {
       "id": "stray-spawn-egg",
       "name": "Stray Spawn Egg",
       "aliases": [],
       "article": "Stray Spawn Egg",
-      "sprite": 335
+      "sprite": 347
     },
     {
       "id": "strider-spawn-egg",
       "name": "Strider Spawn Egg",
       "aliases": [],
       "article": "Strider Spawn Egg",
-      "sprite": 336
+      "sprite": 348
     },
     {
       "id": "string",
       "name": "String",
       "aliases": [],
       "article": "String",
-      "sprite": 337
+      "sprite": 349
     },
     {
       "id": "sugar",
       "name": "Sugar",
       "aliases": [],
       "article": "Sugar",
-      "sprite": 338
+      "sprite": 350
     },
     {
       "id": "sulfur-cube-spawn-egg",
       "name": "Sulfur Cube Spawn Egg",
       "aliases": [],
       "article": "Sulfur Cube Spawn Egg",
-      "sprite": 339
+      "sprite": 351
     },
     {
       "id": "suspicious-stew",
       "name": "Suspicious Stew",
       "aliases": [],
       "article": "Suspicious Stew",
-      "sprite": 340
+      "sprite": 352
+    },
+    {
+      "id": "swamp-hut-map",
+      "name": "Swamp Hut Map",
+      "aliases": [
+        "Swamp Hut Explorer Map"
+      ],
+      "article": "Swamp Hut Map",
+      "sprite": 353
     },
     {
       "id": "sweet-berries",
       "name": "Sweet Berries",
       "aliases": [],
       "article": "Sweet Berries",
-      "sprite": 341
+      "sprite": 354
     },
     {
       "id": "tadpole-spawn-egg",
       "name": "Tadpole Spawn Egg",
       "aliases": [],
       "article": "Tadpole Spawn Egg",
-      "sprite": 342
+      "sprite": 355
+    },
+    {
+      "id": "taiga-village-map",
+      "name": "Taiga Village Map",
+      "aliases": [],
+      "article": "Taiga Village Map",
+      "sprite": 356
     },
     {
       "id": "tipped-arrow",
       "name": "Tipped Arrow",
       "aliases": [],
       "article": "Tipped Arrow",
-      "sprite": 343
+      "sprite": 357
     },
     {
       "id": "torchflower-seeds",
       "name": "Torchflower Seeds",
       "aliases": [],
       "article": "Torchflower Seeds",
-      "sprite": 344
+      "sprite": 358
     },
     {
       "id": "totem-of-undying",
       "name": "Totem of Undying",
       "aliases": [],
       "article": "Totem of Undying",
-      "sprite": 345
+      "sprite": 359
     },
     {
       "id": "trader-llama-spawn-egg",
       "name": "Trader Llama Spawn Egg",
       "aliases": [],
       "article": "Trader Llama Spawn Egg",
-      "sprite": 346
+      "sprite": 360
     },
     {
       "id": "trial-key",
       "name": "Trial Key",
       "aliases": [],
       "article": "Trial Key",
-      "sprite": 347
+      "sprite": 361
     },
     {
       "id": "trident",
       "name": "Trident",
       "aliases": [],
       "article": "Trident",
-      "sprite": 348
+      "sprite": 362
     },
     {
       "id": "tropical-fish",
       "name": "Tropical Fish",
       "aliases": [],
       "article": "Tropical Fish",
-      "sprite": 349
+      "sprite": 363
     },
     {
       "id": "tropical-fish-spawn-egg",
       "name": "Tropical Fish Spawn Egg",
       "aliases": [],
       "article": "Tropical Fish Spawn Egg",
-      "sprite": 350
+      "sprite": 364
     },
     {
       "id": "turtle-scute",
       "name": "Turtle Scute",
       "aliases": [],
       "article": "Turtle Scute",
-      "sprite": 351
+      "sprite": 365
     },
     {
       "id": "turtle-shell",
       "name": "Turtle Shell",
       "aliases": [],
       "article": "Turtle Shell",
-      "sprite": 352
+      "sprite": 366
     },
     {
       "id": "turtle-spawn-egg",
       "name": "Turtle Spawn Egg",
       "aliases": [],
       "article": "Turtle Spawn Egg",
-      "sprite": 353
+      "sprite": 367
     },
     {
       "id": "vex-spawn-egg",
       "name": "Vex Spawn Egg",
       "aliases": [],
       "article": "Vex Spawn Egg",
-      "sprite": 354
+      "sprite": 368
     },
     {
       "id": "villager-spawn-egg",
       "name": "Villager Spawn Egg",
       "aliases": [],
       "article": "Villager Spawn Egg",
-      "sprite": 355
+      "sprite": 369
     },
     {
       "id": "vindicator-spawn-egg",
       "name": "Vindicator Spawn Egg",
       "aliases": [],
       "article": "Vindicator Spawn Egg",
-      "sprite": 356
+      "sprite": 370
     },
     {
       "id": "wandering-trader-spawn-egg",
       "name": "Wandering Trader Spawn Egg",
       "aliases": [],
       "article": "Wandering Trader Spawn Egg",
-      "sprite": 357
+      "sprite": 371
     },
     {
       "id": "warden-spawn-egg",
       "name": "Warden Spawn Egg",
       "aliases": [],
       "article": "Warden Spawn Egg",
-      "sprite": 358
+      "sprite": 372
+    },
+    {
+      "id": "warm-ocean-ruins-map",
+      "name": "Warm Ocean Ruins Map",
+      "aliases": [],
+      "article": "Warm Ocean Ruins Map",
+      "sprite": 373
     },
     {
       "id": "warped-fungus-on-a-stick",
       "name": "Warped Fungus on a Stick",
       "aliases": [],
       "article": "Warped Fungus on a Stick",
-      "sprite": 359
+      "sprite": 374
     },
     {
       "id": "water-bottle",
       "name": "Water Bottle",
       "aliases": [],
       "article": "Water Bottle",
-      "sprite": 360
+      "sprite": 375
     },
     {
       "id": "water-bucket",
       "name": "Water Bucket",
       "aliases": [],
       "article": "Water Bucket",
-      "sprite": 361
+      "sprite": 376
     },
     {
       "id": "wheat",
       "name": "Wheat",
       "aliases": [],
       "article": "Wheat",
-      "sprite": 362
+      "sprite": 377
     },
     {
       "id": "wheat-seeds",
       "name": "Wheat Seeds",
       "aliases": [],
       "article": "Wheat Seeds",
-      "sprite": 363
+      "sprite": 378
     },
     {
       "id": "wind-charge",
       "name": "Wind Charge",
       "aliases": [],
       "article": "Wind Charge",
-      "sprite": 364
+      "sprite": 379
     },
     {
       "id": "witch-spawn-egg",
       "name": "Witch Spawn Egg",
       "aliases": [],
       "article": "Witch Spawn Egg",
-      "sprite": 365
+      "sprite": 380
     },
     {
       "id": "wither-skeleton-spawn-egg",
       "name": "Wither Skeleton Spawn Egg",
       "aliases": [],
       "article": "Wither Skeleton Spawn Egg",
-      "sprite": 366
+      "sprite": 381
     },
     {
       "id": "wither-spawn-egg",
       "name": "Wither Spawn Egg",
       "aliases": [],
       "article": "Wither Spawn Egg",
-      "sprite": 367
+      "sprite": 382
     },
     {
       "id": "wolf-armor",
       "name": "Wolf Armor",
       "aliases": [],
       "article": "Wolf Armor",
-      "sprite": 368
+      "sprite": 383
     },
     {
       "id": "wolf-spawn-egg",
       "name": "Wolf Spawn Egg",
       "aliases": [],
       "article": "Wolf Spawn Egg",
-      "sprite": 369
+      "sprite": 384
     },
     {
       "id": "wooden-axe",
       "name": "Wooden Axe",
       "aliases": [],
       "article": "Wooden Axe",
-      "sprite": 370
+      "sprite": 385
     },
     {
       "id": "wooden-hoe",
       "name": "Wooden Hoe",
       "aliases": [],
       "article": "Wooden Hoe",
-      "sprite": 371
+      "sprite": 386
     },
     {
       "id": "wooden-pickaxe",
       "name": "Wooden Pickaxe",
       "aliases": [],
       "article": "Wooden Pickaxe",
-      "sprite": 372
+      "sprite": 387
     },
     {
       "id": "wooden-shovel",
       "name": "Wooden Shovel",
       "aliases": [],
       "article": "Wooden Shovel",
-      "sprite": 373
+      "sprite": 388
     },
     {
       "id": "wooden-spear",
       "name": "Wooden Spear",
       "aliases": [],
       "article": "Wooden Spear",
-      "sprite": 374
+      "sprite": 389
     },
     {
       "id": "wooden-sword",
       "name": "Wooden Sword",
       "aliases": [],
       "article": "Wooden Sword",
-      "sprite": 375
+      "sprite": 390
+    },
+    {
+      "id": "woodland-mansion-map",
+      "name": "Woodland Mansion Map",
+      "aliases": [
+        "Woodland Mansion Explorer Map"
+      ],
+      "article": "Woodland Mansion Map",
+      "sprite": 391
     },
     {
       "id": "written-book",
       "name": "Written Book",
       "aliases": [],
       "article": "Written Book",
-      "sprite": 376
+      "sprite": 392
     },
     {
       "id": "zoglin-spawn-egg",
       "name": "Zoglin Spawn Egg",
       "aliases": [],
       "article": "Zoglin Spawn Egg",
-      "sprite": 377
+      "sprite": 393
     },
     {
       "id": "zombie-horse-spawn-egg",
       "name": "Zombie Horse Spawn Egg",
       "aliases": [],
       "article": "Zombie Horse Spawn Egg",
-      "sprite": 378
+      "sprite": 394
     },
     {
       "id": "zombie-nautilus-spawn-egg",
       "name": "Zombie Nautilus Spawn Egg",
       "aliases": [],
       "article": "Zombie Nautilus Spawn Egg",
-      "sprite": 379
+      "sprite": 395
     },
     {
       "id": "zombie-spawn-egg",
       "name": "Zombie Spawn Egg",
       "aliases": [],
       "article": "Zombie Spawn Egg",
-      "sprite": 380
+      "sprite": 396
     },
     {
       "id": "zombie-villager-spawn-egg",
       "name": "Zombie Villager Spawn Egg",
       "aliases": [],
       "article": "Zombie Villager Spawn Egg",
-      "sprite": 381
+      "sprite": 397
     },
     {
       "id": "zombified-piglin-spawn-egg",
       "name": "Zombified Piglin Spawn Egg",
       "aliases": [],
       "article": "Zombified Piglin Spawn Egg",
-      "sprite": 382
+      "sprite": 398
     }
   ]
 }
