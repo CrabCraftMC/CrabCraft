@@ -215,7 +215,8 @@ export function oklchToOklab(L: number, C: number, H: number): [number, number, 
 /**
  * Interpolate between two OkLAB colours through OkLCH (cylindrical) space.
  * Keeps chroma high by interpolating hue along the shortest arc instead of
- * cutting through the desaturated center.  Returns [L, a, b].
+ * cutting through the desaturated centre. Near-neutral endpoints use OkLAB
+ * interpolation to preserve their slight tint. Returns [L, a, b].
  */
 export function interpolateOklchValues(
     lab1: [number, number, number],
@@ -225,26 +226,20 @@ export function interpolateOklchValues(
     const [L1, C1, H1] = oklabToOklch(...lab1);
     const [L2, C2, H2] = oklabToOklch(...lab2);
 
+    // Near-neutral hues are unstable, but their small tint still matters.
+    const ACHROMATIC = 0.01;
+    if (C1 < ACHROMATIC || C2 < ACHROMATIC) {
+        return interpolateOklabValues(lab1, lab2, t);
+    }
+
     const L = L1 + (L2 - L1) * t;
     const C = C1 + (C2 - C1) * t;
 
-    // Achromatic edge case: if either endpoint has near-zero chroma,
-    // atan2 is meaningless — use the other endpoint's hue.
-    const ACHROMATIC = 0.01;
-    let H: number;
-    if (C1 < ACHROMATIC && C2 < ACHROMATIC) {
-        H = 0; // both achromatic, hue irrelevant
-    } else if (C1 < ACHROMATIC) {
-        H = H2;
-    } else if (C2 < ACHROMATIC) {
-        H = H1;
-    } else {
-        // Shortest-arc hue interpolation
-        let dh = H2 - H1;
-        if (dh > Math.PI) dh -= 2 * Math.PI;
-        if (dh < -Math.PI) dh += 2 * Math.PI;
-        H = H1 + dh * t;
-    }
+    // Shortest-arc hue interpolation
+    let dh = H2 - H1;
+    if (dh > Math.PI) dh -= 2 * Math.PI;
+    if (dh < -Math.PI) dh += 2 * Math.PI;
+    const H = H1 + dh * t;
 
     return oklchToOklab(L, C, H);
 }
