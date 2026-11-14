@@ -212,4 +212,20 @@ export const ITEM_HUNT_PUZZLES: readonly ItemHuntPuzzle[] = [
     "Firework rockets provide propulsion, while phantom membranes repair its durability.",
     "These wearable wings let a survival player glide through the air.",
   ]),
+  itemPuzzle("Cushion", [
+    "This item has no durability and can be carried in stacks.",
+    "It is crafted and placed in the world before its main interaction becomes available.",
+    "Three wool slabs of the same colour craft it in one of sixteen colours.",
+    "Interacting with the placed object lets a player sit down.",
+    "It has no collision, breaks when its support is removed, and cannot be moved by pistons.",
+    "This soft coloured seat adds a place to rest beside a campfire.",
+  ]),
+  itemPuzzle("Abandoned Camp Map", [
+    "This item has no durability and can be carried in stacks.",
+    "Its main use is navigation rather than crafting or combat.",
+    "It can be found among the explorer maps supplied by abandoned camps.",
+    "It points travellers towards another camp in one of several possible biomes.",
+    "Copies retain their own map item type, and it cannot be zoomed out at a cartography table.",
+    "This explorer map guides an expedition from one abandoned campsite to another.",
+  ]),
 ];
