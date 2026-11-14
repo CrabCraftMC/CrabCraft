@@ -10,13 +10,13 @@ export const metadata: Metadata = {
   description:
     "Convert coordinates between the Overworld and Nether in Minecraft. Bidirectional calculator with portal linking guide — free online tool.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/portal-calculator",
+    canonical: "https://www.crabcraft.net/tools/portal-calculator",
   },
   openGraph: {
     title: "Minecraft Nether Portal Coordinates - CrabCraft",
     description:
       "Convert coordinates between the Overworld and Nether in Minecraft. Bidirectional calculator with portal linking guide.",
-    url: "https://crabcraft.net/tools/portal-calculator",
+    url: "https://www.crabcraft.net/tools/portal-calculator",
     images: ["/logo.png"],
   },
   keywords: [
@@ -38,7 +38,7 @@ const jsonLd = {
   name: "Minecraft Nether Portal Coordinates",
   description:
     "Convert coordinates between the Overworld and Nether in Minecraft. Bidirectional calculator with portal linking guide.",
-  url: "https://crabcraft.net/tools/portal-calculator",
+  url: "https://www.crabcraft.net/tools/portal-calculator",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   offers: {

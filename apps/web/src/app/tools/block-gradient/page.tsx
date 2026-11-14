@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { getBlockGradientShare } from "@crabcraft/db/queries/web";
-import BlockGradientAds from "@/components/BlockGradientAds";
-import { parseAdSenseConfig } from "@/lib/adsense";
-import { auth } from "@/lib/auth";
+import BlockGradientPageContent from "@/components/BlockGradientPageContent";
 import {
   BLOCK_GRADIENT_SHARE_ID_PATTERN,
   BLOCK_GRADIENT_SHARE_VERSION,
@@ -18,13 +16,13 @@ export const metadata: Metadata = {
   description:
     "Create smooth Minecraft block gradients for building. Pick colours or blocks, adjust randomness, and preview a wall of blocks with accurate OkLAB colour matching — free online tool.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/block-gradient",
+    canonical: "https://www.crabcraft.net/tools/block-gradient",
   },
   openGraph: {
     title: "Minecraft Block Gradient Generator - CrabCraft",
     description:
       "Create smooth Minecraft block gradients for building. Pick colours or blocks and generate a gradient palette.",
-    url: "https://crabcraft.net/tools/block-gradient",
+    url: "https://www.crabcraft.net/tools/block-gradient",
     images: ["/logo.png"],
   },
   keywords: [
@@ -46,7 +44,7 @@ const jsonLd = {
   name: "Minecraft Block Gradient Generator",
   description:
     "Create smooth Minecraft block gradients for building. Pick colours or blocks, adjust randomness, and preview a wall of blocks with accurate colour matching.",
-  url: "https://crabcraft.net/tools/block-gradient",
+  url: "https://www.crabcraft.net/tools/block-gradient",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   offers: {
@@ -61,7 +59,7 @@ export default async function BlockGradientPage({
 }: {
   searchParams: Promise<{ share?: string | string[] }>;
 }) {
-  const [{ share: shareId }, session] = await Promise.all([searchParams, auth()]);
+  const { share: shareId } = await searchParams;
   let initialState = null;
 
   if (shareId !== undefined) {
@@ -80,24 +78,18 @@ export default async function BlockGradientPage({
     if (!initialState) notFound();
   }
 
-  const gradient = (
-    <BlockGradient
-      initialState={initialState}
-      initialShareId={typeof shareId === "string" ? shareId : null}
-    />
-  );
-
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      {session?.user ? gradient : (
-        <BlockGradientAds config={parseAdSenseConfig(process.env)}>
-          {gradient}
-        </BlockGradientAds>
-      )}
+      <BlockGradientPageContent>
+        <BlockGradient
+          initialState={initialState}
+          initialShareId={typeof shareId === "string" ? shareId : null}
+        />
+      </BlockGradientPageContent>
     </>
   );
 }

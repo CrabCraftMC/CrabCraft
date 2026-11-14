@@ -4,4 +4,4 @@ Allow: /
 Disallow: /api/
 Disallow: /login
 
-Sitemap: https://crabcraft.net/sitemap.xml
+Sitemap: https://www.crabcraft.net/sitemap.xml

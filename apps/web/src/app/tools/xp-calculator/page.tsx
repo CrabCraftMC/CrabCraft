@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Calculate Minecraft XP needed between levels, including enchanting bottle estimates and target level totals — free online tool.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/xp-calculator",
+    canonical: "https://www.crabcraft.net/tools/xp-calculator",
   },
   openGraph: {
     title: "Minecraft XP Levels - CrabCraft",
     description:
       "Calculate XP needed between Minecraft levels with bottle estimates and target totals.",
-    url: "https://crabcraft.net/tools/xp-calculator",
+    url: "https://www.crabcraft.net/tools/xp-calculator",
     images: ["/logo.png"],
   },
   keywords: [
@@ -34,7 +34,7 @@ const jsonLd = {
   name: "Minecraft XP Levels",
   description:
     "Calculate Minecraft XP needed between levels, including enchanting bottle estimates and target level totals.",
-  url: "https://crabcraft.net/tools/xp-calculator",
+  url: "https://www.crabcraft.net/tools/xp-calculator",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   offers: {

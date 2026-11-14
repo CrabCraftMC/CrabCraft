@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Generate pixel-perfect Minecraft circles and ovals for building. Set width and height, choose outline, filled, or thick modes — free online tool.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/circle-generator",
+    canonical: "https://www.crabcraft.net/tools/circle-generator",
   },
   openGraph: {
     title: "Minecraft Circle & Oval Generator - CrabCraft",
     description:
       "Generate pixel-perfect Minecraft circles and ovals for building. Set width and height, choose outline, filled, or thick modes.",
-    url: "https://crabcraft.net/tools/circle-generator",
+    url: "https://www.crabcraft.net/tools/circle-generator",
     images: ["/logo.png"],
   },
   keywords: [
@@ -37,7 +37,7 @@ const jsonLd = {
   name: "Minecraft Circle & Oval Generator",
   description:
     "Generate pixel-perfect Minecraft circles and ovals for building. Set width and height, choose outline, filled, or thick modes.",
-  url: "https://crabcraft.net/tools/circle-generator",
+  url: "https://www.crabcraft.net/tools/circle-generator",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   offers: {

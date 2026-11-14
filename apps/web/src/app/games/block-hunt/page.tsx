@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Play Block Hunt, a free daily Minecraft block guessing game. Use up to six clues to identify the mystery block, then share how quickly you found it.",
   alternates: {
-    canonical: "https://crabcraft.net/games/block-hunt",
+    canonical: "https://www.crabcraft.net/games/block-hunt",
   },
   openGraph: {
     title: "Block Hunt | Daily Minecraft Guessing Game",
     description:
       "Use up to six clues to identify today's mystery Minecraft block.",
-    url: "https://crabcraft.net/games/block-hunt",
+    url: "https://www.crabcraft.net/games/block-hunt",
     images: ["/logo.png"],
   },
   twitter: {
@@ -32,7 +32,7 @@ const jsonLd = {
   alternateName: "Minecraft Block Hunt",
   description:
     "A free daily Minecraft block guessing game with up to six clues.",
-  url: "https://crabcraft.net/games/block-hunt",
+  url: "https://www.crabcraft.net/games/block-hunt",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   browserRequirements: "Requires JavaScript",
@@ -45,7 +45,7 @@ const jsonLd = {
   publisher: {
     "@type": "Organization",
     name: "CrabCraft",
-    url: "https://crabcraft.net",
+    url: "https://www.crabcraft.net",
   },
 };
 

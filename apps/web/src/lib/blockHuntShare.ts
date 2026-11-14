@@ -44,7 +44,7 @@ export function formatHuntShare({
     elapsedMs === null
       ? formatGuessCount(attemptCount)
       : `${formatGuessCount(attemptCount)} · ${formatDuration(elapsedMs)}`,
-    `https://crabcraft.net${config.route}`,
+    `https://www.crabcraft.net${config.route}`,
   ].join("\n");
 }
 

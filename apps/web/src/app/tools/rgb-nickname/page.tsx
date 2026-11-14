@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Create gradient RGB nicknames for Minecraft. Generate coloured text with MiniMessage, hex codes, and section symbols. Copy the /nick command instantly — free online tool.",
   alternates: {
-    canonical: "https://crabcraft.net/tools/rgb-nickname",
+    canonical: "https://www.crabcraft.net/tools/rgb-nickname",
   },
   openGraph: {
     title: "Minecraft RGB Nickname Generator - CrabCraft",
     description:
       "Create gradient RGB nicknames for Minecraft. Generate coloured text and copy the /nick command instantly.",
-    url: "https://crabcraft.net/tools/rgb-nickname",
+    url: "https://www.crabcraft.net/tools/rgb-nickname",
     images: ["/logo.png"],
   },
   keywords: [
@@ -36,7 +36,7 @@ const jsonLd = {
   name: "Minecraft RGB Nickname Generator",
   description:
     "Create gradient RGB nicknames for Minecraft. Generate coloured text with MiniMessage, hex codes, and section symbols.",
-  url: "https://crabcraft.net/tools/rgb-nickname",
+  url: "https://www.crabcraft.net/tools/rgb-nickname",
   applicationCategory: "GameApplication",
   operatingSystem: "Any",
   offers: {
