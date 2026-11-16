@@ -1,0 +1,33 @@
+.layout {
+  position: relative;
+}
+
+.partner {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .layout {
+    margin-inline: 208px;
+  }
+
+  .partner {
+    position: absolute;
+    top: 256px;
+    right: max(-196px, calc(50% - 760px));
+    bottom: 64px;
+    display: block;
+    width: 160px;
+  }
+
+  .partnerContent {
+    position: sticky;
+    top: 128px;
+  }
+
+  .partner img {
+    display: block;
+    width: 160px;
+    height: 600px;
+  }
+}

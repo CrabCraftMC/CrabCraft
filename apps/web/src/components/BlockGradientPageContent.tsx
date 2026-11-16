@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { blockGradientLayoutScript } from "@/lib/blockGradientLayout";
+import styles from "./BlockGradientPageContent.module.css";
 
 const examples = [
   {
@@ -48,7 +49,28 @@ const examples = [
 
 export default function BlockGradientPageContent({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen pt-24 pb-16">
+    <div className={`${styles.layout} min-h-screen pt-24 pb-16`}>
+      <aside className={`${styles.partner} animate-in`} style={{ animationDelay: "0.2s" }} aria-label="Hosting partner">
+        <div className={styles.partnerContent}>
+          <p className="mb-2 text-center text-xs text-gray-500 dark:text-gray-400">Hosting partner</p>
+          <a
+            href="https://clients.winternode.com/aff.php?aff=129"
+            target="_blank"
+            rel="sponsored noopener noreferrer"
+            className="block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-500"
+          >
+            <img
+              src="/partners/winternode.png"
+              srcSet="/partners/winternode.png 1x, /partners/winternode@2x.png 2x"
+              width={160}
+              height={600}
+              alt="WinterNode Minecraft server hosting — start your server (opens in a new tab)"
+              loading="lazy"
+              decoding="async"
+            />
+          </a>
+        </div>
+      </aside>
       <script dangerouslySetInnerHTML={{ __html: blockGradientLayoutScript }} />
       <header className="container mx-auto px-4 max-w-6xl text-center mb-10">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-orange-500 font-mc">
