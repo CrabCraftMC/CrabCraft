@@ -66,12 +66,18 @@ public class StaffChatManager {
     }
 
     public void displayMessage(String senderName, Component message) {
-        String format = plugin.getConfig().getStaffChatFormat();
-        Component senderComponent = NicknameComponentParser.parse(senderName);
-        Component component = MINI_MESSAGE.deserialize(format,
+        displayMessage(NicknameComponentParser.parse(senderName), message, false);
+    }
+
+    void displayMessage(Component senderComponent, Component message, boolean fromDiscord) {
+        Component component = MINI_MESSAGE.deserialize(plugin.getConfig().getStaffChatFormat(),
                 Placeholder.component("sender", senderComponent),
                 Placeholder.component("message", message)
         );
+        if (fromDiscord) {
+            component = MINI_MESSAGE.deserialize(plugin.getConfig().getStaffChatDiscordIncomingPrefix())
+                    .append(component);
+        }
 
         for (Player player : plugin.getServer().getAllPlayers()) {
             if (player.hasPermission(PERMISSION) && isEnabled(player.getUniqueId())) {

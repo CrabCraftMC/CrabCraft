@@ -17,6 +17,7 @@ public class VelocityConfig {
 
     private static final String DEFAULT_FORMAT =
             "<dark_gray>[<aqua>SC</aqua>]</dark_gray> <gray><sender></gray> <dark_gray>></dark_gray> <white><message></white>";
+    private static final String DEFAULT_DISCORD_PREFIX = "<#5865f2>[Discord]</#5865f2> ";
     private static final String DEFAULT_MSG_OUTGOING =
             "<gold>(to <target>) <white><message>";
     private static final String DEFAULT_MSG_INCOMING =
@@ -39,6 +40,7 @@ public class VelocityConfig {
     private final String staffChatFormat;
     private final String staffChatDiscordWebhookUrl;
     private final String staffChatDiscordAvatarUrl;
+    private final String staffChatDiscordIncomingPrefix;
     private final String msgOutgoingFormat;
     private final String msgIncomingFormat;
     private final String msgSpyFormat;
@@ -82,6 +84,7 @@ public class VelocityConfig {
                            long redisPunishmentWatchIntervalSeconds,
                            String staffChatFormat,
                            String staffChatDiscordWebhookUrl, String staffChatDiscordAvatarUrl,
+                           String staffChatDiscordIncomingPrefix,
                            String msgOutgoingFormat, String msgIncomingFormat,
                            String msgSpyFormat,
                            String msgPlayerNotFound, String msgNoReplyTarget,
@@ -115,6 +118,7 @@ public class VelocityConfig {
         this.staffChatFormat = staffChatFormat;
         this.staffChatDiscordWebhookUrl = staffChatDiscordWebhookUrl;
         this.staffChatDiscordAvatarUrl = staffChatDiscordAvatarUrl;
+        this.staffChatDiscordIncomingPrefix = staffChatDiscordIncomingPrefix;
         this.msgOutgoingFormat = msgOutgoingFormat;
         this.msgIncomingFormat = msgIncomingFormat;
         this.msgSpyFormat = msgSpyFormat;
@@ -172,6 +176,7 @@ public class VelocityConfig {
                     .nodeStyle(NodeStyle.BLOCK)
                     .build();
             ConfigurationNode root = loader.load();
+            String configuredDiscordPrefix = root.node("staff-chat", "discord", "incoming-prefix").getString();
 
             // Merge missing keys from bundled defaults into the user's config
             try (InputStream defaultIn = VelocityConfig.class.getResourceAsStream("/config.yml")) {
@@ -181,6 +186,11 @@ public class VelocityConfig {
                             .build()
                             .load();
                     root.mergeFrom(defaults);
+                    // Configurate merges defaults over empty strings; an empty
+                    // Discord prefix intentionally disables the origin marker.
+                    if (configuredDiscordPrefix != null) {
+                        root.node("staff-chat", "discord", "incoming-prefix").set(configuredDiscordPrefix);
+                    }
                     // Older configs carried login-streaks.buffer-hours (now replaced
                     // by reset-hour-utc); mergeFrom adds the new key but never prunes
                     // the old one, so drop it explicitly to avoid a dead setting.
@@ -204,6 +214,8 @@ public class VelocityConfig {
             String staffChatDiscordWebhookUrl = staffChatDiscord.node("webhook-url").getString("");
             String staffChatDiscordAvatarUrl = staffChatDiscord.node("avatar-url")
                     .getString("https://api.crabstudios.net/v1/renders/{uuid}/head?size=128");
+            String staffChatDiscordIncomingPrefix = staffChatDiscord.node("incoming-prefix")
+                    .getString(DEFAULT_DISCORD_PREFIX);
 
             ConfigurationNode msgNode = root.node("private-messages");
             String msgOutgoing = msgNode.node("outgoing-format").getString(DEFAULT_MSG_OUTGOING);
@@ -299,6 +311,7 @@ public class VelocityConfig {
             return new VelocityConfig(host, port, password, channel,
                     punishmentStream, punishmentWatchIntervalSeconds, format,
                     staffChatDiscordWebhookUrl, staffChatDiscordAvatarUrl,
+                    staffChatDiscordIncomingPrefix,
                     msgOutgoing, msgIncoming, msgSpy, msgNotFound, msgNoReply, msgSelf,
                     soundEnabled, soundKey, soundVolume, soundPitch, apiPort,
                     publicChatEnabled, publicChatStream, publicChatReplayMessages,
@@ -316,6 +329,7 @@ public class VelocityConfig {
             return new VelocityConfig("localhost", 6379, "", "crabutilities:staffchat",
                     "crabcraft:punishments", 10L, DEFAULT_FORMAT,
                     "", "https://api.crabstudios.net/v1/renders/{uuid}/head?size=128",
+                    DEFAULT_DISCORD_PREFIX,
                     DEFAULT_MSG_OUTGOING, DEFAULT_MSG_INCOMING, DEFAULT_MSG_SPY,
                     DEFAULT_MSG_PLAYER_NOT_FOUND, DEFAULT_MSG_NO_REPLY_TARGET, DEFAULT_MSG_SELF,
                     true, "minecraft:entity.experience_orb.pickup", 1.0f, 1.0f, 8080,
@@ -341,6 +355,7 @@ public class VelocityConfig {
     public String getStaffChatFormat() { return staffChatFormat; }
     public String getStaffChatDiscordWebhookUrl() { return staffChatDiscordWebhookUrl; }
     public String getStaffChatDiscordAvatarUrl() { return staffChatDiscordAvatarUrl; }
+    public String getStaffChatDiscordIncomingPrefix() { return staffChatDiscordIncomingPrefix; }
     public String getMsgOutgoingFormat() { return msgOutgoingFormat; }
     public String getMsgIncomingFormat() { return msgIncomingFormat; }
     public String getMsgSpyFormat() { return msgSpyFormat; }
